@@ -1,0 +1,206 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: LiteLLM
+spec:
+    description: Open-source, high-performance LLM proxy for OpenAI, Anthropic, Cohere, and more.
+    icon: https://raw.githubusercontent.com/BerriAI/litellm/main/ui/litellm-dashboard/public/assets/logos/litellm_logo.jpg
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Domain
+          description: Domain of your LiteLLM service.
+    tags:
+        - AI
+        - LLM
+        - Proxy
+    readme: |
+        # LiteLLM
+
+        LiteLLM is an open-source, high-performance proxy for large language models. It provides a unified OpenAI-compatible API for 100+ LLM providers including OpenAI, Anthropic, Google Gemini, Azure, AWS Bedrock, Cohere, and more.
+
+        ## Features
+
+        - **Unified API** — Call 100+ LLMs using the OpenAI API format
+        - **Load balancing** — Route requests across multiple models and providers
+        - **Cost tracking** — Monitor spend per key, user, and team
+        - **Rate limiting** — Set RPM/TPM limits per API key
+        - **Admin UI** — Built-in web dashboard for managing models, keys, and usage
+
+        ## Getting Started
+
+        1. After deployment, visit `https://<your-domain>/ui` to access the LiteLLM Admin UI.
+        2. Login with username `admin` and the **Master Key** shown in the service instructions.
+        3. Go to **Models** tab to add your LLM provider API keys (e.g. OpenAI, Anthropic).
+        4. Use `https://<your-domain>` as the OpenAI-compatible API base URL in your applications.
+
+        ## Notes
+
+        - First startup takes 1–2 minutes while database migrations run.
+        - The PostgreSQL database is included and configured automatically.
+
+        For more information, visit [LiteLLM's official documentation](https://docs.litellm.ai/).
+    services:
+        - name: postgresql
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/postgresql.svg
+          template: PREBUILT
+          spec:
+            source:
+                image: postgres:16
+                command:
+                    - docker-entrypoint.sh
+                    - -c
+                    - config_file=/etc/postgresql/postgresql.conf
+            ports:
+                - id: database
+                  port: 5432
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/postgresql/data
+            instructions:
+                - title: Connection String
+                  content: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}
+                - title: PostgreSQL Connect Command
+                  content: psql "postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}"
+                - title: PostgreSQL username
+                  content: ${POSTGRES_USERNAME}
+                - title: PostgresSQL password
+                  content: ${POSTGRES_PASSWORD}
+                - title: PostgresSQL database
+                  content: ${POSTGRES_DATABASE}
+                - title: PostgreSQL host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: PostgreSQL port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                PGDATA:
+                    default: /var/lib/postgresql/data/pgdata
+                POSTGRES_CONNECTION_STRING:
+                    default: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+                    expose: true
+                POSTGRES_DATABASE:
+                    default: ${POSTGRES_DB}
+                    expose: true
+                POSTGRES_DB:
+                    default: litellm
+                POSTGRES_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                POSTGRES_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                POSTGRES_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                POSTGRES_URI:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                    expose: true
+                POSTGRES_USER:
+                    default: root
+                POSTGRES_USERNAME:
+                    default: ${POSTGRES_USER}
+                    expose: true
+            configs:
+                - path: /etc/postgresql/postgresql.conf
+                  template: |
+                    # https://github.com/postgres/postgres/blob/master/src/backend/utils/misc/postgresql.conf.sample
+                    listen_addresses = '*'
+                    max_connections = 100
+                    shared_buffers = 128MB
+                    dynamic_shared_memory_type = posix
+                    max_wal_size = 1GB
+                    min_wal_size = 80MB
+                    log_timezone = 'Etc/UTC'
+                    datestyle = 'iso, mdy'
+                    timezone = 'Etc/UTC'
+                    lc_messages = 'en_US.utf8'
+                    lc_monetary = 'en_US.utf8'
+                    lc_numeric = 'en_US.utf8'
+                    lc_time = 'en_US.utf8'
+                    default_text_search_config = 'pg_catalog.english'
+                  permission: null
+                  envsubst: null
+        - name: litellm
+          icon: https://raw.githubusercontent.com/BerriAI/litellm/main/ui/litellm-dashboard/public/assets/logos/litellm_logo.jpg
+          template: PREBUILT
+          dependencies:
+              - postgresql
+          spec:
+            source:
+                image: docker.litellm.ai/berriai/litellm:main-stable
+            ports:
+                - id: web
+                  port: 4000
+                  type: HTTP
+            instructions:
+                - title: Init admin username
+                  content: admin
+                - title: Init admin password
+                  content: ${LITELLM_MASTER_KEY}
+            env:
+                DATABASE_URL:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                LITELLM_MASTER_KEY:
+                    default: sk-${PASSWORD}
+                STORE_MODEL_IN_DB:
+                    default: "True"
+          domainKey: PUBLIC_DOMAIN
+localization:
+    zh-CN:
+        description: 开源、高性能的 LLM 代理，提供统一的 OpenAI 兼容 API，支持 100+ LLM 提供商。
+        readme: |
+            # LiteLLM
+
+            LiteLLM 是一个开源、高性能的大型语言模型代理。它提供统一的 OpenAI 兼容 API，支持 100+ LLM 提供商，包括 OpenAI、Anthropic、Google Gemini、Azure、AWS Bedrock、Cohere 等。
+
+            ## 特点
+
+            - **统一 API** — 使用 OpenAI API 格式调用 100+ LLM
+            - **负载均衡** — 在多个模型和提供商之间路由请求
+            - **成本追踪** — 按 Key、用户和团队监控消费
+            - **速率限制** — 为每个 API Key 设置 RPM/TPM 限制
+            - **管理界面** — 内置 Web 控制台，管理模型、密钥和使用量
+
+            ## 使用方式
+
+            1. 部署完成后，访问 `https://<你的域名>/ui` 进入 LiteLLM 管理界面。
+            2. 使用用户名 `admin` 和服务说明中显示的 **Master Key** 登录。
+            3. 前往 **Models** 标签页添加你的 LLM 提供商 API Key（如 OpenAI、Anthropic）。
+            4. 使用 `https://<你的域名>` 作为 OpenAI 兼容 API 地址。
+
+            ## 注意事项
+
+            - 首次启动需要 1–2 分钟执行数据库迁移。
+            - PostgreSQL 数据库已自动包含并配置。
+
+            更多信息，请访问 [LiteLLM 官方文档](https://docs.litellm.ai/)。
+    zh-TW:
+        description: 開源、高效能的 LLM 代理，提供統一的 OpenAI 相容 API，支援 100+ LLM 提供商。
+        readme: |-
+            # LiteLLM
+
+            LiteLLM 是一個開源、高效能的大型語言模型代理。它提供統一的 OpenAI 相容 API，支援 100+ LLM 提供商，包括 OpenAI、Anthropic、Google Gemini、Azure、AWS Bedrock、Cohere 等。
+
+            ## 特點
+
+            - **統一 API** — 使用 OpenAI API 格式呼叫 100+ LLM
+            - **負載均衡** — 在多個模型和提供商之間路由請求
+            - **成本追蹤** — 按 Key、使用者和團隊監控消費
+            - **速率限制** — 為每個 API Key 設定 RPM/TPM 限制
+            - **管理介面** — 內建 Web 控制台，管理模型、金鑰和使用量
+
+            ## 使用方式
+
+            1. 部署完成後，造訪 `https://<你的網域>/ui` 進入 LiteLLM 管理介面。
+            2. 使用使用者名稱 `admin` 和服務說明中顯示的 **Master Key** 登入。
+            3. 前往 **Models** 標籤頁新增你的 LLM 提供商 API Key（如 OpenAI、Anthropic）。
+            4. 使用 `https://<你的網域>` 作為 OpenAI 相容 API 位址。
+
+            ## 注意事項
+
+            - 首次啟動需要 1–2 分鐘執行資料庫遷移。
+            - PostgreSQL 資料庫已自動包含並設定。
+
+            更多資訊，請造訪 [LiteLLM 官方文件](https://docs.litellm.ai/)。

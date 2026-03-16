@@ -50,7 +50,19 @@ spec:
 
     Additionally, you may need to set the `UPLOAD_FILE_SIZE_LIMIT` variable in the environment of the `api` service to match this value. Ensure that this value is the same as the `client_max_body_size` directive in the `/etc/nginx/nginx.conf` configuration (e.g., `100M` for 100 MB).
 
+    ### Changing Domain
+
+    After changing the domain of the `nginx` service, you must **restart all services** in the project for the new domain to take effect. This is because several services (e.g., `api`, `web`) reference the gateway URL via environment variables, which are only refreshed on restart.
+
     ## Changelog
+
+    ### v1.13.0-1
+
+    #### Fixes
+    - Fixed MinIO bucket creation (mc binary not included in image)
+    - Fixed Weaviate gRPC connection failure by using HTTP REST API
+    - Fixed SSRF proxy blocking marketplace.dify.ai requests
+    - Added SSRF proxy performance and timeout settings
 
     ### v1.13.0
 
@@ -319,10 +331,11 @@ spec:
                 echo 'Waiting for MinIO to start...'
                 sleep 1
               done
-              sleep 5
+              echo "Downloading mc client..."
+              curl -so /usr/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc && chmod +x /usr/bin/mc
               mc alias set myminio http://localhost:9000 $MINIO_USERNAME $MINIO_PASSWORD
               echo "Creating bucket '$MINIO_DEFAULT_BUCKET'"
-              mc mb myminio/$MINIO_DEFAULT_BUCKET
+              mc mb --ignore-existing myminio/$MINIO_DEFAULT_BUCKET
               wait $MINIO_PID
         ports:
           - id: web
@@ -523,7 +536,7 @@ spec:
           AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED:
             default: "false"
           AUTHENTICATION_APIKEY_ALLOWED_KEYS:
-            default: WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih
+            default: ${PASSWORD}
           AUTHENTICATION_APIKEY_ENABLED:
             default: "true"
           AUTHENTICATION_APIKEY_USERS:
@@ -551,6 +564,9 @@ spec:
           WEAVIATE_ENDPOINT:
             default: http://weaviate:8080
             expose: true
+          WEAVIATE_GRPC_ENABLED:
+            default: "false"
+            expose: true
 
     - name: sandbox
       icon: https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/dark/dify-color.png
@@ -573,6 +589,10 @@ spec:
             default: "8194"
           WORKER_TIMEOUT:
             default: "15"
+          HTTP_PROXY:
+            default: http://ssrf-proxy:3128
+          HTTPS_PROXY:
+            default: http://ssrf-proxy:3128
           CODE_EXECUTION_API_KEY:
             default: ${API_KEY}
             expose: true
@@ -623,12 +643,15 @@ spec:
               acl Safe_ports port 488
               acl Safe_ports port 591
               acl Safe_ports port 777
+              acl CONNECT method CONNECT
+              acl allowed_domains dstdomain .marketplace.dify.ai
+              http_access allow allowed_domains
               http_access deny !Safe_ports
               http_access deny CONNECT !SSL_ports
               http_access allow localhost manager
               http_access deny manager
-              http_access allow localnet
               http_access allow localhost
+              include /etc/squid/conf.d/*.conf
               http_access deny all
               http_port 3128
               coredump_dir /var/spool/squid
@@ -640,6 +663,18 @@ spec:
               refresh_pattern \/InRelease$ 0 0% 0 refresh-ims
               refresh_pattern \/(Translation-.*)(|\.bz2|\.gz|\.xz)$ 0 0% 0 refresh-ims
               refresh_pattern .               0       20%     4320
+              client_request_buffer_max_size 100 MB
+              max_filedescriptors 65536
+              connect_timeout 30 seconds
+              request_timeout 2 minutes
+              read_timeout 2 minutes
+              client_lifetime 5 minutes
+              shutdown_lifetime 30 seconds
+              server_persistent_connections on
+              client_persistent_connections on
+              quick_abort_min 16 KB
+              quick_abort_max 16 MB
+              quick_abort_pct 95
 
     - name: plugin-daemon
       icon: https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/dark/dify-color.png
@@ -735,7 +770,19 @@ localization:
 
       また、`api` サービスの環境で `UPLOAD_FILE_SIZE_LIMIT` 変数を設定し、上記の設定と一致させる必要があるかもしれません。この値が `/etc/nginx/nginx.conf` の設定にある `client_max_body_size` ディレクティブと同じであることを確認してください（例：`100M` は100 MBを表します）。
 
+      ### ドメインの変更
+
+      `nginx` サービスのドメインを変更した後、新しいドメインを反映させるためにプロジェクト内の**すべてのサービスを再起動**する必要があります。これは、複数のサービス（`api`、`web` など）が環境変数を通じてゲートウェイ URL を参照しており、再起動時にのみ更新されるためです。
+
       ## 変更履歴
+
+      ### v1.13.0-1
+
+      #### 修正
+      - MinIO バケット作成の問題を修正（mc バイナリがイメージに含まれていない）
+      - HTTP REST API を使用して Weaviate gRPC 接続エラーを修正
+      - SSRF プロキシが marketplace.dify.ai へのリクエストをブロックする問題を修正
+      - SSRF プロキシのパフォーマンスとタイムアウト設定を追加
 
       ### v1.13.0
 
@@ -796,7 +843,19 @@ localization:
 
       另外，你可能需要在 `api` 服务的环境中设置 `UPLOAD_FILE_SIZE_LIMIT` 变量，使其与上述配置保持一致。请确保这个数值与 `/etc/nginx/nginx.conf` 配置中的 `client_max_body_size` 指令相同（例如：`100M` 表示 100 MB）。
 
+      ### 变更域名
+
+      更改 `nginx` 服务的域名后，你必须**重启项目中的所有服务**，新域名才会生效。这是因为多个服务（如 `api`、`web`）通过环境变量引用网关 URL，这些变量仅在重启时更新。
+
       ## 更新日志
+
+      ### v1.13.0-1
+
+      #### 修正
+      - 修正 MinIO 存储桶创建问题（镜像中未包含 mc 二进制文件）
+      - 使用 HTTP REST API 修正 Weaviate gRPC 连接失败
+      - 修正 SSRF 代理阻止 marketplace.dify.ai 请求的问题
+      - 新增 SSRF 代理性能和超时设定
 
       ### v1.13.0
 
@@ -857,7 +916,19 @@ localization:
 
       此外，你可能需要在 `api` 服務的環境中設定 `UPLOAD_FILE_SIZE_LIMIT` 變數，使其與上述設定相符。請確保這個數值與 `/etc/nginx/nginx.conf` 設定中的 `client_max_body_size` 指令相同（例如：`100M` 代表 100 MB）。
 
+      ### 變更域名
+
+      更改 `nginx` 服務的域名後，你必須**重啟專案中的所有服務**，新域名才會生效。這是因為多個服務（如 `api`、`web`）透過環境變數參照閘道 URL，這些變數僅在重啟時更新。
+
       ## 更新日誌
+
+      ### v1.13.0-1
+
+      #### 修正
+      - 修正 MinIO 儲存桶建立問題（映像檔中未包含 mc 二進位檔案）
+      - 使用 HTTP REST API 修正 Weaviate gRPC 連線失敗
+      - 修正 SSRF 代理阻擋 marketplace.dify.ai 請求的問題
+      - 新增 SSRF 代理效能和逾時設定
 
       ### v1.13.0
 
@@ -918,7 +989,19 @@ localization:
 
       Además, es posible que necesites establecer la variable `UPLOAD_FILE_SIZE_LIMIT` en el entorno del servicio `api` para que coincida con este valor. Asegúrate de que este valor sea el mismo que la directiva `client_max_body_size` en la configuración `/etc/nginx/nginx.conf` (por ejemplo, `100M` para 100 MB).
 
+      ### Cambiar dominio
+
+      Después de cambiar el dominio del servicio `nginx`, debes **reiniciar todos los servicios** del proyecto para que el nuevo dominio surta efecto. Esto se debe a que varios servicios (por ejemplo, `api`, `web`) hacen referencia a la URL del gateway a través de variables de entorno, que solo se actualizan al reiniciar.
+
       ## Registro de cambios
+
+      ### v1.13.0-1
+
+      #### Correcciones
+      - Corregida la creación de buckets en MinIO (binario mc no incluido en la imagen)
+      - Corregido fallo de conexión gRPC de Weaviate usando API REST HTTP
+      - Corregido el bloqueo de solicitudes a marketplace.dify.ai por el proxy SSRF
+      - Añadida configuración de rendimiento y tiempo de espera del proxy SSRF
 
       ### v1.13.0
 
@@ -979,7 +1062,19 @@ localization:
 
       Selain itu, Anda mungkin perlu mengatur variabel `UPLOAD_FILE_SIZE_LIMIT` di lingkungan layanan `api` agar sesuai dengan nilai ini. Pastikan nilai ini sama dengan direktif `client_max_body_size` dalam konfigurasi `/etc/nginx/nginx.conf` (misalnya, `100M` untuk 100 MB).
 
+      ### Mengubah Domain
+
+      Setelah mengubah domain layanan `nginx`, Anda harus **memulai ulang semua layanan** di proyek agar domain baru berlaku. Ini karena beberapa layanan (misalnya, `api`, `web`) mereferensikan URL gateway melalui variabel lingkungan, yang hanya diperbarui saat restart.
+
       ## Catatan Perubahan
+
+      ### v1.13.0-1
+
+      #### Perbaikan
+      - Memperbaiki pembuatan bucket MinIO (binary mc tidak termasuk dalam image)
+      - Memperbaiki kegagalan koneksi gRPC Weaviate dengan menggunakan HTTP REST API
+      - Memperbaiki proxy SSRF yang memblokir permintaan ke marketplace.dify.ai
+      - Menambahkan pengaturan performa dan timeout proxy SSRF
 
       ### v1.13.0
 

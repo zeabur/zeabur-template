@@ -1,0 +1,180 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Kener
+spec:
+    description: Stunning status pages, batteries included!
+    coverImage: https://cdn.zeabur.com/templates/kener/og.jpg
+    icon: https://cdn.zeabur.com/templates/kener/logo.png
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Public Domain
+          description: The URL of Kener
+    tags:
+        - Uptime
+        - Monitor
+    readme: "# Kener\n\nKener is a sleek and lightweight status page system built with SvelteKit and NodeJS. It’s not here to replace heavyweights like Datadog or Atlassian but rather to offer a simple, modern, and hassle-free way to set up a great-looking status page with minimal effort.\n\nDesigned with ease of use and customization in mind, Kener provides all the essential features you’d expect from a status page—without unnecessary complexity.\n\n[\U0001F3E0 Homepage](https://kener.ing/) | [GitHub](https://github.com/rajnandan1/kener)\n\n## Why Kener?\n\n- ✅ Minimal overhead – Set up quickly with a clean, modern UI\n- ✅ Customizable – Easily tailor it to match your brand\n- ✅ Open-source & free – Because great tools should be accessible to everyone\n"
+    services:
+        - name: Kener
+          icon: https://cdn.zeabur.com/templates/kener/logo.png
+          dependencies:
+            - postgresql
+            - redis
+          template: PREBUILT
+          spec:
+            source:
+                image: rajnandan1/kener:4.0.16
+            ports:
+                - id: web
+                  port: 3000
+                  type: HTTP
+            env:
+                DATABASE_URL:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                KENER_SECRET_KEY:
+                    default: ${PASSWORD}
+                ORIGIN:
+                    default: https://${ZEABUR_WEB_DOMAIN}
+                REDIS_URL:
+                    default: ${REDIS_CONNECTION_STRING}
+          domainKey: PUBLIC_DOMAIN
+        - name: postgresql
+          icon: https://cdn.zeabur.com/marketplace/postgresql.svg
+          template: PREBUILT
+          spec:
+            source:
+                image: postgres:18
+                command:
+                    - docker-entrypoint.sh
+                    - -c
+                    - config_file=/etc/postgresql/postgresql.conf
+            ports:
+                - id: database
+                  port: 5432
+                  type: TCP
+            healthCheck:
+                type: TCP
+                port: database
+            volumes:
+                - id: data
+                  dir: /var/lib/postgresql/18/docker
+            instructions:
+                - title: Connection String
+                  content: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}
+                - title: PostgreSQL Connect Command
+                  content: psql "postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}"
+                - title: PostgreSQL username
+                  content: ${POSTGRES_USERNAME}
+                - title: PostgresSQL password
+                  content: ${POSTGRES_PASSWORD}
+                - title: PostgresSQL database
+                  content: ${POSTGRES_DATABASE}
+                - title: PostgreSQL host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: PostgreSQL port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                PGDATA:
+                    default: /var/lib/postgresql/18/docker/pgdata
+                    expose: false
+                POSTGRES_CONNECTION_STRING:
+                    default: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+                    expose: true
+                POSTGRES_DATABASE:
+                    default: ${POSTGRES_DB}
+                    expose: true
+                POSTGRES_DB:
+                    default: zeabur
+                POSTGRES_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                POSTGRES_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                POSTGRES_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                POSTGRES_URI:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                    expose: true
+                POSTGRES_USER:
+                    default: root
+                POSTGRES_USERNAME:
+                    default: ${POSTGRES_USER}
+                    expose: true
+            configs:
+                - path: /etc/postgresql/postgresql.conf
+                  template: |
+                    # https://github.com/postgres/postgres/blob/master/src/backend/utils/misc/postgresql.conf.sample
+                    listen_addresses = '*'
+                    max_connections = 256
+                    shared_buffers = 256MB
+                    dynamic_shared_memory_type = posix
+                    max_wal_size = 1GB
+                    min_wal_size = 80MB
+                    log_timezone = 'UTC'
+                    datestyle = 'iso, mdy'
+                    timezone = 'UTC'
+                    lc_messages = 'en_US.UTF-8'
+                    lc_monetary = 'en_US.UTF-8'
+                    lc_numeric = 'en_US.UTF-8'
+                    lc_time = 'en_US.UTF-8'
+                    default_text_search_config = 'pg_catalog.english'
+                  permission: null
+                  envsubst: null
+        - name: redis
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/redis.svg
+          template: PREBUILT
+          spec:
+            source:
+                image: redis/redis-stack-server:latest
+            ports:
+                - id: database
+                  port: 6379
+                  type: TCP
+            healthCheck:
+                type: TCP
+                port: database
+            volumes:
+                - id: data
+                  dir: /data
+            instructions:
+                - title: Command to connect to your Redis
+                  content: redis-cli -h ${PORT_FORWARDED_HOSTNAME} -p ${DATABASE_PORT_FORWARDED_PORT} -a ${REDIS_PASSWORD}
+                - title: Redis Connection String
+                  content: redis://:${REDIS_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}
+                - title: Redis password
+                  content: ${REDIS_PASSWORD}
+                - title: Redis host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: Redis port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                CONFFILE:
+                    default: /etc/redis-stack.conf
+                REDIS_ARGS:
+                    default: --requirepass ${REDIS_PASSWORD}
+                REDIS_CONNECTION_STRING:
+                    default: redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}
+                    expose: true
+                REDIS_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                REDIS_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                REDIS_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                REDIS_URI:
+                    default: ${REDIS_CONNECTION_STRING}
+                    expose: true
+            configs:
+                - path: /etc/redis-stack.conf
+                  template: |
+                    port 6379
+                    daemonize no
+                  permission: null
+                  envsubst: null

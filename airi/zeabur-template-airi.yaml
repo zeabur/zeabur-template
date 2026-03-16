@@ -1,0 +1,412 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: AIRI
+spec:
+    description: |
+      AIRI is an open-source AI virtual character platform inspired by Neuro-sama. Features realtime voice chat, 3D character rendering (VRM/Live2D), memory system, and game integration (Minecraft, Factorio). Supports 20+ LLM providers.
+    icon: https://raw.githubusercontent.com/moeru-ai/airi/main/apps/stage-web/public/favicon.svg
+    tags:
+      - AI
+      - VTuber
+    variables:
+      - key: AUTH_GOOGLE_CLIENT_ID
+        type: STRING
+        name: Google OAuth Client ID
+        description: Google OAuth 2.0 Client ID for user authentication. Leave empty to skip Google login.
+      - key: AUTH_GOOGLE_CLIENT_SECRET
+        type: STRING
+        name: Google OAuth Client Secret
+        description: Google OAuth 2.0 Client Secret for user authentication. Leave empty to skip Google login.
+      - key: AUTH_GITHUB_CLIENT_ID
+        type: STRING
+        name: GitHub OAuth Client ID
+        description: GitHub OAuth Client ID for user authentication. Leave empty to skip GitHub login.
+      - key: AUTH_GITHUB_CLIENT_SECRET
+        type: STRING
+        name: GitHub OAuth Client Secret
+        description: GitHub OAuth Client Secret for user authentication. Leave empty to skip GitHub login.
+    readme: |
+      # AIRI
+
+      [AIRI](https://github.com/moeru-ai/airi) is an open-source AI virtual character platform by [Moeru AI](https://github.com/moeru-ai), inspired by Neuro-sama. Build your own AI companion with realtime voice chat, 3D character rendering, memory, and game integration.
+
+      ## Services
+
+      This template deploys three services:
+
+      | Service | Description |
+      |---------|-------------|
+      | **stage-web** | Vue 3 frontend SPA with 3D character rendering (VRM/Live2D) |
+      | **server** | Hono API server for authentication and memory storage |
+      | **db** | PostgreSQL with vchord vector extension for memory search |
+
+      ## Quick Start
+
+      1. After deployment, open the **stage-web** service URL in your browser
+      2. Configure your preferred LLM provider API key in the web UI settings
+      3. Start chatting with your AI character
+
+      ## OAuth Setup (Optional)
+
+      To enable user login, create OAuth apps and fill in the credentials:
+
+      - **Google**: [Google Cloud Console](https://console.cloud.google.com/apis/credentials) - set redirect URI to `<server-url>/api/auth/callback/google`
+      - **GitHub**: [GitHub Developer Settings](https://github.com/settings/developers) - set callback URL to `<server-url>/api/auth/callback/github`
+
+      ## Supported LLM Providers
+
+      OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, vLLM, and 20+ more via the xsAI abstraction layer. Configure in the web UI.
+
+      ## Links
+
+      - [GitHub Repository](https://github.com/moeru-ai/airi)
+      - [Live Demo](https://airi.moeru.ai)
+    services:
+      - name: db
+        icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/postgresql.svg
+        template: PREBUILT_V2
+        spec:
+          source:
+            image: ghcr.io/tensorchord/vchord-postgres:pg18-v1.0.0
+            command:
+              - /bin/sh
+            args:
+              - -c
+              - |
+                echo 'CREATE EXTENSION IF NOT EXISTS vchord CASCADE;' > /docker-entrypoint-initdb.d/init.sql
+                exec docker-entrypoint.sh postgres -c shared_preload_libraries=vchord
+          ports:
+            - id: database
+              port: 5432
+              type: TCP
+          volumes:
+            - id: data
+              dir: /var/lib/postgresql
+          env:
+            POSTGRES_USER:
+              default: postgres
+              expose: true
+            POSTGRES_PASSWORD:
+              default: ${PASSWORD}
+              expose: true
+            POSTGRES_DB:
+              default: airi
+              expose: true
+            POSTGRES_HOST:
+              default: ${CONTAINER_HOSTNAME}
+              expose: true
+              readonly: true
+            POSTGRES_PORT:
+              default: ${DATABASE_PORT}
+              expose: true
+              readonly: true
+            POSTGRES_CONNECTION_STRING:
+              default: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+              expose: true
+              readonly: true
+      - name: server
+        icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/nodejs.svg
+        template: GIT
+        dependencies:
+          - db
+        spec:
+          source:
+            source: GITHUB
+            repo: 896924279
+            branch: main
+            rootDirectory: apps/server
+          ports:
+            - id: web
+              port: 3000
+              type: HTTP
+          env:
+            DATABASE_URL:
+              default: ${POSTGRES_CONNECTION_STRING}
+              readonly: true
+            API_SERVER_URL:
+              default: ${ZEABUR_WEB_URL}
+              readonly: true
+            AUTH_GOOGLE_CLIENT_ID:
+              default: ${AUTH_GOOGLE_CLIENT_ID}
+            AUTH_GOOGLE_CLIENT_SECRET:
+              default: ${AUTH_GOOGLE_CLIENT_SECRET}
+            AUTH_GITHUB_CLIENT_ID:
+              default: ${AUTH_GITHUB_CLIENT_ID}
+            AUTH_GITHUB_CLIENT_SECRET:
+              default: ${AUTH_GITHUB_CLIENT_SECRET}
+      - name: stage-web
+        icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/vue.svg
+        template: GIT
+        spec:
+          source:
+            source: GITHUB
+            repo: 896924279
+            branch: main
+            rootDirectory: apps/stage-web
+          ports:
+            - id: web
+              port: 80
+              type: HTTP
+localization:
+  zh-TW:
+    description: |
+      AIRI 是一個開源 AI 虛擬角色平台，靈感來自 Neuro-sama。支援即時語音聊天、3D 角色渲染（VRM/Live2D）、記憶系統，以及遊戲整合（Minecraft、Factorio）。支援 20+ 種 LLM 供應商。
+    variables:
+      - key: AUTH_GOOGLE_CLIENT_ID
+        name: Google OAuth Client ID
+        description: Google OAuth 2.0 Client ID，用於使用者登入驗證。留空則跳過 Google 登入。
+      - key: AUTH_GOOGLE_CLIENT_SECRET
+        name: Google OAuth Client Secret
+        description: Google OAuth 2.0 Client Secret，用於使用者登入驗證。留空則跳過 Google 登入。
+      - key: AUTH_GITHUB_CLIENT_ID
+        name: GitHub OAuth Client ID
+        description: GitHub OAuth Client ID，用於使用者登入驗證。留空則跳過 GitHub 登入。
+      - key: AUTH_GITHUB_CLIENT_SECRET
+        name: GitHub OAuth Client Secret
+        description: GitHub OAuth Client Secret，用於使用者登入驗證。留空則跳過 GitHub 登入。
+    readme: |
+      # AIRI
+
+      [AIRI](https://github.com/moeru-ai/airi) 是由 [Moeru AI](https://github.com/moeru-ai) 開發的開源 AI 虛擬角色平台，靈感來自 Neuro-sama。打造你自己的 AI 夥伴，支援即時語音聊天、3D 角色渲染、記憶系統和遊戲整合。
+
+      ## 服務元件
+
+      此模板會部署三個服務：
+
+      | 服務 | 說明 |
+      |------|------|
+      | **stage-web** | Vue 3 前端 SPA，含 3D 角色渲染（VRM/Live2D） |
+      | **server** | Hono API 後端，處理認證和記憶儲存 |
+      | **db** | PostgreSQL + vchord 向量擴展，用於記憶搜尋 |
+
+      ## 快速開始
+
+      1. 部署完成後，打開 **stage-web** 的服務網址
+      2. 在網頁設定中填入你偏好的 LLM 供應商 API Key
+      3. 開始與你的 AI 角色對話
+
+      ## OAuth 設定（可選）
+
+      如需啟用使用者登入功能，請建立 OAuth 應用程式並填入憑證：
+
+      - **Google**：[Google Cloud Console](https://console.cloud.google.com/apis/credentials) — 將重導向 URI 設為 `<server-url>/api/auth/callback/google`
+      - **GitHub**：[GitHub Developer Settings](https://github.com/settings/developers) — 將回呼網址設為 `<server-url>/api/auth/callback/github`
+
+      ## 支援的 LLM 供應商
+
+      OpenAI、Anthropic (Claude)、Google Gemini、OpenRouter、Ollama、vLLM 等 20+ 種供應商，可在網頁介面中設定。
+
+      ## 連結
+
+      - [GitHub 原始碼](https://github.com/moeru-ai/airi)
+      - [線上 Demo](https://airi.moeru.ai)
+  zh-CN:
+    description: |
+      AIRI 是一个开源 AI 虚拟角色平台，灵感来自 Neuro-sama。支持实时语音聊天、3D 角色渲染（VRM/Live2D）、记忆系统，以及游戏集成（Minecraft、Factorio）。支持 20+ 种 LLM 供应商。
+    variables:
+      - key: AUTH_GOOGLE_CLIENT_ID
+        name: Google OAuth Client ID
+        description: Google OAuth 2.0 Client ID，用于用户登录验证。留空则跳过 Google 登录。
+      - key: AUTH_GOOGLE_CLIENT_SECRET
+        name: Google OAuth Client Secret
+        description: Google OAuth 2.0 Client Secret，用于用户登录验证。留空则跳过 Google 登录。
+      - key: AUTH_GITHUB_CLIENT_ID
+        name: GitHub OAuth Client ID
+        description: GitHub OAuth Client ID，用于用户登录验证。留空则跳过 GitHub 登录。
+      - key: AUTH_GITHUB_CLIENT_SECRET
+        name: GitHub OAuth Client Secret
+        description: GitHub OAuth Client Secret，用于用户登录验证。留空则跳过 GitHub 登录。
+    readme: |
+      # AIRI
+
+      [AIRI](https://github.com/moeru-ai/airi) 是由 [Moeru AI](https://github.com/moeru-ai) 开发的开源 AI 虚拟角色平台，灵感来自 Neuro-sama。构建你自己的 AI 伙伴，支持实时语音聊天、3D 角色渲染、记忆系统和游戏集成。
+
+      ## 服务组件
+
+      此模板会部署三个服务：
+
+      | 服务 | 说明 |
+      |------|------|
+      | **stage-web** | Vue 3 前端 SPA，含 3D 角色渲染（VRM/Live2D） |
+      | **server** | Hono API 后端，处理认证和记忆存储 |
+      | **db** | PostgreSQL + vchord 向量扩展，用于记忆搜索 |
+
+      ## 快速开始
+
+      1. 部署完成后，打开 **stage-web** 的服务网址
+      2. 在网页设置中填入你偏好的 LLM 供应商 API Key
+      3. 开始与你的 AI 角色对话
+
+      ## OAuth 设置（可选）
+
+      如需启用用户登录功能，请创建 OAuth 应用并填入凭证：
+
+      - **Google**：[Google Cloud Console](https://console.cloud.google.com/apis/credentials) — 将重定向 URI 设为 `<server-url>/api/auth/callback/google`
+      - **GitHub**：[GitHub Developer Settings](https://github.com/settings/developers) — 将回调网址设为 `<server-url>/api/auth/callback/github`
+
+      ## 支持的 LLM 供应商
+
+      OpenAI、Anthropic (Claude)、Google Gemini、OpenRouter、Ollama、vLLM 等 20+ 种供应商，可在网页界面中设置。
+
+      ## 链接
+
+      - [GitHub 源代码](https://github.com/moeru-ai/airi)
+      - [在线 Demo](https://airi.moeru.ai)
+  ja-JP:
+    description: |
+      AIRI は Neuro-sama にインスパイアされたオープンソースの AI バーチャルキャラクタープラットフォームです。リアルタイム音声チャット、3D キャラクターレンダリング（VRM/Live2D）、記憶システム、ゲーム連携（Minecraft、Factorio）に対応。20以上の LLM プロバイダーをサポート。
+    variables:
+      - key: AUTH_GOOGLE_CLIENT_ID
+        name: Google OAuth クライアント ID
+        description: Google OAuth 2.0 クライアント ID（ユーザー認証用）。空欄の場合、Google ログインはスキップされます。
+      - key: AUTH_GOOGLE_CLIENT_SECRET
+        name: Google OAuth クライアントシークレット
+        description: Google OAuth 2.0 クライアントシークレット（ユーザー認証用）。空欄の場合、Google ログインはスキップされます。
+      - key: AUTH_GITHUB_CLIENT_ID
+        name: GitHub OAuth クライアント ID
+        description: GitHub OAuth クライアント ID（ユーザー認証用）。空欄の場合、GitHub ログインはスキップされます。
+      - key: AUTH_GITHUB_CLIENT_SECRET
+        name: GitHub OAuth クライアントシークレット
+        description: GitHub OAuth クライアントシークレット（ユーザー認証用）。空欄の場合、GitHub ログインはスキップされます。
+    readme: |
+      # AIRI
+
+      [AIRI](https://github.com/moeru-ai/airi) は [Moeru AI](https://github.com/moeru-ai) が開発したオープンソースの AI バーチャルキャラクタープラットフォームです。Neuro-sama にインスパイアされ、リアルタイム音声チャット、3D キャラクターレンダリング、記憶システム、ゲーム連携を備えた AI コンパニオンを構築できます。
+
+      ## サービス構成
+
+      このテンプレートは3つのサービスをデプロイします：
+
+      | サービス | 説明 |
+      |----------|------|
+      | **stage-web** | Vue 3 フロントエンド SPA（VRM/Live2D 3D キャラクターレンダリング） |
+      | **server** | Hono API サーバー（認証・記憶ストレージ） |
+      | **db** | PostgreSQL + vchord ベクトル拡張（記憶検索用） |
+
+      ## クイックスタート
+
+      1. デプロイ後、**stage-web** のサービス URL をブラウザで開く
+      2. Web UI の設定でお好みの LLM プロバイダーの API キーを入力
+      3. AI キャラクターとのチャットを開始
+
+      ## OAuth 設定（オプション）
+
+      ユーザーログインを有効にするには、OAuth アプリを作成して認証情報を入力してください：
+
+      - **Google**：[Google Cloud Console](https://console.cloud.google.com/apis/credentials) — リダイレクト URI を `<server-url>/api/auth/callback/google` に設定
+      - **GitHub**：[GitHub Developer Settings](https://github.com/settings/developers) — コールバック URL を `<server-url>/api/auth/callback/github` に設定
+
+      ## 対応 LLM プロバイダー
+
+      OpenAI、Anthropic (Claude)、Google Gemini、OpenRouter、Ollama、vLLM など20以上のプロバイダーに対応。Web UI で設定可能。
+
+      ## リンク
+
+      - [GitHub リポジトリ](https://github.com/moeru-ai/airi)
+      - [ライブデモ](https://airi.moeru.ai)
+  es-ES:
+    description: |
+      AIRI es una plataforma de personajes virtuales de IA de código abierto inspirada en Neuro-sama. Incluye chat de voz en tiempo real, renderizado de personajes 3D (VRM/Live2D), sistema de memoria e integración con juegos (Minecraft, Factorio). Compatible con más de 20 proveedores de LLM.
+    variables:
+      - key: AUTH_GOOGLE_CLIENT_ID
+        name: Google OAuth Client ID
+        description: Google OAuth 2.0 Client ID para autenticación de usuarios. Dejar vacío para omitir el inicio de sesión con Google.
+      - key: AUTH_GOOGLE_CLIENT_SECRET
+        name: Google OAuth Client Secret
+        description: Google OAuth 2.0 Client Secret para autenticación de usuarios. Dejar vacío para omitir el inicio de sesión con Google.
+      - key: AUTH_GITHUB_CLIENT_ID
+        name: GitHub OAuth Client ID
+        description: GitHub OAuth Client ID para autenticación de usuarios. Dejar vacío para omitir el inicio de sesión con GitHub.
+      - key: AUTH_GITHUB_CLIENT_SECRET
+        name: GitHub OAuth Client Secret
+        description: GitHub OAuth Client Secret para autenticación de usuarios. Dejar vacío para omitir el inicio de sesión con GitHub.
+    readme: |
+      # AIRI
+
+      [AIRI](https://github.com/moeru-ai/airi) es una plataforma de personajes virtuales de IA de código abierto desarrollada por [Moeru AI](https://github.com/moeru-ai), inspirada en Neuro-sama. Crea tu propio compañero de IA con chat de voz en tiempo real, renderizado de personajes 3D, sistema de memoria e integración con juegos.
+
+      ## Servicios
+
+      Esta plantilla despliega tres servicios:
+
+      | Servicio | Descripción |
+      |----------|-------------|
+      | **stage-web** | Frontend SPA Vue 3 con renderizado de personajes 3D (VRM/Live2D) |
+      | **server** | Servidor API Hono para autenticación y almacenamiento de memoria |
+      | **db** | PostgreSQL con extensión vectorial vchord para búsqueda de memoria |
+
+      ## Inicio Rápido
+
+      1. Después del despliegue, abre la URL del servicio **stage-web** en tu navegador
+      2. Configura la clave API de tu proveedor de LLM preferido en la interfaz web
+      3. Comienza a chatear con tu personaje de IA
+
+      ## Configuración OAuth (Opcional)
+
+      Para habilitar el inicio de sesión, crea aplicaciones OAuth e ingresa las credenciales:
+
+      - **Google**: [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — URI de redirección: `<server-url>/api/auth/callback/google`
+      - **GitHub**: [GitHub Developer Settings](https://github.com/settings/developers) — URL de callback: `<server-url>/api/auth/callback/github`
+
+      ## Proveedores de LLM Compatibles
+
+      OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, vLLM y más de 20 proveedores adicionales. Configurable desde la interfaz web.
+
+      ## Enlaces
+
+      - [Repositorio en GitHub](https://github.com/moeru-ai/airi)
+      - [Demo en vivo](https://airi.moeru.ai)
+  id-ID:
+    description: |
+      AIRI adalah platform karakter virtual AI open-source yang terinspirasi dari Neuro-sama. Mendukung obrolan suara real-time, rendering karakter 3D (VRM/Live2D), sistem memori, dan integrasi game (Minecraft, Factorio). Mendukung 20+ penyedia LLM.
+    variables:
+      - key: AUTH_GOOGLE_CLIENT_ID
+        name: Google OAuth Client ID
+        description: Google OAuth 2.0 Client ID untuk autentikasi pengguna. Kosongkan untuk melewati login Google.
+      - key: AUTH_GOOGLE_CLIENT_SECRET
+        name: Google OAuth Client Secret
+        description: Google OAuth 2.0 Client Secret untuk autentikasi pengguna. Kosongkan untuk melewati login Google.
+      - key: AUTH_GITHUB_CLIENT_ID
+        name: GitHub OAuth Client ID
+        description: GitHub OAuth Client ID untuk autentikasi pengguna. Kosongkan untuk melewati login GitHub.
+      - key: AUTH_GITHUB_CLIENT_SECRET
+        name: GitHub OAuth Client Secret
+        description: GitHub OAuth Client Secret untuk autentikasi pengguna. Kosongkan untuk melewati login GitHub.
+    readme: |
+      # AIRI
+
+      [AIRI](https://github.com/moeru-ai/airi) adalah platform karakter virtual AI open-source yang dikembangkan oleh [Moeru AI](https://github.com/moeru-ai), terinspirasi dari Neuro-sama. Bangun pendamping AI Anda sendiri dengan obrolan suara real-time, rendering karakter 3D, sistem memori, dan integrasi game.
+
+      ## Layanan
+
+      Template ini mendeploy tiga layanan:
+
+      | Layanan | Deskripsi |
+      |---------|-----------|
+      | **stage-web** | Frontend SPA Vue 3 dengan rendering karakter 3D (VRM/Live2D) |
+      | **server** | Server API Hono untuk autentikasi dan penyimpanan memori |
+      | **db** | PostgreSQL dengan ekstensi vektor vchord untuk pencarian memori |
+
+      ## Mulai Cepat
+
+      1. Setelah deployment, buka URL layanan **stage-web** di browser Anda
+      2. Konfigurasikan kunci API penyedia LLM pilihan Anda di pengaturan antarmuka web
+      3. Mulai mengobrol dengan karakter AI Anda
+
+      ## Pengaturan OAuth (Opsional)
+
+      Untuk mengaktifkan login pengguna, buat aplikasi OAuth dan masukkan kredensial:
+
+      - **Google**: [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — atur URI redirect ke `<server-url>/api/auth/callback/google`
+      - **GitHub**: [GitHub Developer Settings](https://github.com/settings/developers) — atur URL callback ke `<server-url>/api/auth/callback/github`
+
+      ## Penyedia LLM yang Didukung
+
+      OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Ollama, vLLM, dan 20+ penyedia lainnya. Dapat dikonfigurasi melalui antarmuka web.
+
+      ## Tautan
+
+      - [Repositori GitHub](https://github.com/moeru-ai/airi)
+      - [Demo Langsung](https://airi.moeru.ai)

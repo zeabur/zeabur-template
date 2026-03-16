@@ -1,0 +1,374 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: ZeroClaw
+spec:
+    description: |
+      ZeroClaw 🦀 is a lightweight, Rust-based AI assistant infrastructure. Zero overhead, zero compromise — runs on minimal hardware with <5MB RAM, sub-10ms cold starts, and single-binary deployment. Connects to 29+ AI providers and 10+ messaging platforms.
+    icon: https://raw.githubusercontent.com/openagen/zeroclaw/main/zeroclaw.png
+    coverImage: https://raw.githubusercontent.com/openagen/zeroclaw/main/zeroclaw.png
+    variables:
+      - key: PUBLIC_DOMAIN
+        type: DOMAIN
+        name: Domain
+        description: What domain do you want to bind ZeroClaw to?
+      - key: ZEABUR_AI_HUB_API_KEY
+        type: AI_HUB_KEY
+        name: Zeabur AI Hub API Key (Recommended)
+        description: Your Zeabur AI Hub API key for using GPT/Claude/Gemini/DeepSeek via AI Hub (optional, can be configured later)
+    tags:
+      - AI
+      - Assistant
+      - Chatbot
+      - Rust
+      - Telegram
+      - Discord
+    resourceRequirement:
+      minConfig:
+        cpu: 0.25
+        ram: 0.25
+      recommendedConfig:
+        cpu: 0.5
+        ram: 0.5
+    readme: |
+      # ZeroClaw 🦀
+      ZeroClaw is a lightweight, Rust-based AI assistant infrastructure. Zero overhead. Zero compromise. 100% Rust. 100% Agnostic.
+
+      - **Ultra-lightweight**: <5MB RAM, sub-10ms cold starts
+      - **29+ AI providers**: OpenRouter, OpenAI, Anthropic, Gemini, Groq, Ollama, and more
+      - **10+ messaging platforms**: Telegram, Discord, Slack, WhatsApp, Matrix, LINE, DingTalk, Lark, and more
+      - **Built-in memory**: SQLite with hybrid vector + BM25 search (no external vector DB needed)
+      - **Single binary**: No runtime dependencies
+
+      ## Usage
+      1. **Pair your device**: After deployment, open your bound domain in a browser. The Web Dashboard will show a pairing dialog — enter the 6-digit code from the **Logs** tab in Zeabur dashboard. Save the returned bearer token — it is only shown once.
+      2. **Start chatting**: If you entered the AI Hub API Key during deployment, your AI model is already configured. Open the Web Dashboard and send a message to verify it works. You can also use the API: `POST /webhook` with `{"message": "hello"}`.
+      3. **Change model or provider** (optional): To switch models, change `ZEROCLAW_MODEL` in the **Variables** tab (e.g., `gpt-4o-mini`, `deepseek-v3`). To use a different provider, also change `PROVIDER` and `API_KEY` (e.g., `PROVIDER=openrouter` and `API_KEY=sk-or-...`). Restart the service after changes.
+
+      ## Connect Telegram (Optional)
+      1. Create a bot via [@BotFather](https://t.me/BotFather) and copy the bot token
+      2. Open the Web Dashboard, go to **Settings** and add the following to your config:
+         ```toml
+         [channels_config.telegram]
+         bot_token = "123456:your-bot-token"
+         allowed_users = []
+         ```
+         (`allowed_users = []` enables the one-time bind flow; use `["*"]` to allow everyone)
+      3. Restart the service from Zeabur dashboard
+      4. Check the **Logs** tab for a one-time Telegram bind code, then send `/bind <code>` to your bot in Telegram
+
+      For Discord, Slack, WhatsApp, Matrix, LINE, and other channels, see the [Channels Reference](https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/channels-reference.md).
+
+      ## Known Issue: Saving Config via Web Dashboard
+      When editing config in the Web Dashboard Settings page, sensitive fields (e.g. `api_keys`) are masked as `"***MASKED***"`. Saving without fixing these will cause errors. Workaround:
+      1. Change `api_keys = "***MASKED***"` to `api_keys = []` (it must be an array, not a string)
+      2. You may leave `api_key = "***MASKED***"` as-is — the environment variable overrides it
+
+      This is a known upstream issue and will be fixed in a future ZeroClaw release.
+
+      ## Environment Variables
+      | Variable | Description | Default |
+      |----------|-------------|---------|
+      | `PROVIDER` | AI provider endpoint | `custom:https://hnd1.aihub.zeabur.ai/v1` (AI Hub) |
+      | `API_KEY` | API key for the provider | AI Hub key (auto-filled) |
+      | `ZEROCLAW_MODEL` | Model override (e.g., `gpt-4o-mini`) | provider default |
+
+      ## Updating
+      The template uses the `latest` image tag. To update ZeroClaw to the newest version, simply restart the service from the Zeabur dashboard — it will pull the latest image automatically. All data in `/zeroclaw-data` is preserved across restarts.
+
+      ## Data Persistence
+      All data is persisted under `/zeroclaw-data`, including configuration, memory, and workspace files.
+
+      ## Resources
+      - [GitHub Repository](https://github.com/openagen/zeroclaw)
+      - [Channels Reference](https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/channels-reference.md)
+
+    services:
+      - name: zeroclaw
+        icon: https://raw.githubusercontent.com/openagen/zeroclaw/main/zeroclaw.png
+        template: PREBUILT_V2
+        domainKey: PUBLIC_DOMAIN
+        spec:
+          source:
+            image: ghcr.io/zeroclaw-labs/zeroclaw:latest
+          ports:
+            - id: web
+              port: 42617
+              type: HTTP
+          volumes:
+            - id: data
+              dir: /zeroclaw-data
+          instructions:
+            - type: URL
+              title: Web Dashboard
+              content: ${ZEABUR_WEB_URL}
+          env:
+            API_KEY:
+              default: ${ZEABUR_AI_HUB_API_KEY}
+            PROVIDER:
+              default: "custom:https://hnd1.aihub.zeabur.ai/v1"
+            ZEROCLAW_MODEL:
+              default: "claude-sonnet-4-5"
+            ZEROCLAW_GATEWAY_HOST:
+              default: "0.0.0.0"
+              readonly: true
+            ZEROCLAW_ALLOW_PUBLIC_BIND:
+              default: "true"
+              readonly: true
+
+localization:
+  zh-TW:
+    description: |
+      ZeroClaw 🦀 是一個輕量級的 Rust AI 助手基礎設施。零開銷、零妥協——僅需 <5MB 記憶體、亞 10 毫秒冷啟動、單一執行檔部署。支援 29+ AI 供應商和 10+ 訊息平台。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: 網域
+        description: 您想將 ZeroClaw 綁定到哪個網域？
+      - key: ZEABUR_AI_HUB_API_KEY
+        name: Zeabur AI Hub API 金鑰（推薦）
+        description: 您的 Zeabur AI Hub API 金鑰，可透過 AI Hub 使用 GPT/Claude/Gemini/DeepSeek（選填，可稍後設定）
+    readme: |
+      # ZeroClaw 🦀
+      ZeroClaw 是一個輕量級的 Rust AI 助手基礎設施。零開銷、零妥協。100% Rust、100% 不受限。
+
+      - **超輕量**：<5MB 記憶體，亞 10 毫秒冷啟動
+      - **29+ AI 供應商**：OpenRouter、OpenAI、Anthropic、Gemini、Groq、Ollama 等
+      - **10+ 訊息平台**：Telegram、Discord、Slack、WhatsApp、Matrix、LINE 等
+      - **內建記憶體**：SQLite 混合向量 + BM25 搜尋（無需外部向量資料庫）
+
+      ## 使用方式
+      1. **配對裝置**：部署後，在瀏覽器打開綁定的網域。Web Dashboard 會顯示配對對話框——輸入 Zeabur 控制台「日誌」分頁中的 6 位配對碼。請妥善保存回傳的 bearer token，只會顯示一次。
+      2. **開始對話**：如果部署時已輸入 AI Hub API 金鑰，AI 模型已自動設定完成。打開 Web Dashboard 發送訊息確認正常運作。也可使用 API：`POST /webhook` 帶上 `{"message": "hello"}`。
+      3. **切換模型或供應商**（選擇性）：要換模型，在「變數」分頁修改 `ZEROCLAW_MODEL`（如 `gpt-4o-mini`、`deepseek-v3`）。要換供應商，同時修改 `PROVIDER` 和 `API_KEY`（如 `PROVIDER=openrouter`、`API_KEY=sk-or-...`）。修改後重啟服務。
+
+      ## 連接 Telegram（選擇性）
+      1. 透過 [@BotFather](https://t.me/BotFather) 建立 bot 並複製 bot token
+      2. 打開 Web Dashboard，前往 **Settings** 並加入以下設定：
+         ```toml
+         [channels_config.telegram]
+         bot_token = "123456:your-bot-token"
+         allowed_users = []
+         ```
+         （`allowed_users = []` 會啟用一次性綁定流程；使用 `["*"]` 允許所有人）
+      3. 在 Zeabur 控制台重啟服務
+      4. 查看「日誌」分頁中的一次性 Telegram 綁定碼，然後在 Telegram 對 bot 發送 `/bind <code>`
+
+      Discord、Slack、WhatsApp、Matrix、LINE 等其他頻道請參考 [Channels Reference](https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/channels-reference.md)。
+
+      ## 已知問題：透過 Web Dashboard 儲存設定
+      在 Web Dashboard Settings 頁面編輯設定時，敏感欄位（如 `api_keys`）會被遮蔽為 `"***MASKED***"`。未修正直接儲存會導致錯誤。解決方法：
+      1. 將 `api_keys = "***MASKED***"` 改為 `api_keys = []`（必須是陣列，不是字串）
+      2. `api_key = "***MASKED***"` 可以保持不變——環境變數會覆蓋它
+
+      此為上游已知問題，將在未來的 ZeroClaw 版本中修復。
+
+      ## 版本更新
+      模板使用 `latest` 映像標籤。要更新 ZeroClaw 到最新版本，只需在 Zeabur 控制台重啟服務——會自動拉取最新映像。`/zeroclaw-data` 中的所有資料在重啟後保留。
+
+      ## 資料持久化
+      所有資料（設定、記憶、工作區檔案）皆持久化於 `/zeroclaw-data`。
+
+  zh-CN:
+    description: |
+      ZeroClaw 🦀 是一个轻量级的 Rust AI 助手基础设施。零开销、零妥协——仅需 <5MB 内存、亚 10 毫秒冷启动、单一可执行文件部署。支持 29+ AI 供应商和 10+ 消息平台。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: 域名
+        description: 您想将 ZeroClaw 绑定到哪个域名？
+      - key: ZEABUR_AI_HUB_API_KEY
+        name: Zeabur AI Hub API 密钥（推荐）
+        description: 您的 Zeabur AI Hub API 密钥，可通过 AI Hub 使用 GPT/Claude/Gemini/DeepSeek（选填，可稍后设置）
+    readme: |
+      # ZeroClaw 🦀
+      ZeroClaw 是一个轻量级的 Rust AI 助手基础设施。零开销、零妥协。100% Rust、100% 不受限。
+
+      - **超轻量**：<5MB 内存，亚 10 毫秒冷启动
+      - **29+ AI 供应商**：OpenRouter、OpenAI、Anthropic、Gemini、Groq、Ollama 等
+      - **10+ 消息平台**：Telegram、Discord、Slack、WhatsApp、Matrix、LINE 等
+      - **内建记忆**：SQLite 混合向量 + BM25 搜索（无需外部向量数据库）
+
+      ## 使用方式
+      1. **配对设备**：部署后，在浏览器打开绑定的域名。Web Dashboard 会显示配对对话框——输入 Zeabur 控制台「日志」标签中的 6 位配对码。请妥善保存返回的 bearer token，只会显示一次。
+      2. **开始对话**：如果部署时已输入 AI Hub API 密钥，AI 模型已自动配置完成。打开 Web Dashboard 发送消息确认正常运作。也可使用 API：`POST /webhook` 带上 `{"message": "hello"}`。
+      3. **切换模型或供应商**（可选）：要换模型，在「变量」标签修改 `ZEROCLAW_MODEL`（如 `gpt-4o-mini`、`deepseek-v3`）。要换供应商，同时修改 `PROVIDER` 和 `API_KEY`（如 `PROVIDER=openrouter`、`API_KEY=sk-or-...`）。修改后重启服务。
+
+      ## 连接 Telegram（可选）
+      1. 通过 [@BotFather](https://t.me/BotFather) 创建 bot 并复制 bot token
+      2. 打开 Web Dashboard，前往 **Settings** 并添加以下配置：
+         ```toml
+         [channels_config.telegram]
+         bot_token = "123456:your-bot-token"
+         allowed_users = []
+         ```
+         （`allowed_users = []` 会启用一次性绑定流程；使用 `["*"]` 允许所有人）
+      3. 在 Zeabur 控制台重启服务
+      4. 查看「日志」标签中的一次性 Telegram 绑定码，然后在 Telegram 对 bot 发送 `/bind <code>`
+
+      Discord、Slack、WhatsApp、Matrix、LINE 等其他频道请参考 [Channels Reference](https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/channels-reference.md)。
+
+      ## 已知问题：通过 Web Dashboard 保存配置
+      在 Web Dashboard Settings 页面编辑配置时，敏感字段（如 `api_keys`）会被遮蔽为 `"***MASKED***"`。未修正直接保存会导致错误。解决方法：
+      1. 将 `api_keys = "***MASKED***"` 改为 `api_keys = []`（必须是数组，不是字符串）
+      2. `api_key = "***MASKED***"` 可以保持不变——环境变量会覆盖它
+
+      此为上游已知问题，将在未来的 ZeroClaw 版本中修复。
+
+      ## 版本更新
+      模板使用 `latest` 镜像标签。要更新 ZeroClaw 到最新版本，只需在 Zeabur 控制台重启服务——会自动拉取最新镜像。`/zeroclaw-data` 中的所有数据在重启后保留。
+
+      ## 数据持久化
+      所有数据（配置、记忆、工作区文件）均持久化于 `/zeroclaw-data`。
+
+  ja-JP:
+    description: |
+      ZeroClaw 🦀 は軽量な Rust ベースの AI アシスタント基盤です。ゼロオーバーヘッド、ゼロ妥協——5MB 未満のメモリ、10ms 未満のコールドスタート、シングルバイナリデプロイ。29 以上の AI プロバイダーと 10 以上のメッセージングプラットフォームに対応。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: ドメイン
+        description: ZeroClaw をバインドするドメインは？
+      - key: ZEABUR_AI_HUB_API_KEY
+        name: Zeabur AI Hub API キー（推奨）
+        description: Zeabur AI Hub API キー。AI Hub 経由で GPT/Claude/Gemini/DeepSeek を利用可能（任意、後から設定可）
+    readme: |
+      # ZeroClaw 🦀
+      ZeroClaw は軽量な Rust ベースの AI アシスタント基盤です。ゼロオーバーヘッド。ゼロ妥協。100% Rust。100% アグノスティック。
+
+      - **超軽量**：5MB 未満のメモリ、10ms 未満のコールドスタート
+      - **29 以上の AI プロバイダー**：OpenRouter、OpenAI、Anthropic、Gemini、Groq、Ollama など
+      - **10 以上のメッセージングプラットフォーム**：Telegram、Discord、Slack、WhatsApp、Matrix、LINE など
+      - **組み込みメモリ**：SQLite ハイブリッドベクター + BM25 検索（外部ベクター DB 不要）
+
+      ## 使い方
+      1. **デバイスをペアリング**：デプロイ後、バインドしたドメインをブラウザで開きます。Web Dashboard にペアリングダイアログが表示されるので、Zeabur ダッシュボードの「ログ」タブにある 6 桁コードを入力。返された bearer token を保存してください。一度しか表示されません。
+      2. **チャットを開始**：デプロイ時に AI Hub API キーを入力済みなら、AI モデルは設定済みです。Web Dashboard を開いてメッセージを送信し、正常に動作することを確認。API も使用可能：`POST /webhook` に `{"message": "hello"}` を送信。
+      3. **モデルやプロバイダーを変更**（オプション）：モデルを変更するには「変数」タブで `ZEROCLAW_MODEL` を変更（例：`gpt-4o-mini`、`deepseek-v3`）。プロバイダーを変更するには `PROVIDER` と `API_KEY` も変更（例：`PROVIDER=openrouter`、`API_KEY=sk-or-...`）。変更後サービスを再起動。
+
+      ## Telegram を接続（オプション）
+      1. [@BotFather](https://t.me/BotFather) で bot を作成し、bot token をコピー
+      2. Web Dashboard を開き、**Settings** で以下の設定を追加：
+         ```toml
+         [channels_config.telegram]
+         bot_token = "123456:your-bot-token"
+         allowed_users = []
+         ```
+         （`allowed_users = []` でワンタイムバインドフローが有効に。`["*"]` で全員許可）
+      3. Zeabur ダッシュボードからサービスを再起動
+      4. 「ログ」タブでワンタイム Telegram バインドコードを確認し、bot に `/bind <code>` を送信
+
+      Discord、Slack、WhatsApp、Matrix、LINE などの他チャネルは [Channels Reference](https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/channels-reference.md) を参照。
+
+      ## 既知の問題：Web Dashboard からの設定保存
+      Web Dashboard の Settings ページで設定を編集する際、機密フィールド（例：`api_keys`）は `"***MASKED***"` としてマスクされます。修正せずに保存するとエラーが発生します。回避策：
+      1. `api_keys = "***MASKED***"` を `api_keys = []` に変更（文字列ではなく配列にする必要があります）
+      2. `api_key = "***MASKED***"` はそのままで OK — 環境変数が上書きします
+
+      これは上流の既知の問題であり、今後の ZeroClaw リリースで修正される予定です。
+
+      ## アップデート
+      テンプレートは `latest` イメージタグを使用。ZeroClaw を最新版に更新するには、Zeabur ダッシュボードからサービスを再起動するだけで、最新イメージが自動的にプルされます。`/zeroclaw-data` のデータは再起動後も保持されます。
+
+      ## データ永続化
+      すべてのデータ（設定、メモリ、ワークスペースファイル）は `/zeroclaw-data` に永続化されます。
+
+  es-ES:
+    description: |
+      ZeroClaw 🦀 es una infraestructura de asistente de IA ligera basada en Rust. Cero sobrecarga, cero compromisos: funciona con <5MB de RAM, arranques en frío de menos de 10ms y despliegue de un solo binario. Compatible con más de 29 proveedores de IA y más de 10 plataformas de mensajería.
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Dominio
+        description: "¿A qué dominio desea vincular ZeroClaw?"
+      - key: ZEABUR_AI_HUB_API_KEY
+        name: Clave API de Zeabur AI Hub (Recomendado)
+        description: Su clave API de Zeabur AI Hub para usar GPT/Claude/Gemini/DeepSeek a través de AI Hub (opcional, se puede configurar después)
+    readme: |
+      # ZeroClaw 🦀
+      ZeroClaw es una infraestructura de asistente de IA ligera basada en Rust. Cero sobrecarga. Cero compromisos. 100% Rust. 100% Agnóstico.
+
+      - **Ultra ligero**: <5MB de RAM, arranques en frío de menos de 10ms
+      - **Más de 29 proveedores de IA**: OpenRouter, OpenAI, Anthropic, Gemini, Groq, Ollama y más
+      - **Más de 10 plataformas de mensajería**: Telegram, Discord, Slack, WhatsApp, Matrix, LINE y más
+      - **Memoria integrada**: SQLite con búsqueda híbrida vectorial + BM25 (sin base de datos vectorial externa)
+
+      ## Uso
+      1. **Emparejar dispositivo**: Después del despliegue, abra su dominio vinculado en un navegador. El Web Dashboard mostrará un diálogo de emparejamiento — ingrese el código de 6 dígitos de la pestaña "Logs" del panel de Zeabur. Guarde el bearer token devuelto — solo se muestra una vez.
+      2. **Comenzar a chatear**: Si ingresó la clave API de AI Hub durante el despliegue, el modelo de IA ya está configurado. Abra el Web Dashboard y envíe un mensaje para verificar que funciona. También puede usar la API: `POST /webhook` con `{"message": "hello"}`.
+      3. **Cambiar modelo o proveedor** (opcional): Para cambiar el modelo, modifique `ZEROCLAW_MODEL` en la pestaña de variables (ej. `gpt-4o-mini`, `deepseek-v3`). Para cambiar de proveedor, modifique también `PROVIDER` y `API_KEY` (ej. `PROVIDER=openrouter`, `API_KEY=sk-or-...`). Reinicie el servicio después de los cambios.
+
+      ## Conectar Telegram (Opcional)
+      1. Cree un bot en [@BotFather](https://t.me/BotFather) y copie el token del bot
+      2. Abra el Web Dashboard, vaya a **Settings** y agregue la siguiente configuración:
+         ```toml
+         [channels_config.telegram]
+         bot_token = "123456:your-bot-token"
+         allowed_users = []
+         ```
+         (`allowed_users = []` habilita el flujo de vinculación única; use `["*"]` para permitir a todos)
+      3. Reinicie el servicio desde el panel de Zeabur
+      4. Busque el código de vinculación de Telegram en la pestaña "Logs", luego envíe `/bind <code>` a su bot en Telegram
+
+      Para Discord, Slack, WhatsApp, Matrix, LINE y otros canales, consulte [Channels Reference](https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/channels-reference.md).
+
+      ## Problema conocido: Guardar configuración desde Web Dashboard
+      Al editar la configuración en la página Settings del Web Dashboard, los campos sensibles (ej. `api_keys`) se enmascaran como `"***MASKED***"`. Guardar sin corregirlos causará errores. Solución:
+      1. Cambie `api_keys = "***MASKED***"` a `api_keys = []` (debe ser un array, no una cadena)
+      2. Puede dejar `api_key = "***MASKED***"` como está — la variable de entorno lo sobrescribe
+
+      Este es un problema conocido del proyecto y se corregirá en una futura versión de ZeroClaw.
+
+      ## Actualización
+      La plantilla usa la etiqueta de imagen `latest`. Para actualizar ZeroClaw a la versión más reciente, simplemente reinicie el servicio desde el panel de Zeabur — se descargará la imagen más reciente automáticamente. Todos los datos en `/zeroclaw-data` se conservan entre reinicios.
+
+      ## Persistencia de datos
+      Todos los datos (configuración, memoria, archivos de trabajo) se persisten en `/zeroclaw-data`.
+
+  id-ID:
+    description: |
+      ZeroClaw 🦀 adalah infrastruktur asisten AI ringan berbasis Rust. Tanpa overhead, tanpa kompromi — berjalan dengan <5MB RAM, cold start di bawah 10ms, dan deployment binary tunggal. Mendukung 29+ penyedia AI dan 10+ platform pesan.
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Domain
+        description: Domain mana yang ingin Anda gunakan untuk ZeroClaw?
+      - key: ZEABUR_AI_HUB_API_KEY
+        name: Kunci API Zeabur AI Hub (Direkomendasikan)
+        description: Kunci API Zeabur AI Hub Anda untuk menggunakan GPT/Claude/Gemini/DeepSeek melalui AI Hub (opsional, dapat dikonfigurasi nanti)
+    readme: |
+      # ZeroClaw 🦀
+      ZeroClaw adalah infrastruktur asisten AI ringan berbasis Rust. Tanpa overhead. Tanpa kompromi. 100% Rust. 100% Agnostik.
+
+      - **Ultra ringan**: <5MB RAM, cold start di bawah 10ms
+      - **29+ penyedia AI**: OpenRouter, OpenAI, Anthropic, Gemini, Groq, Ollama, dan lainnya
+      - **10+ platform pesan**: Telegram, Discord, Slack, WhatsApp, Matrix, LINE, dan lainnya
+      - **Memori bawaan**: SQLite dengan pencarian hibrida vektor + BM25 (tanpa database vektor eksternal)
+
+      ## Penggunaan
+      1. **Pasangkan perangkat**: Setelah deployment, buka domain yang telah diikat di browser. Web Dashboard akan menampilkan dialog pairing — masukkan kode 6 digit dari tab "Logs" di dashboard Zeabur. Simpan bearer token yang dikembalikan — hanya ditampilkan sekali.
+      2. **Mulai chat**: Jika Anda memasukkan kunci API AI Hub saat deployment, model AI sudah dikonfigurasi. Buka Web Dashboard dan kirim pesan untuk memverifikasi berfungsi. Anda juga dapat menggunakan API: `POST /webhook` dengan `{"message": "hello"}`.
+      3. **Ganti model atau penyedia** (opsional): Untuk mengganti model, ubah `ZEROCLAW_MODEL` di tab variabel (contoh: `gpt-4o-mini`, `deepseek-v3`). Untuk mengganti penyedia, ubah juga `PROVIDER` dan `API_KEY` (contoh: `PROVIDER=openrouter`, `API_KEY=sk-or-...`). Restart layanan setelah perubahan.
+
+      ## Hubungkan Telegram (Opsional)
+      1. Buat bot melalui [@BotFather](https://t.me/BotFather) dan salin bot token
+      2. Buka Web Dashboard, buka **Settings** dan tambahkan konfigurasi berikut:
+         ```toml
+         [channels_config.telegram]
+         bot_token = "123456:your-bot-token"
+         allowed_users = []
+         ```
+         (`allowed_users = []` mengaktifkan alur bind satu kali; gunakan `["*"]` untuk mengizinkan semua orang)
+      3. Restart layanan dari dashboard Zeabur
+      4. Periksa tab "Logs" untuk kode bind Telegram satu kali, lalu kirim `/bind <code>` ke bot Anda di Telegram
+
+      Untuk Discord, Slack, WhatsApp, Matrix, LINE, dan channel lainnya, lihat [Channels Reference](https://github.com/zeroclaw-labs/zeroclaw/blob/main/docs/channels-reference.md).
+
+      ## Masalah Diketahui: Menyimpan Konfigurasi via Web Dashboard
+      Saat mengedit konfigurasi di halaman Settings Web Dashboard, field sensitif (misalnya `api_keys`) disamarkan sebagai `"***MASKED***"`. Menyimpan tanpa memperbaikinya akan menyebabkan error. Solusi:
+      1. Ubah `api_keys = "***MASKED***"` menjadi `api_keys = []` (harus berupa array, bukan string)
+      2. `api_key = "***MASKED***"` bisa dibiarkan apa adanya — variabel environment akan menimpanya
+
+      Ini adalah masalah upstream yang diketahui dan akan diperbaiki di rilis ZeroClaw mendatang.
+
+      ## Pembaruan
+      Template menggunakan tag image `latest`. Untuk memperbarui ZeroClaw ke versi terbaru, cukup restart layanan dari dashboard Zeabur — image terbaru akan diunduh secara otomatis. Semua data di `/zeroclaw-data` tetap tersimpan setelah restart.
+
+      ## Persistensi Data
+      Semua data (konfigurasi, memori, file workspace) disimpan secara persisten di `/zeroclaw-data`.
