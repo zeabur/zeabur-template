@@ -6,8 +6,8 @@ metadata:
 spec:
   description: |
     An orchestration platform for coordinating multiple AI agents to run autonomous businesses. Manages agent teams, assigns goals, tracks work, and monitors costs from a central dashboard.
-  icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/favicon.svg
-  coverImage: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/android-chrome-512x512.png
+  icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/android-chrome-192x192.png
+  coverImage: https://raw.githubusercontent.com/paperclipai/paperclip/master/doc/assets/header.png
   tags:
     - AI
     - Agent
@@ -19,7 +19,7 @@ spec:
   readme: |
     # Paperclip
 
-    > **Beta:** This template is under active development and may have unexpected issues. For the latest information, see the [official documentation](https://docs.paperclip.ing/start/what-is-paperclip).
+    > **Beta:** Paperclip is in early development. This template and the software may have unexpected issues.
 
     [Paperclip](https://github.com/paperclipai/paperclip) is an orchestration platform for coordinating multiple AI agents (Claude, Codex, Cursor, OpenClaw, etc.) to run autonomous businesses. It provides a Node.js server with a React UI that manages agent teams, assigns goals, tracks work, and monitors costs from a central dashboard.
 
@@ -39,12 +39,12 @@ spec:
 
     ## AI Agent Authentication
 
-    Two options: environment variable or terminal login.
+    Currently only **Terminal login** is supported. Environment variable authentication (OPENAI_API_KEY / ANTHROPIC_API_KEY) is not yet working.
 
-    | Adapter | Environment Variable | Terminal Login |
-    |---------|---------------------|----------------|
-    | Codex | `OPENAI_API_KEY` | `runuser -u node -- codex login --device-auth` |
-    | Claude Code | `ANTHROPIC_API_KEY` | `runuser -u node -- claude login` |
+    | Tool | Terminal Login |
+    |------|----------------|
+    | Codex | runuser -u node -- codex login --device-auth |
+    | Claude Code | runuser -u node -- claude login |
 
     ### Notes
 
@@ -68,6 +68,11 @@ spec:
     - Server runs as `node` user via `runuser` (required for Claude Code CLI)
     - Single persistent volume at `/home/node/`
     - Pre-installed CLI tools: `claude-code`, `codex`, `opencode-ai`
+
+    ## Links
+
+    - [Documentation](https://docs.paperclip.ing/start/what-is-paperclip)
+    - [GitHub](https://github.com/paperclipai/paperclip)
   services:
     - name: postgresql
       icon: https://cdn.zeabur.com/marketplace/postgresql.svg
@@ -103,14 +108,14 @@ spec:
             expose: true
 
     - name: paperclip
-      icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/favicon.svg
+      icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/android-chrome-192x192.png
       template: PREBUILT_V2
       domainKey: PUBLIC_DOMAIN
       dependencies:
         - postgresql
       spec:
         source:
-          image: zeabur/paperclip:latest
+          image: zeabur/paperclip:v0.3.1
           command:
             - /bin/sh
             - -c
@@ -189,7 +194,7 @@ spec:
               fi
               # Fix permissions and run as node user (required for Claude Code)
               chown -R node:node "$H"
-              exec runuser -u node -- node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
+              exec runuser -u node --preserve-environment -- node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
         env:
           DATABASE_URL:
             default: ${POSTGRES_CONNECTION_STRING}
@@ -209,6 +214,8 @@ spec:
           PAPERCLIP_DEPLOYMENT_EXPOSURE:
             default: private
           PAPERCLIP_PUBLIC_URL:
+            default: ${ZEABUR_WEB_URL}
+          BETTER_AUTH_BASE_URL:
             default: ${ZEABUR_WEB_URL}
 
           BETTER_AUTH_SECRET:
@@ -232,14 +239,14 @@ localization:
     readme: |
       # Paperclip
 
-      > **測試版：** 此模板仍在積極開發中，可能會有無法預期的問題。最新資訊請參閱[官方文件](https://docs.paperclip.ing/start/what-is-paperclip)。
+      > **測試版：** Paperclip 仍處於早期開發階段。此模板和軟體可能會有無法預期的問題。
 
       [Paperclip](https://github.com/paperclipai/paperclip) 是一個 AI 多代理協調平台，用於協調多個 AI 代理（Claude、Codex、Cursor、OpenClaw 等）自主運營業務。提供 Node.js 伺服器搭配 React UI，管理代理團隊、分配目標、追蹤工作並監控成本。
 
       ## 開始使用
 
       1. 部署模板並等待服務啟動。
-      2. 開啟 Zeabur **Terminal**（Paperclip 服務）。
+      2. 開啟 Zeabur **指令**（Paperclip 服務）。
       3. 建立第一個管理員帳號：
          ```
          pnpm paperclipai auth bootstrap-ceo
@@ -252,16 +259,16 @@ localization:
 
       ## AI 代理認證
 
-      兩種方式：環境變數或 Terminal 登入。
+      目前僅支援**指令登入**。環境變數認證（OPENAI_API_KEY / ANTHROPIC_API_KEY）尚無法使用。
 
-      | 適配器 | 環境變數 | Terminal 登入 |
-      |--------|---------|--------------|
-      | Codex | `OPENAI_API_KEY` | `runuser -u node -- codex login --device-auth` |
-      | Claude Code | `ANTHROPIC_API_KEY` | `runuser -u node -- claude login` |
+      | 工具 | 指令登入 |
+      |------|--------|
+      | Codex | runuser -u node -- codex login --device-auth |
+      | Claude Code | runuser -u node -- claude login |
 
       ### 注意事項
 
-      - **請務必使用 `runuser -u node --` 前綴**執行 Terminal 中的 CLI 工具。以 root 執行會導致權限問題。
+      - **請務必使用 `runuser -u node --` 前綴**執行指令中的 CLI 工具。以 root 執行會導致權限問題。
       - **Codex 裝置驗證：** 執行登入指令前，請先至 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 開啟「Enable device code authorization for Codex」。
       - **`OPENAI_API_KEY is not set` 警告：** 如果您已透過 `codex login` 驗證，可以安全忽略此警告。
 
@@ -281,6 +288,11 @@ localization:
       - 伺服器透過 `runuser` 以 `node` 使用者身份執行（Claude Code CLI 所需）
       - 單一持久化磁碟掛載於 `/home/node/`
       - 預裝 CLI 工具：`claude-code`、`codex`、`opencode-ai`
+
+      ## 連結
+
+      - [官方文件](https://docs.paperclip.ing/start/what-is-paperclip)
+      - [GitHub](https://github.com/paperclipai/paperclip)
   zh-CN:
     description: |
       AI 多代理协调平台，用于管理多个 AI 代理自主运营业务。提供团队管理、目标分配、工作追踪和成本监控的集中仪表板。
@@ -291,14 +303,14 @@ localization:
     readme: |
       # Paperclip
 
-      > **测试版：** 此模板仍在积极开发中，可能会有无法预期的问题。最新信息请参阅[官方文档](https://docs.paperclip.ing/start/what-is-paperclip)。
+      > **测试版：** Paperclip 仍处于早期开发阶段。此模板和软件可能会有无法预期的问题。
 
       [Paperclip](https://github.com/paperclipai/paperclip) 是一个 AI 多代理协调平台，用于协调多个 AI 代理（Claude、Codex、Cursor、OpenClaw 等）自主运营业务。提供 Node.js 服务器搭配 React UI，管理代理团队、分配目标、追踪工作并监控成本。
 
       ## 开始使用
 
       1. 部署模板并等待服务启动。
-      2. 打开 Zeabur **Terminal**（Paperclip 服务）。
+      2. 打开 Zeabur **命令**（Paperclip 服务）。
       3. 创建第一个管理员账号：
          ```
          pnpm paperclipai auth bootstrap-ceo
@@ -311,16 +323,16 @@ localization:
 
       ## AI 代理认证
 
-      两种方式：环境变量或 Terminal 登录。
+      目前仅支持**命令登录**。环境变量认证（OPENAI_API_KEY / ANTHROPIC_API_KEY）尚无法使用。
 
-      | 适配器 | 环境变量 | Terminal 登录 |
-      |--------|---------|--------------|
-      | Codex | `OPENAI_API_KEY` | `runuser -u node -- codex login --device-auth` |
-      | Claude Code | `ANTHROPIC_API_KEY` | `runuser -u node -- claude login` |
+      | 工具 | 命令登录 |
+      |------|--------|
+      | Codex | runuser -u node -- codex login --device-auth |
+      | Claude Code | runuser -u node -- claude login |
 
       ### 注意事项
 
-      - **请务必使用 `runuser -u node --` 前缀**执行 Terminal 中的 CLI 工具。以 root 执行会导致权限问题。
+      - **请务必使用 `runuser -u node --` 前缀**执行命令中的 CLI 工具。以 root 执行会导致权限问题。
       - **Codex 设备验证：** 执行登录命令前，请先在 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 中启用「Enable device code authorization for Codex」。
       - **`OPENAI_API_KEY is not set` 警告：** 如果您已通过 `codex login` 验证，可以安全忽略此警告。
 
@@ -340,6 +352,11 @@ localization:
       - 服务器通过 `runuser` 以 `node` 用户身份运行（Claude Code CLI 所需）
       - 单一持久化卷挂载于 `/home/node/`
       - 预装 CLI 工具：`claude-code`、`codex`、`opencode-ai`
+
+      ## 链接
+
+      - [官方文档](https://docs.paperclip.ing/start/what-is-paperclip)
+      - [GitHub](https://github.com/paperclipai/paperclip)
   ja-JP:
     description: |
       複数のAIエージェントを協調して自律的なビジネスを運営するためのオーケストレーションプラットフォーム。エージェントチームの管理、目標の割り当て、作業の追跡、コスト監視を一元的なダッシュボードから行えます。
@@ -350,14 +367,14 @@ localization:
     readme: |
       # Paperclip
 
-      > **ベータ版：** このテンプレートは開発中であり、予期しない問題が発生する可能性があります。最新情報は[公式ドキュメント](https://docs.paperclip.ing/start/what-is-paperclip)をご覧ください。
+      > **ベータ版：** Paperclip は初期開発段階です。このテンプレートとソフトウェアには予期しない問題が発生する可能性があります。
 
       [Paperclip](https://github.com/paperclipai/paperclip) は、複数のAIエージェント（Claude、Codex、Cursor、OpenClawなど）を協調して自律的なビジネスを運営するためのオーケストレーションプラットフォームです。Node.jsサーバーとReact UIを提供し、エージェントチームの管理、目標の割り当て、作業の追跡、コストの監視を行います。
 
       ## はじめに
 
       1. テンプレートをデプロイし、サービスの起動を待ちます。
-      2. Zeabur **Terminal**（Paperclipサービス）を開きます。
+      2. Zeabur **ターミナル**（Paperclipサービス）を開きます。
       3. 最初の管理者アカウントを作成します：
          ```
          pnpm paperclipai auth bootstrap-ceo
@@ -370,16 +387,16 @@ localization:
 
       ## AIエージェント認証
 
-      2つの方法：環境変数またはTerminalログイン。
+      現在**ターミナルログイン**のみサポートされています。環境変数認証（OPENAI_API_KEY / ANTHROPIC_API_KEY）はまだ動作しません。
 
-      | アダプター | 環境変数 | Terminalログイン |
-      |-----------|---------|----------------|
-      | Codex | `OPENAI_API_KEY` | `runuser -u node -- codex login --device-auth` |
-      | Claude Code | `ANTHROPIC_API_KEY` | `runuser -u node -- claude login` |
+      | ツール | ターミナルログイン |
+      |--------|----------------|
+      | Codex | runuser -u node -- codex login --device-auth |
+      | Claude Code | runuser -u node -- claude login |
 
       ### 注意事項
 
-      - **Terminalで CLIツールを実行する際は必ず `runuser -u node --` プレフィックスを使用してください。** rootで実行すると権限の問題が発生します。
+      - **ターミナルで CLIツールを実行する際は必ず `runuser -u node --` プレフィックスを使用してください。** rootで実行すると権限の問題が発生します。
       - **Codexデバイス認証：** ログインコマンドを実行する前に、[ChatGPT Security Settings](https://chatgpt.com/settings/security) で「Enable device code authorization for Codex」を有効にしてください。
       - **`OPENAI_API_KEY is not set` 警告：** `codex login` で認証済みの場合、この警告は無視して問題ありません。
 
@@ -399,6 +416,11 @@ localization:
       - サーバーは `runuser` を使用して `node` ユーザーとして実行（Claude Code CLIに必要）
       - `/home/node/` に単一の永続ボリューム
       - プリインストール済みCLIツール：`claude-code`、`codex`、`opencode-ai`
+
+      ## リンク
+
+      - [公式ドキュメント](https://docs.paperclip.ing/start/what-is-paperclip)
+      - [GitHub](https://github.com/paperclipai/paperclip)
   es-ES:
     description: |
       Plataforma de orquestación para coordinar múltiples agentes de IA para operar negocios autónomos. Gestiona equipos de agentes, asigna objetivos, rastrea trabajo y monitorea costos desde un panel centralizado.
@@ -409,7 +431,7 @@ localization:
     readme: |
       # Paperclip
 
-      > **Beta:** Esta plantilla está en desarrollo activo y puede presentar problemas inesperados. Para la información más reciente, consulte la [documentación oficial](https://docs.paperclip.ing/start/what-is-paperclip).
+      > **Beta:** Paperclip está en desarrollo temprano. Esta plantilla y el software pueden presentar problemas inesperados.
 
       [Paperclip](https://github.com/paperclipai/paperclip) es una plataforma de orquestación para coordinar múltiples agentes de IA (Claude, Codex, Cursor, OpenClaw, etc.) para operar negocios autónomos. Proporciona un servidor Node.js con una interfaz React para gestionar equipos de agentes, asignar objetivos, rastrear trabajo y monitorear costos.
 
@@ -429,12 +451,12 @@ localization:
 
       ## Autenticación de agentes IA
 
-      Dos opciones: variable de entorno o inicio de sesión en Terminal.
+      Actualmente solo se admite **login en Terminal**. La autenticación por variables de entorno (OPENAI_API_KEY / ANTHROPIC_API_KEY) aún no funciona.
 
-      | Adaptador | Variable de entorno | Login en Terminal |
-      |-----------|-------------------|------------------|
-      | Codex | `OPENAI_API_KEY` | `runuser -u node -- codex login --device-auth` |
-      | Claude Code | `ANTHROPIC_API_KEY` | `runuser -u node -- claude login` |
+      | Herramienta | Login en Terminal |
+      |-------------|------------------|
+      | Codex | runuser -u node -- codex login --device-auth |
+      | Claude Code | runuser -u node -- claude login |
 
       ### Notas
 
@@ -458,6 +480,11 @@ localization:
       - El servidor se ejecuta como usuario `node` mediante `runuser` (requerido para Claude Code CLI)
       - Un único volumen persistente en `/home/node/`
       - Herramientas CLI preinstaladas: `claude-code`, `codex`, `opencode-ai`
+
+      ## Enlaces
+
+      - [Documentación](https://docs.paperclip.ing/start/what-is-paperclip)
+      - [GitHub](https://github.com/paperclipai/paperclip)
   id-ID:
     description: |
       Platform orkestrasi untuk mengoordinasikan beberapa agen AI untuk menjalankan bisnis otonom. Mengelola tim agen, menetapkan tujuan, melacak pekerjaan, dan memantau biaya dari dasbor terpusat.
@@ -468,7 +495,7 @@ localization:
     readme: |
       # Paperclip
 
-      > **Beta:** Template ini masih dalam pengembangan aktif dan mungkin mengalami masalah yang tidak terduga. Untuk informasi terbaru, lihat [dokumentasi resmi](https://docs.paperclip.ing/start/what-is-paperclip).
+      > **Beta:** Paperclip masih dalam tahap pengembangan awal. Template ini dan perangkat lunaknya mungkin mengalami masalah yang tidak terduga.
 
       [Paperclip](https://github.com/paperclipai/paperclip) adalah platform orkestrasi untuk mengoordinasikan beberapa agen AI (Claude, Codex, Cursor, OpenClaw, dll.) untuk menjalankan bisnis otonom. Menyediakan server Node.js dengan UI React untuk mengelola tim agen, menetapkan tujuan, melacak pekerjaan, dan memantau biaya.
 
@@ -488,12 +515,12 @@ localization:
 
       ## Autentikasi Agen AI
 
-      Dua opsi: variabel lingkungan atau login Terminal.
+      Saat ini hanya **login Terminal** yang didukung. Autentikasi variabel lingkungan (OPENAI_API_KEY / ANTHROPIC_API_KEY) belum berfungsi.
 
-      | Adapter | Variabel Lingkungan | Login Terminal |
-      |---------|-------------------|----------------|
-      | Codex | `OPENAI_API_KEY` | `runuser -u node -- codex login --device-auth` |
-      | Claude Code | `ANTHROPIC_API_KEY` | `runuser -u node -- claude login` |
+      | Alat | Login Terminal |
+      |------|----------------|
+      | Codex | runuser -u node -- codex login --device-auth |
+      | Claude Code | runuser -u node -- claude login |
 
       ### Catatan
 
@@ -517,3 +544,8 @@ localization:
       - Server berjalan sebagai pengguna `node` melalui `runuser` (diperlukan untuk Claude Code CLI)
       - Volume persisten tunggal di `/home/node/`
       - Alat CLI terinstal: `claude-code`, `codex`, `opencode-ai`
+
+      ## Tautan
+
+      - [Dokumentasi](https://docs.paperclip.ing/start/what-is-paperclip)
+      - [GitHub](https://github.com/paperclipai/paperclip)
