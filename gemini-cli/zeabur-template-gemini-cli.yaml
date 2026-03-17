@@ -1,0 +1,406 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Gemini CLI
+spec:
+  description: |
+    Google's AI-powered coding agent for the command line. Run Gemini CLI in a persistent cloud workstation with Zeabur Terminal access.
+  icon: https://cdn.zeabur.com/marketplace/gemini-cli.svg
+  tags:
+    - AI
+    - Developer Tools
+  readme: |
+    # Gemini CLI
+
+    [Gemini CLI](https://github.com/google-gemini/gemini-cli) is Google's open-source AI coding agent that runs directly in your terminal. It brings the power of Google's Gemini models to your command line, enabling AI-assisted coding, file manipulation, shell command execution, and more.
+
+    This template deploys Gemini CLI as a persistent cloud workstation on Zeabur. There is no web UI — you interact with it entirely through the Zeabur Terminal.
+
+    ## Getting Started
+
+    1. **Set your API key:** Before deploying (or immediately after), set the `GEMINI_API_KEY` environment variable in the Zeabur dashboard under the service's **Environment Variables** tab.
+    2. **Get an API key:** If you don't have one, visit [Google AI Studio](https://aistudio.google.com/) to create a free Gemini API key.
+    3. **Deploy the template** and wait for the service to start.
+    4. **Open the Zeabur Terminal** for the Gemini CLI service.
+    5. **Run Gemini CLI:**
+       ```
+       runuser -u node -- gemini
+       ```
+
+    ## Usage
+
+    All commands in the Zeabur Terminal must be prefixed with `runuser -u node --` because the container runs as root but Gemini CLI should execute as the `node` user to avoid permission issues.
+
+    ### Common Commands
+
+    | Command | Description |
+    |---------|-------------|
+    | `runuser -u node -- gemini` | Start an interactive Gemini CLI session |
+    | `runuser -u node -- gemini --version` | Check the installed Gemini CLI version |
+    | `runuser -u node -- gemini -p "your prompt"` | Send a single prompt without entering interactive mode |
+
+    ### Interactive Mode
+
+    Once inside the interactive session (`gemini`), you can:
+
+    - Ask coding questions and get AI-generated solutions
+    - Request file edits and creation
+    - Run shell commands through the AI agent
+    - Analyze and refactor code in your workspace
+
+    ## API Key Configuration
+
+    Gemini CLI requires a valid Google Gemini API key to function.
+
+    1. Go to [Google AI Studio](https://aistudio.google.com/).
+    2. Sign in with your Google account.
+    3. Navigate to **API Keys** and create a new key.
+    4. In the Zeabur dashboard, go to the Gemini CLI service's **Environment Variables** tab.
+    5. Set `GEMINI_API_KEY` to your API key value.
+    6. The service will automatically restart with the new key.
+
+    ## Persistent Storage
+
+    This template mounts a persistent volume at `/home/node`. All files stored under this path survive container restarts and redeployments. Any data outside `/home/node` is ephemeral and will be lost on restart.
+
+    Use `/home/node` as your working directory for all projects and configuration files.
+
+    ## Important Notes
+
+    - **No web interface:** This is a CLI-only workstation. Use the Zeabur Terminal to interact with it.
+    - **Always use `runuser -u node --` prefix** when running commands in the Terminal. Running as root will cause permission issues with Gemini CLI.
+    - **Persistent data:** Only `/home/node` is persistent. Do not store important files elsewhere.
+    - **No custom base URL:** Gemini CLI connects directly to Google's API and does not support custom API base URLs.
+
+    ## Links
+
+    - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
+    - [Google AI Studio](https://aistudio.google.com/)
+    - [Gemini API Documentation](https://ai.google.dev/docs)
+  services:
+    - name: gemini-cli
+      icon: https://cdn.zeabur.com/marketplace/gemini-cli.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: zeabur/gemini-cli:latest
+          command:
+            - /bin/sh
+            - -c
+            - /opt/startup.sh
+        volumes:
+          - id: home
+            dir: /home/node
+        configs:
+          - path: /opt/startup.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              chown -R node:node /home/node
+              exec runuser -u node -- sleep infinity
+        env:
+          GEMINI_API_KEY:
+            default: ""
+            required: true
+localization:
+  zh-TW:
+    description: |
+      Google 的 AI 程式碼代理 CLI 工具。在 Zeabur 上部署持久化的雲端工作站，透過終端機使用 Gemini CLI。
+    readme: |
+      # Gemini CLI
+
+      [Gemini CLI](https://github.com/google-gemini/gemini-cli) 是 Google 的開源 AI 程式碼代理工具，直接在終端機中運行。它將 Google Gemini 模型的強大能力帶入命令列，支援 AI 輔助編程、檔案操作、Shell 指令執行等功能。
+
+      此模板將 Gemini CLI 部署為 Zeabur 上的持久化雲端工作站。沒有網頁介面——您完全透過 Zeabur 終端機與其互動。
+
+      ## 開始使用
+
+      1. **設定 API 金鑰：** 部署前（或部署後立即），在 Zeabur 控制面板的服務**環境變數**頁面中設定 `GEMINI_API_KEY`。
+      2. **取得 API 金鑰：** 如果您還沒有，請前往 [Google AI Studio](https://aistudio.google.com/) 建立免費的 Gemini API 金鑰。
+      3. **部署模板**並等待服務啟動。
+      4. **開啟 Zeabur 終端機**（Gemini CLI 服務）。
+      5. **執行 Gemini CLI：**
+         ```
+         runuser -u node -- gemini
+         ```
+
+      ## 使用方式
+
+      在 Zeabur 終端機中，所有指令必須加上 `runuser -u node --` 前綴，因為容器以 root 身份運行，但 Gemini CLI 需要以 `node` 使用者執行以避免權限問題。
+
+      ### 常用指令
+
+      | 指令 | 說明 |
+      |------|------|
+      | `runuser -u node -- gemini` | 啟動互動式 Gemini CLI 會話 |
+      | `runuser -u node -- gemini --version` | 查看已安裝的 Gemini CLI 版本 |
+      | `runuser -u node -- gemini -p "你的提示"` | 發送單次提示，不進入互動模式 |
+
+      ## API 金鑰設定
+
+      Gemini CLI 需要有效的 Google Gemini API 金鑰才能運作。
+
+      1. 前往 [Google AI Studio](https://aistudio.google.com/)。
+      2. 使用 Google 帳號登入。
+      3. 導覽至 **API Keys** 並建立新金鑰。
+      4. 在 Zeabur 控制面板中，前往 Gemini CLI 服務的**環境變數**頁面。
+      5. 將 `GEMINI_API_KEY` 設定為您的 API 金鑰。
+      6. 服務會自動重新啟動並套用新金鑰。
+
+      ## 持久化儲存
+
+      此模板在 `/home/node` 掛載持久化磁碟區。儲存在此路徑下的所有檔案在容器重啟和重新部署後仍會保留。`/home/node` 以外的資料為暫存，重啟後將遺失。
+
+      ## 重要事項
+
+      - **無網頁介面：** 這是純 CLI 工作站，請使用 Zeabur 終端機操作。
+      - **請務必使用 `runuser -u node --` 前綴**執行終端機中的指令。以 root 執行會導致權限問題。
+      - **持久化資料：** 僅 `/home/node` 為持久化儲存，請勿將重要檔案存放在其他路徑。
+      - **無自訂 Base URL：** Gemini CLI 直接連線至 Google API，不支援自訂 API Base URL。
+
+      ## 連結
+
+      - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
+      - [Google AI Studio](https://aistudio.google.com/)
+      - [Gemini API 文件](https://ai.google.dev/docs)
+  zh-CN:
+    description: |
+      Google 的 AI 代码代理 CLI 工具。在 Zeabur 上部署持久化的云端工作站，通过终端使用 Gemini CLI。
+    readme: |
+      # Gemini CLI
+
+      [Gemini CLI](https://github.com/google-gemini/gemini-cli) 是 Google 的开源 AI 代码代理工具，直接在终端中运行。它将 Google Gemini 模型的强大能力带入命令行，支持 AI 辅助编程、文件操作、Shell 命令执行等功能。
+
+      此模板将 Gemini CLI 部署为 Zeabur 上的持久化云端工作站。没有网页界面——您完全通过 Zeabur 终端与其交互。
+
+      ## 开始使用
+
+      1. **设置 API 密钥：** 部署前（或部署后立即），在 Zeabur 控制面板的服务**环境变量**页面中设置 `GEMINI_API_KEY`。
+      2. **获取 API 密钥：** 如果您还没有，请前往 [Google AI Studio](https://aistudio.google.com/) 创建免费的 Gemini API 密钥。
+      3. **部署模板**并等待服务启动。
+      4. **打开 Zeabur 终端**（Gemini CLI 服务）。
+      5. **运行 Gemini CLI：**
+         ```
+         runuser -u node -- gemini
+         ```
+
+      ## 使用方式
+
+      在 Zeabur 终端中，所有命令必须加上 `runuser -u node --` 前缀，因为容器以 root 身份运行，但 Gemini CLI 需要以 `node` 用户执行以避免权限问题。
+
+      ### 常用命令
+
+      | 命令 | 说明 |
+      |------|------|
+      | `runuser -u node -- gemini` | 启动交互式 Gemini CLI 会话 |
+      | `runuser -u node -- gemini --version` | 查看已安装的 Gemini CLI 版本 |
+      | `runuser -u node -- gemini -p "你的提示"` | 发送单次提示，不进入交互模式 |
+
+      ## API 密钥配置
+
+      Gemini CLI 需要有效的 Google Gemini API 密钥才能运行。
+
+      1. 前往 [Google AI Studio](https://aistudio.google.com/)。
+      2. 使用 Google 账号登录。
+      3. 导航至 **API Keys** 并创建新密钥。
+      4. 在 Zeabur 控制面板中，前往 Gemini CLI 服务的**环境变量**页面。
+      5. 将 `GEMINI_API_KEY` 设置为您的 API 密钥。
+      6. 服务会自动重启并应用新密钥。
+
+      ## 持久化存储
+
+      此模板在 `/home/node` 挂载持久化卷。存储在此路径下的所有文件在容器重启和重新部署后仍会保留。`/home/node` 以外的数据为临时存储，重启后将丢失。
+
+      ## 重要事项
+
+      - **无网页界面：** 这是纯 CLI 工作站，请使用 Zeabur 终端操作。
+      - **请务必使用 `runuser -u node --` 前缀**执行终端中的命令。以 root 执行会导致权限问题。
+      - **持久化数据：** 仅 `/home/node` 为持久化存储，请勿将重要文件存放在其他路径。
+      - **无自定义 Base URL：** Gemini CLI 直接连接至 Google API，不支持自定义 API Base URL。
+
+      ## 链接
+
+      - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
+      - [Google AI Studio](https://aistudio.google.com/)
+      - [Gemini API 文档](https://ai.google.dev/docs)
+  ja-JP:
+    description: |
+      Google の AI コーディングエージェント CLI ツール。Zeabur 上に永続的なクラウドワークステーションをデプロイし、ターミナルから Gemini CLI を使用できます。
+    readme: |
+      # Gemini CLI
+
+      [Gemini CLI](https://github.com/google-gemini/gemini-cli) は Google のオープンソース AI コーディングエージェントで、ターミナルから直接実行できます。Google Gemini モデルの機能をコマンドラインに提供し、AI 支援コーディング、ファイル操作、シェルコマンド実行などが可能です。
+
+      このテンプレートは Gemini CLI を Zeabur 上の永続クラウドワークステーションとしてデプロイします。Web UI はありません — Zeabur ターミナルから操作します。
+
+      ## はじめに
+
+      1. **API キーを設定：** デプロイ前（またはデプロイ直後）に、Zeabur ダッシュボードのサービス**環境変数**タブで `GEMINI_API_KEY` を設定します。
+      2. **API キーを取得：** お持ちでない場合は、[Google AI Studio](https://aistudio.google.com/) にアクセスして無料の Gemini API キーを作成してください。
+      3. **テンプレートをデプロイ**し、サービスの起動を待ちます。
+      4. **Zeabur ターミナル**を開きます（Gemini CLI サービス）。
+      5. **Gemini CLI を実行：**
+         ```
+         runuser -u node -- gemini
+         ```
+
+      ## 使い方
+
+      Zeabur ターミナルでは、すべてのコマンドに `runuser -u node --` プレフィックスを付ける必要があります。コンテナは root で実行されますが、Gemini CLI は権限の問題を避けるため `node` ユーザーとして実行する必要があります。
+
+      ### よく使うコマンド
+
+      | コマンド | 説明 |
+      |----------|------|
+      | `runuser -u node -- gemini` | 対話型 Gemini CLI セッションを開始 |
+      | `runuser -u node -- gemini --version` | インストール済みの Gemini CLI バージョンを確認 |
+      | `runuser -u node -- gemini -p "プロンプト"` | 対話モードに入らず単発のプロンプトを送信 |
+
+      ## API キー設定
+
+      Gemini CLI の動作には有効な Google Gemini API キーが必要です。
+
+      1. [Google AI Studio](https://aistudio.google.com/) にアクセスします。
+      2. Google アカウントでサインインします。
+      3. **API Keys** に移動し、新しいキーを作成します。
+      4. Zeabur ダッシュボードで Gemini CLI サービスの**環境変数**タブを開きます。
+      5. `GEMINI_API_KEY` に API キーを設定します。
+      6. サービスは新しいキーで自動的に再起動します。
+
+      ## 永続ストレージ
+
+      このテンプレートは `/home/node` に永続ボリュームをマウントします。このパス配下に保存されたすべてのファイルは、コンテナの再起動や再デプロイ後も保持されます。`/home/node` 以外のデータは一時的で、再起動時に失われます。
+
+      ## 重要事項
+
+      - **Web インターフェースなし：** CLI 専用ワークステーションです。Zeabur ターミナルから操作してください。
+      - **ターミナルでコマンドを実行する際は必ず `runuser -u node --` プレフィックスを使用してください。** root で実行すると権限の問題が発生します。
+      - **永続データ：** `/home/node` のみが永続化されます。重要なファイルは他のパスに保存しないでください。
+      - **カスタム Base URL 非対応：** Gemini CLI は Google API に直接接続し、カスタム API Base URL をサポートしていません。
+
+      ## リンク
+
+      - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
+      - [Google AI Studio](https://aistudio.google.com/)
+      - [Gemini API ドキュメント](https://ai.google.dev/docs)
+  es-ES:
+    description: |
+      Agente de codificación con IA de Google para la línea de comandos. Despliega una estación de trabajo en la nube persistente en Zeabur con acceso por Terminal a Gemini CLI.
+    readme: |
+      # Gemini CLI
+
+      [Gemini CLI](https://github.com/google-gemini/gemini-cli) es el agente de codificación con IA de código abierto de Google que se ejecuta directamente en tu terminal. Lleva el poder de los modelos Google Gemini a la línea de comandos, permitiendo codificación asistida por IA, manipulación de archivos, ejecución de comandos shell y más.
+
+      Esta plantilla despliega Gemini CLI como una estación de trabajo en la nube persistente en Zeabur. No hay interfaz web — interactúas completamente a través del Terminal de Zeabur.
+
+      ## Primeros pasos
+
+      1. **Configura tu clave API:** Antes de desplegar (o inmediatamente después), establece la variable de entorno `GEMINI_API_KEY` en el panel de Zeabur en la pestaña **Variables de entorno** del servicio.
+      2. **Obtén una clave API:** Si no tienes una, visita [Google AI Studio](https://aistudio.google.com/) para crear una clave API de Gemini gratuita.
+      3. **Despliega la plantilla** y espera a que el servicio se inicie.
+      4. **Abre el Terminal de Zeabur** para el servicio Gemini CLI.
+      5. **Ejecuta Gemini CLI:**
+         ```
+         runuser -u node -- gemini
+         ```
+
+      ## Uso
+
+      Todos los comandos en el Terminal de Zeabur deben tener el prefijo `runuser -u node --` porque el contenedor se ejecuta como root, pero Gemini CLI debe ejecutarse como el usuario `node` para evitar problemas de permisos.
+
+      ### Comandos comunes
+
+      | Comando | Descripción |
+      |---------|-------------|
+      | `runuser -u node -- gemini` | Iniciar una sesión interactiva de Gemini CLI |
+      | `runuser -u node -- gemini --version` | Verificar la versión instalada de Gemini CLI |
+      | `runuser -u node -- gemini -p "tu prompt"` | Enviar un prompt único sin entrar en modo interactivo |
+
+      ## Configuración de clave API
+
+      Gemini CLI requiere una clave API válida de Google Gemini para funcionar.
+
+      1. Ve a [Google AI Studio](https://aistudio.google.com/).
+      2. Inicia sesión con tu cuenta de Google.
+      3. Navega a **API Keys** y crea una nueva clave.
+      4. En el panel de Zeabur, ve a la pestaña **Variables de entorno** del servicio Gemini CLI.
+      5. Establece `GEMINI_API_KEY` con el valor de tu clave API.
+      6. El servicio se reiniciará automáticamente con la nueva clave.
+
+      ## Almacenamiento persistente
+
+      Esta plantilla monta un volumen persistente en `/home/node`. Todos los archivos almacenados en esta ruta sobreviven a reinicios del contenedor y redespliegues. Los datos fuera de `/home/node` son efímeros y se perderán al reiniciar.
+
+      ## Notas importantes
+
+      - **Sin interfaz web:** Esta es una estación de trabajo solo CLI. Usa el Terminal de Zeabur para interactuar.
+      - **Usa siempre el prefijo `runuser -u node --`** al ejecutar comandos en el Terminal. Ejecutar como root causará problemas de permisos.
+      - **Datos persistentes:** Solo `/home/node` es persistente. No almacenes archivos importantes en otras rutas.
+      - **Sin URL base personalizada:** Gemini CLI se conecta directamente a la API de Google y no soporta URLs base de API personalizadas.
+
+      ## Enlaces
+
+      - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
+      - [Google AI Studio](https://aistudio.google.com/)
+      - [Documentación de la API de Gemini](https://ai.google.dev/docs)
+  id-ID:
+    description: |
+      Agen coding AI dari Google untuk command line. Deploy workstation cloud persisten di Zeabur dengan akses Terminal ke Gemini CLI.
+    readme: |
+      # Gemini CLI
+
+      [Gemini CLI](https://github.com/google-gemini/gemini-cli) adalah agen coding AI open-source dari Google yang berjalan langsung di terminal Anda. Membawa kekuatan model Google Gemini ke command line, memungkinkan coding berbantuan AI, manipulasi file, eksekusi perintah shell, dan lainnya.
+
+      Template ini mendeploy Gemini CLI sebagai workstation cloud persisten di Zeabur. Tidak ada antarmuka web — Anda berinteraksi sepenuhnya melalui Terminal Zeabur.
+
+      ## Memulai
+
+      1. **Atur API key:** Sebelum deploy (atau segera setelahnya), atur variabel lingkungan `GEMINI_API_KEY` di dashboard Zeabur pada tab **Environment Variables** layanan.
+      2. **Dapatkan API key:** Jika belum memiliki, kunjungi [Google AI Studio](https://aistudio.google.com/) untuk membuat API key Gemini gratis.
+      3. **Deploy template** dan tunggu layanan dimulai.
+      4. **Buka Terminal Zeabur** untuk layanan Gemini CLI.
+      5. **Jalankan Gemini CLI:**
+         ```
+         runuser -u node -- gemini
+         ```
+
+      ## Penggunaan
+
+      Semua perintah di Terminal Zeabur harus menggunakan prefiks `runuser -u node --` karena container berjalan sebagai root, tetapi Gemini CLI harus dijalankan sebagai pengguna `node` untuk menghindari masalah izin.
+
+      ### Perintah Umum
+
+      | Perintah | Deskripsi |
+      |----------|-----------|
+      | `runuser -u node -- gemini` | Memulai sesi interaktif Gemini CLI |
+      | `runuser -u node -- gemini --version` | Memeriksa versi Gemini CLI yang terinstal |
+      | `runuser -u node -- gemini -p "prompt Anda"` | Mengirim prompt tunggal tanpa masuk mode interaktif |
+
+      ## Konfigurasi API Key
+
+      Gemini CLI memerlukan API key Google Gemini yang valid untuk berfungsi.
+
+      1. Buka [Google AI Studio](https://aistudio.google.com/).
+      2. Masuk dengan akun Google Anda.
+      3. Navigasi ke **API Keys** dan buat key baru.
+      4. Di dashboard Zeabur, buka tab **Environment Variables** layanan Gemini CLI.
+      5. Atur `GEMINI_API_KEY` dengan nilai API key Anda.
+      6. Layanan akan otomatis restart dengan key baru.
+
+      ## Penyimpanan Persisten
+
+      Template ini memasang volume persisten di `/home/node`. Semua file yang disimpan di path ini bertahan setelah restart container dan redeploy. Data di luar `/home/node` bersifat sementara dan akan hilang saat restart.
+
+      ## Catatan Penting
+
+      - **Tanpa antarmuka web:** Ini adalah workstation khusus CLI. Gunakan Terminal Zeabur untuk berinteraksi.
+      - **Selalu gunakan prefiks `runuser -u node --`** saat menjalankan perintah di Terminal. Menjalankan sebagai root akan menyebabkan masalah izin.
+      - **Data persisten:** Hanya `/home/node` yang persisten. Jangan simpan file penting di path lain.
+      - **Tanpa URL base kustom:** Gemini CLI terhubung langsung ke API Google dan tidak mendukung URL base API kustom.
+
+      ## Tautan
+
+      - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
+      - [Google AI Studio](https://aistudio.google.com/)
+      - [Dokumentasi API Gemini](https://ai.google.dev/docs)

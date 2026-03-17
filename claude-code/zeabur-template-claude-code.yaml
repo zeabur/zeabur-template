@@ -1,0 +1,560 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Claude Code
+spec:
+  description: |
+    Anthropic's AI coding agent CLI running as a persistent developer workstation. Connect via Zeabur Terminal to use Claude Code for code generation, editing, debugging, and git operations.
+  icon: https://cdn.zeabur.com/marketplace/claude-code.svg
+  tags:
+    - AI
+    - Developer Tools
+  readme: |
+    # Claude Code
+
+    [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is Anthropic's official AI-powered coding agent CLI. It understands your codebase, generates and edits code, runs commands, and helps with complex development tasks -- all from the command line.
+
+    This template deploys Claude Code as a persistent developer workstation on Zeabur. There is no web UI; you interact with it entirely through the Zeabur Terminal.
+
+    ## Getting Started
+
+    1. **Set your API key:** Before deploying, set the `ANTHROPIC_API_KEY` environment variable in Zeabur to your Anthropic API key. You can obtain one from [console.anthropic.com](https://console.anthropic.com/).
+    2. **Deploy the template** and wait for the service to start.
+    3. **Open the Zeabur Terminal** for the Claude Code service.
+    4. **Start using Claude Code:**
+       ```
+       runuser -u node -- claude
+       ```
+
+    ## Using Zeabur AI Hub (Optional)
+
+    If you want to use [Zeabur AI Hub](https://zeabur.com/ai) instead of a direct Anthropic API key:
+
+    1. Set `ANTHROPIC_BASE_URL` to your Zeabur AI Hub endpoint (e.g., `https://ai.hub.zeabur.com`).
+    2. Set `ANTHROPIC_API_KEY` to your Zeabur AI Hub token.
+
+    This allows you to manage API usage and billing through Zeabur's unified AI gateway.
+
+    ## Important: Running Commands in Terminal
+
+    The container runs as `root` by default, but Claude Code must run as the `node` user. **Always prefix your commands with `runuser -u node --`** when using the Zeabur Terminal:
+
+    ```bash
+    # Start Claude Code interactive mode
+    runuser -u node -- claude
+
+    # Check Claude Code version
+    runuser -u node -- claude --version
+
+    # Log in to Anthropic (alternative to API key)
+    runuser -u node -- claude login
+
+    # Run a one-shot command
+    runuser -u node -- claude -p "explain this project"
+    ```
+
+    Running commands as `root` directly will cause permission issues with Claude Code's configuration files.
+
+    ## Common Commands
+
+    | Command | Description |
+    |---------|-------------|
+    | `claude` | Start interactive Claude Code session |
+    | `claude -p "prompt"` | Run a one-shot prompt |
+    | `claude login` | Authenticate with Anthropic |
+    | `claude --version` | Check installed version |
+    | `claude config` | View or modify configuration |
+
+    ## Persistent Storage
+
+    The `/home/node` directory is mounted as a persistent volume. All your projects, Claude Code configuration, and session data stored under `/home/node` will survive service restarts and redeployments.
+
+    **Recommended workflow:**
+    - Clone repositories into `/home/node/projects/`
+    - Your Claude Code settings are stored in `/home/node/.claude/`
+
+    ## Environment Variables
+
+    | Variable | Required | Description |
+    |----------|----------|-------------|
+    | `ANTHROPIC_API_KEY` | Yes | Your Anthropic API key or Zeabur AI Hub token |
+    | `ANTHROPIC_BASE_URL` | No | Custom API endpoint (set this for Zeabur AI Hub) |
+
+    ## Changelog
+
+    ### 2026-03-17 -- Initial Release
+
+    - Zeabur template for Claude Code developer workstation
+    - Prebuilt image `zeabur/claude-code:latest`
+    - Persistent volume at `/home/node`
+    - Startup script with proper `node` user permissions
+    - Support for direct Anthropic API and Zeabur AI Hub
+
+    ## Links
+
+    - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
+    - [Anthropic Console](https://console.anthropic.com/)
+    - [Zeabur AI Hub](https://zeabur.com/ai)
+  services:
+    - name: claude-code
+      icon: https://cdn.zeabur.com/marketplace/claude-code.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: zeabur/claude-code:latest
+          command:
+            - /bin/sh
+            - -c
+            - /opt/startup.sh
+        volumes:
+          - id: home
+            dir: /home/node
+        configs:
+          - path: /opt/startup.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              chown -R node:node /home/node
+              exec runuser -u node -- sleep infinity
+        env:
+          ANTHROPIC_API_KEY:
+            default: ""
+          ANTHROPIC_BASE_URL:
+            default: ""
+localization:
+  zh-TW:
+    description: |
+      Anthropic 的 AI 程式設計代理 CLI，以持久化開發者工作站形式運行。透過 Zeabur 指令連線使用 Claude Code 進行程式碼生成、編輯、除錯和 Git 操作。
+    readme: |
+      # Claude Code
+
+      [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 是 Anthropic 官方的 AI 程式設計代理 CLI。它能理解您的程式碼庫、生成和編輯程式碼、執行命令，並協助完成複雜的開發任務——全部透過命令列完成。
+
+      此模板將 Claude Code 部署為 Zeabur 上的持久化開發者工作站。沒有網頁介面，您完全透過 Zeabur 指令與其互動。
+
+      ## 開始使用
+
+      1. **設定 API 金鑰：** 部署前，在 Zeabur 環境變數中設定 `ANTHROPIC_API_KEY` 為您的 Anthropic API 金鑰。可從 [console.anthropic.com](https://console.anthropic.com/) 取得。
+      2. **部署模板**並等待服務啟動。
+      3. **開啟 Zeabur 指令**（Claude Code 服務）。
+      4. **開始使用 Claude Code：**
+         ```
+         runuser -u node -- claude
+         ```
+
+      ## 使用 Zeabur AI Hub（選用）
+
+      如果您想使用 [Zeabur AI Hub](https://zeabur.com/ai) 而非直接使用 Anthropic API 金鑰：
+
+      1. 將 `ANTHROPIC_BASE_URL` 設定為您的 Zeabur AI Hub 端點（例如 `https://ai.hub.zeabur.com`）。
+      2. 將 `ANTHROPIC_API_KEY` 設定為您的 Zeabur AI Hub Token。
+
+      ## 重要：在指令中執行命令
+
+      容器預設以 `root` 身份執行，但 Claude Code 必須以 `node` 使用者執行。**在 Zeabur 指令中請務必使用 `runuser -u node --` 前綴：**
+
+      ```bash
+      # 啟動 Claude Code 互動模式
+      runuser -u node -- claude
+
+      # 檢查版本
+      runuser -u node -- claude --version
+
+      # 登入 Anthropic（API 金鑰的替代方案）
+      runuser -u node -- claude login
+
+      # 執行單次命令
+      runuser -u node -- claude -p "解釋這個專案"
+      ```
+
+      以 `root` 直接執行命令會導致 Claude Code 設定檔的權限問題。
+
+      ## 常用命令
+
+      | 命令 | 說明 |
+      |------|------|
+      | `claude` | 啟動互動式 Claude Code 工作階段 |
+      | `claude -p "提示"` | 執行單次提示 |
+      | `claude login` | 驗證 Anthropic 帳號 |
+      | `claude --version` | 檢查已安裝版本 |
+      | `claude config` | 檢視或修改設定 |
+
+      ## 持久化儲存
+
+      `/home/node` 目錄掛載為持久化磁碟。所有儲存在 `/home/node` 下的專案、Claude Code 設定和工作階段資料，在服務重啟和重新部署後都會保留。
+
+      **建議工作流程：**
+      - 將程式碼庫複製到 `/home/node/projects/`
+      - Claude Code 設定儲存在 `/home/node/.claude/`
+
+      ## 環境變數
+
+      | 變數 | 必填 | 說明 |
+      |------|------|------|
+      | `ANTHROPIC_API_KEY` | 是 | 您的 Anthropic API 金鑰或 Zeabur AI Hub Token |
+      | `ANTHROPIC_BASE_URL` | 否 | 自訂 API 端點（使用 Zeabur AI Hub 時設定） |
+
+      ## 變更紀錄
+
+      ### 2026-03-17 — 首次發佈
+
+      - Claude Code 開發者工作站的 Zeabur 模板
+      - 預建映像 `zeabur/claude-code:latest`
+      - `/home/node` 持久化磁碟
+      - 啟動腳本自動設定 `node` 使用者權限
+      - 支援直接 Anthropic API 和 Zeabur AI Hub
+
+      ## 連結
+
+      - [Claude Code 官方文件](https://docs.anthropic.com/en/docs/claude-code)
+      - [Anthropic Console](https://console.anthropic.com/)
+      - [Zeabur AI Hub](https://zeabur.com/ai)
+  zh-CN:
+    description: |
+      Anthropic 的 AI 编程代理 CLI，以持久化开发者工作站形式运行。通过 Zeabur 终端连接使用 Claude Code 进行代码生成、编辑、调试和 Git 操作。
+    readme: |
+      # Claude Code
+
+      [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 是 Anthropic 官方的 AI 编程代理 CLI。它能理解您的代码库、生成和编辑代码、执行命令，并协助完成复杂的开发任务——全部通过命令行完成。
+
+      此模板将 Claude Code 部署为 Zeabur 上的持久化开发者工作站。没有网页界面，您完全通过 Zeabur 终端与其交互。
+
+      ## 开始使用
+
+      1. **设置 API 密钥：** 部署前，在 Zeabur 环境变量中设置 `ANTHROPIC_API_KEY` 为您的 Anthropic API 密钥。可从 [console.anthropic.com](https://console.anthropic.com/) 获取。
+      2. **部署模板**并等待服务启动。
+      3. **打开 Zeabur 终端**（Claude Code 服务）。
+      4. **开始使用 Claude Code：**
+         ```
+         runuser -u node -- claude
+         ```
+
+      ## 使用 Zeabur AI Hub（可选）
+
+      如果您想使用 [Zeabur AI Hub](https://zeabur.com/ai) 而非直接使用 Anthropic API 密钥：
+
+      1. 将 `ANTHROPIC_BASE_URL` 设置为您的 Zeabur AI Hub 端点（例如 `https://ai.hub.zeabur.com`）。
+      2. 将 `ANTHROPIC_API_KEY` 设置为您的 Zeabur AI Hub Token。
+
+      ## 重要：在终端中执行命令
+
+      容器默认以 `root` 身份运行，但 Claude Code 必须以 `node` 用户运行。**在 Zeabur 终端中请务必使用 `runuser -u node --` 前缀：**
+
+      ```bash
+      # 启动 Claude Code 交互模式
+      runuser -u node -- claude
+
+      # 检查版本
+      runuser -u node -- claude --version
+
+      # 登录 Anthropic（API 密钥的替代方案）
+      runuser -u node -- claude login
+
+      # 执行单次命令
+      runuser -u node -- claude -p "解释这个项目"
+      ```
+
+      以 `root` 直接执行命令会导致 Claude Code 配置文件的权限问题。
+
+      ## 常用命令
+
+      | 命令 | 说明 |
+      |------|------|
+      | `claude` | 启动交互式 Claude Code 会话 |
+      | `claude -p "提示"` | 执行单次提示 |
+      | `claude login` | 验证 Anthropic 账号 |
+      | `claude --version` | 检查已安装版本 |
+      | `claude config` | 查看或修改配置 |
+
+      ## 持久化存储
+
+      `/home/node` 目录挂载为持久化卷。所有存储在 `/home/node` 下的项目、Claude Code 配置和会话数据，在服务重启和重新部署后都会保留。
+
+      **建议工作流程：**
+      - 将代码库克隆到 `/home/node/projects/`
+      - Claude Code 配置存储在 `/home/node/.claude/`
+
+      ## 环境变量
+
+      | 变量 | 必填 | 说明 |
+      |------|------|------|
+      | `ANTHROPIC_API_KEY` | 是 | 您的 Anthropic API 密钥或 Zeabur AI Hub Token |
+      | `ANTHROPIC_BASE_URL` | 否 | 自定义 API 端点（使用 Zeabur AI Hub 时设置） |
+
+      ## 变更记录
+
+      ### 2026-03-17 — 首次发布
+
+      - Claude Code 开发者工作站的 Zeabur 模板
+      - 预构建镜像 `zeabur/claude-code:latest`
+      - `/home/node` 持久化卷
+      - 启动脚本自动设置 `node` 用户权限
+      - 支持直接 Anthropic API 和 Zeabur AI Hub
+
+      ## 链接
+
+      - [Claude Code 官方文档](https://docs.anthropic.com/en/docs/claude-code)
+      - [Anthropic Console](https://console.anthropic.com/)
+      - [Zeabur AI Hub](https://zeabur.com/ai)
+  ja-JP:
+    description: |
+      Anthropic の AI コーディングエージェント CLI を永続的な開発者ワークステーションとして実行。Zeabur ターミナルから接続し、Claude Code でコード生成、編集、デバッグ、Git 操作を行えます。
+    readme: |
+      # Claude Code
+
+      [Claude Code](https://docs.anthropic.com/en/docs/claude-code) は Anthropic 公式の AI コーディングエージェント CLI です。コードベースを理解し、コードの生成・編集、コマンドの実行、複雑な開発タスクの支援をすべてコマンドラインから行います。
+
+      このテンプレートは Claude Code を Zeabur 上の永続的な開発者ワークステーションとしてデプロイします。Web UI はありません。Zeabur ターミナルを通じてすべての操作を行います。
+
+      ## はじめに
+
+      1. **API キーを設定：** デプロイ前に、Zeabur 環境変数で `ANTHROPIC_API_KEY` を Anthropic API キーに設定してください。[console.anthropic.com](https://console.anthropic.com/) から取得できます。
+      2. **テンプレートをデプロイ**し、サービスの起動を待ちます。
+      3. **Zeabur ターミナルを開きます**（Claude Code サービス）。
+      4. **Claude Code の使用を開始：**
+         ```
+         runuser -u node -- claude
+         ```
+
+      ## Zeabur AI Hub の使用（オプション）
+
+      [Zeabur AI Hub](https://zeabur.com/ai) を直接の Anthropic API キーの代わりに使用する場合：
+
+      1. `ANTHROPIC_BASE_URL` を Zeabur AI Hub エンドポイントに設定します（例：`https://ai.hub.zeabur.com`）。
+      2. `ANTHROPIC_API_KEY` を Zeabur AI Hub トークンに設定します。
+
+      ## 重要：ターミナルでのコマンド実行
+
+      コンテナはデフォルトで `root` として実行されますが、Claude Code は `node` ユーザーで実行する必要があります。**Zeabur ターミナルでは必ず `runuser -u node --` プレフィックスを使用してください：**
+
+      ```bash
+      # Claude Code インタラクティブモードを起動
+      runuser -u node -- claude
+
+      # バージョンを確認
+      runuser -u node -- claude --version
+
+      # Anthropic にログイン（API キーの代替）
+      runuser -u node -- claude login
+
+      # ワンショットコマンドを実行
+      runuser -u node -- claude -p "このプロジェクトを説明して"
+      ```
+
+      `root` で直接コマンドを実行すると、Claude Code の設定ファイルの権限問題が発生します。
+
+      ## よく使うコマンド
+
+      | コマンド | 説明 |
+      |----------|------|
+      | `claude` | インタラクティブな Claude Code セッションを起動 |
+      | `claude -p "プロンプト"` | ワンショットプロンプトを実行 |
+      | `claude login` | Anthropic アカウントで認証 |
+      | `claude --version` | インストール済みバージョンを確認 |
+      | `claude config` | 設定を表示・変更 |
+
+      ## 永続ストレージ
+
+      `/home/node` ディレクトリは永続ボリュームとしてマウントされています。`/home/node` 配下に保存されたプロジェクト、Claude Code の設定、セッションデータはすべてサービスの再起動や再デプロイ後も保持されます。
+
+      **推奨ワークフロー：**
+      - リポジトリを `/home/node/projects/` にクローン
+      - Claude Code の設定は `/home/node/.claude/` に保存されます
+
+      ## 環境変数
+
+      | 変数 | 必須 | 説明 |
+      |------|------|------|
+      | `ANTHROPIC_API_KEY` | はい | Anthropic API キーまたは Zeabur AI Hub トークン |
+      | `ANTHROPIC_BASE_URL` | いいえ | カスタム API エンドポイント（Zeabur AI Hub 使用時に設定） |
+
+      ## 変更履歴
+
+      ### 2026-03-17 — 初回リリース
+
+      - Claude Code 開発者ワークステーションの Zeabur テンプレート
+      - ビルド済みイメージ `zeabur/claude-code:latest`
+      - `/home/node` の永続ボリューム
+      - 起動スクリプトで `node` ユーザー権限を自動設定
+      - Anthropic API 直接接続と Zeabur AI Hub の両方をサポート
+
+      ## リンク
+
+      - [Claude Code 公式ドキュメント](https://docs.anthropic.com/en/docs/claude-code)
+      - [Anthropic Console](https://console.anthropic.com/)
+      - [Zeabur AI Hub](https://zeabur.com/ai)
+  es-ES:
+    description: |
+      CLI del agente de programacion IA de Anthropic ejecutandose como estacion de trabajo persistente para desarrolladores. Conectese a traves del Terminal de Zeabur para usar Claude Code para generar, editar, depurar codigo y realizar operaciones Git.
+    readme: |
+      # Claude Code
+
+      [Claude Code](https://docs.anthropic.com/en/docs/claude-code) es el agente de programacion CLI oficial de Anthropic. Comprende su base de codigo, genera y edita codigo, ejecuta comandos y ayuda con tareas de desarrollo complejas, todo desde la linea de comandos.
+
+      Esta plantilla despliega Claude Code como una estacion de trabajo persistente para desarrolladores en Zeabur. No hay interfaz web; la interaccion es completamente a traves del Terminal de Zeabur.
+
+      ## Primeros pasos
+
+      1. **Configure su clave API:** Antes de desplegar, establezca la variable de entorno `ANTHROPIC_API_KEY` en Zeabur con su clave API de Anthropic. Puede obtenerla en [console.anthropic.com](https://console.anthropic.com/).
+      2. **Despliegue la plantilla** y espere a que el servicio se inicie.
+      3. **Abra el Terminal de Zeabur** (servicio Claude Code).
+      4. **Comience a usar Claude Code:**
+         ```
+         runuser -u node -- claude
+         ```
+
+      ## Uso de Zeabur AI Hub (Opcional)
+
+      Si desea usar [Zeabur AI Hub](https://zeabur.com/ai) en lugar de una clave API directa de Anthropic:
+
+      1. Establezca `ANTHROPIC_BASE_URL` a su endpoint de Zeabur AI Hub (ej. `https://ai.hub.zeabur.com`).
+      2. Establezca `ANTHROPIC_API_KEY` a su token de Zeabur AI Hub.
+
+      ## Importante: Ejecucion de comandos en Terminal
+
+      El contenedor se ejecuta como `root` por defecto, pero Claude Code debe ejecutarse como usuario `node`. **Siempre use el prefijo `runuser -u node --` en el Terminal de Zeabur:**
+
+      ```bash
+      # Iniciar modo interactivo de Claude Code
+      runuser -u node -- claude
+
+      # Verificar version
+      runuser -u node -- claude --version
+
+      # Iniciar sesion en Anthropic (alternativa a clave API)
+      runuser -u node -- claude login
+
+      # Ejecutar un comando unico
+      runuser -u node -- claude -p "explica este proyecto"
+      ```
+
+      Ejecutar comandos directamente como `root` causara problemas de permisos con los archivos de configuracion de Claude Code.
+
+      ## Comandos comunes
+
+      | Comando | Descripcion |
+      |---------|-------------|
+      | `claude` | Iniciar sesion interactiva de Claude Code |
+      | `claude -p "prompt"` | Ejecutar un prompt unico |
+      | `claude login` | Autenticarse con Anthropic |
+      | `claude --version` | Verificar version instalada |
+      | `claude config` | Ver o modificar configuracion |
+
+      ## Almacenamiento persistente
+
+      El directorio `/home/node` esta montado como un volumen persistente. Todos los proyectos, configuracion de Claude Code y datos de sesion almacenados en `/home/node` se mantendran tras reinicios y redespliegues.
+
+      **Flujo de trabajo recomendado:**
+      - Clone repositorios en `/home/node/projects/`
+      - La configuracion de Claude Code se almacena en `/home/node/.claude/`
+
+      ## Variables de entorno
+
+      | Variable | Requerida | Descripcion |
+      |----------|-----------|-------------|
+      | `ANTHROPIC_API_KEY` | Si | Su clave API de Anthropic o token de Zeabur AI Hub |
+      | `ANTHROPIC_BASE_URL` | No | Endpoint API personalizado (configurar para Zeabur AI Hub) |
+
+      ## Registro de cambios
+
+      ### 2026-03-17 -- Lanzamiento inicial
+
+      - Plantilla de Zeabur para estacion de trabajo Claude Code
+      - Imagen preconstruida `zeabur/claude-code:latest`
+      - Volumen persistente en `/home/node`
+      - Script de inicio con permisos de usuario `node`
+      - Soporte para API directa de Anthropic y Zeabur AI Hub
+
+      ## Enlaces
+
+      - [Documentacion de Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+      - [Anthropic Console](https://console.anthropic.com/)
+      - [Zeabur AI Hub](https://zeabur.com/ai)
+  id-ID:
+    description: |
+      CLI agen pemrograman AI dari Anthropic yang berjalan sebagai workstation pengembang persisten. Hubungkan melalui Terminal Zeabur untuk menggunakan Claude Code dalam pembuatan, pengeditan, debugging kode, dan operasi Git.
+    readme: |
+      # Claude Code
+
+      [Claude Code](https://docs.anthropic.com/en/docs/claude-code) adalah CLI agen pemrograman AI resmi dari Anthropic. Ia memahami basis kode Anda, menghasilkan dan mengedit kode, menjalankan perintah, dan membantu tugas pengembangan kompleks -- semuanya dari baris perintah.
+
+      Template ini men-deploy Claude Code sebagai workstation pengembang persisten di Zeabur. Tidak ada antarmuka web; Anda berinteraksi sepenuhnya melalui Terminal Zeabur.
+
+      ## Memulai
+
+      1. **Atur kunci API:** Sebelum deploy, atur variabel lingkungan `ANTHROPIC_API_KEY` di Zeabur dengan kunci API Anthropic Anda. Dapatkan di [console.anthropic.com](https://console.anthropic.com/).
+      2. **Deploy template** dan tunggu layanan dimulai.
+      3. **Buka Terminal Zeabur** (layanan Claude Code).
+      4. **Mulai menggunakan Claude Code:**
+         ```
+         runuser -u node -- claude
+         ```
+
+      ## Menggunakan Zeabur AI Hub (Opsional)
+
+      Jika Anda ingin menggunakan [Zeabur AI Hub](https://zeabur.com/ai) alih-alih kunci API Anthropic langsung:
+
+      1. Atur `ANTHROPIC_BASE_URL` ke endpoint Zeabur AI Hub Anda (misalnya `https://ai.hub.zeabur.com`).
+      2. Atur `ANTHROPIC_API_KEY` ke token Zeabur AI Hub Anda.
+
+      ## Penting: Menjalankan Perintah di Terminal
+
+      Container berjalan sebagai `root` secara default, tetapi Claude Code harus dijalankan sebagai pengguna `node`. **Selalu gunakan prefiks `runuser -u node --` di Terminal Zeabur:**
+
+      ```bash
+      # Mulai mode interaktif Claude Code
+      runuser -u node -- claude
+
+      # Periksa versi
+      runuser -u node -- claude --version
+
+      # Login ke Anthropic (alternatif kunci API)
+      runuser -u node -- claude login
+
+      # Jalankan perintah sekali
+      runuser -u node -- claude -p "jelaskan proyek ini"
+      ```
+
+      Menjalankan perintah langsung sebagai `root` akan menyebabkan masalah izin pada file konfigurasi Claude Code.
+
+      ## Perintah Umum
+
+      | Perintah | Deskripsi |
+      |----------|-----------|
+      | `claude` | Mulai sesi interaktif Claude Code |
+      | `claude -p "prompt"` | Jalankan prompt sekali |
+      | `claude login` | Autentikasi dengan Anthropic |
+      | `claude --version` | Periksa versi terinstal |
+      | `claude config` | Lihat atau ubah konfigurasi |
+
+      ## Penyimpanan Persisten
+
+      Direktori `/home/node` di-mount sebagai volume persisten. Semua proyek, konfigurasi Claude Code, dan data sesi yang disimpan di `/home/node` akan bertahan setelah restart dan redeploy layanan.
+
+      **Alur kerja yang disarankan:**
+      - Clone repositori ke `/home/node/projects/`
+      - Konfigurasi Claude Code disimpan di `/home/node/.claude/`
+
+      ## Variabel Lingkungan
+
+      | Variabel | Wajib | Deskripsi |
+      |----------|-------|-----------|
+      | `ANTHROPIC_API_KEY` | Ya | Kunci API Anthropic atau token Zeabur AI Hub Anda |
+      | `ANTHROPIC_BASE_URL` | Tidak | Endpoint API kustom (atur untuk Zeabur AI Hub) |
+
+      ## Catatan Perubahan
+
+      ### 2026-03-17 -- Rilis Pertama
+
+      - Template Zeabur untuk workstation pengembang Claude Code
+      - Image siap pakai `zeabur/claude-code:latest`
+      - Volume persisten di `/home/node`
+      - Skrip startup dengan izin pengguna `node`
+      - Dukungan API langsung Anthropic dan Zeabur AI Hub
+
+      ## Tautan
+
+      - [Dokumentasi Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+      - [Anthropic Console](https://console.anthropic.com/)
+      - [Zeabur AI Hub](https://zeabur.com/ai)

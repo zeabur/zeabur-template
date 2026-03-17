@@ -1,0 +1,432 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Codex
+spec:
+  description: |
+    OpenAI Codex CLI - an AI coding agent that runs in your terminal. Deploy as a persistent cloud workstation with Zeabur Terminal access.
+  icon: https://cdn.zeabur.com/marketplace/codex.svg
+  tags:
+    - AI
+    - Developer Tools
+  readme: |
+    # OpenAI Codex CLI
+
+    [Codex](https://github.com/openai/codex) is OpenAI's open-source AI coding agent that runs in your terminal. It can understand your codebase, propose changes, execute commands, and help you build software faster — all through natural language conversation.
+
+    This template deploys Codex as a persistent cloud workstation. There is no web UI; you interact with Codex entirely through the Zeabur Terminal.
+
+    ## Getting Started
+
+    1. Deploy the template and wait for the service to start.
+    2. Open the Zeabur **Terminal** for the Codex service.
+    3. Run Codex commands using the `runuser` prefix:
+       ```
+       runuser -u node -- codex
+       ```
+    4. Codex will start an interactive session where you can describe what you want to build or modify.
+
+    ## Authentication
+
+    There are two ways to authenticate Codex with OpenAI:
+
+    ### Method 1: API Key (Environment Variable)
+
+    Set the `OPENAI_API_KEY` environment variable in the Zeabur dashboard. This is the simplest method and works immediately after deployment.
+
+    ### Method 2: Device Auth (Interactive Login)
+
+    1. **Important:** First enable "Enable device code authorization for Codex" in your [ChatGPT Security Settings](https://chatgpt.com/settings/security).
+    2. Open the Zeabur Terminal and run:
+       ```
+       runuser -u node -- codex login --device-auth
+       ```
+    3. Follow the on-screen instructions to authorize in your browser.
+
+    ## Zeabur AI Hub Integration
+
+    You can use Codex with [Zeabur AI Hub](https://zeabur.com/ai) instead of connecting directly to OpenAI. Set the `OPENAI_BASE_URL` environment variable to your Zeabur AI Hub endpoint (e.g., `https://hub.zeabur.com/v1`). This allows you to use Zeabur's unified AI gateway with billing, rate limiting, and model routing.
+
+    ## Running Commands in Terminal
+
+    **You must always use the `runuser -u node --` prefix** when running commands in the Zeabur Terminal. The container runs as root by default, but Codex and development tools should run as the `node` user to avoid permission issues.
+
+    ```
+    # Start interactive Codex session
+    runuser -u node -- codex
+
+    # Check Codex version
+    runuser -u node -- codex --version
+
+    # Run any shell command as node user
+    runuser -u node -- git clone https://github.com/example/repo.git
+    ```
+
+    ## Persistent Storage
+
+    All data under `/home/node/` is persisted across restarts and redeployments. Clone your repositories and do your work inside this directory.
+
+    Any files outside `/home/node/` are ephemeral and will be lost on restart.
+
+    ## Common Commands
+
+    | Command | Description |
+    |---------|-------------|
+    | `runuser -u node -- codex` | Start interactive Codex session |
+    | `runuser -u node -- codex "describe task here"` | Run Codex with a specific prompt |
+    | `runuser -u node -- codex login --device-auth` | Authenticate via device auth flow |
+    | `runuser -u node -- codex --version` | Check installed Codex version |
+
+    ## Links
+
+    - [GitHub](https://github.com/openai/codex)
+    - [OpenAI Documentation](https://platform.openai.com/docs)
+  services:
+    - name: codex
+      icon: https://cdn.zeabur.com/marketplace/codex.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: zeabur/codex:latest
+          command:
+            - /bin/sh
+            - -c
+            - /opt/startup.sh
+        volumes:
+          - id: home
+            dir: /home/node
+        configs:
+          - path: /opt/startup.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              chown -R node:node /home/node
+              exec runuser -u node -- sleep infinity
+        env:
+          OPENAI_API_KEY:
+            default: ""
+            required: true
+          OPENAI_BASE_URL:
+            default: ""
+localization:
+  zh-TW:
+    description: |
+      OpenAI Codex CLI - 在終端機中運行的 AI 編程代理。部署為持久化雲端工作站，透過 Zeabur 終端機存取。
+    readme: |
+      # OpenAI Codex CLI
+
+      [Codex](https://github.com/openai/codex) 是 OpenAI 的開源 AI 編程代理，在終端機中運行。它能理解您的程式碼庫、提出修改建議、執行指令，並透過自然語言對話幫助您更快地建構軟體。
+
+      此模板將 Codex 部署為持久化雲端工作站。沒有 Web UI；您完全透過 Zeabur 終端機與 Codex 互動。
+
+      ## 開始使用
+
+      1. 部署模板並等待服務啟動。
+      2. 開啟 Zeabur **終端機**（Codex 服務）。
+      3. 使用 `runuser` 前綴執行 Codex 指令：
+         ```
+         runuser -u node -- codex
+         ```
+      4. Codex 將啟動互動式會話，您可以描述想要建構或修改的內容。
+
+      ## 認證方式
+
+      有兩種方式可以將 Codex 與 OpenAI 認證：
+
+      ### 方法一：API 金鑰（環境變數）
+
+      在 Zeabur 儀表板中設定 `OPENAI_API_KEY` 環境變數。這是最簡單的方法，部署後即可立即使用。
+
+      ### 方法二：裝置驗證（互動式登入）
+
+      1. **重要：** 首先在 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 中啟用「Enable device code authorization for Codex」。
+      2. 開啟 Zeabur 終端機並執行：
+         ```
+         runuser -u node -- codex login --device-auth
+         ```
+      3. 按照螢幕上的說明在瀏覽器中授權。
+
+      ## Zeabur AI Hub 整合
+
+      您可以透過 [Zeabur AI Hub](https://zeabur.com/ai) 使用 Codex，而非直接連接 OpenAI。將 `OPENAI_BASE_URL` 環境變數設定為您的 Zeabur AI Hub 端點（例如 `https://hub.zeabur.com/v1`）。這讓您可以使用 Zeabur 的統一 AI 閘道，享有計費、速率限制和模型路由功能。
+
+      ## 在終端機中執行指令
+
+      **您必須始終使用 `runuser -u node --` 前綴**在 Zeabur 終端機中執行指令。容器預設以 root 身份執行，但 Codex 和開發工具應以 `node` 使用者執行以避免權限問題。
+
+      ## 持久化儲存
+
+      `/home/node/` 下的所有資料在重啟和重新部署後都會保留。請在此目錄中克隆您的倉庫並進行工作。
+
+      `/home/node/` 以外的所有檔案都是暫存的，重啟後會遺失。
+
+      ## 常用指令
+
+      | 指令 | 說明 |
+      |------|------|
+      | `runuser -u node -- codex` | 啟動互動式 Codex 會話 |
+      | `runuser -u node -- codex "描述任務"` | 使用特定提示執行 Codex |
+      | `runuser -u node -- codex login --device-auth` | 透過裝置驗證流程認證 |
+      | `runuser -u node -- codex --version` | 檢查已安裝的 Codex 版本 |
+
+      ## 連結
+
+      - [GitHub](https://github.com/openai/codex)
+      - [OpenAI 文件](https://platform.openai.com/docs)
+  zh-CN:
+    description: |
+      OpenAI Codex CLI - 在终端中运行的 AI 编程代理。部署为持久化云端工作站，通过 Zeabur 终端访问。
+    readme: |
+      # OpenAI Codex CLI
+
+      [Codex](https://github.com/openai/codex) 是 OpenAI 的开源 AI 编程代理，在终端中运行。它能理解您的代码库、提出修改建议、执行命令，并通过自然语言对话帮助您更快地构建软件。
+
+      此模板将 Codex 部署为持久化云端工作站。没有 Web UI；您完全通过 Zeabur 终端与 Codex 交互。
+
+      ## 开始使用
+
+      1. 部署模板并等待服务启动。
+      2. 打开 Zeabur **终端**（Codex 服务）。
+      3. 使用 `runuser` 前缀执行 Codex 命令：
+         ```
+         runuser -u node -- codex
+         ```
+      4. Codex 将启动交互式会话，您可以描述想要构建或修改的内容。
+
+      ## 认证方式
+
+      有两种方式可以将 Codex 与 OpenAI 认证：
+
+      ### 方法一：API 密钥（环境变量）
+
+      在 Zeabur 仪表板中设置 `OPENAI_API_KEY` 环境变量。这是最简单的方法，部署后即可立即使用。
+
+      ### 方法二：设备验证（交互式登录）
+
+      1. **重要：** 首先在 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 中启用「Enable device code authorization for Codex」。
+      2. 打开 Zeabur 终端并执行：
+         ```
+         runuser -u node -- codex login --device-auth
+         ```
+      3. 按照屏幕上的说明在浏览器中授权。
+
+      ## Zeabur AI Hub 集成
+
+      您可以通过 [Zeabur AI Hub](https://zeabur.com/ai) 使用 Codex，而非直接连接 OpenAI。将 `OPENAI_BASE_URL` 环境变量设置为您的 Zeabur AI Hub 端点（例如 `https://hub.zeabur.com/v1`）。这让您可以使用 Zeabur 的统一 AI 网关，享有计费、速率限制和模型路由功能。
+
+      ## 在终端中执行命令
+
+      **您必须始终使用 `runuser -u node --` 前缀**在 Zeabur 终端中执行命令。容器默认以 root 身份运行，但 Codex 和开发工具应以 `node` 用户运行以避免权限问题。
+
+      ## 持久化存储
+
+      `/home/node/` 下的所有数据在重启和重新部署后都会保留。请在此目录中克隆您的仓库并进行工作。
+
+      `/home/node/` 以外的所有文件都是临时的，重启后会丢失。
+
+      ## 常用命令
+
+      | 命令 | 说明 |
+      |------|------|
+      | `runuser -u node -- codex` | 启动交互式 Codex 会话 |
+      | `runuser -u node -- codex "描述任务"` | 使用特定提示运行 Codex |
+      | `runuser -u node -- codex login --device-auth` | 通过设备验证流程认证 |
+      | `runuser -u node -- codex --version` | 检查已安装的 Codex 版本 |
+
+      ## 链接
+
+      - [GitHub](https://github.com/openai/codex)
+      - [OpenAI 文档](https://platform.openai.com/docs)
+  ja-JP:
+    description: |
+      OpenAI Codex CLI - ターミナルで動作するAIコーディングエージェント。Zeaburターミナルアクセス付きの永続クラウドワークステーションとしてデプロイ。
+    readme: |
+      # OpenAI Codex CLI
+
+      [Codex](https://github.com/openai/codex) は、ターミナルで動作するOpenAIのオープンソースAIコーディングエージェントです。コードベースを理解し、変更を提案し、コマンドを実行し、自然言語の会話を通じてより速くソフトウェアを構築するお手伝いをします。
+
+      このテンプレートはCodexを永続クラウドワークステーションとしてデプロイします。Web UIはありません。Zeaburターミナルを通じてCodexと対話します。
+
+      ## はじめに
+
+      1. テンプレートをデプロイし、サービスの起動を待ちます。
+      2. Codexサービスの Zeabur **ターミナル**を開きます。
+      3. `runuser` プレフィックスを使用してCodexコマンドを実行します：
+         ```
+         runuser -u node -- codex
+         ```
+      4. Codexがインタラクティブセッションを開始し、構築または変更したい内容を説明できます。
+
+      ## 認証方法
+
+      CodexをOpenAIで認証する方法は2つあります：
+
+      ### 方法1：APIキー（環境変数）
+
+      Zeaburダッシュボードで `OPENAI_API_KEY` 環境変数を設定します。最もシンプルな方法で、デプロイ後すぐに使用できます。
+
+      ### 方法2：デバイス認証（インタラクティブログイン）
+
+      1. **重要：** まず [ChatGPT Security Settings](https://chatgpt.com/settings/security) で「Enable device code authorization for Codex」を有効にしてください。
+      2. Zeaburターミナルを開いて実行します：
+         ```
+         runuser -u node -- codex login --device-auth
+         ```
+      3. 画面の指示に従ってブラウザで認可します。
+
+      ## Zeabur AI Hub 統合
+
+      OpenAIに直接接続する代わりに、[Zeabur AI Hub](https://zeabur.com/ai) を通じてCodexを使用できます。`OPENAI_BASE_URL` 環境変数をZeabur AI Hubエンドポイント（例：`https://hub.zeabur.com/v1`）に設定します。これにより、課金、レート制限、モデルルーティング機能を備えたZeaburの統合AIゲートウェイを利用できます。
+
+      ## ターミナルでのコマンド実行
+
+      **Zeaburターミナルでコマンドを実行する際は、必ず `runuser -u node --` プレフィックスを使用してください。** コンテナはデフォルトでrootとして実行されますが、Codexと開発ツールは権限の問題を避けるため `node` ユーザーとして実行する必要があります。
+
+      ## 永続ストレージ
+
+      `/home/node/` 配下のすべてのデータは、再起動や再デプロイ後も保持されます。このディレクトリ内でリポジトリをクローンし作業してください。
+
+      `/home/node/` 以外のファイルは一時的なもので、再起動時に失われます。
+
+      ## よく使うコマンド
+
+      | コマンド | 説明 |
+      |---------|------|
+      | `runuser -u node -- codex` | インタラクティブCodexセッションを開始 |
+      | `runuser -u node -- codex "タスクを説明"` | 特定のプロンプトでCodexを実行 |
+      | `runuser -u node -- codex login --device-auth` | デバイス認証フローで認証 |
+      | `runuser -u node -- codex --version` | インストール済みCodexバージョンを確認 |
+
+      ## リンク
+
+      - [GitHub](https://github.com/openai/codex)
+      - [OpenAIドキュメント](https://platform.openai.com/docs)
+  es-ES:
+    description: |
+      OpenAI Codex CLI - un agente de codificacion IA que se ejecuta en tu terminal. Despliega como estacion de trabajo en la nube persistente con acceso al Terminal de Zeabur.
+    readme: |
+      # OpenAI Codex CLI
+
+      [Codex](https://github.com/openai/codex) es el agente de codificacion IA de codigo abierto de OpenAI que se ejecuta en tu terminal. Puede entender tu base de codigo, proponer cambios, ejecutar comandos y ayudarte a construir software mas rapido, todo a traves de conversacion en lenguaje natural.
+
+      Esta plantilla despliega Codex como una estacion de trabajo en la nube persistente. No hay interfaz web; interactuas con Codex completamente a traves del Terminal de Zeabur.
+
+      ## Primeros pasos
+
+      1. Despliega la plantilla y espera a que el servicio se inicie.
+      2. Abre el **Terminal** de Zeabur para el servicio Codex.
+      3. Ejecuta comandos de Codex usando el prefijo `runuser`:
+         ```
+         runuser -u node -- codex
+         ```
+      4. Codex iniciara una sesion interactiva donde puedes describir lo que quieres construir o modificar.
+
+      ## Autenticacion
+
+      Hay dos formas de autenticar Codex con OpenAI:
+
+      ### Metodo 1: Clave API (Variable de entorno)
+
+      Configura la variable de entorno `OPENAI_API_KEY` en el panel de Zeabur. Es el metodo mas simple y funciona inmediatamente despues del despliegue.
+
+      ### Metodo 2: Autenticacion de dispositivo (Login interactivo)
+
+      1. **Importante:** Primero habilita "Enable device code authorization for Codex" en [ChatGPT Security Settings](https://chatgpt.com/settings/security).
+      2. Abre el Terminal de Zeabur y ejecuta:
+         ```
+         runuser -u node -- codex login --device-auth
+         ```
+      3. Sigue las instrucciones en pantalla para autorizar en tu navegador.
+
+      ## Integracion con Zeabur AI Hub
+
+      Puedes usar Codex con [Zeabur AI Hub](https://zeabur.com/ai) en lugar de conectarte directamente a OpenAI. Configura la variable de entorno `OPENAI_BASE_URL` con tu endpoint de Zeabur AI Hub (ej. `https://hub.zeabur.com/v1`). Esto te permite usar la puerta de enlace IA unificada de Zeabur con facturacion, limites de velocidad y enrutamiento de modelos.
+
+      ## Ejecutar comandos en el Terminal
+
+      **Siempre debes usar el prefijo `runuser -u node --`** al ejecutar comandos en el Terminal de Zeabur. El contenedor se ejecuta como root por defecto, pero Codex y las herramientas de desarrollo deben ejecutarse como el usuario `node` para evitar problemas de permisos.
+
+      ## Almacenamiento persistente
+
+      Todos los datos bajo `/home/node/` se conservan entre reinicios y redespliegues. Clona tus repositorios y trabaja dentro de este directorio.
+
+      Los archivos fuera de `/home/node/` son efimeros y se perderan al reiniciar.
+
+      ## Comandos comunes
+
+      | Comando | Descripcion |
+      |---------|-------------|
+      | `runuser -u node -- codex` | Iniciar sesion interactiva de Codex |
+      | `runuser -u node -- codex "describir tarea"` | Ejecutar Codex con un prompt especifico |
+      | `runuser -u node -- codex login --device-auth` | Autenticar via flujo de autenticacion de dispositivo |
+      | `runuser -u node -- codex --version` | Verificar la version instalada de Codex |
+
+      ## Enlaces
+
+      - [GitHub](https://github.com/openai/codex)
+      - [Documentacion de OpenAI](https://platform.openai.com/docs)
+  id-ID:
+    description: |
+      OpenAI Codex CLI - agen coding AI yang berjalan di terminal Anda. Deploy sebagai workstation cloud persisten dengan akses Terminal Zeabur.
+    readme: |
+      # OpenAI Codex CLI
+
+      [Codex](https://github.com/openai/codex) adalah agen coding AI open-source dari OpenAI yang berjalan di terminal Anda. Dapat memahami codebase Anda, mengusulkan perubahan, menjalankan perintah, dan membantu Anda membangun perangkat lunak lebih cepat — semuanya melalui percakapan bahasa alami.
+
+      Template ini mendeploy Codex sebagai workstation cloud persisten. Tidak ada UI web; Anda berinteraksi dengan Codex sepenuhnya melalui Terminal Zeabur.
+
+      ## Memulai
+
+      1. Deploy template dan tunggu layanan dimulai.
+      2. Buka **Terminal** Zeabur untuk layanan Codex.
+      3. Jalankan perintah Codex menggunakan prefiks `runuser`:
+         ```
+         runuser -u node -- codex
+         ```
+      4. Codex akan memulai sesi interaktif di mana Anda dapat mendeskripsikan apa yang ingin dibangun atau dimodifikasi.
+
+      ## Autentikasi
+
+      Ada dua cara untuk mengautentikasi Codex dengan OpenAI:
+
+      ### Metode 1: API Key (Variabel Lingkungan)
+
+      Atur variabel lingkungan `OPENAI_API_KEY` di dashboard Zeabur. Ini adalah metode paling sederhana dan langsung berfungsi setelah deployment.
+
+      ### Metode 2: Autentikasi Perangkat (Login Interaktif)
+
+      1. **Penting:** Pertama aktifkan "Enable device code authorization for Codex" di [ChatGPT Security Settings](https://chatgpt.com/settings/security).
+      2. Buka Terminal Zeabur dan jalankan:
+         ```
+         runuser -u node -- codex login --device-auth
+         ```
+      3. Ikuti instruksi di layar untuk mengotorisasi di browser Anda.
+
+      ## Integrasi Zeabur AI Hub
+
+      Anda dapat menggunakan Codex dengan [Zeabur AI Hub](https://zeabur.com/ai) alih-alih terhubung langsung ke OpenAI. Atur variabel lingkungan `OPENAI_BASE_URL` ke endpoint Zeabur AI Hub Anda (contoh: `https://hub.zeabur.com/v1`). Ini memungkinkan Anda menggunakan gateway AI terpadu Zeabur dengan fitur billing, rate limiting, dan routing model.
+
+      ## Menjalankan Perintah di Terminal
+
+      **Anda harus selalu menggunakan prefiks `runuser -u node --`** saat menjalankan perintah di Terminal Zeabur. Container berjalan sebagai root secara default, tetapi Codex dan alat pengembangan harus dijalankan sebagai pengguna `node` untuk menghindari masalah izin.
+
+      ## Penyimpanan Persisten
+
+      Semua data di bawah `/home/node/` dipertahankan setelah restart dan redeployment. Clone repositori Anda dan lakukan pekerjaan di dalam direktori ini.
+
+      File di luar `/home/node/` bersifat sementara dan akan hilang saat restart.
+
+      ## Perintah Umum
+
+      | Perintah | Deskripsi |
+      |----------|-----------|
+      | `runuser -u node -- codex` | Mulai sesi Codex interaktif |
+      | `runuser -u node -- codex "deskripsikan tugas"` | Jalankan Codex dengan prompt tertentu |
+      | `runuser -u node -- codex login --device-auth` | Autentikasi via alur autentikasi perangkat |
+      | `runuser -u node -- codex --version` | Periksa versi Codex yang terinstal |
+
+      ## Tautan
+
+      - [GitHub](https://github.com/openai/codex)
+      - [Dokumentasi OpenAI](https://platform.openai.com/docs)
