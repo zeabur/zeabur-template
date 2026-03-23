@@ -158,9 +158,9 @@ spec:
                 - path: /usr/local/etc/php/conf.d/uploads.ini
                   template: |
                     file_uploads = On
-                    upload_max_filesize = 20480M
-                    post_max_size = 20480M
-                    memory_limit = 20480M
+                    upload_max_filesize = 256M
+                    post_max_size = 256M
+                    memory_limit = 1024M
                     max_execution_time = 3000
                   permission: null
                   envsubst: null
