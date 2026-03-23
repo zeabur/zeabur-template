@@ -1,0 +1,260 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: WordPress
+spec:
+    description: A content management system (CMS) that allows you to host and build websites.
+    coverImage: https://kinsta.com/wp-content/uploads/2018/02/what-is-wordpress.png
+    icon: https://cdn.zeabur.com/marketplace/wordpress.png
+    variables:
+        - key: WORDPRESS_DOMAIN
+          type: DOMAIN
+          name: Domain
+          description: What is the domain of your WordPress website?
+    tags:
+        - CMS
+        - Website
+        - Blog
+        - Starter
+    readme: |-
+        # Welcome to WordPress
+
+        WordPress is an open-source content management system (CMS) that enables you to create a website or blog from scratch or to improve an existing website. It's one of the most popular website publishing platforms in the world, known for its flexibility, ease of use, and a vast community of users and developers.
+
+        ## Key Features
+
+        - **User-friendly**: WordPress is designed with non-technical users in mind, making it easy for anyone to publish content.
+        - **Customizable**: With thousands of themes and plugins, you can tailor your site to fit your needs and style.
+        - **SEO Friendly**: WordPress is optimized for search engines right out of the box.
+        - **Responsive Design**: Your WordPress website will look great on any device, whether it's a computer, tablet, or smartphone.
+
+        Whether you're a blogger, small business owner, or web developer, WordPress has the tools and resources to help you create a professional online presence. Join the millions of users who trust WordPress for their website and blogging needs.
+
+        To change your site domain, please enter the following command in your terminal:
+
+        ("domainA.com" is your old domain, "domainB.com" is your new domain)
+        ```bash
+        wp search-replace 'domainA.com' 'domainB.com' --all-tables --precise
+        ```
+    services:
+        - name: mariadb
+          icon: https://cdn.zeabur.com/mariadb.svg
+          template: PREBUILT
+          spec:
+            source:
+                image: mariadb:11
+            ports:
+                - id: database
+                  port: 3306
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/mysql
+            instructions:
+                - title: Command to connect to your MariaDB
+                  content: mariadb --host ${PORT_FORWARDED_HOSTNAME} --port=${DATABASE_PORT_FORWARDED_PORT} --user=${MARIADB_USERNAME} --password=${MARIADB_PASSWORD} --database=${MARIADB_DATABASE}
+                - title: MariaDB username
+                  content: ${MARIADB_USERNAME}
+                - title: MariaDB password
+                  content: ${MARIADB_PASSWORD}
+                - title: MariaDB database
+                  content: ${MARIADB_DATABASE}
+                - title: MariaDB host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: MariaDB port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                MARIADB_DATABASE:
+                    default: zeabur
+                    expose: true
+                MARIADB_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                MARIADB_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                MARIADB_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                MARIADB_ROOT_PASSWORD:
+                    default: ${PASSWORD}
+                MARIADB_USERNAME:
+                    default: root
+                    expose: true
+            configs:
+                - path: /etc/mysql/conf.d/99-custom.cnf
+                  template: |
+                    ; see https://mariadb.com/kb/en/server-system-variables/#setting-server-system-variables for configuration
+                  permission: null
+                  envsubst: null
+            healthCheck:
+                type: TCP
+                port: database
+        - name: wordpress
+          icon: https://cdn.zeabur.com/marketplace/wordpress.png
+          dependencies:
+            - mariadb
+          template: PREBUILT_V2
+          spec:
+            source:
+                image: wordpress:6-php8.3
+                command:
+                    - /bin/bash
+                args:
+                    - -c
+                    - curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp && docker-entrypoint.sh apache2-foreground
+            ports:
+                - id: web
+                  port: 80
+                  type: HTTP
+            volumes:
+                - id: data
+                  dir: /var/www/html
+            env:
+                WORDPRESS_DB_HOST:
+                    default: ${MARIADB_HOST}:${MARIADB_PORT}
+                    expose: false
+                WORDPRESS_DB_NAME:
+                    default: ${MARIADB_DATABASE}
+                    expose: false
+                WORDPRESS_DB_PASSWORD:
+                    default: ${MARIADB_PASSWORD}
+                    expose: false
+                WORDPRESS_DB_USER:
+                    default: ${MARIADB_USERNAME}
+                    expose: false
+                WORDPRESS_DEBUG:
+                    default: "0"
+                    expose: false
+            configs:
+                - path: /var/www/html/wp-config.php
+                  template: "<?php\n\nif (!function_exists('getenv_docker')) {\n\tfunction getenv_docker($env, $default) {\n\t\tif ($fileEnv = getenv($env . '_FILE')) {\n\t\t\treturn rtrim(file_get_contents($fileEnv), \"\r\n\");\n\t\t}\n\t\telse if (($val = getenv($env)) !== false) {\n\t\t\treturn $val;\n\t\t}\n\t\telse {\n\t\t\treturn $default;\n\t\t}\n\t}\n}\n\ndefine( 'DB_NAME', getenv_docker('WORDPRESS_DB_NAME', 'wordpress') );\ndefine( 'DB_USER', getenv_docker('WORDPRESS_DB_USER', 'example username') );\ndefine( 'DB_PASSWORD', getenv_docker('WORDPRESS_DB_PASSWORD', 'example password') );\n\ndefine( 'DB_HOST', getenv_docker('WORDPRESS_DB_HOST', 'mysql') );\ndefine( 'DB_CHARSET', getenv_docker('WORDPRESS_DB_CHARSET', 'utf8') );\ndefine( 'DB_COLLATE', getenv_docker('WORDPRESS_DB_COLLATE', '') );\n\ndefine( 'AUTH_KEY',         getenv_docker('WORDPRESS_AUTH_KEY',         'b5703d7e2fff54eb27af2d5d71718418a4285d93') );\ndefine( 'SECURE_AUTH_KEY',  getenv_docker('WORDPRESS_SECURE_AUTH_KEY',  '266068c6a79054edb1549ef4e8d7ac9161d8ae22') );\ndefine( 'LOGGED_IN_KEY',    getenv_docker('WORDPRESS_LOGGED_IN_KEY',    '8d48501345a93e588fb364374d9c4e3d37ab42c6') );\ndefine( 'NONCE_KEY',        getenv_docker('WORDPRESS_NONCE_KEY',        'fa4dae194949d8530fdd337384a6dc91f1154b84') );\ndefine( 'AUTH_SALT',        getenv_docker('WORDPRESS_AUTH_SALT',        '10b42a9840a7fb7ff3d8a57275cef17451f85038') );\ndefine( 'SECURE_AUTH_SALT', getenv_docker('WORDPRESS_SECURE_AUTH_SALT', '45c7e22c7c005a39f32f9a338ae03af86f14c967') );\ndefine( 'LOGGED_IN_SALT',   getenv_docker('WORDPRESS_LOGGED_IN_SALT',   'ceda7f55fc77c0d7b8429a34f918ba7636594eb4') );\ndefine( 'NONCE_SALT',       getenv_docker('WORDPRESS_NONCE_SALT',       'e64aa6eb6b68c950b32f2e89e76581dbf6e6edd7') );\n\n$table_prefix = getenv_docker('WORDPRESS_TABLE_PREFIX', 'wp_');\n\ndefine( 'WP_DEBUG', !!getenv_docker('WORDPRESS_DEBUG', '') );\n\nif (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) {\n\t$_SERVER['HTTPS'] = 'on';\n}\n\ndefine('FS_METHOD', 'direct');\n\nif ( ! defined( 'ABSPATH' ) ) {\n\tdefine( 'ABSPATH', __DIR__ . '/' );\n}\n\nrequire_once ABSPATH . 'wp-settings.php';\n"
+                  permission: null
+                  envsubst: null
+                - path: /var/www/html/.htaccess
+                  template: |
+                    # BEGIN WordPress
+                    # The directives (lines) between "BEGIN WordPress" and "END WordPress" are
+                    # dynamically generated, and should only be modified via WordPress filters.
+                    # Any changes to the directives between these markers will be overwritten.
+                    <IfModule mod_rewrite.c>
+                    RewriteEngine On
+                    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+                    RewriteBase /
+                    RewriteRule ^index\.php$ - [L]
+                    RewriteCond %{REQUEST_FILENAME} !-f
+                    RewriteCond %{REQUEST_FILENAME} !-d
+                    RewriteRule . /index.php [L]
+                    </IfModule>
+                    # END WordPress
+                    php_value upload_max_filesize 20480M
+                    php_value post_max_size 20480M
+                    php_value max_execution_time 3000
+                    php_value max_input_time 3000
+                    LimitRequestBody 34359738368
+                  permission: null
+                  envsubst: null
+                - path: /usr/local/etc/php/conf.d/uploads.ini
+                  template: |
+                    file_uploads = On
+                    upload_max_filesize = 20480M
+                    post_max_size = 20480M
+                    memory_limit = 20480M
+                    max_execution_time = 3000
+                  permission: null
+                  envsubst: null
+                - path: /etc/apache2/conf-available/wordpress.conf
+                  template: LimitRequestBody 34359738368
+                  permission: null
+                  envsubst: null
+          domainKey: WORDPRESS_DOMAIN
+localization:
+    es-ES:
+        description: Un sistema de gestión de contenido (CMS) que le permite alojar y construir sitios web.
+        readme: |
+            # Bienvenido a WordPress
+
+            WordPress es un sistema de gestión de contenido (CMS) de código abierto que le permite crear un sitio web o blog desde cero o mejorar un sitio web existente. Es una de las plataformas de publicación de sitios web más populares del mundo, conocida por su flexibilidad, facilidad de uso y una vasta comunidad de usuarios y desarrolladores.
+
+            ## Características Clave
+
+            - **Fácil de usar**: WordPress está diseñado pensando en usuarios no técnicos, lo que facilita que cualquiera pueda publicar contenido.
+            - **Personalizable**: Con miles de temas y plugins, puede adaptar su sitio para satisfacer sus necesidades y estilo.
+            - **Amigable con SEO**: WordPress está optimizado para motores de búsqueda desde el primer momento.
+            - **Diseño Responsivo**: Su sitio web de WordPress se verá genial en cualquier dispositivo, ya sea una computadora, tableta o teléfono inteligente.
+
+            Ya sea que sea un bloguero, propietario de una pequeña empresa o desarrollador web, WordPress tiene las herramientas y recursos para ayudarle a crear una presencia en línea profesional. Únase a los millones de usuarios que confían en WordPress para sus necesidades de sitios web y blogs。
+
+            Para cambiar el dominio de su sitio, por favor ingrese el siguiente comando en la terminal:
+
+            ("domainA.com" es su dominio antiguo, "domainB.com" es su nuevo dominio)
+            ```bash
+            wp search-replace 'domainA.com' 'domainB.com' --all-tables --precise --allow-root
+            ```
+    ja-JP:
+        description: ウェブサイトをホストし、構築することができるコンテンツ管理システム（CMS）。
+        readme: |
+            # WordPressへようこそ
+
+            WordPressは、ゼロからウェブサイトやブログを作成したり、既存のウェブサイトを改善したりすることができるオープンソースのコンテンツ管理システム（CMS）です。柔軟性、使いやすさ、そして広大なユーザーと開発者のコミュニティで知られており、世界で最も人気のあるウェブサイト公開プラットフォームの一つです。
+
+            ## 主な特徴
+
+            - **ユーザーフレンドリー**：WordPressは非技術的なユーザーを念頭に置いて設計されており、誰でも簡単にコンテンツを公開できます。
+            - **カスタマイズ可能**：数千のテーマとプラグインを使って、あなたのニーズとスタイルに合わせてサイトをカスタマイズできます。
+            - **SEOフレンドリー**：WordPressは初期設定のままで検索エンジンに最適化されています。
+            - **レスポンシブデザイン**：コンピュータ、タブレット、スマートフォンのいずれでも、WordPressサイトは素晴らしい見た目になります。
+
+            ブロガー、小規模ビジネスオーナー、ウェブ開発者のいずれであっても、WordPressにはプロフェッショナルなオンラインプレゼンスを作成するためのツールとリソースがあります。ウェブサイトとブログのニーズにWordPressを信頼する数百万のユーザーに参加しましょう。
+
+            サイトのドメインを変更するには、ターミナルで次のコマンドを入力してください：
+
+            （「domainA.com」は旧ドメイン、「domainB.com」は新ドメインです）
+            ```bash
+            wp search-replace 'domainA.com' 'domainB.com' --all-tables --precise --allow-root
+            ```
+    zh-CN:
+        description: 一个内容管理系统（CMS），可以让您托管和构建网站。
+        readme: |
+            # 欢迎使用 WordPress
+
+            WordPress 是一个开源的内容管理系统（CMS），可以让您从零开始创建一个网站或博客，或改进现有的网站。它是世界上最受欢迎的网站发布平台之一，以其灵活性、易用性和庞大的用户和开发者社区而闻名。
+
+            ## 主要特点
+
+            - **用户友好**：WordPress 是为非技术用户设计的，使任何人都可以轻松发布内容。
+            - **可定制**：有成千上万的主题和插件，您可以根据需要和风格定制您的网站。
+            - **SEO 友好**：WordPress 开箱即用地对搜索引擎进行了优化。
+            - **响应式设计**：无论是计算机、平板电脑还是智能手机，您的 WordPress 网站都将看起来很棒。
+
+            无论您是博主、小企业主还是网站开发者，WordPress 都有工具和资源帮助您创建一个专业的在线形象。加入数百万信任 WordPress 来满足他们网站和博客需求的用户行列吧。
+
+            更换网站网域，请在指令列中输入以下指令：
+
+            （domainA.com 为旧网域，domainB.com 为新网域）
+            ```bash
+            wp search-replace 'domainA.com' 'domainB.com' --all-tables --precise --allow-root
+            ```
+    zh-TW:
+        description: 一個內容管理系統（CMS），可以讓您托管和構建網站。
+        readme: |-
+            # 歡迎使用 WordPress
+
+            WordPress 是一個開源的內容管理系統（CMS），可以讓您從零開始創建一個網站或博客，或改進現有的網站。它是世界上最受歡迎的網站發布平台之一，以其靈活性、易用性和龐大的用戶和開發者社區而聞名。
+
+            ## 主要特點
+
+            - **用戶友好**：WordPress 是為非技術用戶設計的，使任何人都可以輕鬆發布內容。
+            - **可定制**：有成千上萬的主題和插件，您可以根據需要和風格定制您的網站。
+            - **SEO 友好**：WordPress 開箱即用地對搜索引擎進行了優化。
+            - **響應式設計**：無論是計算機、平板電腦還是智能手機，您的 WordPress 網站都將看起來很棒。
+
+            無論您是博主、小企業主還是網站開發者，WordPress 都有工具和資源幫助您創建一個專業的在線形象。加入數百萬信任 WordPress 來滿足他們網站和博客需求的用戶行列吧。
+
+            更換網站網域，請在指令列中輸入以下指令：
+
+            （domainA.com 為舊網域，domainB.com 為新網域）
+            ```bash
+            wp search-replace 'domainA.com' 'domainB.com' --all-tables --precise --allow-root
+            ```
