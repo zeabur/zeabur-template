@@ -41,7 +41,7 @@ spec:
       # OpenClaw 🦞
       OpenClaw 🦞 (formerly Clawdbot, Moltbot) is a personal AI assistant that runs locally and connects to multiple messaging platforms via a WebSocket-based Gateway architecture.
 
-      ⚠️ This template uses `ghcr.io/openclaw/openclaw:2026.3.22`. OpenClaw 🦞 is in rapid development, so there may be undiscovered bugs. Changing versions may also cause stability issues.
+      ⚠️ This template uses `ghcr.io/openclaw/openclaw:2026.3.24`. OpenClaw 🦞 is in rapid development, so there may be undiscovered bugs. Changing versions may also cause stability issues.
 
       ⚠️ If you encounter any issues, feel free to check the [GitHub issues](https://github.com/openclaw/openclaw/issues) for solutions or to report new ones. For Zeabur platform-related issues, please contact Zeabur support.
 
@@ -421,6 +421,9 @@ spec:
       - GitHub: https://github.com/openclaw/openclaw
 
       ## Changelog
+      **2026/3/27**
+      - Upgrade image to `2026.3.24` — Gateway OpenAI-compatible API endpoints (`/v1/models`, `/v1/embeddings`), Microsoft Teams SDK migration with streaming replies, video generation infrastructure, gateway channel startup isolation, Telegram forum topic and photo dimension fixes, Docker fresh-install setup fix, sandbox media dispatch security hardening, and 60+ fixes across WhatsApp, Discord, Slack, Feishu, and plugin SDK
+
       **2026/3/23**
       - Upgrade image to `2026.3.22` — gateway SIGTERM shutdown hardening, Telegram reply context & topic announce delivery fixes, memory tools independent registration, provider runtime lazy boundary fix, security hardening across exec approvals, pairing, and network discovery
 
@@ -530,7 +533,7 @@ spec:
         domainKey: PUBLIC_DOMAIN
         spec:
           source:
-            image: ghcr.io/openclaw/openclaw:2026.3.22
+            image: ghcr.io/openclaw/openclaw:2026.3.24
             command:
               - /bin/sh
               - -c
@@ -1430,7 +1433,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞（原 Clawdbot、Moltbot）是一個個人 AI 助手，可在本地運行並透過 WebSocket Gateway 架構連接多個訊息平台。
 
-      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.3.22`。OpenClaw 🦞 正在快速開發中，可能存在尚未發現的 bug。更改版本後也無法確保穩定性。
+      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.3.24`。OpenClaw 🦞 正在快速開發中，可能存在尚未發現的 bug。更改版本後也無法確保穩定性。
 
       ⚠️ 如果遇到任何問題，歡迎到 [GitHub issues](https://github.com/openclaw/openclaw/issues) 尋找解決方案或回報新問題。Zeabur 平台相關問題請聯繫 Zeabur 支援。
 
@@ -1812,6 +1815,9 @@ localization:
       - GitHub：https://github.com/openclaw/openclaw
 
       ## 更新日誌
+      **2026/3/27**
+      - 升級映像檔至 `2026.3.24` — Gateway OpenAI 相容 API 端點（`/v1/models`、`/v1/embeddings`）、Microsoft Teams SDK 遷移與串流回覆、影片生成基礎設施、gateway 頻道啟動隔離、Telegram 論壇主題與照片尺寸修復、Docker 全新安裝修復、sandbox 媒體分發安全強化，以及 60+ 修復涵蓋 WhatsApp、Discord、Slack、飛書及 plugin SDK
+
       **2026/3/23**
       - 升級映像檔至 `2026.3.22` — gateway SIGTERM shutdown 強化、Telegram 回覆上下文與 topic 推播修復、memory 工具獨立註冊、provider runtime lazy boundary 修復、exec approvals / pairing / 網路探索安全強化
 
@@ -1931,7 +1937,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞（原 Clawdbot、Moltbot）是一个个人 AI 助手，可在本地运行并通过 WebSocket Gateway 架构连接多个消息平台。
 
-      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.3.22`。OpenClaw 🦞 正在快速开发中，可能存在尚未发现的 bug。更改版本后也无法确保稳定性。
+      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.3.24`。OpenClaw 🦞 正在快速开发中，可能存在尚未发现的 bug。更改版本后也无法确保稳定性。
 
       ⚠️ 如果遇到任何问题，欢迎到 [GitHub issues](https://github.com/openclaw/openclaw/issues) 寻找解决方案或回报新问题。Zeabur 平台相关问题请联系 Zeabur 支持。
 
@@ -2313,6 +2319,9 @@ localization:
       - GitHub：https://github.com/openclaw/openclaw
 
       ## 更新日志
+      **2026/3/27**
+      - 升级镜像至 `2026.3.24` — Gateway OpenAI 兼容 API 端点（`/v1/models`、`/v1/embeddings`）、Microsoft Teams SDK 迁移与流式回复、视频生成基础设施、gateway 频道启动隔离、Telegram 论坛主题与照片尺寸修复、Docker 全新安装修复、sandbox 媒体分发安全强化，以及 60+ 修复涵盖 WhatsApp、Discord、Slack、飞书及 plugin SDK
+
       **2026/3/23**
       - 升级镜像至 `2026.3.22` — gateway SIGTERM shutdown 强化、Telegram 回复上下文与 topic 推送修复、memory 工具独立注册、provider runtime lazy boundary 修复、exec approvals / pairing / 网络探索安全强化
 
@@ -2432,7 +2441,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞（旧 Clawdbot、Moltbot）は、ローカルで実行され、WebSocket ベースの Gateway アーキテクチャを介して複数のメッセージングプラットフォームに接続する個人用 AI アシスタントです。
 
-      ⚠️ 本テンプレートは `ghcr.io/openclaw/openclaw:2026.3.22` を使用しています。OpenClaw 🦞 は急速に開発中のため、未発見のバグがある可能性があります。バージョンを変更した場合も安定性を保証できません。
+      ⚠️ 本テンプレートは `ghcr.io/openclaw/openclaw:2026.3.24` を使用しています。OpenClaw 🦞 は急速に開発中のため、未発見のバグがある可能性があります。バージョンを変更した場合も安定性を保証できません。
 
       ⚠️ 問題が発生した場合は、[GitHub issues](https://github.com/openclaw/openclaw/issues) で解決策を探したり、新しい問題を報告したりしてください。Zeabur プラットフォーム関連の問題については、Zeabur サポートにお問い合わせください。
 
@@ -2814,6 +2823,9 @@ localization:
       - GitHub：https://github.com/openclaw/openclaw
 
       ## 変更履歴
+      **2026/3/27**
+      - イメージを `2026.3.24` にアップグレード — Gateway OpenAI 互換 API エンドポイント（`/v1/models`、`/v1/embeddings`）、Microsoft Teams SDK 移行とストリーミング応答、動画生成インフラ、gateway チャンネル起動分離、Telegram フォーラムトピック・写真サイズ修正、Docker 新規インストール修正、sandbox メディアディスパッチセキュリティ強化、WhatsApp・Discord・Slack・Feishu・plugin SDK にわたる 60 以上の修正
+
       **2026/3/23**
       - イメージを `2026.3.22` にアップグレード — gateway SIGTERM shutdown 強化、Telegram 返信コンテキスト・トピック配信修正、memory ツール独立登録、provider runtime lazy boundary 修正、exec approvals / pairing / ネットワーク探索のセキュリティ強化
 
@@ -2933,7 +2945,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞 (anteriormente Clawdbot, Moltbot) es un asistente personal de IA que se ejecuta localmente y se conecta a múltiples plataformas de mensajería a través de una arquitectura Gateway basada en WebSocket.
 
-      ⚠️ Esta plantilla usa `ghcr.io/openclaw/openclaw:2026.3.22`. OpenClaw 🦞 está en desarrollo rápido, por lo que puede haber errores no descubiertos. Cambiar de versión tampoco garantiza estabilidad.
+      ⚠️ Esta plantilla usa `ghcr.io/openclaw/openclaw:2026.3.24`. OpenClaw 🦞 está en desarrollo rápido, por lo que puede haber errores no descubiertos. Cambiar de versión tampoco garantiza estabilidad.
 
       ⚠️ Si encuentra algún problema, no dude en consultar los [GitHub issues](https://github.com/openclaw/openclaw/issues) para buscar soluciones o reportar nuevos problemas. Para problemas relacionados con la plataforma Zeabur, contacte al soporte de Zeabur.
 
@@ -3315,6 +3327,9 @@ localization:
       - GitHub: https://github.com/openclaw/openclaw
 
       ## Registro de Cambios
+      **2026/3/27**
+      - Actualizar imagen a `2026.3.24` — Endpoints API compatibles con OpenAI del Gateway (`/v1/models`, `/v1/embeddings`), migración del SDK de Microsoft Teams con respuestas en streaming, infraestructura de generación de video, aislamiento de inicio de canales del gateway, correcciones de temas de foro y dimensiones de fotos en Telegram, corrección de instalación nueva de Docker, fortalecimiento de seguridad en despacho de medios del sandbox, y 60+ correcciones en WhatsApp, Discord, Slack, Feishu y plugin SDK
+
       **2026/3/23**
       - Actualizar imagen a `2026.3.22` — hardening del shutdown SIGTERM del gateway, correcciones en contexto de respuesta de Telegram y entrega de topic announce, registro independiente de herramientas memory, corrección del lazy boundary del runtime del provider, fortalecimiento de seguridad en exec approvals, pairing y descubrimiento de red
 
@@ -3434,7 +3449,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞 (sebelumnya Clawdbot, Moltbot) adalah asisten AI pribadi yang berjalan secara lokal dan terhubung ke berbagai platform perpesanan melalui arsitektur Gateway berbasis WebSocket.
 
-      ⚠️ Template ini menggunakan `ghcr.io/openclaw/openclaw:2026.3.22`. OpenClaw 🦞 sedang dalam pengembangan cepat, jadi mungkin ada bug yang belum ditemukan. Mengubah versi juga tidak menjamin stabilitas.
+      ⚠️ Template ini menggunakan `ghcr.io/openclaw/openclaw:2026.3.24`. OpenClaw 🦞 sedang dalam pengembangan cepat, jadi mungkin ada bug yang belum ditemukan. Mengubah versi juga tidak menjamin stabilitas.
 
       ⚠️ Jika Anda mengalami masalah, silakan kunjungi [GitHub issues](https://github.com/openclaw/openclaw/issues) untuk mencari solusi atau melaporkan masalah baru. Untuk masalah terkait platform Zeabur, silakan hubungi dukungan Zeabur.
 
@@ -3816,6 +3831,9 @@ localization:
       - GitHub: https://github.com/openclaw/openclaw
 
       ## Catatan Perubahan
+      **2026/3/27**
+      - Upgrade image ke `2026.3.24` — Endpoint API Gateway kompatibel OpenAI (`/v1/models`, `/v1/embeddings`), migrasi SDK Microsoft Teams dengan reply streaming, infrastruktur pembuatan video, isolasi startup channel gateway, perbaikan topik forum Telegram & dimensi foto, perbaikan instalasi baru Docker, penguatan keamanan dispatch media sandbox, dan 60+ perbaikan di WhatsApp, Discord, Slack, Feishu, dan plugin SDK
+
       **2026/3/23**
       - Upgrade image ke `2026.3.22` — penguatan shutdown SIGTERM gateway, perbaikan konteks reply Telegram & pengiriman topic announce, registrasi independen memory tools, perbaikan lazy boundary runtime provider, penguatan keamanan exec approvals, pairing, dan network discovery
 
