@@ -344,7 +344,7 @@ spec:
                   type: HTTP
             instructions:
                 - title: Open Twenty CRM
-                  content: https://${TWENTY_DOMAIN}.zeabur.app
+                  content: ${ZEABUR_WEB_URL}
             env:
                 APP_SECRET:
                     default: ${PASSWORD}
@@ -371,7 +371,10 @@ spec:
                     default: ${REDIS_CONNECTION_STRING}
                     expose: true
                 SERVER_URL:
-                    default: https://${TWENTY_DOMAIN}.zeabur.app
+                    default: https://${ZEABUR_WEB_DOMAIN}
+                    expose: false
+                REACT_APP_SERVER_BASE_URL:
+                    default: https://${ZEABUR_WEB_DOMAIN}
                     expose: false
                 STORAGE_S3_ENDPOINT:
                     default: ${MINIO_S3_ENDPOINT}
