@@ -17,11 +17,21 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
   && apt-get update && apt-get install -y --no-install-recommends gh \
   && rm -rf /var/lib/apt/lists/*
 
+# ttyd - web terminal
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then TTYD_ARCH=x86_64; \
+    elif [ "$ARCH" = "arm64" ]; then TTYD_ARCH=aarch64; \
+    else echo "Unsupported arch: $ARCH" && exit 1; fi && \
+    curl -fsSL -o /usr/local/bin/ttyd \
+      "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" && \
+    chmod +x /usr/local/bin/ttyd
+
 RUN npm install -g @openai/codex@latest
 
 RUN mkdir -p /home/node && chown node:node /home/node
 
 ENV HOME=/home/node
+WORKDIR /home/node
 VOLUME ["/home/node"]
 
 CMD ["sleep", "infinity"]
