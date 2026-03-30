@@ -6,7 +6,7 @@ metadata:
 spec:
   description: |
     Google's AI-powered coding agent for the command line. Run Gemini CLI in a persistent cloud workstation with Zeabur Terminal access.
-  icon: https://cdn.zeabur.com/marketplace/gemini-cli.svg
+  icon: https://cdn-console.zeabur.com/f/AYgtA/geminicli-color.webp
   variables:
     - key: PUBLIC_DOMAIN
       type: DOMAIN
@@ -74,7 +74,7 @@ spec:
     - [Gemini API Documentation](https://ai.google.dev/docs)
   services:
     - name: gemini-cli
-      icon: https://cdn.zeabur.com/marketplace/gemini-cli.svg
+      icon: https://cdn-console.zeabur.com/f/AYgtA/geminicli-color.webp
       template: PREBUILT_V2
       domainKey: PUBLIC_DOMAIN
       spec:
@@ -120,6 +120,10 @@ spec:
             title: Password
             content: ${WEB_TERMINAL_PASSWORD}
             category: Credentials
+          - type: TEXT
+            title: Start Gemini CLI (full permissions)
+            content: gemini --yolo
+            category: Usage
 localization:
   zh-TW:
     description: |

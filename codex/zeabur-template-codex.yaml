@@ -6,7 +6,7 @@ metadata:
 spec:
   description: |
     OpenAI Codex CLI - an AI coding agent that runs in your terminal. Deploy as a persistent cloud workstation with Zeabur Terminal access.
-  icon: https://cdn.zeabur.com/marketplace/codex.svg
+  icon: https://cdn-console.zeabur.com/f/zD0ib/codex-color.webp
   variables:
     - key: PUBLIC_DOMAIN
       type: DOMAIN
@@ -80,7 +80,7 @@ spec:
     - [Codex CLI Documentation](https://developers.openai.com/codex/cli/features)
   services:
     - name: codex
-      icon: https://cdn.zeabur.com/marketplace/codex.svg
+      icon: https://cdn-console.zeabur.com/f/zD0ib/codex-color.webp
       template: PREBUILT
       domainKey: PUBLIC_DOMAIN
       spec:
