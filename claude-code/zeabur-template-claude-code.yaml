@@ -84,15 +84,11 @@ spec:
 
     ## Changelog
 
-    ### 2026-03-30
+    ### 2026-03-30 -- Initial Release
 
-    - Add ttyd web terminal with password auth
-    - Switch to Claude Code native installer (auto-installed on first boot)
-    - Add resource requirements and domain binding
-
-    ### 2026-03-17
-
-    - Initial release
+    - ttyd web terminal with password auth
+    - Claude Code native installer (auto-installed on first boot)
+    - Resource requirements, domain binding, and health check
 
     ## Links
 
@@ -227,15 +223,11 @@ localization:
 
       ## 變更紀錄
 
-      ### 2026-03-30
+      ### 2026-03-30 — 首次發佈
 
-      - 新增 ttyd Web 終端機（密碼驗證）
-      - 改用 Claude Code 原生安裝器（首次啟動自動安裝）
-      - 新增資源需求及網域綁定
-
-      ### 2026-03-17
-
-      - 首次發佈
+      - ttyd Web 終端機（密碼驗證）
+      - Claude Code 原生安裝器（首次啟動自動安裝）
+      - 資源需求、網域綁定及健康檢查
 
       ## 連結
 
@@ -308,15 +300,11 @@ localization:
 
       ## 变更记录
 
-      ### 2026-03-30
+      ### 2026-03-30 — 首次发布
 
-      - 新增 ttyd Web 终端（密码验证）
-      - 改用 Claude Code 原生安装器（首次启动自动安装）
-      - 新增资源需求及域名绑定
-
-      ### 2026-03-17
-
-      - 首次发布
+      - ttyd Web 终端（密码验证）
+      - Claude Code 原生安装器（首次启动自动安装）
+      - 资源需求、域名绑定及健康检查
 
       ## 链接
 
@@ -389,15 +377,11 @@ localization:
 
       ## 変更履歴
 
-      ### 2026-03-30
+      ### 2026-03-30 — 初回リリース
 
-      - ttyd Web ターミナルを追加（パスワード認証）
-      - Claude Code ネイティブインストーラーに切替（初回起動時に自動インストール）
-      - リソース要件とドメインバインディングを追加
-
-      ### 2026-03-17
-
-      - 初回リリース
+      - ttyd Web ターミナル（パスワード認証）
+      - Claude Code ネイティブインストーラー（初回起動時に自動インストール）
+      - リソース要件、ドメインバインディング、ヘルスチェック
 
       ## リンク
 
@@ -470,15 +454,11 @@ localization:
 
       ## Registro de cambios
 
-      ### 2026-03-30
+      ### 2026-03-30 -- Lanzamiento inicial
 
-      - Agregar terminal web ttyd (autenticacion por contrasena)
-      - Cambiar al instalador nativo de Claude Code (instalacion automatica en primer inicio)
-      - Agregar requisitos de recursos y vinculacion de dominio
-
-      ### 2026-03-17
-
-      - Lanzamiento inicial
+      - Terminal web ttyd (autenticacion por contrasena)
+      - Instalador nativo de Claude Code (instalacion automatica en primer inicio)
+      - Requisitos de recursos, vinculacion de dominio y health check
 
       ## Enlaces
 
@@ -551,15 +531,11 @@ localization:
 
       ## Catatan Perubahan
 
-      ### 2026-03-30
+      ### 2026-03-30 -- Rilis Pertama
 
-      - Tambah terminal web ttyd (autentikasi password)
-      - Beralih ke installer native Claude Code (instalasi otomatis saat boot pertama)
-      - Tambah persyaratan sumber daya dan binding domain
-
-      ### 2026-03-17
-
-      - Rilis pertama
+      - Terminal web ttyd (autentikasi password)
+      - Installer native Claude Code (instalasi otomatis saat boot pertama)
+      - Persyaratan sumber daya, binding domain, dan health check
 
       ## Tautan
 
