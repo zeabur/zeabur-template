@@ -67,6 +67,14 @@ spec:
     - **Minimum**: 1 vCPU / 4 GB RAM (casual use)
     - **Recommended**: 2 vCPU / 16 GB RAM (power use, large codebases)
 
+    ## Changelog
+
+    ### 2026-03-31 -- Initial Release
+
+    - ttyd web terminal with password auth
+    - Homebrew and npm global packages persisted in volume
+    - Resource requirements and domain binding
+
     ## Links
 
     - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
@@ -173,6 +181,14 @@ localization:
       - **最低配置**：1 vCPU / 4 GB RAM（輕度使用）
       - **建議配置**：2 vCPU / 16 GB RAM（重度使用、大型程式碼庫）
 
+      ## 變更紀錄
+
+      ### 2026-03-31 — 首次發佈
+
+      - ttyd Web 終端機（密碼驗證）
+      - Homebrew 及 npm 全域套件持久化於磁碟
+      - 資源需求及網域綁定
+
       ## 連結
 
       - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
@@ -212,6 +228,14 @@ localization:
       ## 建议资源配置
       - **最低配置**：1 vCPU / 4 GB RAM（轻度使用）
       - **建议配置**：2 vCPU / 16 GB RAM（重度使用、大型代码库）
+
+      ## 变更记录
+
+      ### 2026-03-31 — 首次发布
+
+      - ttyd Web 终端（密码验证）
+      - Homebrew 及 npm 全局包持久化于卷
+      - 资源需求及域名绑定
 
       ## 链接
 
@@ -253,6 +277,14 @@ localization:
       - **最小構成**：1 vCPU / 4 GB RAM（軽量使用）
       - **推奨構成**：2 vCPU / 16 GB RAM（ヘビー使用、大規模コードベース）
 
+      ## 変更履歴
+
+      ### 2026-03-31 — 初回リリース
+
+      - ttyd Web ターミナル（パスワード認証）
+      - Homebrew および npm グローバルパッケージをボリュームに永続化
+      - リソース要件およびドメインバインディング
+
       ## リンク
 
       - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
@@ -293,6 +325,14 @@ localization:
       - **Minimo**: 1 vCPU / 4 GB RAM (uso casual)
       - **Recomendado**: 2 vCPU / 16 GB RAM (uso intensivo, grandes bases de codigo)
 
+      ## Registro de cambios
+
+      ### 2026-03-31 -- Lanzamiento inicial
+
+      - Terminal web ttyd (autenticacion por contrasena)
+      - Homebrew y paquetes npm globales persistidos en volumen
+      - Requisitos de recursos y vinculacion de dominio
+
       ## Enlaces
 
       - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
@@ -332,6 +372,14 @@ localization:
       ## Sumber Daya yang Direkomendasikan
       - **Minimum**: 1 vCPU / 4 GB RAM (penggunaan ringan)
       - **Disarankan**: 2 vCPU / 16 GB RAM (penggunaan berat, codebase besar)
+
+      ## Catatan Perubahan
+
+      ### 2026-03-31 -- Rilis Pertama
+
+      - Terminal web ttyd (autentikasi password)
+      - Homebrew dan paket npm global disimpan persisten di volume
+      - Persyaratan sumber daya dan binding domain
 
       ## Tautan
 

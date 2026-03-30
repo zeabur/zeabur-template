@@ -74,6 +74,14 @@ spec:
     - **Minimum**: 1 vCPU / 2 GB RAM
     - **Recommended**: 2 vCPU / 4 GB RAM
 
+    ## Changelog
+
+    ### 2026-03-31 -- Initial Release
+
+    - ttyd web terminal with password auth and device code sign-in
+    - Homebrew and npm global packages persisted in volume
+    - Resource requirements and domain binding
+
     ## Links
 
     - [GitHub](https://github.com/openai/codex)
@@ -194,6 +202,14 @@ localization:
       - **最低配置**：1 vCPU / 2 GB RAM
       - **建議配置**：2 vCPU / 4 GB RAM
 
+      ## 變更紀錄
+
+      ### 2026-03-31 — 首次發佈
+
+      - ttyd Web 終端機（密碼驗證及裝置代碼登入）
+      - Homebrew 及 npm 全域套件持久化於磁碟
+      - 資源需求及網域綁定
+
       ## 連結
 
       - [GitHub](https://github.com/openai/codex)
@@ -238,6 +254,14 @@ localization:
       ## 建议资源配置
       - **最低配置**：1 vCPU / 2 GB RAM
       - **建议配置**：2 vCPU / 4 GB RAM
+
+      ## 变更记录
+
+      ### 2026-03-31 — 首次发布
+
+      - ttyd Web 终端（密码验证及设备代码登录）
+      - Homebrew 及 npm 全局包持久化于卷
+      - 资源需求及域名绑定
 
       ## 链接
 
@@ -284,6 +308,14 @@ localization:
       - **最小構成**：1 vCPU / 2 GB RAM
       - **推奨構成**：2 vCPU / 4 GB RAM
 
+      ## 変更履歴
+
+      ### 2026-03-31 — 初回リリース
+
+      - ttyd Web ターミナル（パスワード認証およびデバイスコードサインイン）
+      - Homebrew および npm グローバルパッケージをボリュームに永続化
+      - リソース要件およびドメインバインディング
+
       ## リンク
 
       - [GitHub](https://github.com/openai/codex)
@@ -329,6 +361,14 @@ localization:
       - **Minimo**: 1 vCPU / 2 GB RAM
       - **Recomendado**: 2 vCPU / 4 GB RAM
 
+      ## Registro de cambios
+
+      ### 2026-03-31 -- Lanzamiento inicial
+
+      - Terminal web ttyd (autenticacion por contrasena e inicio de sesion por codigo de dispositivo)
+      - Homebrew y paquetes npm globales persistidos en volumen
+      - Requisitos de recursos y vinculacion de dominio
+
       ## Enlaces
 
       - [GitHub](https://github.com/openai/codex)
@@ -373,6 +413,14 @@ localization:
       ## Sumber Daya yang Direkomendasikan
       - **Minimum**: 1 vCPU / 2 GB RAM
       - **Disarankan**: 2 vCPU / 4 GB RAM
+
+      ## Catatan Perubahan
+
+      ### 2026-03-31 -- Rilis Pertama
+
+      - Terminal web ttyd (autentikasi password dan login kode perangkat)
+      - Homebrew dan paket npm global disimpan persisten di volume
+      - Persyaratan sumber daya dan binding domain
 
       ## Tautan
 
