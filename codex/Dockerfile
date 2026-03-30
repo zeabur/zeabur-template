@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq bc fzf ripgrep tree unzip zip tar \
     procps psmisc lsof socat iproute2 dnsutils \
     python3 make g++ \
-    sudo rsync \
+    sudo rsync bubblewrap \
   && rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI

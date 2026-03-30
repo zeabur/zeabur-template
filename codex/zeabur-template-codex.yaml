@@ -42,18 +42,11 @@ spec:
     1. **Deploy the template** and wait for the service to start. Wait until the health check turns green before proceeding.
     2. **Open the service URL** in your browser (the domain bound to your service).
     3. **Log in** with username `user` and the password from the **Instructions** tab on the Zeabur dashboard.
-    4. **Authenticate Codex** — run `codex` and follow the prompts, or set `OPENAI_API_KEY` in the dashboard.
+    4. **Sign in** — run `codex`, then open https://auth.openai.com/codex/device in your browser and enter the one-time code shown in the terminal. See [Codex Auth Docs](https://developers.openai.com/codex/auth#login-on-headless-devices).
 
-    ## Authentication
+    ## Using API Key (Optional)
 
-    ### Device Auth (Recommended)
-
-    1. Enable "Enable device code authorization for Codex" in your [ChatGPT Security Settings](https://chatgpt.com/settings/security).
-    2. Run `codex login --device-auth` in the web terminal and follow the on-screen instructions.
-
-    ### API Key (Optional)
-
-    Set `OPENAI_API_KEY` in the Zeabur dashboard. Optionally set `OPENAI_BASE_URL` to use [Zeabur AI Hub](https://zeabur.com/ai) (e.g., `https://hub.zeabur.com/v1`).
+    Instead of device code sign-in, you can set `OPENAI_API_KEY` in the Zeabur dashboard. Optionally set `OPENAI_BASE_URL` to use [Zeabur AI Hub](https://zeabur.com/ai) (e.g., `https://hub.zeabur.com/v1`).
 
     ## Persistent Storage
 
@@ -141,6 +134,10 @@ spec:
             content: ${WEB_TERMINAL_PASSWORD}
             category: Credentials
           - type: TEXT
+            title: Sign in URL
+            content: https://auth.openai.com/codex/device
+            category: Usage
+          - type: TEXT
             title: Start Codex (full permissions)
             content: codex --full-auto
             category: Usage
@@ -162,18 +159,11 @@ localization:
       1. **部署模板**並等待服務啟動。請等待健康檢查變為綠色後再繼續。
       2. **在瀏覽器中開啟服務網址**（綁定到服務的網域）。
       3. **登入**，使用者名稱為 `user`，密碼請在 Zeabur 儀表板的 **Instructions** 頁籤查看。
-      4. **認證 Codex** — 執行 `codex` 並依照提示操作，或在儀表板設定 `OPENAI_API_KEY`。
+      4. **登入** — 執行 `codex`，然後在瀏覽器開啟 https://auth.openai.com/codex/device 並輸入終端機顯示的一次性代碼。參考 [Codex 認證文件](https://developers.openai.com/codex/auth#login-on-headless-devices)。
 
-      ## 認證方式
+      ## 使用 API 金鑰（選用）
 
-      ### 裝置驗證（推薦）
-
-      1. 在 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 中啟用「Enable device code authorization for Codex」。
-      2. 在 Web 終端機中執行 `codex login --device-auth` 並依照指示操作。
-
-      ### API 金鑰（選用）
-
-      在 Zeabur 儀表板設定 `OPENAI_API_KEY`。可選擇設定 `OPENAI_BASE_URL` 以使用 [Zeabur AI Hub](https://zeabur.com/ai)。
+      除了裝置代碼登入外，也可以在 Zeabur 儀表板設定 `OPENAI_API_KEY`。可選擇設定 `OPENAI_BASE_URL` 以使用 [Zeabur AI Hub](https://zeabur.com/ai)。
 
       ## 持久化儲存
 
@@ -214,18 +204,11 @@ localization:
       1. **部署模板**并等待服务启动。请等待健康检查变为绿色后再继续。
       2. **在浏览器中打开服务网址**（绑定到服务的域名）。
       3. **登录**，用户名为 `user`，密码请在 Zeabur 仪表板的 **Instructions** 页签查看。
-      4. **认证 Codex** — 执行 `codex` 并按照提示操作，或在仪表板设置 `OPENAI_API_KEY`。
+      4. **登录** — 执行 `codex`，然后在浏览器打开 https://auth.openai.com/codex/device 并输入终端显示的一次性代码。参考 [Codex 认证文档](https://developers.openai.com/codex/auth#login-on-headless-devices)。
 
-      ## 认证方式
+      ## 使用 API 密钥（可选）
 
-      ### 设备验证（推荐）
-
-      1. 在 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 中启用「Enable device code authorization for Codex」。
-      2. 在 Web 终端中执行 `codex login --device-auth` 并按照指示操作。
-
-      ### API 密钥（可选）
-
-      在 Zeabur 仪表板设置 `OPENAI_API_KEY`。可选择设置 `OPENAI_BASE_URL` 以使用 [Zeabur AI Hub](https://zeabur.com/ai)。
+      除了设备代码登录外，也可以在 Zeabur 仪表板设置 `OPENAI_API_KEY`。可选择设置 `OPENAI_BASE_URL` 以使用 [Zeabur AI Hub](https://zeabur.com/ai)。
 
       ## 持久化存储
 
@@ -266,18 +249,11 @@ localization:
       1. **テンプレートをデプロイ**し、サービスの起動を待ちます。ヘルスチェックが緑になるまでお待ちください。
       2. **ブラウザでサービスURLを開きます**（サービスにバインドされたドメイン）。
       3. **ログイン**：ユーザー名は `user`、パスワードはZeaburダッシュボードの**Instructions**タブで確認できます。
-      4. **Codexを認証** — `codex` を実行してプロンプトに従うか、ダッシュボードで `OPENAI_API_KEY` を設定します。
+      4. **サインイン** — `codex` を実行し、ブラウザで https://auth.openai.com/codex/device を開いてターミナルに表示されるワンタイムコードを入力します。[Codex 認証ドキュメント](https://developers.openai.com/codex/auth#login-on-headless-devices)を参照。
 
-      ## 認証方法
+      ## API キーの使用（オプション）
 
-      ### デバイス認証（推奨）
-
-      1. [ChatGPT Security Settings](https://chatgpt.com/settings/security) で「Enable device code authorization for Codex」を有効にします。
-      2. Webターミナルで `codex login --device-auth` を実行し、指示に従います。
-
-      ### APIキー（オプション）
-
-      Zeaburダッシュボードで `OPENAI_API_KEY` を設定します。オプションで `OPENAI_BASE_URL` を設定し、[Zeabur AI Hub](https://zeabur.com/ai) を使用できます。
+      デバイスコードサインインの代わりに、Zeabur ダッシュボードで `OPENAI_API_KEY` を設定できます。オプションで `OPENAI_BASE_URL` を設定し、[Zeabur AI Hub](https://zeabur.com/ai) を使用できます。
 
       ## 永続ストレージ
 
@@ -318,18 +294,11 @@ localization:
       1. **Despliega la plantilla** y espera a que el servicio se inicie. Espera hasta que el health check se ponga verde.
       2. **Abre la URL del servicio** en tu navegador (el dominio vinculado al servicio).
       3. **Inicia sesion** con usuario `user` y la contrasena de la pestana **Instructions** en el panel de Zeabur.
-      4. **Autentica Codex** — ejecuta `codex` y sigue las indicaciones, o configura `OPENAI_API_KEY` en el panel.
+      4. **Iniciar sesion** — ejecuta `codex`, luego abre https://auth.openai.com/codex/device en tu navegador e ingresa el codigo mostrado en el terminal. Ver [Codex Auth Docs](https://developers.openai.com/codex/auth#login-on-headless-devices).
 
-      ## Autenticacion
+      ## Usar clave API (Opcional)
 
-      ### Autenticacion de dispositivo (Recomendado)
-
-      1. Habilita "Enable device code authorization for Codex" en [ChatGPT Security Settings](https://chatgpt.com/settings/security).
-      2. Ejecuta `codex login --device-auth` en el terminal web y sigue las instrucciones.
-
-      ### Clave API (Opcional)
-
-      Configura `OPENAI_API_KEY` en el panel de Zeabur. Opcionalmente configura `OPENAI_BASE_URL` para usar [Zeabur AI Hub](https://zeabur.com/ai).
+      En lugar del inicio de sesion por codigo de dispositivo, puedes configurar `OPENAI_API_KEY` en el panel de Zeabur. Opcionalmente configura `OPENAI_BASE_URL` para usar [Zeabur AI Hub](https://zeabur.com/ai).
 
       ## Almacenamiento persistente
 
@@ -370,18 +339,11 @@ localization:
       1. **Deploy template** dan tunggu layanan dimulai. Tunggu hingga health check berwarna hijau sebelum melanjutkan.
       2. **Buka URL layanan** di browser Anda (domain yang terikat ke layanan).
       3. **Login** dengan username `user` dan password dari tab **Instructions** di dashboard Zeabur.
-      4. **Autentikasi Codex** — jalankan `codex` dan ikuti petunjuk, atau atur `OPENAI_API_KEY` di dashboard.
+      4. **Login** — jalankan `codex`, lalu buka https://auth.openai.com/codex/device di browser dan masukkan kode yang ditampilkan di terminal. Lihat [Codex Auth Docs](https://developers.openai.com/codex/auth#login-on-headless-devices).
 
-      ## Autentikasi
+      ## Menggunakan API Key (Opsional)
 
-      ### Autentikasi Perangkat (Direkomendasikan)
-
-      1. Aktifkan "Enable device code authorization for Codex" di [ChatGPT Security Settings](https://chatgpt.com/settings/security).
-      2. Jalankan `codex login --device-auth` di terminal web dan ikuti instruksi.
-
-      ### API Key (Opsional)
-
-      Atur `OPENAI_API_KEY` di dashboard Zeabur. Opsional atur `OPENAI_BASE_URL` untuk menggunakan [Zeabur AI Hub](https://zeabur.com/ai).
+      Selain login kode perangkat, Anda juga dapat mengatur `OPENAI_API_KEY` di dashboard Zeabur. Opsional atur `OPENAI_BASE_URL` untuk menggunakan [Zeabur AI Hub](https://zeabur.com/ai).
 
       ## Penyimpanan Persisten
 
