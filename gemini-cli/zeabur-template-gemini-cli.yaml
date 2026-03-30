@@ -63,6 +63,10 @@ spec:
     | `GEMINI_API_KEY` | Yes | Google Gemini API key from [Google AI Studio](https://aistudio.google.com/) |
     | `WEB_TERMINAL_PASSWORD` | Auto | Password for web terminal login (auto-generated) |
 
+    ## Recommended Resources
+    - **Minimum**: 1 vCPU / 4 GB RAM (casual use)
+    - **Recommended**: 2 vCPU / 16 GB RAM (power use, large codebases)
+
     ## Links
 
     - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
@@ -149,6 +153,10 @@ localization:
 
       `/home/node/` 下的所有資料在重啟和重新部署後都會保留。
 
+      ## 建議資源配置
+      - **最低配置**：1 vCPU / 4 GB RAM（輕度使用）
+      - **建議配置**：2 vCPU / 16 GB RAM（重度使用、大型程式碼庫）
+
       ## 連結
 
       - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
@@ -184,6 +192,10 @@ localization:
       ## 持久化存储
 
       `/home/node/` 下的所有数据在重启和重新部署后都会保留。
+
+      ## 建议资源配置
+      - **最低配置**：1 vCPU / 4 GB RAM（轻度使用）
+      - **建议配置**：2 vCPU / 16 GB RAM（重度使用、大型代码库）
 
       ## 链接
 
@@ -221,6 +233,10 @@ localization:
 
       `/home/node/` 配下のすべてのデータは、再起動や再デプロイ後も保持されます。
 
+      ## 推奨リソース
+      - **最小構成**：1 vCPU / 4 GB RAM（軽量使用）
+      - **推奨構成**：2 vCPU / 16 GB RAM（ヘビー使用、大規模コードベース）
+
       ## リンク
 
       - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
@@ -257,6 +273,10 @@ localization:
 
       Todos los datos bajo `/home/node/` se conservan entre reinicios y redespliegues.
 
+      ## Recursos Recomendados
+      - **Minimo**: 1 vCPU / 4 GB RAM (uso casual)
+      - **Recomendado**: 2 vCPU / 16 GB RAM (uso intensivo, grandes bases de codigo)
+
       ## Enlaces
 
       - [Gemini CLI GitHub](https://github.com/google-gemini/gemini-cli)
@@ -292,6 +312,10 @@ localization:
       ## Penyimpanan Persisten
 
       Semua data di bawah `/home/node/` dipertahankan setelah restart dan redeployment.
+
+      ## Sumber Daya yang Direkomendasikan
+      - **Minimum**: 1 vCPU / 4 GB RAM (penggunaan ringan)
+      - **Disarankan**: 2 vCPU / 16 GB RAM (penggunaan berat, codebase besar)
 
       ## Tautan
 

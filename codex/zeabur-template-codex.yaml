@@ -77,6 +77,10 @@ spec:
     | `OPENAI_BASE_URL` | No | Custom API endpoint (for Zeabur AI Hub) |
     | `WEB_TERMINAL_PASSWORD` | Auto | Password for web terminal login (auto-generated) |
 
+    ## Recommended Resources
+    - **Minimum**: 1 vCPU / 2 GB RAM
+    - **Recommended**: 2 vCPU / 4 GB RAM
+
     ## Links
 
     - [GitHub](https://github.com/openai/codex)
@@ -185,6 +189,10 @@ localization:
       | `codex resume` | 恢復先前的會話 |
       | `codex --version` | 檢查已安裝的 Codex 版本 |
 
+      ## 建議資源配置
+      - **最低配置**：1 vCPU / 2 GB RAM
+      - **建議配置**：2 vCPU / 4 GB RAM
+
       ## 連結
 
       - [GitHub](https://github.com/openai/codex)
@@ -232,6 +240,10 @@ localization:
       | `codex exec "任务"` | 非交互式运行（用于自动化） |
       | `codex resume` | 恢复之前的会话 |
       | `codex --version` | 检查已安装的 Codex 版本 |
+
+      ## 建议资源配置
+      - **最低配置**：1 vCPU / 2 GB RAM
+      - **建议配置**：2 vCPU / 4 GB RAM
 
       ## 链接
 
@@ -281,6 +293,10 @@ localization:
       | `codex resume` | 以前のセッションを再開 |
       | `codex --version` | インストール済みCodexバージョンを確認 |
 
+      ## 推奨リソース
+      - **最小構成**：1 vCPU / 2 GB RAM
+      - **推奨構成**：2 vCPU / 4 GB RAM
+
       ## リンク
 
       - [GitHub](https://github.com/openai/codex)
@@ -329,6 +345,10 @@ localization:
       | `codex resume` | Reanudar una sesion anterior |
       | `codex --version` | Verificar la version instalada de Codex |
 
+      ## Recursos Recomendados
+      - **Minimo**: 1 vCPU / 2 GB RAM
+      - **Recomendado**: 2 vCPU / 4 GB RAM
+
       ## Enlaces
 
       - [GitHub](https://github.com/openai/codex)
@@ -376,6 +396,10 @@ localization:
       | `codex exec "tugas"` | Jalankan non-interaktif (untuk otomatisasi) |
       | `codex resume` | Lanjutkan sesi sebelumnya |
       | `codex --version` | Periksa versi Codex yang terinstal |
+
+      ## Sumber Daya yang Direkomendasikan
+      - **Minimum**: 1 vCPU / 2 GB RAM
+      - **Disarankan**: 2 vCPU / 4 GB RAM
 
       ## Tautan
 
