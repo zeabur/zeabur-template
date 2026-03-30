@@ -105,9 +105,11 @@ spec:
               if [ ! -f /home/node/.linuxbrew/bin/brew ]; then
                 NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
               fi
-              BREW_SHELLENV='eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"'
               for rc in /home/node/.bashrc /home/node/.profile; do
-                grep -qF 'linuxbrew' "$rc" 2>/dev/null || echo "$BREW_SHELLENV" >> "$rc"
+                grep -qF '.npm-global' "$rc" 2>/dev/null || cat >> "$rc" << 'EOPATH'
+              export PATH="$HOME/.npm-global/bin:$PATH"
+              EOPATH
+                grep -qF 'linuxbrew' "$rc" 2>/dev/null || echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "$rc"
               done
 
               exec ttyd \
