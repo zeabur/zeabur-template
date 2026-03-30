@@ -78,11 +78,12 @@ spec:
 
     ## Changelog
 
-    ### 2026-03-30 -- Initial Release
+    ### 2026-03-31 -- Initial Release
 
     - ttyd web terminal with password auth
     - Claude Code native installer (auto-installed on first boot)
-    - Resource requirements, domain binding, and health check
+    - Homebrew and npm global packages persisted in volume
+    - Resource requirements and domain binding
 
     ## Links
 
@@ -221,11 +222,12 @@ localization:
 
       ## 變更紀錄
 
-      ### 2026-03-30 — 首次發佈
+      ### 2026-03-31 — 首次發佈
 
       - ttyd Web 終端機（密碼驗證）
       - Claude Code 原生安裝器（首次啟動自動安裝）
-      - 資源需求、網域綁定及健康檢查
+      - Homebrew 及 npm 全域套件持久化於磁碟
+      - 資源需求及網域綁定
 
       ## 連結
 
@@ -294,11 +296,12 @@ localization:
 
       ## 变更记录
 
-      ### 2026-03-30 — 首次发布
+      ### 2026-03-31 — 首次发布
 
       - ttyd Web 终端（密码验证）
       - Claude Code 原生安装器（首次启动自动安装）
-      - 资源需求、域名绑定及健康检查
+      - Homebrew 及 npm 全局包持久化于卷
+      - 资源需求及域名绑定
 
       ## 链接
 
@@ -367,11 +370,12 @@ localization:
 
       ## 変更履歴
 
-      ### 2026-03-30 — 初回リリース
+      ### 2026-03-31 — 初回リリース
 
       - ttyd Web ターミナル（パスワード認証）
       - Claude Code ネイティブインストーラー（初回起動時に自動インストール）
-      - リソース要件、ドメインバインディング、ヘルスチェック
+      - Homebrew および npm グローバルパッケージをボリュームに永続化
+      - リソース要件およびドメインバインディング
 
       ## リンク
 
@@ -440,11 +444,12 @@ localization:
 
       ## Registro de cambios
 
-      ### 2026-03-30 -- Lanzamiento inicial
+      ### 2026-03-31 -- Lanzamiento inicial
 
       - Terminal web ttyd (autenticacion por contrasena)
       - Instalador nativo de Claude Code (instalacion automatica en primer inicio)
-      - Requisitos de recursos, vinculacion de dominio y health check
+      - Homebrew y paquetes npm globales persistidos en volumen
+      - Requisitos de recursos y vinculacion de dominio
 
       ## Enlaces
 
@@ -513,11 +518,12 @@ localization:
 
       ## Catatan Perubahan
 
-      ### 2026-03-30 -- Rilis Pertama
+      ### 2026-03-31 -- Rilis Pertama
 
       - Terminal web ttyd (autentikasi password)
       - Installer native Claude Code (instalasi otomatis saat boot pertama)
-      - Persyaratan sumber daya, binding domain, dan health check
+      - Homebrew dan paket npm global disimpan persisten di volume
+      - Persyaratan sumber daya dan binding domain
 
       ## Tautan
 
