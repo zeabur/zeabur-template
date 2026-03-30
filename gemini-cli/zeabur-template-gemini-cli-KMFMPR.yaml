@@ -67,6 +67,9 @@ spec:
     - **Minimum**: 1 vCPU / 4 GB RAM (casual use)
     - **Recommended**: 2 vCPU / 16 GB RAM (power use, large codebases)
 
+    ## Known Issues
+    - After completing first-time login, the terminal may freeze. Reload the page to continue.
+
     ## Changelog
 
     ### 2026-03-31 -- Initial Release
@@ -181,6 +184,9 @@ localization:
       - **最低配置**：1 vCPU / 4 GB RAM（輕度使用）
       - **建議配置**：2 vCPU / 16 GB RAM（重度使用、大型程式碼庫）
 
+      ## 已知問題
+      - 首次登入完成後終端機可能會卡住，請重新整理網頁即可繼續使用。
+
       ## 變更紀錄
 
       ### 2026-03-31 — 首次發佈
@@ -228,6 +234,9 @@ localization:
       ## 建议资源配置
       - **最低配置**：1 vCPU / 4 GB RAM（轻度使用）
       - **建议配置**：2 vCPU / 16 GB RAM（重度使用、大型代码库）
+
+      ## 已知问题
+      - 首次登录完成后终端可能会卡住，请刷新网页即可继续使用。
 
       ## 变更记录
 
@@ -277,6 +286,9 @@ localization:
       - **最小構成**：1 vCPU / 4 GB RAM（軽量使用）
       - **推奨構成**：2 vCPU / 16 GB RAM（ヘビー使用、大規模コードベース）
 
+      ## 既知の問題
+      - 初回ログイン完了後にターミナルがフリーズする場合があります。ページを再読み込みしてください。
+
       ## 変更履歴
 
       ### 2026-03-31 — 初回リリース
@@ -325,6 +337,9 @@ localization:
       - **Minimo**: 1 vCPU / 4 GB RAM (uso casual)
       - **Recomendado**: 2 vCPU / 16 GB RAM (uso intensivo, grandes bases de codigo)
 
+      ## Problemas conocidos
+      - Despues de completar el primer inicio de sesion, el terminal puede congelarse. Recarga la pagina para continuar.
+
       ## Registro de cambios
 
       ### 2026-03-31 -- Lanzamiento inicial
@@ -372,6 +387,9 @@ localization:
       ## Sumber Daya yang Direkomendasikan
       - **Minimum**: 1 vCPU / 4 GB RAM (penggunaan ringan)
       - **Disarankan**: 2 vCPU / 16 GB RAM (penggunaan berat, codebase besar)
+
+      ## Masalah yang Diketahui
+      - Setelah menyelesaikan login pertama kali, terminal mungkin membeku. Muat ulang halaman untuk melanjutkan.
 
       ## Catatan Perubahan
 
