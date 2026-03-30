@@ -31,6 +31,8 @@ RUN npm install -g @google/gemini-cli@latest
 RUN mkdir -p /home/node/.gemini && chown -R node:node /home/node
 
 ENV HOME=/home/node
+ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
+ENV PATH="/home/node/.npm-global/bin:$PATH"
 WORKDIR /home/node
 VOLUME ["/home/node"]
 

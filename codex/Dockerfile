@@ -31,6 +31,8 @@ RUN npm install -g @openai/codex@latest
 RUN mkdir -p /home/node && chown node:node /home/node
 
 ENV HOME=/home/node
+ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
+ENV PATH="/home/node/.npm-global/bin:$PATH"
 WORKDIR /home/node
 VOLUME ["/home/node"]
 
