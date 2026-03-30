@@ -133,9 +133,11 @@ spec:
 
                 # Install Claude Code
                 runuser -u node -- bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
+              fi
 
-                # Install Homebrew
-                runuser -u node -- bash -c 'NONINTERACTIVE=1 HOMEBREW_PREFIX=$HOME/.linuxbrew /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+              # Install Homebrew in background (doesn't block ttyd startup)
+              if [ ! -d /home/node/.linuxbrew ]; then
+                runuser -u node -- bash -c 'NONINTERACTIVE=1 HOMEBREW_PREFIX=$HOME/.linuxbrew /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' &
               fi
 
               exec ttyd \
