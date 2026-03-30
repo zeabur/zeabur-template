@@ -134,8 +134,8 @@ spec:
             content: ${WEB_TERMINAL_PASSWORD}
             category: Credentials
           - type: TEXT
-            title: Sign in URL
-            content: https://auth.openai.com/codex/device
+            title: Sign in (device code)
+            content: codex login --device-auth
             category: Usage
           - type: TEXT
             title: Start Codex (full permissions)
