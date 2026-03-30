@@ -118,10 +118,24 @@ spec:
               #!/bin/sh
               chown -R node:node /home/node
 
-              # Install Claude Code on first boot (persisted in volume)
-              if [ ! -f /home/node/.local/bin/claude ]; then
-                runuser -u node -- bash -c 'echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.profile'
+              # First boot setup (persisted in volume)
+              if [ ! -f /home/node/.profile_initialized ]; then
+                runuser -u node -- bash -c 'cat >> ~/.profile << "EOPROFILE"
+              # Claude Code
+              export PATH="$HOME/.local/bin:$PATH"
+              # npm global packages
+              export NPM_CONFIG_PREFIX="$HOME/.npm-global"
+              export PATH="$HOME/.npm-global/bin:$PATH"
+              # Homebrew
+              [ -d "$HOME/.linuxbrew" ] && eval "$($HOME/.linuxbrew/bin/brew shellenv)"
+              EOPROFILE'
+                touch /home/node/.profile_initialized
+
+                # Install Claude Code
                 runuser -u node -- bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
+
+                # Install Homebrew
+                runuser -u node -- bash -c 'NONINTERACTIVE=1 HOMEBREW_PREFIX=$HOME/.linuxbrew /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
               fi
 
               exec ttyd \

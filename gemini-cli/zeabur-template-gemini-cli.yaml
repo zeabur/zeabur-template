@@ -100,6 +100,22 @@ spec:
             template: |
               #!/bin/sh
               chown -R node:node /home/node
+
+              # First boot setup (persisted in volume)
+              if [ ! -f /home/node/.profile_initialized ]; then
+                runuser -u node -- bash -c 'cat >> ~/.profile << "EOPROFILE"
+              # npm global packages
+              export NPM_CONFIG_PREFIX="$HOME/.npm-global"
+              export PATH="$HOME/.npm-global/bin:$PATH"
+              # Homebrew
+              [ -d "$HOME/.linuxbrew" ] && eval "$($HOME/.linuxbrew/bin/brew shellenv)"
+              EOPROFILE'
+                touch /home/node/.profile_initialized
+
+                # Install Homebrew
+                runuser -u node -- bash -c 'NONINTERACTIVE=1 HOMEBREW_PREFIX=$HOME/.linuxbrew /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+              fi
+
               exec ttyd \
                 --port 7681 \
                 --writable \
