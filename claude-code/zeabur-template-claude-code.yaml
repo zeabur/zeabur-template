@@ -10,21 +10,34 @@ spec:
   tags:
     - AI
     - Developer Tools
+  variables:
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Domain
+      description: The domain for accessing the web terminal (e.g. my-claude-code)
+  resourceRequirement:
+    minConfig:
+      cpu: 1
+      ram: 4
+    recommendedConfig:
+      cpu: 2
+      ram: 4
   readme: |
     # Claude Code
 
     [Claude Code](https://docs.anthropic.com/en/docs/claude-code) is Anthropic's official AI-powered coding agent CLI. It understands your codebase, generates and edits code, runs commands, and helps with complex development tasks -- all from the command line.
 
-    This template deploys Claude Code as a persistent developer workstation on Zeabur. There is no web UI; you interact with it entirely through the Zeabur Terminal.
+    This template deploys Claude Code as a persistent developer workstation on Zeabur with a web-based terminal (ttyd) accessible from your browser.
 
     ## Getting Started
 
     1. **Set your API key:** Before deploying, set the `ANTHROPIC_API_KEY` environment variable in Zeabur to your Anthropic API key. You can obtain one from [console.anthropic.com](https://console.anthropic.com/).
     2. **Deploy the template** and wait for the service to start.
-    3. **Open the Zeabur Terminal** for the Claude Code service.
-    4. **Start using Claude Code:**
+    3. **Open the service URL** in your browser (the domain bound to your service).
+    4. **Log in** with username `user` and the password shown in the `WEB_TERMINAL_PASSWORD` environment variable on the Zeabur dashboard.
+    5. **Start using Claude Code:**
        ```
-       runuser -u node -- claude
+       claude
        ```
 
     ## Using Zeabur AI Hub (Optional)
@@ -35,26 +48,6 @@ spec:
     2. Set `ANTHROPIC_API_KEY` to your Zeabur AI Hub token.
 
     This allows you to manage API usage and billing through Zeabur's unified AI gateway.
-
-    ## Important: Running Commands in Terminal
-
-    The container runs as `root` by default, but Claude Code must run as the `node` user. **Always prefix your commands with `runuser -u node --`** when using the Zeabur Terminal:
-
-    ```bash
-    # Start Claude Code interactive mode
-    runuser -u node -- claude
-
-    # Check Claude Code version
-    runuser -u node -- claude --version
-
-    # Log in to Anthropic (alternative to API key)
-    runuser -u node -- claude login
-
-    # Run a one-shot command
-    runuser -u node -- claude -p "explain this project"
-    ```
-
-    Running commands as `root` directly will cause permission issues with Claude Code's configuration files.
 
     ## Common Commands
 
@@ -80,6 +73,13 @@ spec:
     |----------|----------|-------------|
     | `ANTHROPIC_API_KEY` | Yes | Your Anthropic API key or Zeabur AI Hub token |
     | `ANTHROPIC_BASE_URL` | No | Custom API endpoint (set this for Zeabur AI Hub) |
+    | `WEB_TERMINAL_PASSWORD` | Auto | Password for web terminal login (auto-generated, visible in dashboard) |
+
+    ## Recommended Resources (Official Requirements)
+    - **Minimum**: 1 vCPU / 4 GB RAM
+    - **Recommended**: 2 vCPU / 4 GB RAM
+
+    Claude Code's official system requirement is 4 GB+ RAM. AI processing happens on the Anthropic API side, so locally it only runs the Node.js CLI and shell tools, keeping CPU requirements low.
 
     ## Changelog
 
@@ -100,6 +100,7 @@ spec:
     - name: claude-code
       icon: https://cdn.zeabur.com/marketplace/claude-code.svg
       template: PREBUILT_V2
+      domainKey: PUBLIC_DOMAIN
       spec:
         source:
           image: zeabur/claude-code:latest
@@ -107,6 +108,10 @@ spec:
             - /bin/sh
             - -c
             - /opt/startup.sh
+        ports:
+          - id: web
+            port: 7681
+            type: HTTP
         volumes:
           - id: home
             dir: /home/node
@@ -116,31 +121,52 @@ spec:
             template: |
               #!/bin/sh
               chown -R node:node /home/node
-              exec runuser -u node -- sleep infinity
+              exec ttyd \
+                --port 7681 \
+                --writable \
+                --credential "user:$WEB_TERMINAL_PASSWORD" \
+                runuser -u node -- bash -l
         env:
           ANTHROPIC_API_KEY:
             default: ""
           ANTHROPIC_BASE_URL:
             default: ""
+          WEB_TERMINAL_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+        instructions:
+          - type: TEXT
+            title: Username
+            content: user
+            category: Credentials
+          - type: PASSWORD
+            title: Password
+            content: ${WEB_TERMINAL_PASSWORD}
+            category: Credentials
 localization:
   zh-TW:
     description: |
       Anthropic 的 AI 程式設計代理 CLI，以持久化開發者工作站形式運行。透過 Zeabur 指令連線使用 Claude Code 進行程式碼生成、編輯、除錯和 Git 操作。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: 網域
+        description: 用來存取 Web 終端機的網域（例如 my-claude-code）
     readme: |
       # Claude Code
 
       [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 是 Anthropic 官方的 AI 程式設計代理 CLI。它能理解您的程式碼庫、生成和編輯程式碼、執行命令，並協助完成複雜的開發任務——全部透過命令列完成。
 
-      此模板將 Claude Code 部署為 Zeabur 上的持久化開發者工作站。沒有網頁介面，您完全透過 Zeabur 指令與其互動。
+      此模板將 Claude Code 部署為 Zeabur 上的持久化開發者工作站，並提供瀏覽器可存取的 Web 終端機（ttyd）。
 
       ## 開始使用
 
       1. **設定 API 金鑰：** 部署前，在 Zeabur 環境變數中設定 `ANTHROPIC_API_KEY` 為您的 Anthropic API 金鑰。可從 [console.anthropic.com](https://console.anthropic.com/) 取得。
       2. **部署模板**並等待服務啟動。
-      3. **開啟 Zeabur 指令**（Claude Code 服務）。
-      4. **開始使用 Claude Code：**
+      3. **在瀏覽器中開啟服務網址**（綁定到服務的網域）。
+      4. **登入**，使用者名稱為 `user`，密碼請在 Zeabur 儀表板的 `WEB_TERMINAL_PASSWORD` 環境變數中查看。
+      5. **開始使用 Claude Code：**
          ```
-         runuser -u node -- claude
+         claude
          ```
 
       ## 使用 Zeabur AI Hub（選用）
@@ -149,26 +175,6 @@ localization:
 
       1. 將 `ANTHROPIC_BASE_URL` 設定為您的 Zeabur AI Hub 端點（例如 `https://ai.hub.zeabur.com`）。
       2. 將 `ANTHROPIC_API_KEY` 設定為您的 Zeabur AI Hub Token。
-
-      ## 重要：在指令中執行命令
-
-      容器預設以 `root` 身份執行，但 Claude Code 必須以 `node` 使用者執行。**在 Zeabur 指令中請務必使用 `runuser -u node --` 前綴：**
-
-      ```bash
-      # 啟動 Claude Code 互動模式
-      runuser -u node -- claude
-
-      # 檢查版本
-      runuser -u node -- claude --version
-
-      # 登入 Anthropic（API 金鑰的替代方案）
-      runuser -u node -- claude login
-
-      # 執行單次命令
-      runuser -u node -- claude -p "解釋這個專案"
-      ```
-
-      以 `root` 直接執行命令會導致 Claude Code 設定檔的權限問題。
 
       ## 常用命令
 
@@ -194,6 +200,13 @@ localization:
       |------|------|------|
       | `ANTHROPIC_API_KEY` | 是 | 您的 Anthropic API 金鑰或 Zeabur AI Hub Token |
       | `ANTHROPIC_BASE_URL` | 否 | 自訂 API 端點（使用 Zeabur AI Hub 時設定） |
+      | `WEB_TERMINAL_PASSWORD` | 自動 | Web 終端機登入密碼（自動產生，可在儀表板查看） |
+
+      ## 建議資源配置（官方要求）
+      - **最低配置**：1 vCPU / 4 GB RAM
+      - **建議配置**：2 vCPU / 4 GB RAM
+
+      Claude Code 官方系統要求為 4 GB 以上記憶體。AI 運算在 Anthropic API 端進行，本機僅運行 Node.js CLI 和 shell 工具，CPU 需求較低。
 
       ## 變更紀錄
 
@@ -213,21 +226,26 @@ localization:
   zh-CN:
     description: |
       Anthropic 的 AI 编程代理 CLI，以持久化开发者工作站形式运行。通过 Zeabur 终端连接使用 Claude Code 进行代码生成、编辑、调试和 Git 操作。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: 域名
+        description: 用来访问 Web 终端的域名（例如 my-claude-code）
     readme: |
       # Claude Code
 
       [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 是 Anthropic 官方的 AI 编程代理 CLI。它能理解您的代码库、生成和编辑代码、执行命令，并协助完成复杂的开发任务——全部通过命令行完成。
 
-      此模板将 Claude Code 部署为 Zeabur 上的持久化开发者工作站。没有网页界面，您完全通过 Zeabur 终端与其交互。
+      此模板将 Claude Code 部署为 Zeabur 上的持久化开发者工作站，并提供浏览器可访问的 Web 终端（ttyd）。
 
       ## 开始使用
 
       1. **设置 API 密钥：** 部署前，在 Zeabur 环境变量中设置 `ANTHROPIC_API_KEY` 为您的 Anthropic API 密钥。可从 [console.anthropic.com](https://console.anthropic.com/) 获取。
       2. **部署模板**并等待服务启动。
-      3. **打开 Zeabur 终端**（Claude Code 服务）。
-      4. **开始使用 Claude Code：**
+      3. **在浏览器中打开服务网址**（绑定到服务的域名）。
+      4. **登录**，用户名为 `user`，密码请在 Zeabur 仪表板的 `WEB_TERMINAL_PASSWORD` 环境变量中查看。
+      5. **开始使用 Claude Code：**
          ```
-         runuser -u node -- claude
+         claude
          ```
 
       ## 使用 Zeabur AI Hub（可选）
@@ -236,26 +254,6 @@ localization:
 
       1. 将 `ANTHROPIC_BASE_URL` 设置为您的 Zeabur AI Hub 端点（例如 `https://ai.hub.zeabur.com`）。
       2. 将 `ANTHROPIC_API_KEY` 设置为您的 Zeabur AI Hub Token。
-
-      ## 重要：在终端中执行命令
-
-      容器默认以 `root` 身份运行，但 Claude Code 必须以 `node` 用户运行。**在 Zeabur 终端中请务必使用 `runuser -u node --` 前缀：**
-
-      ```bash
-      # 启动 Claude Code 交互模式
-      runuser -u node -- claude
-
-      # 检查版本
-      runuser -u node -- claude --version
-
-      # 登录 Anthropic（API 密钥的替代方案）
-      runuser -u node -- claude login
-
-      # 执行单次命令
-      runuser -u node -- claude -p "解释这个项目"
-      ```
-
-      以 `root` 直接执行命令会导致 Claude Code 配置文件的权限问题。
 
       ## 常用命令
 
@@ -281,6 +279,13 @@ localization:
       |------|------|------|
       | `ANTHROPIC_API_KEY` | 是 | 您的 Anthropic API 密钥或 Zeabur AI Hub Token |
       | `ANTHROPIC_BASE_URL` | 否 | 自定义 API 端点（使用 Zeabur AI Hub 时设置） |
+      | `WEB_TERMINAL_PASSWORD` | 自动 | Web 终端登录密码（自动生成，可在仪表板查看） |
+
+      ## 建议资源配置（官方要求）
+      - **最低配置**：1 vCPU / 4 GB RAM
+      - **建议配置**：2 vCPU / 4 GB RAM
+
+      Claude Code 官方系统要求为 4 GB 以上内存。AI 运算在 Anthropic API 端进行，本机仅运行 Node.js CLI 和 shell 工具，CPU 需求较低。
 
       ## 变更记录
 
@@ -300,21 +305,26 @@ localization:
   ja-JP:
     description: |
       Anthropic の AI コーディングエージェント CLI を永続的な開発者ワークステーションとして実行。Zeabur ターミナルから接続し、Claude Code でコード生成、編集、デバッグ、Git 操作を行えます。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: ドメイン
+        description: Web ターミナルにアクセスするためのドメイン（例：my-claude-code）
     readme: |
       # Claude Code
 
       [Claude Code](https://docs.anthropic.com/en/docs/claude-code) は Anthropic 公式の AI コーディングエージェント CLI です。コードベースを理解し、コードの生成・編集、コマンドの実行、複雑な開発タスクの支援をすべてコマンドラインから行います。
 
-      このテンプレートは Claude Code を Zeabur 上の永続的な開発者ワークステーションとしてデプロイします。Web UI はありません。Zeabur ターミナルを通じてすべての操作を行います。
+      このテンプレートは Claude Code を Zeabur 上の永続的な開発者ワークステーションとしてデプロイし、ブラウザからアクセス可能な Web ターミナル（ttyd）を提供します。
 
       ## はじめに
 
       1. **API キーを設定：** デプロイ前に、Zeabur 環境変数で `ANTHROPIC_API_KEY` を Anthropic API キーに設定してください。[console.anthropic.com](https://console.anthropic.com/) から取得できます。
       2. **テンプレートをデプロイ**し、サービスの起動を待ちます。
-      3. **Zeabur ターミナルを開きます**（Claude Code サービス）。
-      4. **Claude Code の使用を開始：**
+      3. **ブラウザでサービス URL を開きます**（サービスにバインドされたドメイン）。
+      4. **ログイン**：ユーザー名は `user`、パスワードは Zeabur ダッシュボードの `WEB_TERMINAL_PASSWORD` 環境変数で確認できます。
+      5. **Claude Code の使用を開始：**
          ```
-         runuser -u node -- claude
+         claude
          ```
 
       ## Zeabur AI Hub の使用（オプション）
@@ -323,26 +333,6 @@ localization:
 
       1. `ANTHROPIC_BASE_URL` を Zeabur AI Hub エンドポイントに設定します（例：`https://ai.hub.zeabur.com`）。
       2. `ANTHROPIC_API_KEY` を Zeabur AI Hub トークンに設定します。
-
-      ## 重要：ターミナルでのコマンド実行
-
-      コンテナはデフォルトで `root` として実行されますが、Claude Code は `node` ユーザーで実行する必要があります。**Zeabur ターミナルでは必ず `runuser -u node --` プレフィックスを使用してください：**
-
-      ```bash
-      # Claude Code インタラクティブモードを起動
-      runuser -u node -- claude
-
-      # バージョンを確認
-      runuser -u node -- claude --version
-
-      # Anthropic にログイン（API キーの代替）
-      runuser -u node -- claude login
-
-      # ワンショットコマンドを実行
-      runuser -u node -- claude -p "このプロジェクトを説明して"
-      ```
-
-      `root` で直接コマンドを実行すると、Claude Code の設定ファイルの権限問題が発生します。
 
       ## よく使うコマンド
 
@@ -368,6 +358,13 @@ localization:
       |------|------|------|
       | `ANTHROPIC_API_KEY` | はい | Anthropic API キーまたは Zeabur AI Hub トークン |
       | `ANTHROPIC_BASE_URL` | いいえ | カスタム API エンドポイント（Zeabur AI Hub 使用時に設定） |
+      | `WEB_TERMINAL_PASSWORD` | 自動 | Web ターミナルのログインパスワード（自動生成、ダッシュボードで確認可能） |
+
+      ## 推奨リソース（公式要件）
+      - **最小構成**：1 vCPU / 4 GB RAM
+      - **推奨構成**：2 vCPU / 4 GB RAM
+
+      Claude Code の公式システム要件は 4 GB 以上の RAM です。AI 処理は Anthropic API 側で行われるため、ローカルでは Node.js CLI とシェルツールのみが動作し、CPU 要件は低めです。
 
       ## 変更履歴
 
@@ -387,21 +384,26 @@ localization:
   es-ES:
     description: |
       CLI del agente de programacion IA de Anthropic ejecutandose como estacion de trabajo persistente para desarrolladores. Conectese a traves del Terminal de Zeabur para usar Claude Code para generar, editar, depurar codigo y realizar operaciones Git.
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Dominio
+        description: El dominio para acceder al terminal web (ej. my-claude-code)
     readme: |
       # Claude Code
 
       [Claude Code](https://docs.anthropic.com/en/docs/claude-code) es el agente de programacion CLI oficial de Anthropic. Comprende su base de codigo, genera y edita codigo, ejecuta comandos y ayuda con tareas de desarrollo complejas, todo desde la linea de comandos.
 
-      Esta plantilla despliega Claude Code como una estacion de trabajo persistente para desarrolladores en Zeabur. No hay interfaz web; la interaccion es completamente a traves del Terminal de Zeabur.
+      Esta plantilla despliega Claude Code como una estacion de trabajo persistente para desarrolladores en Zeabur, con un terminal web (ttyd) accesible desde el navegador.
 
       ## Primeros pasos
 
       1. **Configure su clave API:** Antes de desplegar, establezca la variable de entorno `ANTHROPIC_API_KEY` en Zeabur con su clave API de Anthropic. Puede obtenerla en [console.anthropic.com](https://console.anthropic.com/).
       2. **Despliegue la plantilla** y espere a que el servicio se inicie.
-      3. **Abra el Terminal de Zeabur** (servicio Claude Code).
-      4. **Comience a usar Claude Code:**
+      3. **Abra la URL del servicio** en su navegador (el dominio vinculado al servicio).
+      4. **Inicie sesion** con usuario `user` y la contrasena mostrada en la variable `WEB_TERMINAL_PASSWORD` en el panel de Zeabur.
+      5. **Comience a usar Claude Code:**
          ```
-         runuser -u node -- claude
+         claude
          ```
 
       ## Uso de Zeabur AI Hub (Opcional)
@@ -410,26 +412,6 @@ localization:
 
       1. Establezca `ANTHROPIC_BASE_URL` a su endpoint de Zeabur AI Hub (ej. `https://ai.hub.zeabur.com`).
       2. Establezca `ANTHROPIC_API_KEY` a su token de Zeabur AI Hub.
-
-      ## Importante: Ejecucion de comandos en Terminal
-
-      El contenedor se ejecuta como `root` por defecto, pero Claude Code debe ejecutarse como usuario `node`. **Siempre use el prefijo `runuser -u node --` en el Terminal de Zeabur:**
-
-      ```bash
-      # Iniciar modo interactivo de Claude Code
-      runuser -u node -- claude
-
-      # Verificar version
-      runuser -u node -- claude --version
-
-      # Iniciar sesion en Anthropic (alternativa a clave API)
-      runuser -u node -- claude login
-
-      # Ejecutar un comando unico
-      runuser -u node -- claude -p "explica este proyecto"
-      ```
-
-      Ejecutar comandos directamente como `root` causara problemas de permisos con los archivos de configuracion de Claude Code.
 
       ## Comandos comunes
 
@@ -455,6 +437,13 @@ localization:
       |----------|-----------|-------------|
       | `ANTHROPIC_API_KEY` | Si | Su clave API de Anthropic o token de Zeabur AI Hub |
       | `ANTHROPIC_BASE_URL` | No | Endpoint API personalizado (configurar para Zeabur AI Hub) |
+      | `WEB_TERMINAL_PASSWORD` | Auto | Contrasena del terminal web (generada automaticamente, visible en el panel) |
+
+      ## Recursos Recomendados (Requisitos Oficiales)
+      - **Minimo**: 1 vCPU / 4 GB RAM
+      - **Recomendado**: 2 vCPU / 4 GB RAM
+
+      El requisito oficial de Claude Code es 4 GB+ de RAM. El procesamiento de IA se realiza en la API de Anthropic, por lo que localmente solo se ejecuta el CLI de Node.js y herramientas de shell, con requisitos minimos de CPU.
 
       ## Registro de cambios
 
@@ -474,21 +463,26 @@ localization:
   id-ID:
     description: |
       CLI agen pemrograman AI dari Anthropic yang berjalan sebagai workstation pengembang persisten. Hubungkan melalui Terminal Zeabur untuk menggunakan Claude Code dalam pembuatan, pengeditan, debugging kode, dan operasi Git.
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Domain
+        description: Domain untuk mengakses terminal web (contoh my-claude-code)
     readme: |
       # Claude Code
 
       [Claude Code](https://docs.anthropic.com/en/docs/claude-code) adalah CLI agen pemrograman AI resmi dari Anthropic. Ia memahami basis kode Anda, menghasilkan dan mengedit kode, menjalankan perintah, dan membantu tugas pengembangan kompleks -- semuanya dari baris perintah.
 
-      Template ini men-deploy Claude Code sebagai workstation pengembang persisten di Zeabur. Tidak ada antarmuka web; Anda berinteraksi sepenuhnya melalui Terminal Zeabur.
+      Template ini men-deploy Claude Code sebagai workstation pengembang persisten di Zeabur, dengan terminal web (ttyd) yang dapat diakses dari browser.
 
       ## Memulai
 
       1. **Atur kunci API:** Sebelum deploy, atur variabel lingkungan `ANTHROPIC_API_KEY` di Zeabur dengan kunci API Anthropic Anda. Dapatkan di [console.anthropic.com](https://console.anthropic.com/).
       2. **Deploy template** dan tunggu layanan dimulai.
-      3. **Buka Terminal Zeabur** (layanan Claude Code).
-      4. **Mulai menggunakan Claude Code:**
+      3. **Buka URL layanan** di browser Anda (domain yang terikat ke layanan).
+      4. **Login** dengan username `user` dan password yang ditampilkan di variabel `WEB_TERMINAL_PASSWORD` pada dashboard Zeabur.
+      5. **Mulai menggunakan Claude Code:**
          ```
-         runuser -u node -- claude
+         claude
          ```
 
       ## Menggunakan Zeabur AI Hub (Opsional)
@@ -497,26 +491,6 @@ localization:
 
       1. Atur `ANTHROPIC_BASE_URL` ke endpoint Zeabur AI Hub Anda (misalnya `https://ai.hub.zeabur.com`).
       2. Atur `ANTHROPIC_API_KEY` ke token Zeabur AI Hub Anda.
-
-      ## Penting: Menjalankan Perintah di Terminal
-
-      Container berjalan sebagai `root` secara default, tetapi Claude Code harus dijalankan sebagai pengguna `node`. **Selalu gunakan prefiks `runuser -u node --` di Terminal Zeabur:**
-
-      ```bash
-      # Mulai mode interaktif Claude Code
-      runuser -u node -- claude
-
-      # Periksa versi
-      runuser -u node -- claude --version
-
-      # Login ke Anthropic (alternatif kunci API)
-      runuser -u node -- claude login
-
-      # Jalankan perintah sekali
-      runuser -u node -- claude -p "jelaskan proyek ini"
-      ```
-
-      Menjalankan perintah langsung sebagai `root` akan menyebabkan masalah izin pada file konfigurasi Claude Code.
 
       ## Perintah Umum
 
@@ -542,6 +516,13 @@ localization:
       |----------|-------|-----------|
       | `ANTHROPIC_API_KEY` | Ya | Kunci API Anthropic atau token Zeabur AI Hub Anda |
       | `ANTHROPIC_BASE_URL` | Tidak | Endpoint API kustom (atur untuk Zeabur AI Hub) |
+      | `WEB_TERMINAL_PASSWORD` | Otomatis | Password login terminal web (dibuat otomatis, dapat dilihat di dashboard) |
+
+      ## Sumber Daya yang Direkomendasikan (Persyaratan Resmi)
+      - **Minimum**: 1 vCPU / 4 GB RAM
+      - **Disarankan**: 2 vCPU / 4 GB RAM
+
+      Persyaratan resmi Claude Code adalah RAM 4 GB+. Pemrosesan AI dilakukan di API Anthropic, sehingga secara lokal hanya menjalankan CLI Node.js dan alat shell, dengan kebutuhan CPU yang minimal.
 
       ## Catatan Perubahan
 
