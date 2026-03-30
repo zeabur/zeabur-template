@@ -32,7 +32,7 @@ spec:
 
     ## Getting Started
 
-    1. **Deploy the template** and wait for the service to start (first boot installs Claude Code automatically).
+    1. **Deploy the template** and wait for the service to start. The first boot installs Claude Code automatically — wait until the health check turns green before proceeding.
     2. **Open the service URL** in your browser (the domain bound to your service).
     3. **Log in** with username `user` and the password from the **Instructions** tab on the Zeabur dashboard.
     4. **Authenticate Claude Code** — run `claude` and follow the login prompts to sign in with your Claude Pro/Max/Team/Enterprise subscription.
@@ -167,7 +167,7 @@ localization:
 
       ## 開始使用
 
-      1. **部署模板**並等待服務啟動（首次啟動會自動安裝 Claude Code）。
+      1. **部署模板**並等待服務啟動。首次啟動會自動安裝 Claude Code，請等待健康檢查變為綠色後再繼續。
       2. **在瀏覽器中開啟服務網址**（綁定到服務的網域）。
       3. **登入**，使用者名稱為 `user`，密碼請在 Zeabur 儀表板的 **Instructions** 頁籤查看。
       4. **認證 Claude Code** — 執行 `claude` 並依照提示登入您的 Claude Pro/Max/Team/Enterprise 訂閱帳號。
@@ -240,7 +240,7 @@ localization:
 
       ## 开始使用
 
-      1. **部署模板**并等待服务启动（首次启动会自动安装 Claude Code）。
+      1. **部署模板**并等待服务启动。首次启动会自动安装 Claude Code，请等待健康检查变为绿色后再继续。
       2. **在浏览器中打开服务网址**（绑定到服务的域名）。
       3. **登录**，用户名为 `user`，密码请在 Zeabur 仪表板的 **Instructions** 页签查看。
       4. **认证 Claude Code** — 执行 `claude` 并按照提示登录您的 Claude Pro/Max/Team/Enterprise 订阅账号。
@@ -313,7 +313,7 @@ localization:
 
       ## はじめに
 
-      1. **テンプレートをデプロイ**し、サービスの起動を待ちます（初回起動時に Claude Code が自動インストールされます）。
+      1. **テンプレートをデプロイ**し、サービスの起動を待ちます。初回起動時に Claude Code が自動インストールされます。ヘルスチェックが緑になるまでお待ちください。
       2. **ブラウザでサービス URL を開きます**（サービスにバインドされたドメイン）。
       3. **ログイン**：ユーザー名は `user`、パスワードは Zeabur ダッシュボードの **Instructions** タブで確認できます。
       4. **Claude Code を認証** — `claude` を実行し、プロンプトに従って Claude Pro/Max/Team/Enterprise サブスクリプションでログインします。
@@ -386,7 +386,7 @@ localization:
 
       ## Primeros pasos
 
-      1. **Despliegue la plantilla** y espere a que el servicio se inicie (la primera vez instala Claude Code automaticamente).
+      1. **Despliegue la plantilla** y espere a que el servicio se inicie. La primera vez instala Claude Code automaticamente — espere hasta que el health check se ponga verde antes de continuar.
       2. **Abra la URL del servicio** en su navegador (el dominio vinculado al servicio).
       3. **Inicie sesion** con usuario `user` y la contrasena de la pestana **Instructions** en el panel de Zeabur.
       4. **Autentique Claude Code** — ejecute `claude` y siga las indicaciones para iniciar sesion con su suscripcion Claude Pro/Max/Team/Enterprise.
@@ -459,7 +459,7 @@ localization:
 
       ## Memulai
 
-      1. **Deploy template** dan tunggu layanan dimulai (boot pertama menginstal Claude Code secara otomatis).
+      1. **Deploy template** dan tunggu layanan dimulai. Boot pertama menginstal Claude Code secara otomatis — tunggu hingga health check berwarna hijau sebelum melanjutkan.
       2. **Buka URL layanan** di browser Anda (domain yang terikat ke layanan).
       3. **Login** dengan username `user` dan password dari tab **Instructions** di dashboard Zeabur.
       4. **Autentikasi Claude Code** — jalankan `claude` dan ikuti petunjuk untuk login dengan langganan Claude Pro/Max/Team/Enterprise Anda.
