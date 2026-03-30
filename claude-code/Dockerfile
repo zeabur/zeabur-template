@@ -26,11 +26,10 @@ RUN ARCH=$(dpkg --print-architecture) && \
       "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" && \
     chmod +x /usr/local/bin/ttyd
 
-RUN npm install -g @anthropic-ai/claude-code@latest
-
 RUN mkdir -p /home/node && chown node:node /home/node
 
 ENV HOME=/home/node
+
 WORKDIR /home/node
 VOLUME ["/home/node"]
 

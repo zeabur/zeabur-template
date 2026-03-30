@@ -6,7 +6,8 @@ metadata:
 spec:
   description: |
     Anthropic's AI coding agent CLI running as a persistent developer workstation. Connect via Zeabur Terminal to use Claude Code for code generation, editing, debugging, and git operations.
-  icon: https://cdn.zeabur.com/marketplace/claude-code.svg
+  icon: https://cdn-console.zeabur.com/f/WpysO/claude-color.webp
+  coverImage: https://cdn-console.zeabur.com/f/w7XH6/claude-code-coverimage.png
   tags:
     - AI
     - Developer Tools
@@ -83,13 +84,15 @@ spec:
 
     ## Changelog
 
-    ### 2026-03-17 -- Initial Release
+    ### 2026-03-30
 
-    - Zeabur template for Claude Code developer workstation
-    - Prebuilt image `zeabur/claude-code:latest`
-    - Persistent volume at `/home/node`
-    - Startup script with proper `node` user permissions
-    - Support for direct Anthropic API and Zeabur AI Hub
+    - Add ttyd web terminal with password auth
+    - Switch to Claude Code native installer (auto-installed on first boot)
+    - Add resource requirements and domain binding
+
+    ### 2026-03-17
+
+    - Initial release
 
     ## Links
 
@@ -98,7 +101,7 @@ spec:
     - [Zeabur AI Hub](https://zeabur.com/ai)
   services:
     - name: claude-code
-      icon: https://cdn.zeabur.com/marketplace/claude-code.svg
+      icon: https://cdn-console.zeabur.com/f/WpysO/claude-color.webp
       template: PREBUILT_V2
       domainKey: PUBLIC_DOMAIN
       spec:
@@ -112,6 +115,9 @@ spec:
           - id: web
             port: 7681
             type: HTTP
+        healthCheck:
+            type: TCP
+            port: web
         volumes:
           - id: home
             dir: /home/node
@@ -121,6 +127,13 @@ spec:
             template: |
               #!/bin/sh
               chown -R node:node /home/node
+
+              # Install Claude Code on first boot (persisted in volume)
+              if [ ! -f /home/node/.local/bin/claude ]; then
+                runuser -u node -- bash -c 'echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.profile'
+                runuser -u node -- bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
+              fi
+
               exec ttyd \
                 --port 7681 \
                 --writable \
@@ -143,6 +156,10 @@ spec:
             title: Password
             content: ${WEB_TERMINAL_PASSWORD}
             category: Credentials
+          - type: TEXT
+            title: Start Claude Code (full permissions)
+            content: claude --dangerously-skip-permissions
+            category: Usage
 localization:
   zh-TW:
     description: |
@@ -210,13 +227,15 @@ localization:
 
       ## 變更紀錄
 
-      ### 2026-03-17 — 首次發佈
+      ### 2026-03-30
 
-      - Claude Code 開發者工作站的 Zeabur 模板
-      - 預建映像 `zeabur/claude-code:latest`
-      - `/home/node` 持久化磁碟
-      - 啟動腳本自動設定 `node` 使用者權限
-      - 支援直接 Anthropic API 和 Zeabur AI Hub
+      - 新增 ttyd Web 終端機（密碼驗證）
+      - 改用 Claude Code 原生安裝器（首次啟動自動安裝）
+      - 新增資源需求及網域綁定
+
+      ### 2026-03-17
+
+      - 首次發佈
 
       ## 連結
 
@@ -289,13 +308,15 @@ localization:
 
       ## 变更记录
 
-      ### 2026-03-17 — 首次发布
+      ### 2026-03-30
 
-      - Claude Code 开发者工作站的 Zeabur 模板
-      - 预构建镜像 `zeabur/claude-code:latest`
-      - `/home/node` 持久化卷
-      - 启动脚本自动设置 `node` 用户权限
-      - 支持直接 Anthropic API 和 Zeabur AI Hub
+      - 新增 ttyd Web 终端（密码验证）
+      - 改用 Claude Code 原生安装器（首次启动自动安装）
+      - 新增资源需求及域名绑定
+
+      ### 2026-03-17
+
+      - 首次发布
 
       ## 链接
 
@@ -368,13 +389,15 @@ localization:
 
       ## 変更履歴
 
-      ### 2026-03-17 — 初回リリース
+      ### 2026-03-30
 
-      - Claude Code 開発者ワークステーションの Zeabur テンプレート
-      - ビルド済みイメージ `zeabur/claude-code:latest`
-      - `/home/node` の永続ボリューム
-      - 起動スクリプトで `node` ユーザー権限を自動設定
-      - Anthropic API 直接接続と Zeabur AI Hub の両方をサポート
+      - ttyd Web ターミナルを追加（パスワード認証）
+      - Claude Code ネイティブインストーラーに切替（初回起動時に自動インストール）
+      - リソース要件とドメインバインディングを追加
+
+      ### 2026-03-17
+
+      - 初回リリース
 
       ## リンク
 
@@ -447,13 +470,15 @@ localization:
 
       ## Registro de cambios
 
-      ### 2026-03-17 -- Lanzamiento inicial
+      ### 2026-03-30
 
-      - Plantilla de Zeabur para estacion de trabajo Claude Code
-      - Imagen preconstruida `zeabur/claude-code:latest`
-      - Volumen persistente en `/home/node`
-      - Script de inicio con permisos de usuario `node`
-      - Soporte para API directa de Anthropic y Zeabur AI Hub
+      - Agregar terminal web ttyd (autenticacion por contrasena)
+      - Cambiar al instalador nativo de Claude Code (instalacion automatica en primer inicio)
+      - Agregar requisitos de recursos y vinculacion de dominio
+
+      ### 2026-03-17
+
+      - Lanzamiento inicial
 
       ## Enlaces
 
@@ -526,13 +551,15 @@ localization:
 
       ## Catatan Perubahan
 
-      ### 2026-03-17 -- Rilis Pertama
+      ### 2026-03-30
 
-      - Template Zeabur untuk workstation pengembang Claude Code
-      - Image siap pakai `zeabur/claude-code:latest`
-      - Volume persisten di `/home/node`
-      - Skrip startup dengan izin pengguna `node`
-      - Dukungan API langsung Anthropic dan Zeabur AI Hub
+      - Tambah terminal web ttyd (autentikasi password)
+      - Beralih ke installer native Claude Code (instalasi otomatis saat boot pertama)
+      - Tambah persyaratan sumber daya dan binding domain
+
+      ### 2026-03-17
+
+      - Rilis pertama
 
       ## Tautan
 
