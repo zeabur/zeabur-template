@@ -32,23 +32,17 @@ spec:
 
     ## Getting Started
 
-    1. **Set your API key:** Before deploying, set the `ANTHROPIC_API_KEY` environment variable in Zeabur to your Anthropic API key. You can obtain one from [console.anthropic.com](https://console.anthropic.com/).
-    2. **Deploy the template** and wait for the service to start.
-    3. **Open the service URL** in your browser (the domain bound to your service).
-    4. **Log in** with username `user` and the password shown in the `WEB_TERMINAL_PASSWORD` environment variable on the Zeabur dashboard.
-    5. **Start using Claude Code:**
-       ```
-       claude
-       ```
+    1. **Deploy the template** and wait for the service to start (first boot installs Claude Code automatically).
+    2. **Open the service URL** in your browser (the domain bound to your service).
+    3. **Log in** with username `user` and the password from the **Instructions** tab on the Zeabur dashboard.
+    4. **Authenticate Claude Code** — run `claude` and follow the login prompts to sign in with your Claude Pro/Max/Team/Enterprise subscription.
 
-    ## Using Zeabur AI Hub (Optional)
+    ## Using API Key (Optional)
 
-    If you want to use [Zeabur AI Hub](https://zeabur.com/ai) instead of a direct Anthropic API key:
+    If you prefer API key authentication instead of a subscription:
 
-    1. Set `ANTHROPIC_BASE_URL` to your Zeabur AI Hub endpoint (e.g., `https://ai.hub.zeabur.com`).
-    2. Set `ANTHROPIC_API_KEY` to your Zeabur AI Hub token.
-
-    This allows you to manage API usage and billing through Zeabur's unified AI gateway.
+    1. Set `ANTHROPIC_API_KEY` to your Anthropic API key from [console.anthropic.com](https://console.anthropic.com/).
+    2. Optionally set `ANTHROPIC_BASE_URL` to use [Zeabur AI Hub](https://zeabur.com/ai) (e.g., `https://ai.hub.zeabur.com`).
 
     ## Common Commands
 
@@ -72,7 +66,7 @@ spec:
 
     | Variable | Required | Description |
     |----------|----------|-------------|
-    | `ANTHROPIC_API_KEY` | Yes | Your Anthropic API key or Zeabur AI Hub token |
+    | `ANTHROPIC_API_KEY` | No | Anthropic API key or Zeabur AI Hub token (only needed if not using subscription login) |
     | `ANTHROPIC_BASE_URL` | No | Custom API endpoint (set this for Zeabur AI Hub) |
     | `WEB_TERMINAL_PASSWORD` | Auto | Password for web terminal login (auto-generated, visible in dashboard) |
 
@@ -173,21 +167,17 @@ localization:
 
       ## 開始使用
 
-      1. **設定 API 金鑰：** 部署前，在 Zeabur 環境變數中設定 `ANTHROPIC_API_KEY` 為您的 Anthropic API 金鑰。可從 [console.anthropic.com](https://console.anthropic.com/) 取得。
-      2. **部署模板**並等待服務啟動。
-      3. **在瀏覽器中開啟服務網址**（綁定到服務的網域）。
-      4. **登入**，使用者名稱為 `user`，密碼請在 Zeabur 儀表板的 `WEB_TERMINAL_PASSWORD` 環境變數中查看。
-      5. **開始使用 Claude Code：**
-         ```
-         claude
-         ```
+      1. **部署模板**並等待服務啟動（首次啟動會自動安裝 Claude Code）。
+      2. **在瀏覽器中開啟服務網址**（綁定到服務的網域）。
+      3. **登入**，使用者名稱為 `user`，密碼請在 Zeabur 儀表板的 **Instructions** 頁籤查看。
+      4. **認證 Claude Code** — 執行 `claude` 並依照提示登入您的 Claude Pro/Max/Team/Enterprise 訂閱帳號。
 
-      ## 使用 Zeabur AI Hub（選用）
+      ## 使用 API 金鑰（選用）
 
-      如果您想使用 [Zeabur AI Hub](https://zeabur.com/ai) 而非直接使用 Anthropic API 金鑰：
+      如果您偏好使用 API 金鑰而非訂閱認證：
 
-      1. 將 `ANTHROPIC_BASE_URL` 設定為您的 Zeabur AI Hub 端點（例如 `https://ai.hub.zeabur.com`）。
-      2. 將 `ANTHROPIC_API_KEY` 設定為您的 Zeabur AI Hub Token。
+      1. 將 `ANTHROPIC_API_KEY` 設定為您的 Anthropic API 金鑰，可從 [console.anthropic.com](https://console.anthropic.com/) 取得。
+      2. 可選擇設定 `ANTHROPIC_BASE_URL` 以使用 [Zeabur AI Hub](https://zeabur.com/ai)（例如 `https://ai.hub.zeabur.com`）。
 
       ## 常用命令
 
@@ -211,7 +201,7 @@ localization:
 
       | 變數 | 必填 | 說明 |
       |------|------|------|
-      | `ANTHROPIC_API_KEY` | 是 | 您的 Anthropic API 金鑰或 Zeabur AI Hub Token |
+      | `ANTHROPIC_API_KEY` | 否 | Anthropic API 金鑰或 Zeabur AI Hub Token（僅在不使用訂閱登入時需要） |
       | `ANTHROPIC_BASE_URL` | 否 | 自訂 API 端點（使用 Zeabur AI Hub 時設定） |
       | `WEB_TERMINAL_PASSWORD` | 自動 | Web 終端機登入密碼（自動產生，可在儀表板查看） |
 
@@ -250,21 +240,17 @@ localization:
 
       ## 开始使用
 
-      1. **设置 API 密钥：** 部署前，在 Zeabur 环境变量中设置 `ANTHROPIC_API_KEY` 为您的 Anthropic API 密钥。可从 [console.anthropic.com](https://console.anthropic.com/) 获取。
-      2. **部署模板**并等待服务启动。
-      3. **在浏览器中打开服务网址**（绑定到服务的域名）。
-      4. **登录**，用户名为 `user`，密码请在 Zeabur 仪表板的 `WEB_TERMINAL_PASSWORD` 环境变量中查看。
-      5. **开始使用 Claude Code：**
-         ```
-         claude
-         ```
+      1. **部署模板**并等待服务启动（首次启动会自动安装 Claude Code）。
+      2. **在浏览器中打开服务网址**（绑定到服务的域名）。
+      3. **登录**，用户名为 `user`，密码请在 Zeabur 仪表板的 **Instructions** 页签查看。
+      4. **认证 Claude Code** — 执行 `claude` 并按照提示登录您的 Claude Pro/Max/Team/Enterprise 订阅账号。
 
-      ## 使用 Zeabur AI Hub（可选）
+      ## 使用 API 密钥（可选）
 
-      如果您想使用 [Zeabur AI Hub](https://zeabur.com/ai) 而非直接使用 Anthropic API 密钥：
+      如果您偏好使用 API 密钥而非订阅认证：
 
-      1. 将 `ANTHROPIC_BASE_URL` 设置为您的 Zeabur AI Hub 端点（例如 `https://ai.hub.zeabur.com`）。
-      2. 将 `ANTHROPIC_API_KEY` 设置为您的 Zeabur AI Hub Token。
+      1. 将 `ANTHROPIC_API_KEY` 设置为您的 Anthropic API 密钥，可从 [console.anthropic.com](https://console.anthropic.com/) 获取。
+      2. 可选择设置 `ANTHROPIC_BASE_URL` 以使用 [Zeabur AI Hub](https://zeabur.com/ai)（例如 `https://ai.hub.zeabur.com`）。
 
       ## 常用命令
 
@@ -288,7 +274,7 @@ localization:
 
       | 变量 | 必填 | 说明 |
       |------|------|------|
-      | `ANTHROPIC_API_KEY` | 是 | 您的 Anthropic API 密钥或 Zeabur AI Hub Token |
+      | `ANTHROPIC_API_KEY` | 否 | Anthropic API 密钥或 Zeabur AI Hub Token（仅在不使用订阅登录时需要） |
       | `ANTHROPIC_BASE_URL` | 否 | 自定义 API 端点（使用 Zeabur AI Hub 时设置） |
       | `WEB_TERMINAL_PASSWORD` | 自动 | Web 终端登录密码（自动生成，可在仪表板查看） |
 
@@ -327,21 +313,17 @@ localization:
 
       ## はじめに
 
-      1. **API キーを設定：** デプロイ前に、Zeabur 環境変数で `ANTHROPIC_API_KEY` を Anthropic API キーに設定してください。[console.anthropic.com](https://console.anthropic.com/) から取得できます。
-      2. **テンプレートをデプロイ**し、サービスの起動を待ちます。
-      3. **ブラウザでサービス URL を開きます**（サービスにバインドされたドメイン）。
-      4. **ログイン**：ユーザー名は `user`、パスワードは Zeabur ダッシュボードの `WEB_TERMINAL_PASSWORD` 環境変数で確認できます。
-      5. **Claude Code の使用を開始：**
-         ```
-         claude
-         ```
+      1. **テンプレートをデプロイ**し、サービスの起動を待ちます（初回起動時に Claude Code が自動インストールされます）。
+      2. **ブラウザでサービス URL を開きます**（サービスにバインドされたドメイン）。
+      3. **ログイン**：ユーザー名は `user`、パスワードは Zeabur ダッシュボードの **Instructions** タブで確認できます。
+      4. **Claude Code を認証** — `claude` を実行し、プロンプトに従って Claude Pro/Max/Team/Enterprise サブスクリプションでログインします。
 
-      ## Zeabur AI Hub の使用（オプション）
+      ## API キーの使用（オプション）
 
-      [Zeabur AI Hub](https://zeabur.com/ai) を直接の Anthropic API キーの代わりに使用する場合：
+      サブスクリプションの代わりに API キー認証を使用する場合：
 
-      1. `ANTHROPIC_BASE_URL` を Zeabur AI Hub エンドポイントに設定します（例：`https://ai.hub.zeabur.com`）。
-      2. `ANTHROPIC_API_KEY` を Zeabur AI Hub トークンに設定します。
+      1. `ANTHROPIC_API_KEY` を Anthropic API キーに設定します。[console.anthropic.com](https://console.anthropic.com/) から取得できます。
+      2. オプションで `ANTHROPIC_BASE_URL` を設定し、[Zeabur AI Hub](https://zeabur.com/ai) を使用できます（例：`https://ai.hub.zeabur.com`）。
 
       ## よく使うコマンド
 
@@ -365,7 +347,7 @@ localization:
 
       | 変数 | 必須 | 説明 |
       |------|------|------|
-      | `ANTHROPIC_API_KEY` | はい | Anthropic API キーまたは Zeabur AI Hub トークン |
+      | `ANTHROPIC_API_KEY` | いいえ | Anthropic API キーまたは Zeabur AI Hub トークン（サブスクリプションログインを使用しない場合のみ必要） |
       | `ANTHROPIC_BASE_URL` | いいえ | カスタム API エンドポイント（Zeabur AI Hub 使用時に設定） |
       | `WEB_TERMINAL_PASSWORD` | 自動 | Web ターミナルのログインパスワード（自動生成、ダッシュボードで確認可能） |
 
@@ -404,21 +386,17 @@ localization:
 
       ## Primeros pasos
 
-      1. **Configure su clave API:** Antes de desplegar, establezca la variable de entorno `ANTHROPIC_API_KEY` en Zeabur con su clave API de Anthropic. Puede obtenerla en [console.anthropic.com](https://console.anthropic.com/).
-      2. **Despliegue la plantilla** y espere a que el servicio se inicie.
-      3. **Abra la URL del servicio** en su navegador (el dominio vinculado al servicio).
-      4. **Inicie sesion** con usuario `user` y la contrasena mostrada en la variable `WEB_TERMINAL_PASSWORD` en el panel de Zeabur.
-      5. **Comience a usar Claude Code:**
-         ```
-         claude
-         ```
+      1. **Despliegue la plantilla** y espere a que el servicio se inicie (la primera vez instala Claude Code automaticamente).
+      2. **Abra la URL del servicio** en su navegador (el dominio vinculado al servicio).
+      3. **Inicie sesion** con usuario `user` y la contrasena de la pestana **Instructions** en el panel de Zeabur.
+      4. **Autentique Claude Code** — ejecute `claude` y siga las indicaciones para iniciar sesion con su suscripcion Claude Pro/Max/Team/Enterprise.
 
-      ## Uso de Zeabur AI Hub (Opcional)
+      ## Usar clave API (Opcional)
 
-      Si desea usar [Zeabur AI Hub](https://zeabur.com/ai) en lugar de una clave API directa de Anthropic:
+      Si prefiere autenticacion por clave API en lugar de suscripcion:
 
-      1. Establezca `ANTHROPIC_BASE_URL` a su endpoint de Zeabur AI Hub (ej. `https://ai.hub.zeabur.com`).
-      2. Establezca `ANTHROPIC_API_KEY` a su token de Zeabur AI Hub.
+      1. Configure `ANTHROPIC_API_KEY` con su clave API de Anthropic de [console.anthropic.com](https://console.anthropic.com/).
+      2. Opcionalmente configure `ANTHROPIC_BASE_URL` para usar [Zeabur AI Hub](https://zeabur.com/ai) (ej. `https://ai.hub.zeabur.com`).
 
       ## Comandos comunes
 
@@ -442,7 +420,7 @@ localization:
 
       | Variable | Requerida | Descripcion |
       |----------|-----------|-------------|
-      | `ANTHROPIC_API_KEY` | Si | Su clave API de Anthropic o token de Zeabur AI Hub |
+      | `ANTHROPIC_API_KEY` | No | Clave API de Anthropic o token de Zeabur AI Hub (solo necesaria si no usa login por suscripcion) |
       | `ANTHROPIC_BASE_URL` | No | Endpoint API personalizado (configurar para Zeabur AI Hub) |
       | `WEB_TERMINAL_PASSWORD` | Auto | Contrasena del terminal web (generada automaticamente, visible en el panel) |
 
@@ -481,21 +459,17 @@ localization:
 
       ## Memulai
 
-      1. **Atur kunci API:** Sebelum deploy, atur variabel lingkungan `ANTHROPIC_API_KEY` di Zeabur dengan kunci API Anthropic Anda. Dapatkan di [console.anthropic.com](https://console.anthropic.com/).
-      2. **Deploy template** dan tunggu layanan dimulai.
-      3. **Buka URL layanan** di browser Anda (domain yang terikat ke layanan).
-      4. **Login** dengan username `user` dan password yang ditampilkan di variabel `WEB_TERMINAL_PASSWORD` pada dashboard Zeabur.
-      5. **Mulai menggunakan Claude Code:**
-         ```
-         claude
-         ```
+      1. **Deploy template** dan tunggu layanan dimulai (boot pertama menginstal Claude Code secara otomatis).
+      2. **Buka URL layanan** di browser Anda (domain yang terikat ke layanan).
+      3. **Login** dengan username `user` dan password dari tab **Instructions** di dashboard Zeabur.
+      4. **Autentikasi Claude Code** — jalankan `claude` dan ikuti petunjuk untuk login dengan langganan Claude Pro/Max/Team/Enterprise Anda.
 
-      ## Menggunakan Zeabur AI Hub (Opsional)
+      ## Menggunakan API Key (Opsional)
 
-      Jika Anda ingin menggunakan [Zeabur AI Hub](https://zeabur.com/ai) alih-alih kunci API Anthropic langsung:
+      Jika Anda lebih memilih autentikasi API key daripada langganan:
 
-      1. Atur `ANTHROPIC_BASE_URL` ke endpoint Zeabur AI Hub Anda (misalnya `https://ai.hub.zeabur.com`).
-      2. Atur `ANTHROPIC_API_KEY` ke token Zeabur AI Hub Anda.
+      1. Atur `ANTHROPIC_API_KEY` ke kunci API Anthropic Anda dari [console.anthropic.com](https://console.anthropic.com/).
+      2. Opsional atur `ANTHROPIC_BASE_URL` untuk menggunakan [Zeabur AI Hub](https://zeabur.com/ai) (misalnya `https://ai.hub.zeabur.com`).
 
       ## Perintah Umum
 
@@ -519,7 +493,7 @@ localization:
 
       | Variabel | Wajib | Deskripsi |
       |----------|-------|-----------|
-      | `ANTHROPIC_API_KEY` | Ya | Kunci API Anthropic atau token Zeabur AI Hub Anda |
+      | `ANTHROPIC_API_KEY` | Tidak | Kunci API Anthropic atau token Zeabur AI Hub (hanya diperlukan jika tidak menggunakan login langganan) |
       | `ANTHROPIC_BASE_URL` | Tidak | Endpoint API kustom (atur untuk Zeabur AI Hub) |
       | `WEB_TERMINAL_PASSWORD` | Otomatis | Password login terminal web (dibuat otomatis, dapat dilihat di dashboard) |
 
