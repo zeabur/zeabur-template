@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq bc fzf ripgrep tree unzip zip tar \
     procps psmisc lsof socat iproute2 dnsutils \
     python3 make g++ \
-    sudo rsync \
+    sudo rsync tmux \
   && rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI
@@ -25,6 +25,12 @@ RUN ARCH=$(dpkg --print-architecture) && \
     curl -fsSL -o /usr/local/bin/ttyd \
       "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" && \
     chmod +x /usr/local/bin/ttyd
+
+# Bun - required for Claude Code channel plugins
+RUN curl -fsSL https://bun.sh/install | bash && \
+    cp /root/.bun/bin/bun /usr/local/bin/bun && \
+    cp /root/.bun/bin/bunx /usr/local/bin/bunx && \
+    chmod +x /usr/local/bin/bun /usr/local/bin/bunx
 
 RUN mkdir -p /home/node && chown node:node /home/node
 

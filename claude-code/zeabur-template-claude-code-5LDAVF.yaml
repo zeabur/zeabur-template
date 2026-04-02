@@ -32,11 +32,33 @@ spec:
 
     ## Getting Started
 
-    1. **Deploy the template** and wait for the service to start. The first boot installs Claude Code automatically — wait until the health check turns green before proceeding.
+    1. **Deploy the template** and wait for the service to start. The first boot installs Claude Code and channel plugins automatically — wait until the health check turns green before proceeding.
     2. **Open the service URL** in your browser (the domain bound to your service).
     3. **Log in** — enter the password from the **Instructions** tab on the Zeabur dashboard.
-    4. **Copy the command** you need (e.g. `claude --dangerously-skip-permissions` for full permissions) and click **Enter Terminal**.
-    5. **Authenticate Claude Code** — paste the command, then follow the login prompts to sign in with your Claude Pro/Max/Team/Enterprise subscription.
+    4. **Select options** — check the options you want (e.g. skip permissions, Telegram/Discord channel).
+    5. **Enter bot token** (if using channels) — paste your bot token into the input field that appears.
+    6. **Copy the command** and click **Enter Terminal**.
+    7. **Authenticate Claude Code** — paste the command, then follow the login prompts to sign in with your Claude Pro/Max/Team/Enterprise subscription.
+
+    ## Channels (Telegram / Discord)
+
+    Channels let you chat with Claude Code from your phone via Telegram or Discord while it works on your files.
+
+    ### Setup
+
+    1. **Create a bot** — [BotFather](https://t.me/BotFather) for Telegram, or [Discord Developer Portal](https://discord.com/developers/applications) for Discord (enable Message Content Intent, invite bot with Send Messages permission).
+    2. **Select the channel** on the landing page and paste your bot token.
+    3. **Copy and run the command** in the terminal — the channel starts automatically.
+    4. **Pair your account** — DM your bot, it replies with a pairing code. Run `/discord:access pair <code>` or `/telegram:access pair <code>` in Claude Code.
+    5. **Lock down access** — run `/discord:access policy allowlist` or `/telegram:access policy allowlist` so only you can send messages.
+
+    After pairing, you can chat with Claude from Telegram/Discord. Your bot token is saved in the browser for next time.
+
+    ### Notes
+
+    - Channels require a Claude Pro/Max/Team/Enterprise subscription (not API key).
+    - The bot token is passed as an environment variable in the command (e.g. `DISCORD_BOT_TOKEN=xxx claude ...`) — it is NOT stored on the server.
+    - Channels are an [experimental feature](https://code.claude.com/docs/en/channels) in Claude Code.
 
     ## Using API Key (Optional)
 
@@ -86,6 +108,14 @@ spec:
     - Homebrew and npm global packages persisted in volume
     - Resource requirements and domain binding
 
+    ### 2026-04-02 -- Channel Support & Landing Page Redesign
+
+    - Landing page redesigned with checkbox-based command builder
+    - Channel support: Telegram, Discord (via `--channels` flag)
+    - Pre-installed channel plugins using `CLAUDE_CODE_PLUGIN_SEED_DIR`
+    - Bun runtime pre-installed for channel plugin dependencies
+    - Bot token input on landing page (prepended as env var in command)
+
     ## Links
 
     - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
@@ -129,6 +159,57 @@ spec:
               if [ ! -f /home/node/.linuxbrew/bin/brew ]; then
                 NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
               fi
+              # Pre-install channel plugins into ~/.claude/plugins/
+              PLUGINS_DIR=/home/node/.claude/plugins
+              if [ ! -d "$PLUGINS_DIR/marketplaces/claude-plugins-official" ]; then
+                echo "Setting up channel plugins..."
+                mkdir -p "$PLUGINS_DIR/marketplaces"
+                chown -R node:node /home/node/.claude
+                runuser -u node -- git clone --depth 1 \
+                  https://github.com/anthropics/claude-plugins-official.git \
+                  "$PLUGINS_DIR/marketplaces/claude-plugins-official"
+                NOW=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+                # Register marketplace
+                if [ ! -f "$PLUGINS_DIR/known_marketplaces.json" ]; then
+                  cat > "$PLUGINS_DIR/known_marketplaces.json" << EOJSON
+              {"claude-plugins-official":{"source":{"source":"github","repo":"anthropics/claude-plugins-official"},"installLocation":"$PLUGINS_DIR/marketplaces/claude-plugins-official","lastUpdated":"$NOW"}}
+              EOJSON
+                fi
+                # Initialize installed_plugins.json if not exists
+                if [ ! -f "$PLUGINS_DIR/installed_plugins.json" ]; then
+                  echo '{"version":2,"plugins":{}}' > "$PLUGINS_DIR/installed_plugins.json"
+                fi
+                for plugin in telegram discord fakechat; do
+                  src="$PLUGINS_DIR/marketplaces/claude-plugins-official/external_plugins/$plugin"
+                  if [ -d "$src" ]; then
+                    version=$(jq -r '.version // "0.0.0"' "$src/.claude-plugin/plugin.json")
+                    cache_dir="$PLUGINS_DIR/cache/claude-plugins-official/$plugin/$version"
+                    mkdir -p "$cache_dir"
+                    cp -r "$src/." "$cache_dir/"
+                    # Register in installed_plugins.json
+                    jq --arg k "${plugin}@claude-plugins-official" \
+                       --arg p "$cache_dir" \
+                       --arg v "$version" \
+                       --arg t "$NOW" \
+                       '.plugins[$k] = [{"scope":"user","installPath":$p,"version":$v,"installedAt":$t,"lastUpdated":$t}]' \
+                       "$PLUGINS_DIR/installed_plugins.json" > "$PLUGINS_DIR/installed_plugins.tmp" \
+                    && mv "$PLUGINS_DIR/installed_plugins.tmp" "$PLUGINS_DIR/installed_plugins.json"
+                    # Enable in settings.json
+                    SETTINGS=/home/node/.claude/settings.json
+                    if [ ! -f "$SETTINGS" ]; then echo '{}' > "$SETTINGS"; fi
+                    jq --arg k "${plugin}@claude-plugins-official" '.enabledPlugins[$k] = true' \
+                       "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"
+                  fi
+                done
+                chown -R node:node "$PLUGINS_DIR"
+                for plugin in telegram discord fakechat; do
+                  cache_dir=$(find "$PLUGINS_DIR/cache/claude-plugins-official/$plugin" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | head -1)
+                  if [ -n "$cache_dir" ] && [ -f "$cache_dir/package.json" ]; then
+                    (cd "$cache_dir" && runuser -u node -- bun install --frozen-lockfile 2>/dev/null || runuser -u node -- bun install)
+                  fi
+                done
+              fi
+
               # Ensure PATH includes claude, npm-global, and brew in login shell
               for rc in /home/node/.bashrc /home/node/.profile; do
                 grep -qF '.npm-global' "$rc" 2>/dev/null || cat >> "$rc" << 'EOPATH'
@@ -136,6 +217,27 @@ spec:
               EOPATH
                 grep -qF 'linuxbrew' "$rc" 2>/dev/null || echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "$rc"
               done
+
+              # tmux tips on terminal login
+              grep -qF 'tmux tips' /home/node/.profile 2>/dev/null || cat >> /home/node/.profile << 'EOMOTD'
+
+              # tmux tips
+              if [ -z "$TMUX" ]; then
+                echo ""
+                echo "  tmux quick reference:"
+                echo "    tmux new -As main     Start or reconnect to session"
+                echo "    tmux attach           Reconnect to last session"
+                echo "    tmux ls               List sessions"
+                echo "    Ctrl+B, D             Detach (session keeps running)"
+                echo ""
+                SESSIONS=$(tmux ls 2>/dev/null)
+                if [ -n "$SESSIONS" ]; then
+                  echo "  Active tmux sessions:"
+                  echo "$SESSIONS" | sed 's/^/    /'
+                  echo ""
+                fi
+              fi
+              EOMOTD
 
               # Start ttyd on internal port with auth
               ttyd \
@@ -315,6 +417,34 @@ spec:
                 }
                 .cmd-box button:hover { background: #2d2d44; color: #fff; }
                 .step-label { color: #888; font-size: 0.8rem; margin-top: 1.25rem; margin-bottom: 0.25rem; }
+                .note {
+                  text-align: left; font-size: 0.8rem; color: #bbb;
+                  background: #1e1e3a; border: 1px solid #3d3d5c; border-radius: 8px;
+                  padding: 0.6rem 0.8rem; margin: 0.75rem 0;
+                }
+                .note strong { color: #d4a574; }
+                .note code { color: #d4a574; font-size: 0.75rem; }
+                .options { text-align: left; margin: 0.75rem 0; }
+                .option {
+                  display: flex; align-items: flex-start; gap: 0.6rem;
+                  padding: 0.6rem 0.8rem; margin: 0.4rem 0;
+                  background: #16162a; border: 1px solid #3d3d5c; border-radius: 8px;
+                  cursor: pointer; transition: border-color 0.2s;
+                }
+                .option:hover { border-color: #d4a574; }
+                .option input[type="checkbox"] {
+                  accent-color: #d4a574; width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;
+                }
+                .option-info { display: flex; flex-direction: column; gap: 0.15rem; }
+                .option-name { font-size: 0.9rem; color: #fff; font-weight: 500; }
+                .option-desc { font-size: 0.75rem; color: #888; }
+                .token-input {
+                  width: 100%; padding: 0.5rem 0.8rem; margin: -0.1rem 0 0.4rem 0;
+                  background: #12122a; border: 1px solid #3d3d5c; border-radius: 0 0 8px 8px;
+                  color: #d4a574; font-family: monospace; font-size: 0.8rem; outline: none;
+                }
+                .token-input:focus { border-color: #d4a574; }
+                .token-hint { font-size: 0.7rem; color: #555; margin: -0.2rem 0 0.4rem 0; text-align: right; }
                 .footer { margin-top: 2rem; font-size: 0.75rem; color: #555; }
               </style>
               </head>
@@ -333,16 +463,47 @@ spec:
 
                 <!-- Step 2: Commands + Enter Terminal -->
                 <div id="step-ready" class="hidden">
-                  <p class="step-label">Step 1 — Copy the command you need</p>
-                  <div class="cmd-box">
-                    <code>claude --dangerously-skip-permissions</code>
-                    <button onclick="copy(this, 'claude --dangerously-skip-permissions')">Copy</button>
+                  <p class="step-label">Step 1 — Select options</p>
+                  <div class="options">
+                    <label class="option">
+                      <input type="checkbox" id="opt-tmux" checked onchange="buildCmd()">
+                      <span class="option-info">
+                        <span class="option-name">Use tmux</span>
+                        <span class="option-desc">Keep session alive when browser closes (reconnect with tmux attach)</span>
+                      </span>
+                    </label>
+                    <label class="option">
+                      <input type="checkbox" id="opt-skip-perms" checked onchange="buildCmd()">
+                      <span class="option-info">
+                        <span class="option-name">Skip permissions</span>
+                        <span class="option-desc">Auto-approve all tool calls (--dangerously-skip-permissions)</span>
+                      </span>
+                    </label>
+                    <label class="option">
+                      <input type="checkbox" id="opt-ch-telegram" onchange="buildCmd()">
+                      <span class="option-info">
+                        <span class="option-name">Telegram channel</span>
+                        <span class="option-desc">Receive and reply to Telegram messages</span>
+                      </span>
+                    </label>
+                    <input type="text" id="token-telegram" class="token-input hidden" placeholder="Telegram Bot Token (from BotFather)" oninput="buildCmd()" title="Saved in this browser only">
+                    <p id="hint-telegram" class="token-hint hidden">Saved in this browser only</p>
+                    <label class="option">
+                      <input type="checkbox" id="opt-ch-discord" onchange="buildCmd()">
+                      <span class="option-info">
+                        <span class="option-name">Discord channel</span>
+                        <span class="option-desc">Receive and reply to Discord messages</span>
+                      </span>
+                    </label>
+                    <input type="text" id="token-discord" class="token-input hidden" placeholder="Discord Bot Token (from Developer Portal)" oninput="buildCmd()" title="Saved in this browser only">
+                    <p id="hint-discord" class="token-hint hidden">Saved in this browser only</p>
                   </div>
+                  <p class="step-label">Step 2 — Copy command</p>
                   <div class="cmd-box">
-                    <code>claude</code>
-                    <button onclick="copy(this, 'claude')">Copy</button>
+                    <code id="cmd-output">tmux new -As main -- claude --dangerously-skip-permissions</code>
+                    <button id="cmd-copy-btn" onclick="copy(this, document.getElementById('cmd-output').textContent)">Copy</button>
                   </div>
-                  <p class="step-label">Step 2 — Open terminal and paste</p>
+                  <p class="step-label">Step 3 — Open terminal and paste</p>
                   <a class="btn btn-primary" href="/?go">Enter Terminal</a>
                 </div>
 
@@ -363,6 +524,9 @@ spec:
                   if (d.ok) {
                     document.getElementById('step-login').classList.add('hidden');
                     document.getElementById('step-ready').classList.remove('hidden');
+                    document.getElementById('token-telegram').value = localStorage.getItem('tg_token') || '';
+                    document.getElementById('token-discord').value = localStorage.getItem('dc_token') || '';
+                    buildCmd();
                   } else {
                     document.getElementById('err').classList.remove('hidden');
                     document.querySelector('#step-login .btn').disabled = false;
@@ -371,6 +535,33 @@ spec:
                 .catch(() => {
                   document.querySelector('#step-login .btn').disabled = false;
                 });
+              }
+              function buildCmd() {
+                const tgOn = document.getElementById('opt-ch-telegram').checked;
+                const dcOn = document.getElementById('opt-ch-discord').checked;
+                document.getElementById('token-telegram').classList.toggle('hidden', !tgOn);
+                document.getElementById('hint-telegram').classList.toggle('hidden', !tgOn);
+                document.getElementById('token-discord').classList.toggle('hidden', !dcOn);
+                document.getElementById('hint-discord').classList.toggle('hidden', !dcOn);
+                let env = '';
+                const tgToken = document.getElementById('token-telegram').value.trim();
+                const dcToken = document.getElementById('token-discord').value.trim();
+                if (tgToken) localStorage.setItem('tg_token', tgToken);
+                if (dcToken) localStorage.setItem('dc_token', dcToken);
+                if (tgOn && tgToken) env += 'TELEGRAM_BOT_TOKEN=' + tgToken + ' ';
+                if (dcOn && dcToken) env += 'DISCORD_BOT_TOKEN=' + dcToken + ' ';
+                let cmd = 'claude';
+                if (document.getElementById('opt-skip-perms').checked) cmd += ' --dangerously-skip-permissions';
+                const channels = [];
+                if (tgOn) channels.push('plugin:telegram@claude-plugins-official');
+                if (dcOn) channels.push('plugin:discord@claude-plugins-official');
+                if (channels.length) cmd += ' --channels ' + channels.join(' ');
+                const useTmux = document.getElementById('opt-tmux').checked;
+                if (useTmux) {
+                  document.getElementById('cmd-output').textContent = env + 'tmux new -As main -- ' + cmd;
+                } else {
+                  document.getElementById('cmd-output').textContent = env + cmd;
+                }
               }
               function copy(btn, text) {
                 navigator.clipboard.writeText(text).then(() => {
@@ -414,11 +605,33 @@ localization:
 
       ## 開始使用
 
-      1. **部署模板**並等待服務啟動。首次啟動會自動安裝 Claude Code，請等待健康檢查變為綠色後再繼續。
+      1. **部署模板**並等待服務啟動。首次啟動會自動安裝 Claude Code 及頻道外掛，請等待健康檢查變為綠色後再繼續。
       2. **在瀏覽器中開啟服務網址**（綁定到服務的網域）。
       3. **登入** — 輸入 Zeabur 儀表板 **Instructions** 頁籤中的密碼。
-      4. **複製指令**（例如 `claude --dangerously-skip-permissions` 可取得完整權限），然後點擊 **Enter Terminal**。
-      5. **認證 Claude Code** — 貼上指令，依照提示登入您的 Claude Pro/Max/Team/Enterprise 訂閱帳號。
+      4. **選擇選項** — 勾選需要的功能（如跳過權限、Telegram/Discord 頻道）。
+      5. **輸入 Bot Token**（使用頻道時） — 在出現的輸入框中貼上 Bot Token。
+      6. **複製指令**並點擊 **Enter Terminal**。
+      7. **認證 Claude Code** — 貼上指令，依照提示登入您的 Claude Pro/Max/Team/Enterprise 訂閱帳號。
+
+      ## 頻道（Telegram / Discord）
+
+      頻道功能讓您透過 Telegram 或 Discord 在手機上與 Claude Code 對話，同時它在伺服器上操作您的檔案。
+
+      ### 設定步驟
+
+      1. **建立機器人** — Telegram 使用 [BotFather](https://t.me/BotFather)，Discord 則到 [Developer Portal](https://discord.com/developers/applications) 建立（需啟用 Message Content Intent，並邀請機器人加入伺服器且授予傳送訊息權限）。
+      2. **在入口頁面勾選頻道**並貼上 Bot Token。
+      3. **複製指令並在終端機中執行** — 頻道會自動啟動。
+      4. **配對帳號** — 私訊您的機器人，它會回覆配對碼。在 Claude Code 中執行 `/discord:access pair <code>` 或 `/telegram:access pair <code>`。
+      5. **鎖定存取** — 執行 `/discord:access policy allowlist` 或 `/telegram:access policy allowlist`，確保只有您能傳送訊息。
+
+      配對完成後，即可透過 Telegram/Discord 與 Claude 對話。Bot Token 會儲存在瀏覽器中，下次無需重新輸入。
+
+      ### 注意事項
+
+      - 頻道需要 Claude Pro/Max/Team/Enterprise 訂閱（不支援 API 金鑰）。
+      - Bot Token 以環境變數方式帶入指令（如 `DISCORD_BOT_TOKEN=xxx claude ...`），**不會儲存在伺服器上**。
+      - 頻道是 Claude Code 的[實驗性功能](https://code.claude.com/docs/en/channels)。
 
       ## 使用 API 金鑰（選用）
 
@@ -461,6 +674,14 @@ localization:
 
       ## 變更紀錄
 
+      ### 2026-04-02 — 頻道支援與入口頁面重新設計
+
+      - 入口頁面改為勾選式指令組合器
+      - 頻道支援：Telegram、Discord、iMessage（透過 `--channels` 參數）
+      - 使用 `CLAUDE_CODE_PLUGIN_SEED_DIR` 預裝頻道外掛
+      - 預裝 Bun 執行環境（頻道外掛依賴）
+      - 入口頁面可直接輸入 Bot Token（以環境變數帶入指令）
+
       ### 2026-03-31 — 首次發佈
 
       - ttyd Web 終端機（密碼驗證）
@@ -489,11 +710,33 @@ localization:
 
       ## 开始使用
 
-      1. **部署模板**并等待服务启动。首次启动会自动安装 Claude Code，请等待健康检查变为绿色后再继续。
+      1. **部署模板**并等待服务启动。首次启动会自动安装 Claude Code 及频道插件，请等待健康检查变为绿色后再继续。
       2. **在浏览器中打开服务网址**（绑定到服务的域名）。
       3. **登录** — 输入 Zeabur 仪表板 **Instructions** 页签中的密码。
-      4. **复制命令**（例如 `claude --dangerously-skip-permissions` 可获取完整权限），然后点击 **Enter Terminal**。
-      5. **认证 Claude Code** — 粘贴命令，按照提示登录您的 Claude Pro/Max/Team/Enterprise 订阅账号。
+      4. **选择选项** — 勾选需要的功能（如跳过权限、Telegram/Discord 频道）。
+      5. **输入 Bot Token**（使用频道时） — 在出现的输入框中粘贴 Bot Token。
+      6. **复制命令**并点击 **Enter Terminal**。
+      7. **认证 Claude Code** — 粘贴命令，按照提示登录您的 Claude Pro/Max/Team/Enterprise 订阅账号。
+
+      ## 频道（Telegram / Discord）
+
+      频道功能让您通过 Telegram 或 Discord 在手机上与 Claude Code 对话，同时它在服务器上操作您的文件。
+
+      ### 设置步骤
+
+      1. **创建机器人** — Telegram 使用 [BotFather](https://t.me/BotFather)，Discord 到 [Developer Portal](https://discord.com/developers/applications) 创建（需启用 Message Content Intent，邀请机器人加入服务器并授予发送消息权限）。
+      2. **在入口页面勾选频道**并粘贴 Bot Token。
+      3. **复制命令并在终端中执行** — 频道会自动启动。
+      4. **配对账号** — 私信您的机器人，它会回复配对码。在 Claude Code 中执行 `/discord:access pair <code>` 或 `/telegram:access pair <code>`。
+      5. **锁定访问** — 执行 `/discord:access policy allowlist` 或 `/telegram:access policy allowlist`，确保只有您能发送消息。
+
+      配对完成后，即可通过 Telegram/Discord 与 Claude 对话。Bot Token 会保存在浏览器中，下次无需重新输入。
+
+      ### 注意事项
+
+      - 频道需要 Claude Pro/Max/Team/Enterprise 订阅（不支持 API 密钥）。
+      - Bot Token 以环境变量方式带入命令（如 `DISCORD_BOT_TOKEN=xxx claude ...`），**不会存储在服务器上**。
+      - 频道是 Claude Code 的[实验性功能](https://code.claude.com/docs/en/channels)。
 
       ## 使用 API 密钥（可选）
 
@@ -536,6 +779,14 @@ localization:
 
       ## 变更记录
 
+      ### 2026-04-02 — 频道支持与入口页面重新设计
+
+      - 入口页面改为勾选式命令组合器
+      - 频道支持：Telegram、Discord、iMessage（通过 `--channels` 参数）
+      - 使用 `CLAUDE_CODE_PLUGIN_SEED_DIR` 预装频道插件
+      - 预装 Bun 运行时（频道插件依赖）
+      - 入口页面可直接输入 Bot Token（以环境变量带入命令）
+
       ### 2026-03-31 — 首次发布
 
       - ttyd Web 终端（密码验证）
@@ -564,11 +815,33 @@ localization:
 
       ## はじめに
 
-      1. **テンプレートをデプロイ**し、サービスの起動を待ちます。初回起動時に Claude Code が自動インストールされます。ヘルスチェックが緑になるまでお待ちください。
+      1. **テンプレートをデプロイ**し、サービスの起動を待ちます。初回起動時に Claude Code とチャンネルプラグインが自動インストールされます。ヘルスチェックが緑になるまでお待ちください。
       2. **ブラウザでサービス URL を開きます**（サービスにバインドされたドメイン）。
       3. **ログイン** — Zeabur ダッシュボードの **Instructions** タブに表示されるパスワードを入力します。
-      4. **コマンドをコピー**（例：`claude --dangerously-skip-permissions` でフル権限）し、**Enter Terminal** をクリックします。
-      5. **Claude Code を認証** — コマンドを貼り付け、プロンプトに従って Claude Pro/Max/Team/Enterprise サブスクリプションでログインします。
+      4. **オプションを選択** — 必要な機能にチェックを入れます（権限スキップ、Telegram/Discord チャンネルなど）。
+      5. **Bot トークンを入力**（チャンネル使用時） — 表示された入力欄に Bot トークンを貼り付けます。
+      6. **コマンドをコピー**し、**Enter Terminal** をクリックします。
+      7. **Claude Code を認証** — コマンドを貼り付け、プロンプトに従って Claude Pro/Max/Team/Enterprise サブスクリプションでログインします。
+
+      ## チャンネル（Telegram / Discord）
+
+      チャンネル機能を使うと、Telegram や Discord からスマートフォンで Claude Code と会話できます。サーバー上でファイルを操作しながらやり取りが可能です。
+
+      ### セットアップ手順
+
+      1. **ボットを作成** — Telegram は [BotFather](https://t.me/BotFather)、Discord は [Developer Portal](https://discord.com/developers/applications) で作成します（Message Content Intent を有効にし、ボットをサーバーに招待してメッセージ送信権限を付与してください）。
+      2. **ランディングページでチャンネルを選択**し、Bot トークンを貼り付けます。
+      3. **コマンドをコピーしてターミナルで実行** — チャンネルが自動的に起動します。
+      4. **アカウントをペアリング** — ボットにダイレクトメッセージを送ると、ペアリングコードが返されます。Claude Code で `/discord:access pair <code>` または `/telegram:access pair <code>` を実行します。
+      5. **アクセスをロック** — `/discord:access policy allowlist` または `/telegram:access policy allowlist` を実行して、自分だけがメッセージを送れるようにします。
+
+      ペアリング完了後、Telegram/Discord 経由で Claude と会話できます。Bot トークンはブラウザに保存され、次回再入力は不要です。
+
+      ### 注意事項
+
+      - チャンネルには Claude Pro/Max/Team/Enterprise サブスクリプションが必要です（API キーでは使用できません）。
+      - Bot トークンは環境変数としてコマンドに付加されます（例：`DISCORD_BOT_TOKEN=xxx claude ...`）。**サーバーには保存されません**。
+      - チャンネルは Claude Code の[実験的機能](https://code.claude.com/docs/en/channels)です。
 
       ## API キーの使用（オプション）
 
@@ -611,6 +884,14 @@ localization:
 
       ## 変更履歴
 
+      ### 2026-04-02 — チャンネルサポートとランディングページの再設計
+
+      - ランディングページをチェックボックス式コマンドビルダーに変更
+      - チャンネルサポート：Telegram、Discord、iMessage（`--channels` フラグ）
+      - `CLAUDE_CODE_PLUGIN_SEED_DIR` でチャンネルプラグインをプリインストール
+      - Bun ランタイムをプリインストール（チャンネルプラグインの依存関係）
+      - ランディングページで Bot トークンを直接入力可能（環境変数としてコマンドに付加）
+
       ### 2026-03-31 — 初回リリース
 
       - ttyd Web ターミナル（パスワード認証）
@@ -639,11 +920,33 @@ localization:
 
       ## Primeros pasos
 
-      1. **Despliegue la plantilla** y espere a que el servicio se inicie. La primera vez instala Claude Code automaticamente — espere hasta que el health check se ponga verde antes de continuar.
+      1. **Despliegue la plantilla** y espere a que el servicio se inicie. La primera vez instala Claude Code y los plugins de canales automaticamente — espere hasta que el health check se ponga verde antes de continuar.
       2. **Abra la URL del servicio** en su navegador (el dominio vinculado al servicio).
       3. **Inicie sesion** — ingrese la contrasena de la pestana **Instructions** en el panel de Zeabur.
-      4. **Copie el comando** que necesite (ej. `claude --dangerously-skip-permissions` para permisos completos) y haga clic en **Enter Terminal**.
-      5. **Autentique Claude Code** — pegue el comando y siga las indicaciones para iniciar sesion con su suscripcion Claude Pro/Max/Team/Enterprise.
+      4. **Seleccione opciones** — marque las funciones que necesite (como omitir permisos, canal Telegram/Discord).
+      5. **Ingrese el Bot Token** (si usa canales) — peguelo en el campo de entrada que aparece.
+      6. **Copie el comando** y haga clic en **Enter Terminal**.
+      7. **Autentique Claude Code** — pegue el comando y siga las indicaciones para iniciar sesion con su suscripcion Claude Pro/Max/Team/Enterprise.
+
+      ## Canales (Telegram / Discord)
+
+      Los canales le permiten chatear con Claude Code desde su telefono a traves de Telegram o Discord, mientras opera sus archivos en el servidor.
+
+      ### Pasos de configuracion
+
+      1. **Cree un bot** — Para Telegram use [BotFather](https://t.me/BotFather), para Discord vaya al [Developer Portal](https://discord.com/developers/applications) (habilite Message Content Intent e invite al bot al servidor con permiso de enviar mensajes).
+      2. **Seleccione el canal en la pagina de inicio** y pegue el Bot Token.
+      3. **Copie y ejecute el comando en la terminal** — el canal se inicia automaticamente.
+      4. **Vincule su cuenta** — envie un mensaje directo a su bot, recibira un codigo de vinculacion. Ejecute `/discord:access pair <code>` o `/telegram:access pair <code>` en Claude Code.
+      5. **Bloquee el acceso** — ejecute `/discord:access policy allowlist` o `/telegram:access policy allowlist` para asegurar que solo usted pueda enviar mensajes.
+
+      Una vez vinculado, puede chatear con Claude a traves de Telegram/Discord. El Bot Token se guarda en el navegador y no necesita reingresarlo.
+
+      ### Notas
+
+      - Los canales requieren suscripcion Claude Pro/Max/Team/Enterprise (no funcionan con clave API).
+      - El Bot Token se pasa como variable de entorno en el comando (ej. `DISCORD_BOT_TOKEN=xxx claude ...`), **no se almacena en el servidor**.
+      - Los canales son una [funcion experimental](https://code.claude.com/docs/en/channels) de Claude Code.
 
       ## Usar clave API (Opcional)
 
@@ -686,6 +989,14 @@ localization:
 
       ## Registro de cambios
 
+      ### 2026-04-02 -- Soporte de canales y rediseno de pagina de inicio
+
+      - Pagina de inicio rediseñada con constructor de comandos basado en checkboxes
+      - Soporte de canales: Telegram, Discord (via `--channels`)
+      - Plugins de canales preinstalados con `CLAUDE_CODE_PLUGIN_SEED_DIR`
+      - Runtime Bun preinstalado (dependencia de plugins de canales)
+      - Entrada de Bot Token en la pagina de inicio (como variable de entorno en el comando)
+
       ### 2026-03-31 -- Lanzamiento inicial
 
       - Terminal web ttyd (autenticacion por contrasena)
@@ -714,11 +1025,33 @@ localization:
 
       ## Memulai
 
-      1. **Deploy template** dan tunggu layanan dimulai. Boot pertama menginstal Claude Code secara otomatis — tunggu hingga health check berwarna hijau sebelum melanjutkan.
+      1. **Deploy template** dan tunggu layanan dimulai. Boot pertama menginstal Claude Code dan plugin channel secara otomatis — tunggu hingga health check berwarna hijau sebelum melanjutkan.
       2. **Buka URL layanan** di browser Anda (domain yang terikat ke layanan).
       3. **Login** — masukkan password dari tab **Instructions** di dashboard Zeabur.
-      4. **Salin perintah** yang dibutuhkan (misalnya `claude --dangerously-skip-permissions` untuk izin penuh) dan klik **Enter Terminal**.
-      5. **Autentikasi Claude Code** — tempel perintah, lalu ikuti petunjuk untuk login dengan langganan Claude Pro/Max/Team/Enterprise Anda.
+      4. **Pilih opsi** — centang fitur yang dibutuhkan (seperti lewati izin, channel Telegram/Discord).
+      5. **Masukkan Bot Token** (jika menggunakan channel) — tempel di kolom input yang muncul.
+      6. **Salin perintah** dan klik **Enter Terminal**.
+      7. **Autentikasi Claude Code** — tempel perintah, lalu ikuti petunjuk untuk login dengan langganan Claude Pro/Max/Team/Enterprise Anda.
+
+      ## Channel (Telegram / Discord)
+
+      Fitur channel memungkinkan Anda mengobrol dengan Claude Code dari ponsel melalui Telegram atau Discord, sementara ia mengoperasikan file Anda di server.
+
+      ### Langkah Pengaturan
+
+      1. **Buat bot** — Untuk Telegram gunakan [BotFather](https://t.me/BotFather), untuk Discord buka [Developer Portal](https://discord.com/developers/applications) (aktifkan Message Content Intent, undang bot ke server dengan izin kirim pesan).
+      2. **Pilih channel di halaman landing** dan tempel Bot Token.
+      3. **Salin dan jalankan perintah di terminal** — channel akan dimulai secara otomatis.
+      4. **Pasangkan akun** — kirim pesan langsung ke bot Anda, Anda akan menerima kode pairing. Jalankan `/discord:access pair <code>` atau `/telegram:access pair <code>` di Claude Code.
+      5. **Kunci akses** — jalankan `/discord:access policy allowlist` atau `/telegram:access policy allowlist` agar hanya Anda yang bisa mengirim pesan.
+
+      Setelah dipasangkan, Anda dapat mengobrol dengan Claude melalui Telegram/Discord. Bot Token disimpan di browser dan tidak perlu dimasukkan ulang.
+
+      ### Catatan
+
+      - Channel memerlukan langganan Claude Pro/Max/Team/Enterprise (tidak bisa menggunakan API key).
+      - Bot Token diteruskan sebagai variabel lingkungan dalam perintah (misalnya `DISCORD_BOT_TOKEN=xxx claude ...`), **tidak disimpan di server**.
+      - Channel adalah [fitur eksperimental](https://code.claude.com/docs/en/channels) Claude Code.
 
       ## Menggunakan API Key (Opsional)
 
@@ -760,6 +1093,14 @@ localization:
       Persyaratan resmi Claude Code adalah RAM 4 GB+. Pemrosesan AI dilakukan di API Anthropic, sehingga secara lokal hanya menjalankan CLI Node.js dan alat shell, dengan kebutuhan CPU yang minimal.
 
       ## Catatan Perubahan
+
+      ### 2026-04-02 -- Dukungan Channel & Desain Ulang Halaman Landing
+
+      - Halaman landing didesain ulang dengan pembangun perintah berbasis checkbox
+      - Dukungan channel: Telegram, Discord (via `--channels`)
+      - Plugin channel terpasang otomatis dengan `CLAUDE_CODE_PLUGIN_SEED_DIR`
+      - Runtime Bun terpasang otomatis (dependensi plugin channel)
+      - Input Bot Token di halaman landing (sebagai variabel lingkungan dalam perintah)
 
       ### 2026-03-31 -- Rilis Pertama
 
