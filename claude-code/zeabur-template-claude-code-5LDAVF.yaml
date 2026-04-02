@@ -34,8 +34,9 @@ spec:
 
     1. **Deploy the template** and wait for the service to start. The first boot installs Claude Code automatically — wait until the health check turns green before proceeding.
     2. **Open the service URL** in your browser (the domain bound to your service).
-    3. **Log in** with username `user` and the password from the **Instructions** tab on the Zeabur dashboard.
-    4. **Authenticate Claude Code** — run `claude` and follow the login prompts to sign in with your Claude Pro/Max/Team/Enterprise subscription.
+    3. **Log in** — enter the password from the **Instructions** tab on the Zeabur dashboard.
+    4. **Copy the command** you need (e.g. `claude --dangerously-skip-permissions` for full permissions) and click **Enter Terminal**.
+    5. **Authenticate Claude Code** — paste the command, then follow the login prompts to sign in with your Claude Pro/Max/Team/Enterprise subscription.
 
     ## Using API Key (Optional)
 
@@ -136,11 +137,253 @@ spec:
                 grep -qF 'linuxbrew' "$rc" 2>/dev/null || echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "$rc"
               done
 
-              exec ttyd \
-                --port 7681 \
+              # Start ttyd on internal port with auth
+              ttyd \
+                --port 7682 \
                 --writable \
                 --credential "user:$WEB_TERMINAL_PASSWORD" \
-                runuser -u node -- bash -l
+                runuser -u node -- bash -l &
+
+              # Start landing page proxy on exposed port
+              exec node /opt/launcher.js
+          - path: /opt/launcher.js
+            template: |
+              const http = require('http');
+              const crypto = require('crypto');
+              const fs = require('fs');
+
+              const TTYD = 7682;
+              const PORT = 7681;
+              const PASS = process.env.WEB_TERMINAL_PASSWORD || '';
+              const AUTH = 'Basic ' + Buffer.from('user:' + PASS).toString('base64');
+              const SECRET = crypto.randomBytes(32).toString('hex');
+
+              const landing = fs.readFileSync('/opt/landing.html', 'utf8');
+
+              function hmac(val) {
+                return crypto.createHmac('sha256', SECRET).update(val).digest('hex');
+              }
+              function parseCookies(str) {
+                const obj = {};
+                (str || '').split(';').forEach(p => {
+                  const [k, ...v] = p.trim().split('=');
+                  if (k) obj[k] = v.join('=');
+                });
+                return obj;
+              }
+              function authorized(req) {
+                return parseCookies(req.headers.cookie).session === hmac(PASS);
+              }
+              function stripGo(url) {
+                const u = new URL(url, 'http://x');
+                u.searchParams.delete('go');
+                const qs = u.searchParams.toString();
+                return u.pathname + (qs ? '?' + qs : '');
+              }
+
+              const server = http.createServer((req, res) => {
+                // POST /auth — validate password, set session cookie
+                if (req.method === 'POST' && req.url === '/auth') {
+                  let body = '';
+                  req.on('data', c => body += c);
+                  req.on('end', () => {
+                    try {
+                      const { password } = JSON.parse(body);
+                      if (password === PASS) {
+                        res.writeHead(200, {
+                          'Content-Type': 'application/json',
+                          'Set-Cookie': 'session=' + hmac(PASS) + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400'
+                        });
+                        res.end(JSON.stringify({ ok: true }));
+                      } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ ok: false }));
+                      }
+                    } catch {
+                      res.writeHead(400);
+                      res.end('Bad request');
+                    }
+                  });
+                  return;
+                }
+
+                const u = new URL(req.url, 'http://x');
+
+                // Landing page — show if root path without ?go and not authenticated
+                if (u.pathname === '/' && !u.searchParams.has('go') && !authorized(req)) {
+                  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                  res.end(landing);
+                  return;
+                }
+
+                // Everything else — require auth, proxy to ttyd
+                if (!authorized(req)) {
+                  res.writeHead(302, { Location: '/' });
+                  res.end();
+                  return;
+                }
+
+                const headers = { ...req.headers, authorization: AUTH };
+                delete headers.host;
+                const proxyReq = http.request({
+                  hostname: '127.0.0.1', port: TTYD,
+                  path: stripGo(req.url), method: req.method, headers,
+                }, proxyRes => {
+                  res.writeHead(proxyRes.statusCode, proxyRes.headers);
+                  proxyRes.pipe(res);
+                });
+                proxyReq.on('error', () => { res.writeHead(502); res.end('Service starting...'); });
+                req.pipe(proxyReq);
+              });
+
+              // WebSocket upgrade proxy
+              server.on('upgrade', (req, socket, head) => {
+                if (!authorized(req)) { socket.destroy(); return; }
+                const headers = { ...req.headers, authorization: AUTH };
+                delete headers.host;
+                const proxyReq = http.request({
+                  hostname: '127.0.0.1', port: TTYD,
+                  path: stripGo(req.url), headers,
+                });
+                proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
+                  let resp = 'HTTP/1.1 101 Switching Protocols\r\n';
+                  const rh = proxyRes.rawHeaders;
+                  for (let i = 0; i < rh.length; i += 2) resp += rh[i] + ': ' + rh[i+1] + '\r\n';
+                  resp += '\r\n';
+                  socket.write(resp);
+                  if (proxyHead.length) socket.write(proxyHead);
+                  proxySocket.pipe(socket);
+                  socket.pipe(proxySocket);
+                  proxySocket.on('error', () => socket.destroy());
+                  socket.on('error', () => proxySocket.destroy());
+                });
+                proxyReq.on('error', () => socket.destroy());
+                proxyReq.end();
+              });
+
+              server.listen(PORT, () => console.log('Launcher ready on port ' + PORT));
+          - path: /opt/landing.html
+            template: |
+              <!DOCTYPE html>
+              <html lang="en">
+              <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Claude Code</title>
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                  background: #1a1a2e;
+                  color: #e0e0e0;
+                  min-height: 100vh;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                }
+                .container { text-align: center; max-width: 440px; padding: 2rem; }
+                .logo { width: 72px; height: 72px; margin-bottom: 1.5rem; }
+                h1 { font-size: 1.75rem; margin-bottom: 0.25rem; color: #fff; }
+                .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.9rem; }
+                .input {
+                  width: 100%; padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+                  background: #16162a; border: 1px solid #3d3d5c; border-radius: 8px;
+                  color: #fff; font-size: 1rem; outline: none;
+                }
+                .input:focus { border-color: #d4a574; }
+                .error { color: #e74c3c; font-size: 0.85rem; margin-bottom: 0.5rem; }
+                .btn {
+                  display: block; width: 100%; padding: 0.85rem; margin: 0.5rem 0;
+                  border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+                  cursor: pointer; transition: opacity 0.2s; text-decoration: none;
+                }
+                .btn:hover { opacity: 0.85; }
+                .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+                .btn-primary { background: #d4a574; color: #1a1a2e; }
+                .btn-secondary { background: #2d2d44; color: #e0e0e0; border: 1px solid #3d3d5c; }
+                .hidden { display: none; }
+                .cmd-box {
+                  display: flex; align-items: center; gap: 0.5rem;
+                  background: #16162a; border: 1px solid #3d3d5c; border-radius: 8px;
+                  padding: 0.6rem 0.8rem; margin: 0.75rem 0; text-align: left;
+                }
+                .cmd-box code { flex: 1; font-size: 0.85rem; color: #d4a574; word-break: break-all; }
+                .cmd-box button {
+                  background: none; border: none; color: #888; cursor: pointer;
+                  font-size: 0.8rem; white-space: nowrap; padding: 0.25rem 0.5rem;
+                  border-radius: 4px; transition: background 0.2s;
+                }
+                .cmd-box button:hover { background: #2d2d44; color: #fff; }
+                .step-label { color: #888; font-size: 0.8rem; margin-top: 1.25rem; margin-bottom: 0.25rem; }
+                .footer { margin-top: 2rem; font-size: 0.75rem; color: #555; }
+              </style>
+              </head>
+              <body>
+              <div class="container">
+                <img class="logo" src="https://cdn-console.zeabur.com/f/WpysO/claude-color.webp" alt="Claude Code">
+                <h1>Claude Code</h1>
+                <p class="subtitle">AI-powered coding agent workstation</p>
+
+                <!-- Step 1: Password -->
+                <div id="step-login">
+                  <input type="password" id="pw" class="input" placeholder="Enter password" autofocus>
+                  <p id="err" class="error hidden">Incorrect password</p>
+                  <button class="btn btn-primary" onclick="login()">Login</button>
+                </div>
+
+                <!-- Step 2: Commands + Enter Terminal -->
+                <div id="step-ready" class="hidden">
+                  <p class="step-label">Step 1 — Copy the command you need</p>
+                  <div class="cmd-box">
+                    <code>claude --dangerously-skip-permissions</code>
+                    <button onclick="copy(this, 'claude --dangerously-skip-permissions')">Copy</button>
+                  </div>
+                  <div class="cmd-box">
+                    <code>claude</code>
+                    <button onclick="copy(this, 'claude')">Copy</button>
+                  </div>
+                  <p class="step-label">Step 2 — Open terminal and paste</p>
+                  <a class="btn btn-primary" href="/?go">Enter Terminal</a>
+                </div>
+
+                <p class="footer">Powered by Zeabur</p>
+              </div>
+              <script>
+              function login() {
+                const pw = document.getElementById('pw').value;
+                document.querySelector('#step-login .btn').disabled = true;
+                document.getElementById('err').classList.add('hidden');
+                fetch('/auth', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ password: pw })
+                })
+                .then(r => r.json())
+                .then(d => {
+                  if (d.ok) {
+                    document.getElementById('step-login').classList.add('hidden');
+                    document.getElementById('step-ready').classList.remove('hidden');
+                  } else {
+                    document.getElementById('err').classList.remove('hidden');
+                    document.querySelector('#step-login .btn').disabled = false;
+                  }
+                })
+                .catch(() => {
+                  document.querySelector('#step-login .btn').disabled = false;
+                });
+              }
+              function copy(btn, text) {
+                navigator.clipboard.writeText(text).then(() => {
+                  btn.textContent = 'Copied!';
+                  setTimeout(() => btn.textContent = 'Copy', 1500);
+                });
+              }
+              document.getElementById('pw').addEventListener('keydown', e => {
+                if (e.key === 'Enter') login();
+              });
+              </script>
+              </body>
+              </html>
         env:
           ANTHROPIC_API_KEY:
             default: ""
@@ -150,18 +393,10 @@ spec:
             default: ${PASSWORD}
             expose: true
         instructions:
-          - type: TEXT
-            title: Username
-            content: user
-            category: Credentials
           - type: PASSWORD
             title: Password
             content: ${WEB_TERMINAL_PASSWORD}
             category: Credentials
-          - type: TEXT
-            title: Start Claude Code (full permissions)
-            content: claude --dangerously-skip-permissions
-            category: Usage
 localization:
   zh-TW:
     description: |
@@ -181,8 +416,9 @@ localization:
 
       1. **部署模板**並等待服務啟動。首次啟動會自動安裝 Claude Code，請等待健康檢查變為綠色後再繼續。
       2. **在瀏覽器中開啟服務網址**（綁定到服務的網域）。
-      3. **登入**，使用者名稱為 `user`，密碼請在 Zeabur 儀表板的 **Instructions** 頁籤查看。
-      4. **認證 Claude Code** — 執行 `claude` 並依照提示登入您的 Claude Pro/Max/Team/Enterprise 訂閱帳號。
+      3. **登入** — 輸入 Zeabur 儀表板 **Instructions** 頁籤中的密碼。
+      4. **複製指令**（例如 `claude --dangerously-skip-permissions` 可取得完整權限），然後點擊 **Enter Terminal**。
+      5. **認證 Claude Code** — 貼上指令，依照提示登入您的 Claude Pro/Max/Team/Enterprise 訂閱帳號。
 
       ## 使用 API 金鑰（選用）
 
@@ -255,8 +491,9 @@ localization:
 
       1. **部署模板**并等待服务启动。首次启动会自动安装 Claude Code，请等待健康检查变为绿色后再继续。
       2. **在浏览器中打开服务网址**（绑定到服务的域名）。
-      3. **登录**，用户名为 `user`，密码请在 Zeabur 仪表板的 **Instructions** 页签查看。
-      4. **认证 Claude Code** — 执行 `claude` 并按照提示登录您的 Claude Pro/Max/Team/Enterprise 订阅账号。
+      3. **登录** — 输入 Zeabur 仪表板 **Instructions** 页签中的密码。
+      4. **复制命令**（例如 `claude --dangerously-skip-permissions` 可获取完整权限），然后点击 **Enter Terminal**。
+      5. **认证 Claude Code** — 粘贴命令，按照提示登录您的 Claude Pro/Max/Team/Enterprise 订阅账号。
 
       ## 使用 API 密钥（可选）
 
@@ -329,8 +566,9 @@ localization:
 
       1. **テンプレートをデプロイ**し、サービスの起動を待ちます。初回起動時に Claude Code が自動インストールされます。ヘルスチェックが緑になるまでお待ちください。
       2. **ブラウザでサービス URL を開きます**（サービスにバインドされたドメイン）。
-      3. **ログイン**：ユーザー名は `user`、パスワードは Zeabur ダッシュボードの **Instructions** タブで確認できます。
-      4. **Claude Code を認証** — `claude` を実行し、プロンプトに従って Claude Pro/Max/Team/Enterprise サブスクリプションでログインします。
+      3. **ログイン** — Zeabur ダッシュボードの **Instructions** タブに表示されるパスワードを入力します。
+      4. **コマンドをコピー**（例：`claude --dangerously-skip-permissions` でフル権限）し、**Enter Terminal** をクリックします。
+      5. **Claude Code を認証** — コマンドを貼り付け、プロンプトに従って Claude Pro/Max/Team/Enterprise サブスクリプションでログインします。
 
       ## API キーの使用（オプション）
 
@@ -403,8 +641,9 @@ localization:
 
       1. **Despliegue la plantilla** y espere a que el servicio se inicie. La primera vez instala Claude Code automaticamente — espere hasta que el health check se ponga verde antes de continuar.
       2. **Abra la URL del servicio** en su navegador (el dominio vinculado al servicio).
-      3. **Inicie sesion** con usuario `user` y la contrasena de la pestana **Instructions** en el panel de Zeabur.
-      4. **Autentique Claude Code** — ejecute `claude` y siga las indicaciones para iniciar sesion con su suscripcion Claude Pro/Max/Team/Enterprise.
+      3. **Inicie sesion** — ingrese la contrasena de la pestana **Instructions** en el panel de Zeabur.
+      4. **Copie el comando** que necesite (ej. `claude --dangerously-skip-permissions` para permisos completos) y haga clic en **Enter Terminal**.
+      5. **Autentique Claude Code** — pegue el comando y siga las indicaciones para iniciar sesion con su suscripcion Claude Pro/Max/Team/Enterprise.
 
       ## Usar clave API (Opcional)
 
@@ -477,8 +716,9 @@ localization:
 
       1. **Deploy template** dan tunggu layanan dimulai. Boot pertama menginstal Claude Code secara otomatis — tunggu hingga health check berwarna hijau sebelum melanjutkan.
       2. **Buka URL layanan** di browser Anda (domain yang terikat ke layanan).
-      3. **Login** dengan username `user` dan password dari tab **Instructions** di dashboard Zeabur.
-      4. **Autentikasi Claude Code** — jalankan `claude` dan ikuti petunjuk untuk login dengan langganan Claude Pro/Max/Team/Enterprise Anda.
+      3. **Login** — masukkan password dari tab **Instructions** di dashboard Zeabur.
+      4. **Salin perintah** yang dibutuhkan (misalnya `claude --dangerously-skip-permissions` untuk izin penuh) dan klik **Enter Terminal**.
+      5. **Autentikasi Claude Code** — tempel perintah, lalu ikuti petunjuk untuk login dengan langganan Claude Pro/Max/Team/Enterprise Anda.
 
       ## Menggunakan API Key (Opsional)
 
