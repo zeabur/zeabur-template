@@ -41,7 +41,7 @@ spec:
       # OpenClaw 🦞
       OpenClaw 🦞 (formerly Clawdbot, Moltbot) is a personal AI assistant that runs locally and connects to multiple messaging platforms via a WebSocket-based Gateway architecture.
 
-      ⚠️ This template uses `ghcr.io/openclaw/openclaw:2026.3.24`. OpenClaw 🦞 is in rapid development, so there may be undiscovered bugs. Changing versions may also cause stability issues.
+      ⚠️ This template uses `ghcr.io/openclaw/openclaw:2026.3.31`. OpenClaw 🦞 is in rapid development, so there may be undiscovered bugs. Changing versions may also cause stability issues.
 
       ⚠️ If you encounter any issues, feel free to check the [GitHub issues](https://github.com/openclaw/openclaw/issues) for solutions or to report new ones. For Zeabur platform-related issues, please contact Zeabur support.
 
@@ -421,6 +421,9 @@ spec:
       - GitHub: https://github.com/openclaw/openclaw
 
       ## Changelog
+      **2026/4/1**
+      - Upgrade image to `2026.3.31` — background task flow control plane (SQLite-backed task ledger, `openclaw flows` CLI), QQ Bot bundled channel plugin, Matrix streaming/proxy/history/thread replies, remote MCP HTTP/SSE server support, LINE outbound media, Slack exec approval routing, WhatsApp emoji reactions, Pi/Codex native web search, configurable overload failover, 60+ fixes across Slack, Discord, Telegram, Docker, Control UI, and plugin SDK
+
       **2026/3/27**
       - Upgrade image to `2026.3.24` — Gateway OpenAI-compatible API endpoints (`/v1/models`, `/v1/embeddings`), Microsoft Teams SDK migration with streaming replies, video generation infrastructure, gateway channel startup isolation, Telegram forum topic and photo dimension fixes, Docker fresh-install setup fix, sandbox media dispatch security hardening, and 60+ fixes across WhatsApp, Discord, Slack, Feishu, and plugin SDK
 
@@ -533,7 +536,7 @@ spec:
         domainKey: PUBLIC_DOMAIN
         spec:
           source:
-            image: ghcr.io/openclaw/openclaw:2026.3.24
+            image: ghcr.io/openclaw/openclaw:2026.3.31
             command:
               - /bin/sh
               - -c
