@@ -1,0 +1,219 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Hindsight
+spec:
+  description: |
+    Long-term memory system for AI agents. Provides retain, recall, and reflect operations with multi-strategy retrieval (semantic, BM25, graph, temporal) and cross-encoder reranking.
+  icon: https://raw.githubusercontent.com/vectorize-io/hindsight/main/hindsight-favicon.png
+  tags:
+    - AI
+    - Tool
+    - API
+  variables:
+    - key: LLM_PROVIDER
+      type: STRING
+      name: LLM Provider
+      description: "LLM provider: openai, anthropic, gemini, groq, ollama"
+    - key: LLM_API_KEY
+      type: STRING
+      name: LLM API Key
+      description: API key for the chosen LLM provider
+    - key: LLM_MODEL
+      type: STRING
+      name: LLM Model
+      description: "Model name (e.g. gpt-4o-mini, claude-sonnet-4-20250514, gemini-2.0-flash)"
+    - key: API_DOMAIN
+      type: DOMAIN
+      name: API Domain
+      description: Domain for the Hindsight API
+    - key: CP_DOMAIN
+      type: DOMAIN
+      name: Control Plane Domain
+      description: Domain for the Hindsight Control Plane UI
+  readme: |
+    # Hindsight
+
+    Long-term memory system for AI agents using biomimetic data structures. Provides three core operations:
+
+    - **Retain**: Store memories — extracts facts, entities, and relationships automatically
+    - **Recall**: Retrieve memories via 4 parallel strategies (semantic, BM25, graph, temporal) + reranking
+    - **Reflect**: Disposition-aware reasoning using memories and mental models
+
+    ## Services
+
+    This template deploys 3 services:
+
+    | Service | Port | Purpose |
+    |---------|------|---------|
+    | PostgreSQL (pgvector) | 5432 | Database with vector search |
+    | Hindsight API | 8888 | Core memory engine (FastAPI) |
+    | Control Plane | 9999 | Admin dashboard UI (Next.js) |
+
+    ## Configuration
+
+    1. Set your **LLM Provider** (`openai`, `anthropic`, `gemini`, `groq`, etc.)
+    2. Set your **LLM API Key**
+    3. Set your **LLM Model** (e.g. `gpt-4o-mini`)
+    4. Bind domains to the API and Control Plane services
+
+    ## Usage
+
+    After deployment, access the API at `https://<your-api-domain>/docs` for the interactive API documentation, or use the Control Plane UI to manage memory banks.
+
+    ### SDK & Integrations
+
+    Hindsight provides SDKs for Python, TypeScript, Go, and Rust, plus integrations with Claude Code, OpenAI Codex, CrewAI, LangGraph, LlamaIndex, and more.
+
+    ## Links
+
+    - [GitHub](https://github.com/vectorize-io/hindsight)
+    - [Documentation](https://docs.hindsight.cloud)
+    - License: Apache 2.0
+  services:
+    # --- PostgreSQL with pgvector ---
+    - name: postgresql
+      icon: https://cdn.zeabur.com/marketplace/postgresql.svg
+      template: PREBUILT
+      spec:
+        source:
+          image: pgvector/pgvector:pg17
+          command:
+            - docker-entrypoint.sh
+            - -c
+            - config_file=/etc/postgresql/postgresql.conf
+        ports:
+          - id: database
+            port: 5432
+            type: TCP
+        volumes:
+          - id: data
+            dir: /var/lib/postgresql/data
+        instructions:
+          - title: Connection String
+            content: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}
+          - title: PostgreSQL Connect Command
+            content: psql "postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}"
+          - title: Username
+            content: ${POSTGRES_USERNAME}
+          - title: Password
+            content: ${POSTGRES_PASSWORD}
+          - title: Database
+            content: ${POSTGRES_DATABASE}
+        env:
+          PGDATA:
+            default: /var/lib/postgresql/data/pgdata
+          POSTGRES_DB:
+            default: hindsight
+          POSTGRES_USER:
+            default: hindsight
+          POSTGRES_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          POSTGRES_USERNAME:
+            default: ${POSTGRES_USER}
+            expose: true
+          POSTGRES_DATABASE:
+            default: ${POSTGRES_DB}
+            expose: true
+          POSTGRES_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+          POSTGRES_PORT:
+            default: ${DATABASE_PORT}
+            expose: true
+          POSTGRES_CONNECTION_STRING:
+            default: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+            expose: true
+          POSTGRES_URI:
+            default: ${POSTGRES_CONNECTION_STRING}
+            expose: true
+        configs:
+          - path: /etc/postgresql/postgresql.conf
+            template: |
+              listen_addresses = '*'
+              max_connections = 256
+              shared_buffers = 256MB
+              dynamic_shared_memory_type = posix
+              max_wal_size = 1GB
+              min_wal_size = 80MB
+              log_timezone = 'UTC'
+              datestyle = 'iso, mdy'
+              timezone = 'UTC'
+              lc_messages = 'en_US.UTF-8'
+              lc_monetary = 'en_US.UTF-8'
+              lc_numeric = 'en_US.UTF-8'
+              lc_time = 'en_US.UTF-8'
+              default_text_search_config = 'pg_catalog.english'
+
+    # --- Hindsight API ---
+    - name: hindsight-api
+      icon: https://raw.githubusercontent.com/vectorize-io/hindsight/main/hindsight-favicon.png
+      template: PREBUILT_V2
+      dependencies:
+        - postgresql
+      spec:
+        source:
+          image: ghcr.io/vectorize-io/hindsight-api:0.4.22
+        ports:
+          - id: web
+            port: 8888
+            type: HTTP
+        env:
+          HINDSIGHT_API_LLM_PROVIDER:
+            default: ${LLM_PROVIDER}
+          HINDSIGHT_API_LLM_API_KEY:
+            default: ${LLM_API_KEY}
+          HINDSIGHT_API_LLM_MODEL:
+            default: ${LLM_MODEL}
+          HINDSIGHT_API_DATABASE_URL:
+            default: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+          HINDSIGHT_API_HOST:
+            default: "0.0.0.0"
+            readonly: true
+          HINDSIGHT_API_PORT:
+            default: "8888"
+            readonly: true
+          HINDSIGHT_API_VECTOR_EXTENSION:
+            default: pgvector
+          HINDSIGHT_API_EMBEDDINGS_PROVIDER:
+            default: local
+          HINDSIGHT_API_RERANKER_PROVIDER:
+            default: local
+          HINDSIGHT_API_INTERNAL_URL:
+            default: http://${CONTAINER_HOSTNAME}:8888
+            expose: true
+            readonly: true
+        instructions:
+          - title: API URL
+            content: ${ZEABUR_WEB_URL}
+          - title: API Docs
+            content: ${ZEABUR_WEB_URL}/docs
+          - title: Health Check
+            content: ${ZEABUR_WEB_URL}/health
+      domainKey: API_DOMAIN
+
+    # --- Hindsight Control Plane ---
+    - name: hindsight-control-plane
+      icon: https://raw.githubusercontent.com/vectorize-io/hindsight/main/hindsight-favicon.png
+      template: PREBUILT_V2
+      dependencies:
+        - hindsight-api
+      spec:
+        source:
+          image: ghcr.io/vectorize-io/hindsight-control-plane:0.4.22
+        ports:
+          - id: web
+            port: 9999
+            type: HTTP
+        env:
+          HINDSIGHT_CP_DATAPLANE_API_URL:
+            default: ${HINDSIGHT_API_INTERNAL_URL}
+          HINDSIGHT_CP_HOSTNAME:
+            default: "0.0.0.0"
+            readonly: true
+          HINDSIGHT_CP_PORT:
+            default: "9999"
+            readonly: true
+      domainKey: CP_DOMAIN
