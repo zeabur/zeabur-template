@@ -37,12 +37,9 @@ spec:
 
     1. **Deploy the template** and wait for the service to start. Wait until the health check turns green before proceeding.
     2. **Open the service URL** in your browser (the domain bound to your service).
-    3. **Log in** with username `user` and the password from the **Instructions** tab on the Zeabur dashboard.
+    3. **Log in** with the password from the **Instructions** tab on the Zeabur dashboard.
     4. **Set your API key** — set `GEMINI_API_KEY` in the Zeabur dashboard, or run `gemini` and follow the authentication prompts. Get a free key at [Google AI Studio](https://aistudio.google.com/).
-    5. **Start using Gemini CLI:**
-       ```
-       gemini
-       ```
+    5. **Start using Gemini CLI** — select your options on the landing page, copy the command, open the terminal, and paste it.
 
     ## Common Commands
 
@@ -116,6 +113,7 @@ spec:
               if [ ! -f /home/node/.linuxbrew/bin/brew ]; then
                 NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
               fi
+              chown -R node:node /home/node/.linuxbrew /home/linuxbrew/.linuxbrew /home/node/.cache 2>/dev/null
               for rc in /home/node/.bashrc /home/node/.profile; do
                 grep -qF '.npm-global' "$rc" 2>/dev/null || cat >> "$rc" << 'EOPATH'
               export PATH="$HOME/.npm-global/bin:$PATH"
@@ -123,11 +121,290 @@ spec:
                 grep -qF 'linuxbrew' "$rc" 2>/dev/null || echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> "$rc"
               done
 
-              exec ttyd \
-                --port 7681 \
+              # Start ttyd on internal port with auth
+              ttyd \
+                --port 7682 \
                 --writable \
                 --credential "user:$WEB_TERMINAL_PASSWORD" \
-                runuser -u node -- bash -l
+                runuser -u node -- bash -l &
+
+              # Start landing page proxy on exposed port
+              exec node /opt/launcher.js
+          - path: /opt/launcher.js
+            template: |
+              const http = require('http');
+              const crypto = require('crypto');
+              const fs = require('fs');
+
+              const TTYD = 7682;
+              const PORT = 7681;
+              const PASS = process.env.WEB_TERMINAL_PASSWORD || '';
+              const AUTH = 'Basic ' + Buffer.from('user:' + PASS).toString('base64');
+              const SECRET = crypto.randomBytes(32).toString('hex');
+
+              const landing = fs.readFileSync('/opt/landing.html', 'utf8');
+
+              function hmac(val) {
+                return crypto.createHmac('sha256', SECRET).update(val).digest('hex');
+              }
+              function parseCookies(str) {
+                const obj = {};
+                (str || '').split(';').forEach(p => {
+                  const [k, ...v] = p.trim().split('=');
+                  if (k) obj[k] = v.join('=');
+                });
+                return obj;
+              }
+              function authorized(req) {
+                return parseCookies(req.headers.cookie).session === hmac(PASS);
+              }
+              function stripGo(url) {
+                const u = new URL(url, 'http://x');
+                u.searchParams.delete('go');
+                const qs = u.searchParams.toString();
+                return u.pathname + (qs ? '?' + qs : '');
+              }
+
+              const server = http.createServer((req, res) => {
+                // POST /auth — validate password, set session cookie
+                if (req.method === 'POST' && req.url === '/auth') {
+                  let body = '';
+                  req.on('data', c => body += c);
+                  req.on('end', () => {
+                    try {
+                      const { password } = JSON.parse(body);
+                      if (password === PASS) {
+                        res.writeHead(200, {
+                          'Content-Type': 'application/json',
+                          'Set-Cookie': 'session=' + hmac(PASS) + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400'
+                        });
+                        res.end(JSON.stringify({ ok: true }));
+                      } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ ok: false }));
+                      }
+                    } catch {
+                      res.writeHead(400);
+                      res.end('Bad request');
+                    }
+                  });
+                  return;
+                }
+
+                const u = new URL(req.url, 'http://x');
+
+                // Landing page — show if root path without ?go and not authenticated
+                if (u.pathname === '/' && !u.searchParams.has('go') && !authorized(req)) {
+                  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                  res.end(landing);
+                  return;
+                }
+
+                // Everything else — require auth, proxy to ttyd
+                if (!authorized(req)) {
+                  res.writeHead(302, { Location: '/' });
+                  res.end();
+                  return;
+                }
+
+                const headers = { ...req.headers, authorization: AUTH };
+                delete headers.host;
+                const proxyReq = http.request({
+                  hostname: '127.0.0.1', port: TTYD,
+                  path: stripGo(req.url), method: req.method, headers,
+                }, proxyRes => {
+                  res.writeHead(proxyRes.statusCode, proxyRes.headers);
+                  proxyRes.pipe(res);
+                });
+                proxyReq.on('error', () => { res.writeHead(502); res.end('Service starting...'); });
+                req.pipe(proxyReq);
+              });
+
+              // WebSocket upgrade proxy
+              server.on('upgrade', (req, socket, head) => {
+                if (!authorized(req)) { socket.destroy(); return; }
+                const headers = { ...req.headers, authorization: AUTH };
+                delete headers.host;
+                const proxyReq = http.request({
+                  hostname: '127.0.0.1', port: TTYD,
+                  path: stripGo(req.url), headers,
+                });
+                proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
+                  let resp = 'HTTP/1.1 101 Switching Protocols\r\n';
+                  const rh = proxyRes.rawHeaders;
+                  for (let i = 0; i < rh.length; i += 2) resp += rh[i] + ': ' + rh[i+1] + '\r\n';
+                  resp += '\r\n';
+                  socket.write(resp);
+                  if (proxyHead.length) socket.write(proxyHead);
+                  proxySocket.pipe(socket);
+                  socket.pipe(proxySocket);
+                  proxySocket.on('error', () => socket.destroy());
+                  socket.on('error', () => proxySocket.destroy());
+                });
+                proxyReq.on('error', () => socket.destroy());
+                proxyReq.end();
+              });
+
+              server.listen(PORT, () => console.log('Launcher ready on port ' + PORT));
+          - path: /opt/landing.html
+            template: |
+              <!DOCTYPE html>
+              <html lang="en">
+              <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Gemini CLI</title>
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                  background: #1a1a2e;
+                  color: #e0e0e0;
+                  min-height: 100vh;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                }
+                .container { text-align: center; max-width: 440px; padding: 2rem; }
+                .logo { width: 72px; height: 72px; margin-bottom: 1.5rem; }
+                h1 { font-size: 1.75rem; margin-bottom: 0.25rem; color: #fff; }
+                .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.9rem; }
+                .input {
+                  width: 100%; padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+                  background: #16162a; border: 1px solid #3d3d5c; border-radius: 8px;
+                  color: #fff; font-size: 1rem; outline: none;
+                }
+                .input:focus { border-color: #d4a574; }
+                .error { color: #e74c3c; font-size: 0.85rem; margin-bottom: 0.5rem; }
+                .btn {
+                  display: block; width: 100%; padding: 0.85rem; margin: 0.5rem 0;
+                  border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+                  cursor: pointer; transition: opacity 0.2s; text-decoration: none;
+                }
+                .btn:hover { opacity: 0.85; }
+                .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+                .btn-primary { background: #d4a574; color: #1a1a2e; }
+                .hidden { display: none; }
+                .cmd-box {
+                  display: flex; align-items: center; gap: 0.5rem;
+                  background: #16162a; border: 1px solid #3d3d5c; border-radius: 8px;
+                  padding: 0.6rem 0.8rem; margin: 0.75rem 0; text-align: left;
+                }
+                .cmd-box code { flex: 1; font-size: 0.85rem; color: #d4a574; word-break: break-all; }
+                .cmd-box button {
+                  background: none; border: none; color: #888; cursor: pointer;
+                  font-size: 0.8rem; white-space: nowrap; padding: 0.25rem 0.5rem;
+                  border-radius: 4px; transition: background 0.2s;
+                }
+                .cmd-box button:hover { background: #2d2d44; color: #fff; }
+                .step-label { color: #888; font-size: 0.8rem; margin-top: 1.25rem; margin-bottom: 0.25rem; }
+                .options { text-align: left; margin: 0.75rem 0; }
+                .option {
+                  display: flex; align-items: flex-start; gap: 0.6rem;
+                  padding: 0.6rem 0.8rem; margin: 0.4rem 0;
+                  background: #16162a; border: 1px solid #3d3d5c; border-radius: 8px;
+                  cursor: pointer; transition: border-color 0.2s;
+                }
+                .option:hover { border-color: #d4a574; }
+                .option input[type="checkbox"] {
+                  accent-color: #d4a574; width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0;
+                }
+                .option-info { display: flex; flex-direction: column; gap: 0.15rem; }
+                .option-name { font-size: 0.9rem; color: #fff; font-weight: 500; }
+                .option-desc { font-size: 0.75rem; color: #888; }
+                .footer { margin-top: 2rem; font-size: 0.75rem; color: #555; }
+              </style>
+              </head>
+              <body>
+              <div class="container">
+                <img class="logo" src="https://cdn-console.zeabur.com/f/rCTwI/gemini.webp" alt="Gemini CLI">
+                <h1>Gemini CLI</h1>
+                <p class="subtitle">Google's AI coding agent</p>
+
+                <!-- Step 1: Password -->
+                <div id="step-login">
+                  <input type="password" id="pw" class="input" placeholder="Enter password" autofocus>
+                  <p id="err" class="error hidden">Incorrect password</p>
+                  <button class="btn btn-primary" onclick="login()">Login</button>
+                </div>
+
+                <!-- Step 2: Options + Command + Enter Terminal -->
+                <div id="step-ready" class="hidden">
+                  <p class="step-label">Step 1 — Select options</p>
+                  <div class="options">
+                    <label class="option">
+                      <input type="checkbox" id="opt-tmux" checked onchange="buildCmd()">
+                      <span class="option-info">
+                        <span class="option-name">Use tmux</span>
+                        <span class="option-desc">Keep session alive when browser closes (reconnect with tmux attach)</span>
+                      </span>
+                    </label>
+                    <label class="option">
+                      <input type="checkbox" id="opt-sandbox" onchange="buildCmd()">
+                      <span class="option-info">
+                        <span class="option-name">Sandbox mode</span>
+                        <span class="option-desc">Run in a sandboxed environment (--sandbox)</span>
+                      </span>
+                    </label>
+                  </div>
+                  <p class="step-label">Step 2 — Copy command</p>
+                  <div class="cmd-box">
+                    <code id="cmd-output">tmux new -As main -- gemini</code>
+                    <button id="cmd-copy-btn" onclick="copy(this, document.getElementById('cmd-output').textContent)">Copy</button>
+                  </div>
+                  <p class="step-label">Step 3 — Open terminal and paste</p>
+                  <a class="btn btn-primary" href="/?go">Enter Terminal</a>
+                </div>
+
+                <p class="footer">Powered by Zeabur</p>
+              </div>
+              <script>
+              function login() {
+                const pw = document.getElementById('pw').value;
+                document.querySelector('#step-login .btn').disabled = true;
+                document.getElementById('err').classList.add('hidden');
+                fetch('/auth', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ password: pw })
+                })
+                .then(r => r.json())
+                .then(d => {
+                  if (d.ok) {
+                    document.getElementById('step-login').classList.add('hidden');
+                    document.getElementById('step-ready').classList.remove('hidden');
+                    buildCmd();
+                  } else {
+                    document.getElementById('err').classList.remove('hidden');
+                    document.querySelector('#step-login .btn').disabled = false;
+                  }
+                })
+                .catch(() => {
+                  document.querySelector('#step-login .btn').disabled = false;
+                });
+              }
+              function buildCmd() {
+                let cmd = 'gemini';
+                if (document.getElementById('opt-sandbox').checked) cmd += ' --sandbox';
+                const useTmux = document.getElementById('opt-tmux').checked;
+                if (useTmux) {
+                  document.getElementById('cmd-output').textContent = 'tmux new -As main -- ' + cmd;
+                } else {
+                  document.getElementById('cmd-output').textContent = cmd;
+                }
+              }
+              function copy(btn, text) {
+                navigator.clipboard.writeText(text).then(() => {
+                  btn.textContent = 'Copied!';
+                  setTimeout(() => btn.textContent = 'Copy', 1500);
+                });
+              }
+              document.getElementById('pw').addEventListener('keydown', e => {
+                if (e.key === 'Enter') login();
+              });
+              </script>
+              </body>
+              </html>
         env:
           GEMINI_API_KEY:
             default: ${GEMINI_API_KEY}
@@ -135,10 +412,6 @@ spec:
             default: ${PASSWORD}
             expose: true
         instructions:
-          - type: TEXT
-            title: Username
-            content: user
-            category: Credentials
           - type: PASSWORD
             title: Password
             content: ${WEB_TERMINAL_PASSWORD}
@@ -164,9 +437,9 @@ localization:
 
       1. **部署模板**並等待服務啟動。請等待健康檢查變為綠色後再繼續。
       2. **在瀏覽器中開啟服務網址**（綁定到服務的網域）。
-      3. **登入**，使用者名稱為 `user`，密碼請在 Zeabur 儀表板的 **Instructions** 頁籤查看。
+      3. **登入**，密碼請在 Zeabur 儀表板的 **Instructions** 頁籤查看。
       4. **設定 API 金鑰** — 在 Zeabur 儀表板設定 `GEMINI_API_KEY`，或執行 `gemini` 依照提示認證。可在 [Google AI Studio](https://aistudio.google.com/) 取得免費金鑰。
-      5. **開始使用：** `gemini`
+      5. **開始使用** — 在登入頁面選擇選項，複製指令，開啟終端機後貼上執行。
 
       ## 常用指令
 
@@ -215,9 +488,9 @@ localization:
 
       1. **部署模板**并等待服务启动。请等待健康检查变为绿色后再继续。
       2. **在浏览器中打开服务网址**（绑定到服务的域名）。
-      3. **登录**，用户名为 `user`，密码请在 Zeabur 仪表板的 **Instructions** 页签查看。
+      3. **登录**，密码请在 Zeabur 仪表板的 **Instructions** 页签查看。
       4. **设置 API 密钥** — 在 Zeabur 仪表板设置 `GEMINI_API_KEY`，或执行 `gemini` 按照提示认证。可在 [Google AI Studio](https://aistudio.google.com/) 获取免费密钥。
-      5. **开始使用：** `gemini`
+      5. **开始使用** — 在登录页面选择选项，复制命令，打开终端后粘贴执行。
 
       ## 常用命令
 
@@ -266,9 +539,9 @@ localization:
 
       1. **テンプレートをデプロイ**し、サービスの起動を待ちます。ヘルスチェックが緑になるまでお待ちください。
       2. **ブラウザでサービス URL を開きます**（サービスにバインドされたドメイン）。
-      3. **ログイン**：ユーザー名は `user`、パスワードは Zeabur ダッシュボードの **Instructions** タブで確認できます。
+      3. **ログイン**：パスワードは Zeabur ダッシュボードの **Instructions** タブで確認できます。
       4. **API キーを設定** — Zeabur ダッシュボードで `GEMINI_API_KEY` を設定するか、`gemini` を実行して認証プロンプトに従います。[Google AI Studio](https://aistudio.google.com/) で無料キーを取得できます。
-      5. **使用開始：** `gemini`
+      5. **使用開始** — ランディングページでオプションを選択し、コマンドをコピーしてターミナルに貼り付けます。
 
       ## よく使うコマンド
 
@@ -317,9 +590,9 @@ localization:
 
       1. **Despliega la plantilla** y espera a que el servicio se inicie. Espera hasta que el health check se ponga verde.
       2. **Abre la URL del servicio** en tu navegador (el dominio vinculado al servicio).
-      3. **Inicia sesion** con usuario `user` y la contrasena de la pestana **Instructions** en el panel de Zeabur.
+      3. **Inicia sesion** con la contrasena de la pestana **Instructions** en el panel de Zeabur.
       4. **Configura tu clave API** — configura `GEMINI_API_KEY` en el panel de Zeabur, o ejecuta `gemini` y sigue las indicaciones. Obtén una clave gratuita en [Google AI Studio](https://aistudio.google.com/).
-      5. **Comienza a usar:** `gemini`
+      5. **Comienza a usar** — selecciona las opciones en la pagina de inicio, copia el comando, abre la terminal y pegalo.
 
       ## Comandos comunes
 
@@ -368,9 +641,9 @@ localization:
 
       1. **Deploy template** dan tunggu layanan dimulai. Tunggu hingga health check berwarna hijau sebelum melanjutkan.
       2. **Buka URL layanan** di browser Anda (domain yang terikat ke layanan).
-      3. **Login** dengan username `user` dan password dari tab **Instructions** di dashboard Zeabur.
+      3. **Login** dengan password dari tab **Instructions** di dashboard Zeabur.
       4. **Atur API key** — atur `GEMINI_API_KEY` di dashboard Zeabur, atau jalankan `gemini` dan ikuti petunjuk autentikasi. Dapatkan key gratis di [Google AI Studio](https://aistudio.google.com/).
-      5. **Mulai menggunakan:** `gemini`
+      5. **Mulai menggunakan** — pilih opsi di halaman landing, salin perintah, buka terminal dan tempelkan.
 
       ## Perintah Umum
 
