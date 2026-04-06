@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim nano less man-db \
     jq bc fzf ripgrep tree unzip zip tar \
     procps psmisc lsof socat iproute2 dnsutils \
-    python3 make g++ \
+    python3 python3-pip make g++ cmake \
+    ffmpeg \
     sudo rsync tmux \
   && rm -rf /var/lib/apt/lists/*
 
