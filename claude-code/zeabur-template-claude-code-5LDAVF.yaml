@@ -159,6 +159,7 @@ spec:
               if [ ! -f /home/node/.linuxbrew/bin/brew ]; then
                 NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
               fi
+              chown -R node:node /home/node/.linuxbrew /home/linuxbrew/.linuxbrew /home/node/.cache 2>/dev/null
               # Pre-install channel plugins into ~/.claude/plugins/
               PLUGINS_DIR=/home/node/.claude/plugins
               if [ ! -d "$PLUGINS_DIR/marketplaces/claude-plugins-official" ]; then
