@@ -29,36 +29,69 @@ spec:
     2. Open the Zeabur **Terminal** for the Paperclip service.
     3. Create the first admin account:
        ```
-       pnpm paperclipai auth bootstrap-ceo
+       gosu node pnpm paperclipai auth bootstrap-ceo
        ```
     4. Copy the invite URL from the output and open it in your browser to register.
-    5. Login to your preferred AI tool — Codex or Claude Code (see **AI Agent Authentication** below).
-    6. When creating an agent, set **Working directory** to a path under `/home/node/` (e.g. `/home/node/workspaces/my-project`).
+    5. Configure AI agent authentication (see **AI Agent Authentication** below).
+    6. When creating an agent, set **Working directory** to a path under `/paperclip/` (e.g. `/paperclip/workspaces/my-project`).
     7. Click **Test now** to run the adapter environment check. A successful result shows `hello probe succeeded`.
     8. After setup, set `PAPERCLIP_AUTH_DISABLE_SIGN_UP` to `true` in Zeabur environment variables to prevent unauthorized signups.
 
     ## AI Agent Authentication
 
-    Currently only **Terminal login** is supported. Environment variable authentication (OPENAI_API_KEY / ANTHROPIC_API_KEY) is not yet working.
+    **Option 1: Environment variables (recommended)**
+
+    Set these in Zeabur environment variables:
+
+    | Tool | Environment Variable |
+    |------|---------------------|
+    | Claude Code | `ANTHROPIC_API_KEY` |
+    | Codex | `OPENAI_API_KEY` |
+
+    **Option 2: Terminal login**
+
+    Open the Zeabur Terminal and run:
 
     | Tool | Terminal Login |
     |------|----------------|
-    | Codex | runuser -u node -- codex login --device-auth |
-    | Claude Code | runuser -u node -- claude login |
+    | Claude Code | `gosu node claude login` |
+    | Codex | `gosu node codex login --device-auth` |
 
     ### Notes
 
-    - **Always use `runuser -u node --` prefix** when running CLI tools in Terminal. Running as root will cause permission issues.
+    - **Always use `gosu node` prefix** when running CLI tools in Terminal. The terminal runs as root, but credentials must be stored under the `node` user's home (`/paperclip/`) to persist and be accessible by the server.
     - **Codex device auth:** Enable "Enable device code authorization for Codex" in [ChatGPT Security Settings](https://chatgpt.com/settings/security) before running the login command.
-    - **`OPENAI_API_KEY is not set` warning:** This warning can be safely ignored if you authenticated via `codex login`.
 
     ## Important Notes
 
-    - **Persistent storage:** Only data under `/home/node/` survives restarts. All other paths are ephemeral.
-    - **Working directory:** Do not use `/app` — it contains the Paperclip source code and will be overwritten on updates. Always use paths under `/home/node/` which is persistent.
+    - **Persistent storage:** Only data under `/paperclip/` survives restarts. All other paths are ephemeral.
+    - **Working directory:** Do not use `/app` — it contains the Paperclip source code and will be overwritten on updates. Always use paths under `/paperclip/` which is persistent.
     - **Sign-up control:** Set `PAPERCLIP_AUTH_DISABLE_SIGN_UP` to `true` after creating your admin account. Temporarily set to `false` when you need to invite new users, then set back to `true`.
 
     ## Changelog
+
+    ### 2026-04-07 — v2026.403.0
+
+    - Updated image to upstream release `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
+    - Switched from Docker Hub (`zeabur/paperclip`) to upstream GitHub Container Registry (`ghcr.io/paperclipai/paperclip`)
+    - New: First-class blocker/dependency relations with wake-on-subtasks-done
+    - Improved: Bearer token redaction in server logs
+    - Improved: CEO agent onboarding with relative paths
+    - Improved: Markdown paste auto-formatting in inline editor
+    - Many bug fixes for UI routing, sidebar, worktree, and agent workflows
+
+    ### 2026-03-30 — v2026.325.0
+
+    - Updated image to upstream release `v2026.325.0` (652 commits since v0.3.1)
+    - New: Inbox "Mine" tab with archive flow
+    - New: Hermes adapter support
+    - New: Cost control plane with billing, quota, and budget management
+    - New: Plugin SDK with document CRUD and event bus
+    - New: Worktree support for isolated agent workspaces
+    - New: Company import/export with org chart SVG
+    - Improved: Agent detail tabs reorganized (Prompts, Skills, Instructions)
+    - Improved: Embedded Postgres reliability in Docker
+    - Many bug fixes for adapters (Codex, Pi, OpenCode, Cursor)
 
     ### 2026-03-16 — Initial Release
 
@@ -115,117 +148,47 @@ spec:
         - postgresql
       spec:
         source:
-          image: zeabur/paperclip:v0.3.1
+          image: ghcr.io/paperclipai/paperclip:sha-a072377
           command:
             - /bin/sh
             - -c
-            - /opt/paperclip/startup.sh
+            - /opt/paperclip/init.sh
         ports:
           - id: web
             port: 3100
             type: HTTP
         volumes:
-          - id: home
-            dir: /home/node
+          - id: paperclip
+            dir: /paperclip
         configs:
-          - path: /opt/paperclip/startup.sh
+          - path: /opt/paperclip/init.sh
             permission: 493
             template: |
               #!/bin/sh
-              H="/home/node"
-              CONFIG_PATH="$H/instances/default/config.json"
-              if [ ! -f "$CONFIG_PATH" ]; then
-                mkdir -p "$(dirname "$CONFIG_PATH")"
-                cat > "$CONFIG_PATH" <<'CONF'
-              {
-                "$meta": {
-                  "version": 1,
-                  "updatedAt": "2026-01-01T00:00:00.000Z",
-                  "source": "onboard"
-                },
-                "database": {
-                  "mode": "postgres",
-                  "embeddedPostgresPort": 54329,
-                  "backup": {
-                    "enabled": true,
-                    "intervalMinutes": 60,
-                    "retentionDays": 30,
-                    "dir": "/home/node/instances/default/data/backups"
-                  }
-                },
-                "logging": {
-                  "mode": "file",
-                  "logDir": "/home/node/instances/default/logs"
-                },
-                "server": {
-                  "deploymentMode": "authenticated",
-                  "exposure": "private",
-                  "host": "0.0.0.0",
-                  "port": 3100,
-                  "allowedHostnames": [],
-                  "serveUi": true
-                },
-                "auth": {
-                  "baseUrlMode": "auto",
-                  "disableSignUp": false
-                },
-                "storage": {
-                  "provider": "local_disk",
-                  "localDisk": {
-                    "baseDir": "/home/node/instances/default/data/storage"
-                  },
-                  "s3": {
-                    "bucket": "paperclip",
-                    "region": "us-east-1",
-                    "prefix": "",
-                    "forcePathStyle": false
-                  }
-                },
-                "secrets": {
-                  "provider": "local_encrypted",
-                  "strictMode": false,
-                  "localEncrypted": {
-                    "keyFilePath": "/home/node/instances/default/secrets/master.key"
-                  }
-                }
-              }
+              set -e
+              CONFIG="/paperclip/instances/default/config.json"
+              if [ ! -f "$CONFIG" ]; then
+                mkdir -p "$(dirname "$CONFIG")"
+                cat > "$CONFIG" <<'CONF'
+              { "$meta": { "version": 1, "updatedAt": "2026-01-01T00:00:00.000Z", "source": "onboard" }, "database": { "mode": "postgres" }, "logging": { "mode": "file" }, "server": { "deploymentMode": "authenticated", "exposure": "private", "host": "0.0.0.0", "port": 3100, "serveUi": true } }
               CONF
-                echo "Generated config.json at $CONFIG_PATH"
+                echo "Generated $CONFIG"
               fi
-              # Fix permissions and run as node user (required for Claude Code)
-              chown -R node:node "$H"
-              exec runuser -u node --preserve-environment -- node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
+              chown -R node:node /paperclip
+              exec gosu node node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
         env:
           DATABASE_URL:
             default: ${POSTGRES_CONNECTION_STRING}
-
-          PORT:
-            default: "3100"
-          HOST:
-            default: 0.0.0.0
-          SERVE_UI:
-            default: "true"
-          PAPERCLIP_HOME:
-            default: /home/node
-          PAPERCLIP_CONFIG:
-            default: /home/node/instances/default/config.json
-          PAPERCLIP_DEPLOYMENT_MODE:
-            default: authenticated
-          PAPERCLIP_DEPLOYMENT_EXPOSURE:
-            default: private
           PAPERCLIP_PUBLIC_URL:
             default: ${ZEABUR_WEB_URL}
           BETTER_AUTH_BASE_URL:
             default: ${ZEABUR_WEB_URL}
-
           BETTER_AUTH_SECRET:
             default: ${PASSWORD}
           PAPERCLIP_AGENT_JWT_SECRET:
             default: ${PASSWORD}
           PAPERCLIP_MIGRATION_AUTO_APPLY:
             default: "true"
-          NODE_ENV:
-            default: production
           PAPERCLIP_AUTH_DISABLE_SIGN_UP:
             default: "false"
 localization:
@@ -279,6 +242,19 @@ localization:
       - **註冊控管：** 建立管理員帳號後，將 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 設為 `true`。需要邀請新使用者時暫時設為 `false`，完成後再改回 `true`。
 
       ## 變更紀錄
+
+      ### 2026-03-30 — v2026.325.0
+
+      - 更新映像至上游版本 `v2026.325.0`（自 v0.3.1 以來 652 個 commit）
+      - 新增：收件匣「我的」分頁與封存流程
+      - 新增：Hermes 適配器支援
+      - 新增：成本控制面板（帳務、配額、預算管理）
+      - 新增：Plugin SDK，支援文件 CRUD 與事件匯流排
+      - 新增：Worktree 支援，提供隔離的代理工作區
+      - 新增：公司匯入/匯出，含組織圖 SVG
+      - 改進：代理詳情分頁重整（提示詞、技能、指令）
+      - 改進：Docker 中嵌入式 Postgres 穩定性
+      - 多項適配器修正（Codex、Pi、OpenCode、Cursor）
 
       ### 2026-03-16 — 首次發佈
 
@@ -344,6 +320,19 @@ localization:
 
       ## 变更记录
 
+      ### 2026-03-30 — v2026.325.0
+
+      - 更新镜像至上游版本 `v2026.325.0`（自 v0.3.1 以来 652 个 commit）
+      - 新增：收件箱「我的」标签页与归档流程
+      - 新增：Hermes 适配器支持
+      - 新增：成本控制面板（账务、配额、预算管理）
+      - 新增：Plugin SDK，支持文档 CRUD 与事件总线
+      - 新增：Worktree 支持，提供隔离的代理工作区
+      - 新增：公司导入/导出，含组织图 SVG
+      - 改进：代理详情标签页重整（提示词、技能、指令）
+      - 改进：Docker 中嵌入式 Postgres 稳定性
+      - 多项适配器修正（Codex、Pi、OpenCode、Cursor）
+
       ### 2026-03-16 — 首次发布
 
       - Paperclip AI 代理协调平台的 Zeabur 模板
@@ -407,6 +396,19 @@ localization:
       - **登録制御：** 管理者アカウント作成後、`PAPERCLIP_AUTH_DISABLE_SIGN_UP` を `true` に設定してください。新しいユーザーを招待する際は一時的に `false` に変更し、完了後 `true` に戻してください。
 
       ## 変更履歴
+
+      ### 2026-03-30 — v2026.325.0
+
+      - イメージをアップストリームリリース `v2026.325.0` に更新（v0.3.1以降652コミット）
+      - 新機能：受信トレイ「マイ」タブとアーカイブフロー
+      - 新機能：Hermesアダプターサポート
+      - 新機能：コスト管理パネル（請求、クォータ、予算管理）
+      - 新機能：Plugin SDK（ドキュメントCRUDとイベントバス対応）
+      - 新機能：Worktreeサポート（エージェント用の隔離ワークスペース）
+      - 新機能：会社インポート/エクスポート（組織図SVG付き）
+      - 改善：エージェント詳細タブの再構成（プロンプト、スキル、指示）
+      - 改善：Docker内蔵PostgreSQLの安定性向上
+      - 複数のアダプター修正（Codex、Pi、OpenCode、Cursor）
 
       ### 2026-03-16 — 初回リリース
 
@@ -472,6 +474,19 @@ localization:
 
       ## Registro de cambios
 
+      ### 2026-03-30 — v2026.325.0
+
+      - Imagen actualizada a la versión upstream `v2026.325.0` (652 commits desde v0.3.1)
+      - Nuevo: Pestaña "Mío" en la bandeja de entrada con flujo de archivo
+      - Nuevo: Soporte para adaptador Hermes
+      - Nuevo: Panel de control de costos (facturación, cuotas, gestión de presupuesto)
+      - Nuevo: Plugin SDK con CRUD de documentos y bus de eventos
+      - Nuevo: Soporte Worktree para espacios de trabajo aislados de agentes
+      - Nuevo: Importación/exportación de empresas con organigrama SVG
+      - Mejorado: Pestañas de detalle de agente reorganizadas (Prompts, Skills, Instructions)
+      - Mejorado: Estabilidad de Postgres embebido en Docker
+      - Múltiples correcciones de adaptadores (Codex, Pi, OpenCode, Cursor)
+
       ### 2026-03-16 — Lanzamiento inicial
 
       - Plantilla de Zeabur para la plataforma de orquestación de agentes IA Paperclip
@@ -535,6 +550,19 @@ localization:
       - **Kontrol pendaftaran:** Atur `PAPERCLIP_AUTH_DISABLE_SIGN_UP` menjadi `true` setelah membuat akun admin Anda. Ubah sementara ke `false` saat perlu mengundang pengguna baru, lalu kembalikan ke `true`.
 
       ## Catatan Perubahan
+
+      ### 2026-03-30 — v2026.325.0
+
+      - Image diperbarui ke rilis upstream `v2026.325.0` (652 commit sejak v0.3.1)
+      - Baru: Tab "Milik Saya" di kotak masuk dengan alur arsip
+      - Baru: Dukungan adaptor Hermes
+      - Baru: Panel kontrol biaya (tagihan, kuota, manajemen anggaran)
+      - Baru: Plugin SDK dengan CRUD dokumen dan event bus
+      - Baru: Dukungan Worktree untuk ruang kerja agen terisolasi
+      - Baru: Impor/ekspor perusahaan dengan bagan organisasi SVG
+      - Ditingkatkan: Tab detail agen direorganisasi (Prompts, Skills, Instructions)
+      - Ditingkatkan: Stabilitas Postgres tertanam di Docker
+      - Berbagai perbaikan adaptor (Codex, Pi, OpenCode, Cursor)
 
       ### 2026-03-16 — Rilis Pertama
 
