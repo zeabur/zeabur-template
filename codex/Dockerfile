@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq bc fzf ripgrep tree unzip zip tar \
     procps psmisc lsof socat iproute2 dnsutils \
     python3 make g++ \
-    sudo rsync bubblewrap \
+    sudo rsync tmux bubblewrap \
   && rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI
@@ -27,6 +27,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
     chmod +x /usr/local/bin/ttyd
 
 RUN npm install -g @openai/codex@latest
+
+# Allow node user to use sudo without password
+RUN echo 'node ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/node
 
 RUN mkdir -p /home/node && chown node:node /home/node
 
