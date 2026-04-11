@@ -7,7 +7,8 @@ spec:
   description: |
     Open Agent Broker — a lightweight Rust harness that bridges Discord to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC.
     Source: https://github.com/openabdev/openab
-  icon: https://cdn-console.zeabur.com/f/WpysO/claude-color.webp
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
   tags:
     - AI
     - Developer Tools
@@ -112,7 +113,7 @@ spec:
     - [Zeabur AI Hub](https://zeabur.com/ai)
   services:
     - name: openab
-      icon: https://cdn-console.zeabur.com/f/WpysO/claude-color.webp
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
       template: PREBUILT_V2
       spec:
         source:
