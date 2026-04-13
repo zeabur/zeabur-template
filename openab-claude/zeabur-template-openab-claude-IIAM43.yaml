@@ -65,7 +65,7 @@ spec:
     | Method | How to get it |
     |--------|--------------|
     | **Anthropic API Key** | Go to [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → copy the `sk-ant-api...` key |
-    | **Zeabur AI Hub Token** | Go to [Zeabur AI Hub](https://zeabur.com/ai) → API Keys → Create → copy the token |
+    | **Zeabur AI Hub Token** | Go to [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → copy the token |
     | **Claude OAuth Token** | Run `claude setup-token` in your terminal (requires Claude Pro/Max/Team/Enterprise subscription) → visit the URL it shows → authorize → paste the code back → copy the `sk-ant-oat...` token it outputs |
 
     ### 3. Get Discord Channel IDs
@@ -116,7 +116,7 @@ spec:
     - [OpenAB GitHub](https://github.com/openabdev/openab)
     - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
     - [Anthropic Console](https://console.anthropic.com/)
-    - [Zeabur AI Hub](https://zeabur.com/ai)
+    - [Zeabur AI Hub](https://zeabur.com/ai-hub)
   services:
     - name: openab
       icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
@@ -263,7 +263,7 @@ spec:
         | 方式 | 取得方法 |
         |------|---------|
         | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 複製 `sk-ant-api...` 金鑰 |
-        | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai) → API Keys → Create → 複製 token |
+        | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 複製 token |
         | **Claude OAuth Token** | 在終端執行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 訂閱）→ 開啟顯示的 URL → 授權 → 貼回驗證碼 → 複製輸出的 `sk-ant-oat...` token |
 
         ### 3. 取得 Discord 頻道 ID
@@ -314,7 +314,7 @@ spec:
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
         - [Anthropic Console](https://console.anthropic.com/)
-        - [Zeabur AI Hub](https://zeabur.com/ai)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     zh-CN:
       description: |
         Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。
@@ -360,7 +360,7 @@ spec:
         | 方式 | 获取方法 |
         |------|---------|
         | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 复制 `sk-ant-api...` 密钥 |
-        | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai) → API Keys → Create → 复制 token |
+        | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 复制 token |
         | **Claude OAuth Token** | 在终端运行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 订阅）→ 打开显示的 URL → 授权 → 粘贴验证码 → 复制输出的 `sk-ant-oat...` token |
 
         ### 3. 获取 Discord 频道 ID
@@ -411,7 +411,7 @@ spec:
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
         - [Anthropic Console](https://console.anthropic.com/)
-        - [Zeabur AI Hub](https://zeabur.com/ai)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     ja-JP:
       description: |
         Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。
@@ -457,7 +457,7 @@ spec:
         | 方法 | 取得手順 |
         |------|---------|
         | **Anthropic API Key** | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → `sk-ant-api...` キーをコピー |
-        | **Zeabur AI Hub Token** | [Zeabur AI Hub](https://zeabur.com/ai) → API Keys → Create → token をコピー |
+        | **Zeabur AI Hub Token** | [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → token をコピー |
         | **Claude OAuth Token** | ターミナルで `claude setup-token` を実行（Claude Pro/Max/Team/Enterprise サブスクリプションが必要）→ 表示された URL を開く → 認証 → コードを貼り付け → 出力された `sk-ant-oat...` token をコピー |
 
         ### 3. Discord チャンネル ID の取得
@@ -508,7 +508,7 @@ spec:
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
         - [Anthropic Console](https://console.anthropic.com/)
-        - [Zeabur AI Hub](https://zeabur.com/ai)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     es-ES:
       description: |
         Open Agent Broker — un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC.
@@ -554,7 +554,7 @@ spec:
         | Método | Cómo obtenerlo |
         |--------|---------------|
         | **Anthropic API Key** | Ir a [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → copiar la clave `sk-ant-api...` |
-        | **Zeabur AI Hub Token** | Ir a [Zeabur AI Hub](https://zeabur.com/ai) → API Keys → Create → copiar el token |
+        | **Zeabur AI Hub Token** | Ir a [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → copiar el token |
         | **Claude OAuth Token** | Ejecutar `claude setup-token` en la terminal (requiere suscripción Claude Pro/Max/Team/Enterprise) → abrir la URL mostrada → autorizar → pegar el código → copiar el token `sk-ant-oat...` |
 
         ### 3. Obtener IDs de canales de Discord
@@ -605,7 +605,7 @@ spec:
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
         - [Anthropic Console](https://console.anthropic.com/)
-        - [Zeabur AI Hub](https://zeabur.com/ai)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     id-ID:
       description: |
         Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC.
@@ -651,7 +651,7 @@ spec:
         | Metode | Cara mendapatkan |
         |--------|-----------------|
         | **Anthropic API Key** | Buka [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → salin kunci `sk-ant-api...` |
-        | **Zeabur AI Hub Token** | Buka [Zeabur AI Hub](https://zeabur.com/ai) → API Keys → Create → salin token |
+        | **Zeabur AI Hub Token** | Buka [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → salin token |
         | **Claude OAuth Token** | Jalankan `claude setup-token` di terminal (memerlukan langganan Claude Pro/Max/Team/Enterprise) → buka URL yang ditampilkan → otorisasi → tempel kode → salin token `sk-ant-oat...` yang dihasilkan |
 
         ### 3. Dapatkan ID Channel Discord
@@ -702,4 +702,4 @@ spec:
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
         - [Anthropic Console](https://console.anthropic.com/)
-        - [Zeabur AI Hub](https://zeabur.com/ai)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
