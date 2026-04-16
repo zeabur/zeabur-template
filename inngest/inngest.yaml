@@ -57,9 +57,17 @@ spec:
 
     ## ⚠️ Security Warning
 
-    Inngest self-hosted has **no built-in UI authentication**. Anyone who can reach your Dashboard domain can view all apps, functions, and event history without logging in.
+    By design, Inngest self-hosted does **not** protect the dashboard UI or GraphQL API with authentication. The source code only applies the signing key middleware to SDK-facing endpoints:
 
-    **Recommended:** restrict access at the network level — do not expose the Dashboard domain publicly unless your deployment is behind a VPN or access control layer. The Connect Gateway domain (port 8289) must remain publicly accessible for SDK workers to connect.
+    | Endpoint | Protected |
+    |----------|-----------|
+    | Dashboard UI | ❌ Public |
+    | GraphQL API (`/v0/gql`) | ❌ Public — anyone can query all apps, functions, and events |
+    | Event ingestion (`/e/*`) | ✅ Requires Event Key |
+    | SDK sync (`/fn/register`) | ✅ Requires Signing Key |
+    | Connect WebSocket | ✅ Requires Signing Key |
+
+    **Recommended:** do not expose the Dashboard domain publicly. Place it behind a VPN, IP allowlist, or HTTP Basic Auth proxy. The Connect Gateway domain (port 8289) must remain publicly accessible for SDK workers to connect.
 
     ## Connecting SDK Workers
 
@@ -283,9 +291,17 @@ localization:
 
       ## ⚠️ 安全警告
 
-      Inngest self-hosted **沒有內建 UI 登入機制**。任何能連到 Dashboard 域名的人都可以在不登入的情況下查看所有 app、函式和事件記錄。
+      Inngest self-hosted **設計上** 不對 Dashboard UI 或 GraphQL API 進行身份驗證，原始碼只對 SDK 相關端點套用 signing key 驗證：
 
-      **建議：** 在網路層面限制存取，不要將 Dashboard 域名公開到網路，除非你的部署已在 VPN 或存取控制層之後。Connect Gateway 域名（port 8289）需保持公開，供 SDK Worker 連線。
+      | 端點 | 是否保護 |
+      |------|---------|
+      | Dashboard UI | ❌ 公開 |
+      | GraphQL API（`/v0/gql`）| ❌ 公開 — 任何人都能查詢所有 app、函式和事件 |
+      | 送 Event（`/e/*`）| ✅ 需要 Event Key |
+      | SDK Sync（`/fn/register`）| ✅ 需要 Signing Key |
+      | Connect WebSocket | ✅ 需要 Signing Key |
+
+      **建議：** 不要將 Dashboard 域名公開到網路，請放在 VPN、IP 白名單或 HTTP Basic Auth Proxy 之後。Connect Gateway 域名（port 8289）需保持公開，供 SDK Worker 連線。
 
       ## 連接 SDK Worker
 
@@ -364,9 +380,17 @@ localization:
 
       ## ⚠️ 安全警告
 
-      Inngest self-hosted **没有内建 UI 登录机制**。任何能访问 Dashboard 域名的人都可以在不登录的情况下查看所有 app、函数和事件记录。
+      Inngest self-hosted **设计上** 不对 Dashboard UI 或 GraphQL API 进行身份验证，原始码只对 SDK 相关端点应用 signing key 验证：
 
-      **建议：** 在网络层面限制访问，不要将 Dashboard 域名公开到网络，除非你的部署已在 VPN 或访问控制层之后。Connect Gateway 域名（port 8289）需保持公开，供 SDK Worker 连接。
+      | 端点 | 是否保护 |
+      |------|---------|
+      | Dashboard UI | ❌ 公开 |
+      | GraphQL API（`/v0/gql`）| ❌ 公开 — 任何人都能查询所有 app、函数和事件 |
+      | 发送 Event（`/e/*`）| ✅ 需要 Event Key |
+      | SDK Sync（`/fn/register`）| ✅ 需要 Signing Key |
+      | Connect WebSocket | ✅ 需要 Signing Key |
+
+      **建议：** 不要将 Dashboard 域名公开到网络，请放在 VPN、IP 白名单或 HTTP Basic Auth Proxy 之后。Connect Gateway 域名（port 8289）需保持公开，供 SDK Worker 连接。
 
       ## 连接 SDK Worker
 
@@ -445,9 +469,17 @@ localization:
 
       ## ⚠️ セキュリティ警告
 
-      Inngest self-hosted には**UIのログイン機能が内蔵されていません**。Dashboardドメインにアクセスできる人は誰でも、ログインなしですべてのapp、関数、イベント履歴を閲覧できます。
+      Inngest self-hosted は**設計上**、Dashboard UI や GraphQL API に認証を適用しません。ソースコードは SDK 関連エンドポイントにのみ signing key 検証を適用します：
 
-      **推奨：** ネットワークレベルでアクセスを制限し、VPNまたはアクセス制御層の後ろにない限り、Dashboardドメインを公開しないでください。SDK ワーカーが接続するためにConnect Gatewayドメイン（ポート8289）は公開が必要です。
+      | エンドポイント | 保護 |
+      |--------------|------|
+      | Dashboard UI | ❌ 公開 |
+      | GraphQL API（`/v0/gql`）| ❌ 公開 — 誰でもすべての app・関数・イベントを照会可能 |
+      | イベント送信（`/e/*`）| ✅ Event Key が必要 |
+      | SDK Sync（`/fn/register`）| ✅ Signing Key が必要 |
+      | Connect WebSocket | ✅ Signing Key が必要 |
+
+      **推奨：** Dashboardドメインを公開しないでください。VPN、IPホワイトリスト、またはHTTP Basic Auth プロキシの後ろに配置してください。SDK ワーカーの接続のためにConnect Gatewayドメイン（ポート8289）は公開が必要です。
 
       ## SDK ワーカーの接続
 
@@ -526,9 +558,17 @@ localization:
 
       ## ⚠️ Advertencia de seguridad
 
-      Inngest self-hosted **no tiene autenticación de UI integrada**. Cualquier persona que pueda acceder al dominio del Dashboard puede ver todas las apps, funciones e historial de eventos sin iniciar sesión.
+      Inngest self-hosted **por diseño** no aplica autenticación al Dashboard UI ni a la GraphQL API. El código fuente solo aplica la validación de signing key a los endpoints del SDK:
 
-      **Recomendado:** restringe el acceso a nivel de red — no expongas el dominio del Dashboard públicamente a menos que tu despliegue esté detrás de una VPN o capa de control de acceso. El dominio del Connect Gateway (puerto 8289) debe permanecer público para que los workers del SDK puedan conectarse.
+      | Endpoint | Protegido |
+      |----------|-----------|
+      | Dashboard UI | ❌ Público |
+      | GraphQL API (`/v0/gql`) | ❌ Público — cualquiera puede consultar todas las apps, funciones y eventos |
+      | Envío de eventos (`/e/*`) | ✅ Requiere Event Key |
+      | SDK Sync (`/fn/register`) | ✅ Requiere Signing Key |
+      | Connect WebSocket | ✅ Requiere Signing Key |
+
+      **Recomendado:** no expongas el dominio del Dashboard públicamente. Colócalo detrás de una VPN, lista de IPs permitidas o un proxy con HTTP Basic Auth. El dominio del Connect Gateway (puerto 8289) debe permanecer público para los workers del SDK.
 
       ## Conectar workers SDK
 
@@ -607,9 +647,17 @@ localization:
 
       ## ⚠️ Peringatan Keamanan
 
-      Inngest self-hosted **tidak memiliki autentikasi UI bawaan**. Siapa pun yang dapat mengakses domain Dashboard dapat melihat semua app, fungsi, dan riwayat event tanpa login.
+      Inngest self-hosted **secara desain** tidak menerapkan autentikasi pada Dashboard UI atau GraphQL API. Source code hanya menerapkan validasi signing key pada endpoint SDK:
 
-      **Disarankan:** batasi akses di level jaringan — jangan ekspos domain Dashboard secara publik kecuali deployment Anda berada di belakang VPN atau lapisan kontrol akses. Domain Connect Gateway (port 8289) harus tetap publik agar SDK worker dapat terhubung.
+      | Endpoint | Dilindungi |
+      |----------|-----------|
+      | Dashboard UI | ❌ Publik |
+      | GraphQL API (`/v0/gql`) | ❌ Publik — siapa pun dapat query semua app, fungsi, dan event |
+      | Kirim Event (`/e/*`) | ✅ Memerlukan Event Key |
+      | SDK Sync (`/fn/register`) | ✅ Memerlukan Signing Key |
+      | Connect WebSocket | ✅ Memerlukan Signing Key |
+
+      **Disarankan:** jangan ekspos domain Dashboard secara publik. Tempatkan di belakang VPN, IP allowlist, atau proxy HTTP Basic Auth. Domain Connect Gateway (port 8289) harus tetap publik agar SDK worker dapat terhubung.
 
       ## Menghubungkan SDK Worker
 
