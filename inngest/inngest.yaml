@@ -1,0 +1,496 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Inngest
+spec:
+  description: |
+    Self-hosted Inngest — a durable execution engine for reliable background jobs and AI workflows. Includes PostgreSQL and Redis.
+  icon: https://avatars.githubusercontent.com/u/78935958
+  tags:
+    - Developer Tools
+    - Background Jobs
+    - Workflow
+  variables:
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Dashboard Domain
+      description: Public domain for the Inngest dashboard and API (port 8288)
+    - key: INNGEST_EVENT_KEY
+      type: STRING
+      name: Event Key
+      description: "Hex string for authenticating event ingestion (e.g. a1b2c3d4e5f6). Must be an even number of hex characters."
+    - key: INNGEST_SIGNING_KEY
+      type: STRING
+      name: Signing Key
+      description: "Hex string for signing SDK requests (e.g. a1b2c3d4e5f6). Must be an even number of hex characters."
+  readme: |
+    # Inngest — Self-Hosted
+
+    [Inngest](https://www.inngest.com/) is an open-source durable execution engine that lets you write reliable background jobs, scheduled functions, and AI workflows with built-in retries, concurrency control, and observability.
+
+    This template deploys a self-hosted Inngest instance with **PostgreSQL** (state persistence) and **Redis** (queue and cache) in a single click.
+
+    ## Services
+
+    | Service | Port | Purpose |
+    |---------|------|---------|
+    | Inngest Dashboard & API | 8288 (HTTP) | UI, event ingestion, REST API |
+    | Inngest Connect Gateway | 8289 (TCP) | WebSocket gateway for SDK workers |
+    | PostgreSQL | 5432 | Durable state storage |
+    | Redis | 6379 | Queue and cache |
+
+    ## Required Setup Before Deploying
+
+    You need two hex strings (even number of characters, using 0-9 and a-f only).
+
+    **Generate on macOS/Linux:**
+    ```bash
+    openssl rand -hex 16
+    ```
+
+    Use one value for **Event Key** and another for **Signing Key**.
+
+    ## Connecting SDK Workers
+
+    After deployment, configure your Inngest SDK to point to your self-hosted instance:
+
+    ```ts
+    const inngest = new Inngest({
+      id: "my-app",
+      baseUrl: "https://YOUR_DOMAIN",   // Dashboard domain (port 8288)
+      eventKey: "YOUR_EVENT_KEY",
+      signingKey: "YOUR_SIGNING_KEY",
+    });
+    ```
+
+    For Connect (persistent WebSocket workers), use the forwarded address shown in the **Networking** tab of the Inngest service (port 8289).
+
+    ## License
+
+    Inngest is open-source under the [Apache 2.0 License](https://github.com/inngest/inngest/blob/main/LICENSE).
+    - GitHub: https://github.com/inngest/inngest
+    - Docs: https://www.inngest.com/docs/self-hosting
+  services:
+    - name: postgresql
+      icon: https://cdn.zeabur.com/marketplace/postgresql.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: postgres:17
+          command:
+            - docker-entrypoint.sh
+            - -c
+            - config_file=/etc/postgresql/postgresql.conf
+        ports:
+          - id: database
+            port: 5432
+            type: TCP
+        volumes:
+          - id: data
+            dir: /var/lib/postgresql/17/docker
+        env:
+          PGDATA:
+            default: /var/lib/postgresql/17/docker/pgdata
+          POSTGRES_DB:
+            default: inngest
+          POSTGRES_DATABASE:
+            default: ${POSTGRES_DB}
+            expose: true
+          POSTGRES_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+          POSTGRES_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          POSTGRES_PORT:
+            default: ${DATABASE_PORT}
+            expose: true
+          POSTGRES_USER:
+            default: root
+          POSTGRES_USERNAME:
+            default: ${POSTGRES_USER}
+            expose: true
+          POSTGRES_CONNECTION_STRING:
+            default: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+            expose: true
+          POSTGRES_URI:
+            default: ${POSTGRES_CONNECTION_STRING}
+            expose: true
+        configs:
+          - path: /etc/postgresql/postgresql.conf
+            template: |
+              listen_addresses = '*'
+              max_connections = 256
+              shared_buffers = 256MB
+              dynamic_shared_memory_type = posix
+              max_wal_size = 1GB
+              min_wal_size = 80MB
+              log_timezone = 'UTC'
+              datestyle = 'iso, mdy'
+              timezone = 'UTC'
+              lc_messages = 'en_US.UTF-8'
+              lc_monetary = 'en_US.UTF-8'
+              lc_numeric = 'en_US.UTF-8'
+              lc_time = 'en_US.UTF-8'
+              default_text_search_config = 'pg_catalog.english'
+
+    - name: redis
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/redis.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: redis:7-alpine
+          command:
+            - redis-server
+            - /usr/local/etc/redis/redis.conf
+        ports:
+          - id: database
+            port: 6379
+            type: TCP
+        volumes:
+          - id: data
+            dir: /data
+        env:
+          REDIS_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+          REDIS_PORT:
+            default: ${DATABASE_PORT}
+            expose: true
+          REDIS_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          REDIS_CONNECTION_STRING:
+            default: redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}
+            expose: true
+        configs:
+          - path: /usr/local/etc/redis/redis.conf
+            envsubst: true
+            template: |
+              requirepass ${REDIS_PASSWORD}
+              appendonly yes
+              dir /data
+
+    - name: inngest
+      icon: https://avatars.githubusercontent.com/u/78935958
+      template: PREBUILT_V2
+      dependencies:
+        - postgresql
+        - redis
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: inngest/inngest:v1.17.9
+          command:
+            - inngest
+            - start
+        ports:
+          - id: web
+            port: 8288
+            type: HTTP
+          - id: connect
+            port: 8289
+            type: TCP
+        portForwarding:
+          enabled: true
+        healthCheck:
+          type: HTTP
+          port: web
+          http:
+            path: /health
+        env:
+          INNGEST_EVENT_KEY:
+            default: ${INNGEST_EVENT_KEY}
+          INNGEST_SIGNING_KEY:
+            default: ${INNGEST_SIGNING_KEY}
+          INNGEST_POSTGRES_URI:
+            default: ${POSTGRES_CONNECTION_STRING}
+          INNGEST_REDIS_URI:
+            default: ${REDIS_CONNECTION_STRING}
+
+localization:
+  zh-TW:
+    description: |
+      自架 Inngest — 可靠的持久執行引擎，適用於背景任務與 AI 工作流程。包含 PostgreSQL 和 Redis。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Dashboard 網域
+        description: Inngest 儀表板與 API 的公開網域（Port 8288）
+      - key: INNGEST_EVENT_KEY
+        name: Event Key
+        description: "用於事件驗證的十六進位字串（例如 a1b2c3d4e5f6），必須為偶數位。"
+      - key: INNGEST_SIGNING_KEY
+        name: Signing Key
+        description: "用於 SDK 請求簽署的十六進位字串（例如 a1b2c3d4e5f6），必須為偶數位。"
+    readme: |
+      # Inngest — 自架版
+
+      [Inngest](https://www.inngest.com/) 是開源的持久執行引擎，用於建立可靠的背景任務、排程函式與 AI 工作流程，內建重試、並發控制與可觀測性。
+
+      此模板一鍵部署包含 **PostgreSQL**（狀態儲存）和 **Redis**（佇列與快取）的自架 Inngest 實例。
+
+      ## 服務說明
+
+      | 服務 | Port | 用途 |
+      |------|------|------|
+      | Inngest Dashboard & API | 8288 (HTTP) | 介面、事件接收、REST API |
+      | Inngest Connect Gateway | 8289 (TCP) | SDK Worker 的 WebSocket 閘道 |
+      | PostgreSQL | 5432 | 持久狀態儲存 |
+      | Redis | 6379 | 佇列與快取 |
+
+      ## 部署前準備
+
+      您需要兩組十六進位字串（偶數位，使用 0-9 和 a-f）：
+
+      ```bash
+      openssl rand -hex 16
+      ```
+
+      一組用於 **Event Key**，另一組用於 **Signing Key**。
+
+      ## 連接 SDK Worker
+
+      ```ts
+      const inngest = new Inngest({
+        id: "my-app",
+        baseUrl: "https://YOUR_DOMAIN",
+        eventKey: "YOUR_EVENT_KEY",
+        signingKey: "YOUR_SIGNING_KEY",
+      });
+      ```
+
+      Connect 模式（WebSocket Worker）請使用 Inngest 服務 **Networking** 頁籤中顯示的轉發位址（Port 8289）。
+
+      ## 授權
+
+      Inngest 以 [Apache 2.0](https://github.com/inngest/inngest/blob/main/LICENSE) 授權開源。
+      - GitHub：https://github.com/inngest/inngest
+
+  zh-CN:
+    description: |
+      自托管 Inngest — 可靠的持久执行引擎，适用于后台任务与 AI 工作流。包含 PostgreSQL 和 Redis。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Dashboard 域名
+        description: Inngest 仪表板与 API 的公开域名（Port 8288）
+      - key: INNGEST_EVENT_KEY
+        name: Event Key
+        description: "用于事件认证的十六进制字符串（例如 a1b2c3d4e5f6），必须为偶数位。"
+      - key: INNGEST_SIGNING_KEY
+        name: Signing Key
+        description: "用于 SDK 请求签名的十六进制字符串（例如 a1b2c3d4e5f6），必须为偶数位。"
+    readme: |
+      # Inngest — 自托管版
+
+      [Inngest](https://www.inngest.com/) 是开源的持久执行引擎，用于构建可靠的后台任务、定时函数与 AI 工作流，内置重试、并发控制与可观测性。
+
+      此模板一键部署包含 **PostgreSQL**（状态存储）和 **Redis**（队列与缓存）的自托管 Inngest 实例。
+
+      ## 服务说明
+
+      | 服务 | Port | 用途 |
+      |------|------|------|
+      | Inngest Dashboard & API | 8288 (HTTP) | 界面、事件接收、REST API |
+      | Inngest Connect Gateway | 8289 (TCP) | SDK Worker 的 WebSocket 网关 |
+      | PostgreSQL | 5432 | 持久状态存储 |
+      | Redis | 6379 | 队列与缓存 |
+
+      ## 部署前准备
+
+      需要两组十六进制字符串（偶数位，仅含 0-9 和 a-f）：
+
+      ```bash
+      openssl rand -hex 16
+      ```
+
+      一个用于 **Event Key**，另一个用于 **Signing Key**。
+
+      ## 连接 SDK Worker
+
+      ```ts
+      const inngest = new Inngest({
+        id: "my-app",
+        baseUrl: "https://YOUR_DOMAIN",
+        eventKey: "YOUR_EVENT_KEY",
+        signingKey: "YOUR_SIGNING_KEY",
+      });
+      ```
+
+      Connect 模式（WebSocket Worker）请使用 Inngest 服务 **Networking** 标签页中显示的转发地址（Port 8289）。
+
+      ## 授权
+
+      Inngest 以 [Apache 2.0](https://github.com/inngest/inngest/blob/main/LICENSE) 授权开源。
+      - GitHub：https://github.com/inngest/inngest
+
+  ja-JP:
+    description: |
+      セルフホスト型 Inngest — 信頼性の高いバックグラウンドジョブと AI ワークフローのための永続実行エンジン。PostgreSQL と Redis 付き。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: ダッシュボードドメイン
+        description: Inngest ダッシュボードと API の公開ドメイン（ポート 8288）
+      - key: INNGEST_EVENT_KEY
+        name: イベントキー
+        description: "イベント認証用の16進数文字列（例：a1b2c3d4e5f6）。偶数桁である必要があります。"
+      - key: INNGEST_SIGNING_KEY
+        name: 署名キー
+        description: "SDK リクエスト署名用の16進数文字列（例：a1b2c3d4e5f6）。偶数桁である必要があります。"
+    readme: |
+      # Inngest — セルフホスト版
+
+      [Inngest](https://www.inngest.com/) はオープンソースの永続実行エンジンで、信頼性の高いバックグラウンドジョブ、スケジュール関数、AI ワークフローをリトライ・並行制御・可観測性付きで構築できます。
+
+      このテンプレートは **PostgreSQL**（状態保存）と **Redis**（キューとキャッシュ）を含むセルフホスト型 Inngest インスタンスをワンクリックでデプロイします。
+
+      ## サービス構成
+
+      | サービス | ポート | 用途 |
+      |----------|--------|------|
+      | Inngest Dashboard & API | 8288 (HTTP) | UI、イベント受信、REST API |
+      | Inngest Connect Gateway | 8289 (TCP) | SDK ワーカー用 WebSocket ゲートウェイ |
+      | PostgreSQL | 5432 | 永続状態ストレージ |
+      | Redis | 6379 | キューとキャッシュ |
+
+      ## 事前準備
+
+      2つの16進数文字列が必要です（偶数桁、0-9 と a-f のみ）：
+
+      ```bash
+      openssl rand -hex 16
+      ```
+
+      1つを **Event Key**、もう1つを **Signing Key** として使用してください。
+
+      ## SDK ワーカーの接続
+
+      ```ts
+      const inngest = new Inngest({
+        id: "my-app",
+        baseUrl: "https://YOUR_DOMAIN",
+        eventKey: "YOUR_EVENT_KEY",
+        signingKey: "YOUR_SIGNING_KEY",
+      });
+      ```
+
+      Connect モード（WebSocket ワーカー）の場合は、Inngest サービスの **Networking** タブに表示される転送アドレス（ポート 8289）を使用してください。
+
+      ## ライセンス
+
+      Inngest は [Apache 2.0](https://github.com/inngest/inngest/blob/main/LICENSE) ライセンスでオープンソース公開されています。
+      - GitHub：https://github.com/inngest/inngest
+
+  es-ES:
+    description: |
+      Inngest auto-hospedado — motor de ejecución durable para trabajos en segundo plano y flujos de trabajo de IA. Incluye PostgreSQL y Redis.
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Dominio del Dashboard
+        description: Dominio público para el dashboard y API de Inngest (puerto 8288)
+      - key: INNGEST_EVENT_KEY
+        name: Clave de Evento
+        description: "Cadena hexadecimal para autenticar eventos (ej. a1b2c3d4e5f6). Debe tener número par de caracteres."
+      - key: INNGEST_SIGNING_KEY
+        name: Clave de Firma
+        description: "Cadena hexadecimal para firmar peticiones del SDK (ej. a1b2c3d4e5f6). Debe tener número par de caracteres."
+    readme: |
+      # Inngest — Auto-Hospedado
+
+      [Inngest](https://www.inngest.com/) es un motor de ejecución durable de código abierto para trabajos en segundo plano, funciones programadas y flujos de trabajo de IA con reintentos y control de concurrencia integrados.
+
+      Esta plantilla despliega una instancia auto-hospedada de Inngest con **PostgreSQL** y **Redis** en un solo clic.
+
+      ## Servicios
+
+      | Servicio | Puerto | Propósito |
+      |----------|--------|-----------|
+      | Inngest Dashboard & API | 8288 (HTTP) | UI, ingesta de eventos, REST API |
+      | Inngest Connect Gateway | 8289 (TCP) | Puerta de enlace WebSocket para workers SDK |
+      | PostgreSQL | 5432 | Almacenamiento de estado persistente |
+      | Redis | 6379 | Cola y caché |
+
+      ## Preparación
+
+      Necesitas dos cadenas hexadecimales (número par de caracteres, solo 0-9 y a-f):
+
+      ```bash
+      openssl rand -hex 16
+      ```
+
+      Usa una para **Event Key** y otra para **Signing Key**.
+
+      ## Conectar workers SDK
+
+      ```ts
+      const inngest = new Inngest({
+        id: "my-app",
+        baseUrl: "https://YOUR_DOMAIN",
+        eventKey: "YOUR_EVENT_KEY",
+        signingKey: "YOUR_SIGNING_KEY",
+      });
+      ```
+
+      Para el modo Connect (workers WebSocket), usa la dirección de reenvío que aparece en la pestaña **Networking** del servicio Inngest (puerto 8289).
+
+      ## Licencia
+
+      Inngest es de código abierto bajo la licencia [Apache 2.0](https://github.com/inngest/inngest/blob/main/LICENSE).
+      - GitHub: https://github.com/inngest/inngest
+
+  id-ID:
+    description: |
+      Inngest self-hosted — mesin eksekusi durable untuk background jobs dan AI workflow yang andal. Dilengkapi PostgreSQL dan Redis.
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Domain Dashboard
+        description: Domain publik untuk dashboard dan API Inngest (port 8288)
+      - key: INNGEST_EVENT_KEY
+        name: Event Key
+        description: "String heksadesimal untuk autentikasi event (contoh: a1b2c3d4e5f6). Harus berjumlah karakter genap."
+      - key: INNGEST_SIGNING_KEY
+        name: Signing Key
+        description: "String heksadesimal untuk menandatangani permintaan SDK (contoh: a1b2c3d4e5f6). Harus berjumlah karakter genap."
+    readme: |
+      # Inngest — Self-Hosted
+
+      [Inngest](https://www.inngest.com/) adalah mesin eksekusi durable open-source untuk membangun background jobs, fungsi terjadwal, dan AI workflow yang andal dengan retry dan kontrol konkurensi bawaan.
+
+      Template ini men-deploy instance Inngest self-hosted dengan **PostgreSQL** dan **Redis** dalam satu klik.
+
+      ## Layanan
+
+      | Layanan | Port | Fungsi |
+      |---------|------|--------|
+      | Inngest Dashboard & API | 8288 (HTTP) | UI, penerimaan event, REST API |
+      | Inngest Connect Gateway | 8289 (TCP) | Gateway WebSocket untuk SDK worker |
+      | PostgreSQL | 5432 | Penyimpanan state persisten |
+      | Redis | 6379 | Antrean dan cache |
+
+      ## Persiapan
+
+      Anda memerlukan dua string heksadesimal (jumlah karakter genap, hanya 0-9 dan a-f):
+
+      ```bash
+      openssl rand -hex 16
+      ```
+
+      Gunakan satu untuk **Event Key** dan satu lagi untuk **Signing Key**.
+
+      ## Menghubungkan SDK Worker
+
+      ```ts
+      const inngest = new Inngest({
+        id: "my-app",
+        baseUrl: "https://YOUR_DOMAIN",
+        eventKey: "YOUR_EVENT_KEY",
+        signingKey: "YOUR_SIGNING_KEY",
+      });
+      ```
+
+      Untuk mode Connect (WebSocket worker), gunakan alamat yang ditampilkan di tab **Networking** layanan Inngest (port 8289).
+
+      ## Lisensi
+
+      Inngest open-source di bawah lisensi [Apache 2.0](https://github.com/inngest/inngest/blob/main/LICENSE).
+      - GitHub: https://github.com/inngest/inngest
