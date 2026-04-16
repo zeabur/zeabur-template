@@ -73,11 +73,19 @@ spec:
     ```ts
     import { connect } from "inngest/connect";
 
+    // ⚠️ Use `triggers` (plural array), NOT `trigger` (singular)
+    const myFn = inngest.createFunction(
+      { id: "my-fn", triggers: [{ event: "my/event" }] },
+      async ({ event, step }) => { /* ... */ }
+    );
+
     await connect({
       apps: [{ client: inngest, functions: [myFn] }],
       gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
     });
     ```
+
+    > **Note:** The Connect gateway WebSocket path is `/v0/connect`. Always use `triggers: [...]` (plural array) when defining functions — using `trigger:` (singular) will result in empty triggers and functions will never execute.
 
     ## License
 
@@ -281,11 +289,19 @@ localization:
       Connect 模式（WebSocket Worker）需覆蓋 gateway URL，指向你的 Connect 域名：
 
       ```ts
+      // ⚠️ 請用 `triggers`（複數陣列），不要用 `trigger`（單數）
+      const myFn = inngest.createFunction(
+        { id: "my-fn", triggers: [{ event: "my/event" }] },
+        async ({ event, step }) => { /* ... */ }
+      );
+
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
         gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
+
+      > **注意：** 定義函式時請使用 `triggers: [...]`（複數陣列）。若使用 `trigger:`（單數）會導致 triggers 為空，函式永遠不會執行。
 
       ## 授權
 
@@ -348,11 +364,19 @@ localization:
       Connect 模式（WebSocket Worker）需覆盖 gateway URL，指向你的 Connect 域名：
 
       ```ts
+      // ⚠️ 请用 `triggers`（复数数组），不要用 `trigger`（单数）
+      const myFn = inngest.createFunction(
+        { id: "my-fn", triggers: [{ event: "my/event" }] },
+        async ({ event, step }) => { /* ... */ }
+      );
+
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
         gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
+
+      > **注意：** 定义函式时请使用 `triggers: [...]`（复数数组）。若使用 `trigger:`（单数）会导致 triggers 为空，函式永远不会执行。
 
       ## 授权
 
@@ -415,11 +439,19 @@ localization:
       Connect モード（WebSocket ワーカー）の場合は、Connect ドメインを `gatewayUrl` に指定してください：
 
       ```ts
+      // ⚠️ `triggers`（複数配列）を使用してください。`trigger`（単数）は使用しないでください
+      const myFn = inngest.createFunction(
+        { id: "my-fn", triggers: [{ event: "my/event" }] },
+        async ({ event, step }) => { /* ... */ }
+      );
+
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
         gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
+
+      > **注意：** 関数定義には必ず `triggers: [...]`（複数配列）を使用してください。`trigger:`（単数）を使用するとトリガーが空になり、関数が実行されません。
 
       ## ライセンス
 
@@ -482,11 +514,19 @@ localization:
       Para el modo Connect (workers WebSocket), especifica tu dominio Connect en `gatewayUrl`:
 
       ```ts
+      // ⚠️ Usa `triggers` (array plural), NO `trigger` (singular)
+      const myFn = inngest.createFunction(
+        { id: "my-fn", triggers: [{ event: "my/event" }] },
+        async ({ event, step }) => { /* ... */ }
+      );
+
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
         gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
+
+      > **Importante:** Usa siempre `triggers: [...]` (array plural) al definir funciones. Usar `trigger:` (singular) dejará los triggers vacíos y las funciones nunca se ejecutarán.
 
       ## Licencia
 
@@ -549,11 +589,19 @@ localization:
       Untuk mode Connect (WebSocket worker), tentukan domain Connect di `gatewayUrl`:
 
       ```ts
+      // ⚠️ Gunakan `triggers` (array jamak), BUKAN `trigger` (tunggal)
+      const myFn = inngest.createFunction(
+        { id: "my-fn", triggers: [{ event: "my/event" }] },
+        async ({ event, step }) => { /* ... */ }
+      );
+
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
         gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
+
+      > **Penting:** Selalu gunakan `triggers: [...]` (array jamak) saat mendefinisikan fungsi. Menggunakan `trigger:` (tunggal) akan membuat triggers kosong dan fungsi tidak akan pernah dieksekusi.
 
       ## Lisensi
 
