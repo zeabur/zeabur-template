@@ -1,0 +1,592 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB Gemini
+spec:
+  description: |
+    Open Agent Broker — a lightweight Rust harness that bridges Discord to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC. This template deploys the Gemini variant.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - Discord
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: DISCORD_BOT_TOKEN
+      type: STRING
+      name: Discord Bot Token
+      description: Token from https://discord.com/developers/applications
+    - key: GEMINI_API_KEY
+      type: STRING
+      name: Gemini API Key
+      description: "API key from https://aistudio.google.com/apikey"
+    - key: OPENAB_ALLOWED_CHANNELS
+      type: STRING
+      name: Discord Channel IDs (optional)
+      description: "Optional. Comma-separated Discord channel IDs where the bot listens. Leave empty to allow all channels. Example: 123456789012345678,234567890123456789"
+    - key: OPENAB_ALLOWED_USERS
+      type: STRING
+      name: Discord User IDs (optional)
+      description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone in the allowed channels."
+  readme: |
+    # OpenAB
+
+    [OpenAB](https://github.com/openabdev/openab) is a lightweight, open-source Rust harness that bridges Discord to any [Agent Client Protocol](https://github.com/anthropics/agent-protocol)-compatible coding CLI over stdio JSON-RPC.
+
+    This template deploys the Gemini variant (`openab-gemini`) which uses `gemini --acp` as the agent backend.
+
+    ## Important Notes
+
+    - **Image tag:** This template uses a pinned version (`0.7.5`). To upgrade, change the image tag in Zeabur Dashboard -> Service -> Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
+    - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
+    - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service -- ownership is fixed automatically on boot.
+
+    ## Setup
+
+    ### 1. Get a Discord Bot Token
+
+    1. Go to https://discord.com/developers/applications and click **New Application**
+    2. Navigate to **Bot** tab -> click **Reset Token** -> copy the token
+    3. On the same page, scroll down and enable **Message Content Intent** under Privileged Gateway Intents
+    4. Go to **OAuth2 -> URL Generator** -> check scope `bot` -> check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+    5. Copy the generated URL and open it in your browser to invite the bot to your server
+
+    ### 2. Get a Gemini API Key
+
+    1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+    2. Click **Create API key**
+    3. Copy the generated API key
+
+    ### 3. Get Discord Channel IDs
+
+    1. Open Discord -> go to **User Settings** (gear icon) -> **Advanced** -> enable **Developer Mode**
+    2. Right-click the channel where you want the bot to respond -> **Copy Channel ID**
+    3. For multiple channels, separate IDs with commas: `123456789012345678,234567890123456789`
+
+    ### 4. Deploy
+
+    Fill in the template variables and click deploy. The service connects to Discord automatically.
+
+    ## Usage
+
+    - **@mention the bot** in an allowed channel to start a conversation
+    - OpenAB creates a **thread** for multi-turn conversations -- no @mention needed for follow-ups
+    - Each thread maps to a persistent Gemini session (24h TTL)
+
+    ## Customization
+
+    | File | Description |
+    |------|-------------|
+    | `/home/node/.config/openab/config.toml` | OpenAB config (sessions, reactions, STT, etc.) |
+
+    `config.toml` is created from a built-in template on first boot. After that, edit the file directly -- environment variables are only used for initial setup. To reset to defaults, delete the file and restart: `rm /home/node/.config/openab/config.toml`
+
+    For config options, see the [OpenAB documentation](https://github.com/openabdev/openab).
+
+    ## Disabling
+
+    Leave `Discord Bot Token` empty. The service sleeps instead of crashing.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+    - [Google AI Studio](https://aistudio.google.com/)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-gemini:0.7.5
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        volumes:
+          - id: node-home
+            dir: /home/node
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell config on first boot (volume is empty)
+              if [ ! -f /home/node/.bashrc ]; then
+                cp /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout /home/node/ 2>/dev/null || true
+              fi
+
+              # Fix ownership for persistent volume
+              chown -R node:node /home/node
+              chmod 755 /home/node/.config 2>/dev/null || true
+
+              if [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$GEMINI_API_KEY" ]; then
+                echo "openab: DISCORD_BOT_TOKEN or GEMINI_API_KEY not set — sleeping"
+                exec sleep infinity
+              fi
+
+              CONFIG_DIR=/home/node/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              # Generate config.toml on first boot only
+              # openab expands ${VAR} at runtime from process env
+              # To regenerate, delete the file and restart
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # Append allowed_channels/users if provided
+                if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
+                  IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
+                    id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
+                  sed -i "/^\[discord\]/a allowed_channels = [$(echo "$channels" | sed 's/,$//')]" "$CONFIG_FILE"
+                fi
+                if [ -n "$OPENAB_ALLOWED_USERS" ]; then
+                  IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do
+                    id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
+                  sed -i "/^\[discord\]/a allowed_users = [$(echo "$users" | sed 's/,$//')]" "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              chown -R node:node "$CONFIG_DIR"
+              exec runuser -u node --preserve-environment -- openab run "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [discord]
+              bot_token = "${DISCORD_BOT_TOKEN}"
+
+              [agent]
+              command = "gemini"
+              args = ["--acp", "--approval-mode", "yolo"]
+              working_dir = "/home/node"
+              env = { GEMINI_API_KEY = "${GEMINI_API_KEY}" }
+        env:
+          DISCORD_BOT_TOKEN:
+            default: ${DISCORD_BOT_TOKEN}
+          GEMINI_API_KEY:
+            default: ${GEMINI_API_KEY}
+          OPENAB_ALLOWED_CHANNELS:
+            default: ""
+          OPENAB_ALLOWED_USERS:
+            default: ""
+  locales:
+    zh-TW:
+      description: |
+        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板部署 Gemini 變體。
+        來源：https://github.com/openabdev/openab
+      variables:
+        - key: DISCORD_BOT_TOKEN
+          name: Discord Bot Token
+          description: 從 https://discord.com/developers/applications 取得的 Token
+        - key: GEMINI_API_KEY
+          name: Gemini API Key
+          description: "從 https://aistudio.google.com/apikey 取得的 API 金鑰"
+        - key: OPENAB_ALLOWED_CHANNELS
+          name: Discord 頻道 ID（選填）
+          description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
+        - key: OPENAB_ALLOWED_USERS
+          name: Discord 用戶 ID（選填）
+          description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
+      readme: |
+        # OpenAB（中文）
+
+        [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+
+        此模板部署的是 Gemini 變體（`openab-gemini`），使用 `gemini --acp` 作為 agent 後端。
+
+        ## 注意事項
+
+        - **映像標籤：** 此模板使用固定版本（`0.7.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
+        - **持久化儲存：** `/home/node` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
+        - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
+
+        ## 設定步驟
+
+        ### 1. 取得 Discord Bot Token
+
+        1. 前往 https://discord.com/developers/applications，點擊 **New Application**
+        2. 進入 **Bot** 頁籤 → 點擊 **Reset Token** → 複製 token
+        3. 同一頁面往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
+        4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+        5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
+
+        ### 2. 取得 Gemini API Key
+
+        1. 前往 [Google AI Studio](https://aistudio.google.com/apikey)
+        2. 點擊 **Create API key**
+        3. 複製產生的 API 金鑰
+
+        ### 3. 取得 Discord 頻道 ID
+
+        1. 開啟 Discord → 前往 **使用者設定**（齒輪圖示）→ **進階** → 啟用 **開發者模式**
+        2. 對你要 Bot 回應的頻道按右鍵 → **複製頻道 ID**
+        3. 多個頻道用逗號分隔：`123456789012345678,234567890123456789`
+
+        ### 4. 部署
+
+        填入模板變數後點擊部署即可。服務會自動連線到 Discord。
+
+        ## 使用方式
+
+        - 在允許的頻道中 **@mention Bot** 即可開始對話
+        - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
+        - 每個 thread 對應一個持久的 Gemini session（預設 24 小時 TTL）
+
+        ## 自訂設定
+
+        | 檔案 | 說明 |
+        |------|------|
+        | `/home/node/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT 等） |
+
+        `config.toml` 在首次啟動時從內建範本建立。之後請直接編輯檔案，環境變數僅用於初始設定。要恢復預設值請刪除後重啟：`rm /home/node/.config/openab/config.toml`
+
+        設定選項請參閱 [OpenAB 文件](https://github.com/openabdev/openab)。
+
+        ## 停用
+
+        部署時將 `Discord Bot Token` 留空即可。服務會進入 sleep 狀態，不會崩潰。
+
+        ## 連結
+
+        - [OpenAB GitHub](https://github.com/openabdev/openab)
+        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+        - [Google AI Studio](https://aistudio.google.com/)
+    zh-CN:
+      description: |
+        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板部署 Gemini 变体。
+        来源：https://github.com/openabdev/openab
+      variables:
+        - key: DISCORD_BOT_TOKEN
+          name: Discord Bot Token
+          description: 从 https://discord.com/developers/applications 获取的 Token
+        - key: GEMINI_API_KEY
+          name: Gemini API Key
+          description: "从 https://aistudio.google.com/apikey 获取的 API 密钥"
+        - key: OPENAB_ALLOWED_CHANNELS
+          name: Discord 频道 ID（选填）
+          description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
+        - key: OPENAB_ALLOWED_USERS
+          name: Discord 用户 ID（选填）
+          description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
+      readme: |
+        # OpenAB（简体中文）
+
+        [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+
+        此模板部署的是 Gemini 变体（`openab-gemini`），使用 `gemini --acp` 作为 agent 后端。
+
+        ## 注意事项
+
+        - **镜像标签：** 此模板使用固定版本（`0.7.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
+        - **持久化存储：** `/home/node` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
+        - **文件权限：** 容器以 root 启动后切换为 node 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
+
+        ## 设置步骤
+
+        ### 1. 获取 Discord Bot Token
+
+        1. 前往 https://discord.com/developers/applications，点击 **New Application**
+        2. 进入 **Bot** 页签 → 点击 **Reset Token** → 复制 token
+        3. 同一页面往下滑，在 Privileged Gateway Intents 下启用 **Message Content Intent**
+        4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+        5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
+
+        ### 2. 获取 Gemini API Key
+
+        1. 前往 [Google AI Studio](https://aistudio.google.com/apikey)
+        2. 点击 **Create API key**
+        3. 复制生成的 API 密钥
+
+        ### 3. 获取 Discord 频道 ID
+
+        1. 打开 Discord → 前往 **用户设置**（齿轮图标）→ **高级** → 启用 **开发者模式**
+        2. 右键点击你要 Bot 回应的频道 → **复制频道 ID**
+        3. 多个频道用逗号分隔：`123456789012345678,234567890123456789`
+
+        ### 4. 部署
+
+        填入模板变量后点击部署即可。服务会自动连接到 Discord。
+
+        ## 使用方式
+
+        - 在允许的频道中 **@mention Bot** 即可开始对话
+        - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
+        - 每个 thread 对应一个持久的 Gemini session（默认 24 小时 TTL）
+
+        ## 自定义设置
+
+        | 文件 | 说明 |
+        |------|------|
+        | `/home/node/.config/openab/config.toml` | OpenAB 设置（sessions、reactions、STT 等） |
+
+        `config.toml` 在首次启动时从内建模板创建。之后请直接编辑文件，环境变量仅用于初始设置。要恢复默认值请删除后重启：`rm /home/node/.config/openab/config.toml`
+
+        设置选项请参阅 [OpenAB 文档](https://github.com/openabdev/openab)。
+
+        ## 停用
+
+        部署时将 `Discord Bot Token` 留空即可。服务会进入 sleep 状态，不会崩溃。
+
+        ## 链接
+
+        - [OpenAB GitHub](https://github.com/openabdev/openab)
+        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+        - [Google AI Studio](https://aistudio.google.com/)
+    ja-JP:
+      description: |
+        Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。このテンプレートは Gemini バリアントをデプロイします。
+        ソース：https://github.com/openabdev/openab
+      variables:
+        - key: DISCORD_BOT_TOKEN
+          name: Discord Bot トークン
+          description: https://discord.com/developers/applications から取得したトークン
+        - key: GEMINI_API_KEY
+          name: Gemini API キー
+          description: "https://aistudio.google.com/apikey から取得した API キー"
+        - key: OPENAB_ALLOWED_CHANNELS
+          name: Discord チャンネル ID（オプション）
+          description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
+        - key: OPENAB_ALLOWED_USERS
+          name: Discord ユーザー ID（オプション）
+          description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
+      readme: |
+        # OpenAB（日本語）
+
+        [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
+
+        このテンプレートは Gemini バリアント（`openab-gemini`）をデプロイし、`gemini --acp` をエージェントバックエンドとして使用します。
+
+        ## 注意事項
+
+        - **イメージタグ：** このテンプレートは固定バージョン（`0.7.5`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
+        - **永続ストレージ：** `/home/node` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
+        - **ファイル権限：** コンテナは root で起動し、openab 実行前に node ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
+
+        ## セットアップ
+
+        ### 1. Discord Bot Token の取得
+
+        1. https://discord.com/developers/applications にアクセスし、**New Application** をクリック
+        2. **Bot** タブ → **Reset Token** をクリック → token をコピー
+        3. 同じページを下にスクロールし、Privileged Gateway Intents の **Message Content Intent** を有効化
+        4. **OAuth2 → URL Generator** → scope `bot` にチェック → 権限にチェック：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+        5. 生成された URL をコピーし、ブラウザで開いて Bot をサーバーに招待
+
+        ### 2. Gemini API キーの取得
+
+        1. [Google AI Studio](https://aistudio.google.com/apikey) にアクセス
+        2. **Create API key** をクリック
+        3. 生成された API キーをコピー
+
+        ### 3. Discord チャンネル ID の取得
+
+        1. Discord を開く → **ユーザー設定**（歯車アイコン）→ **詳細設定** → **開発者モード** を有効化
+        2. Bot に応答させたいチャンネルを右クリック → **チャンネル ID をコピー**
+        3. 複数チャンネルはカンマで区切る：`123456789012345678,234567890123456789`
+
+        ### 4. デプロイ
+
+        テンプレート変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。
+
+        ## 使い方
+
+        - 許可されたチャンネルで **Bot を @mention** して会話を開始
+        - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
+        - 各 thread は永続的な Gemini session に対応（デフォルト 24 時間 TTL）
+
+        ## カスタマイズ
+
+        | ファイル | 説明 |
+        |---------|------|
+        | `/home/node/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT など） |
+
+        `config.toml` は初回起動時に内蔵テンプレートから作成されます。以降の変更はファイルを直接編集してください。環境変数は初期設定時のみ使用されます。デフォルトに戻すにはファイルを削除して再起動：`rm /home/node/.config/openab/config.toml`
+
+        設定オプションは [OpenAB ドキュメント](https://github.com/openabdev/openab) を参照。
+
+        ## 無効化
+
+        デプロイ時に `Discord Bot Token` を空にしてください。サービスはクラッシュせずスリープ状態になります。
+
+        ## リンク
+
+        - [OpenAB GitHub](https://github.com/openabdev/openab)
+        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+        - [Google AI Studio](https://aistudio.google.com/)
+    es-ES:
+      description: |
+        Open Agent Broker — un arnes ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a traves de stdio JSON-RPC. Esta plantilla despliega la variante Gemini.
+        Fuente: https://github.com/openabdev/openab
+      variables:
+        - key: DISCORD_BOT_TOKEN
+          name: Token del Bot de Discord
+          description: Token obtenido de https://discord.com/developers/applications
+        - key: GEMINI_API_KEY
+          name: Clave API de Gemini
+          description: "Clave API de https://aistudio.google.com/apikey"
+        - key: OPENAB_ALLOWED_CHANNELS
+          name: IDs de Canales de Discord (opcional)
+          description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacio para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
+        - key: OPENAB_ALLOWED_USERS
+          name: IDs de Usuarios de Discord (opcional)
+          description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacio para permitir a todos en los canales permitidos."
+      readme: |
+        # OpenAB (Espanol)
+
+        [OpenAB](https://github.com/openabdev/openab) es un arnes ligero de codigo abierto en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a traves de stdio JSON-RPC.
+
+        Esta plantilla despliega la variante Gemini (`openab-gemini`), que utiliza `gemini --acp` como backend de agente.
+
+        ## Notas Importantes
+
+        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.7.5`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard -> Servicio -> Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
+        - **Almacenamiento persistente:** `/home/node` esta montado como volumen persistente. Plugins, configuracion y credenciales se conservan entre reinicios.
+        - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario node (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio -- los permisos se corrigen automaticamente al arrancar.
+
+        ## Configuracion
+
+        ### 1. Obtener el Discord Bot Token
+
+        1. Ir a https://discord.com/developers/applications y hacer clic en **New Application**
+        2. Ir a la pestana **Bot** -> clic en **Reset Token** -> copiar el token
+        3. En la misma pagina, bajar y habilitar **Message Content Intent** en Privileged Gateway Intents
+        4. Ir a **OAuth2 -> URL Generator** -> marcar scope `bot` -> marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+        5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
+
+        ### 2. Obtener una Clave API de Gemini
+
+        1. Ir a [Google AI Studio](https://aistudio.google.com/apikey)
+        2. Hacer clic en **Create API key**
+        3. Copiar la clave API generada
+
+        ### 3. Obtener IDs de canales de Discord
+
+        1. Abrir Discord -> **Ajustes de usuario** (icono de engranaje) -> **Avanzado** -> activar **Modo desarrollador**
+        2. Clic derecho en el canal donde quieres que el Bot responda -> **Copiar ID del canal**
+        3. Para multiples canales, separar con comas: `123456789012345678,234567890123456789`
+
+        ### 4. Desplegar
+
+        Completar las variables de la plantilla y hacer clic en desplegar. El servicio se conecta a Discord automaticamente.
+
+        ## Uso
+
+        - **@mencionar al bot** en un canal permitido para iniciar una conversacion
+        - OpenAB crea un **thread** para conversaciones de multiples turnos -- no se necesita @mencion en los mensajes siguientes
+        - Cada thread corresponde a una sesion persistente de Gemini (TTL de 24h por defecto)
+
+        ## Personalizacion
+
+        | Archivo | Descripcion |
+        |---------|-------------|
+        | `/home/node/.config/openab/config.toml` | Configuracion de OpenAB (sessions, reactions, STT, etc.) |
+
+        `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Despues, edite el archivo directamente -- las variables de entorno solo se usan para la configuracion inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/node/.config/openab/config.toml`
+
+        Para opciones de configuracion, consulte la [documentacion de OpenAB](https://github.com/openabdev/openab).
+
+        ## Desactivar
+
+        Dejar `Discord Bot Token` vacio al desplegar. El servicio entrara en modo sleep sin fallar.
+
+        ## Enlaces
+
+        - [OpenAB GitHub](https://github.com/openabdev/openab)
+        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+        - [Google AI Studio](https://aistudio.google.com/)
+    id-ID:
+      description: |
+        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC. Template ini men-deploy varian Gemini.
+        Sumber: https://github.com/openabdev/openab
+      variables:
+        - key: DISCORD_BOT_TOKEN
+          name: Token Bot Discord
+          description: Token dari https://discord.com/developers/applications
+        - key: GEMINI_API_KEY
+          name: Kunci API Gemini
+          description: "Kunci API dari https://aistudio.google.com/apikey"
+        - key: OPENAB_ALLOWED_CHANNELS
+          name: ID Channel Discord (opsional)
+          description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
+        - key: OPENAB_ALLOWED_USERS
+          name: ID Pengguna Discord (opsional)
+          description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
+      readme: |
+        # OpenAB (Bahasa Indonesia)
+
+        [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
+
+        Template ini men-deploy varian Gemini (`openab-gemini`) yang menggunakan `gemini --acp` sebagai backend agen.
+
+        ## Catatan Penting
+
+        - **Tag image:** Template ini menggunakan versi yang dipin (`0.7.5`). Untuk upgrade, ubah tag image di Zeabur Dashboard -> Layanan -> Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
+        - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
+        - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna node (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan -- izin diperbaiki secara otomatis saat boot.
+
+        ## Pengaturan
+
+        ### 1. Dapatkan Discord Bot Token
+
+        1. Buka https://discord.com/developers/applications dan klik **New Application**
+        2. Buka tab **Bot** -> klik **Reset Token** -> salin token
+        3. Di halaman yang sama, scroll ke bawah dan aktifkan **Message Content Intent** di Privileged Gateway Intents
+        4. Buka **OAuth2 -> URL Generator** -> centang scope `bot` -> centang izin: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+        5. Salin URL yang dihasilkan dan buka di browser untuk mengundang Bot ke server Anda
+
+        ### 2. Dapatkan Kunci API Gemini
+
+        1. Buka [Google AI Studio](https://aistudio.google.com/apikey)
+        2. Klik **Create API key**
+        3. Salin kunci API yang dihasilkan
+
+        ### 3. Dapatkan ID Channel Discord
+
+        1. Buka Discord -> **Pengaturan Pengguna** (ikon roda gigi) -> **Lanjutan** -> aktifkan **Mode Pengembang**
+        2. Klik kanan channel tempat Anda ingin Bot merespons -> **Salin ID Channel**
+        3. Untuk beberapa channel, pisahkan dengan koma: `123456789012345678,234567890123456789`
+
+        ### 4. Deploy
+
+        Isi variabel template dan klik deploy. Layanan akan terhubung ke Discord secara otomatis.
+
+        ## Penggunaan
+
+        - **@mention bot** di channel yang diizinkan untuk memulai percakapan
+        - OpenAB membuat **thread** untuk percakapan multi-giliran -- tidak perlu @mention untuk pesan selanjutnya
+        - Setiap thread dipetakan ke sesi Gemini yang persisten (TTL 24 jam secara default)
+
+        ## Kustomisasi
+
+        | File | Deskripsi |
+        |------|-----------|
+        | `/home/node/.config/openab/config.toml` | Konfigurasi OpenAB (sessions, reactions, STT, dll.) |
+
+        `config.toml` dibuat dari template bawaan saat boot pertama. Setelah itu, edit file secara langsung -- variabel lingkungan hanya digunakan untuk pengaturan awal. Untuk mengembalikan ke default, hapus dan restart: `rm /home/node/.config/openab/config.toml`
+
+        Untuk opsi konfigurasi, lihat [dokumentasi OpenAB](https://github.com/openabdev/openab).
+
+        ## Menonaktifkan
+
+        Kosongkan `Discord Bot Token` saat deploy. Layanan akan tidur tanpa crash.
+
+        ## Tautan
+
+        - [OpenAB GitHub](https://github.com/openabdev/openab)
+        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+        - [Google AI Studio](https://aistudio.google.com/)

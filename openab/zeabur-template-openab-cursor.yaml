@@ -1,0 +1,387 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB Cursor
+spec:
+  description: |
+    Open Agent Broker — a lightweight Rust harness that bridges Discord to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro, Cursor) over stdio JSON-RPC. This template uses the Cursor Agent CLI as the agent backend.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - Discord
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: DISCORD_BOT_TOKEN
+      type: STRING
+      name: Discord Bot Token
+      description: Token from https://discord.com/developers/applications
+    - key: OPENAB_ALLOWED_CHANNELS
+      type: STRING
+      name: Discord Channel IDs (optional)
+      description: "Optional. Comma-separated Discord channel IDs where the bot listens. Leave empty to allow all channels. Example: 123456789012345678,234567890123456789"
+    - key: OPENAB_ALLOWED_USERS
+      type: STRING
+      name: Discord User IDs (optional)
+      description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone in the allowed channels."
+  readme: |
+    # OpenAB Cursor
+
+    [OpenAB](https://github.com/openabdev/openab) is a lightweight, open-source Rust harness that bridges Discord to any [Agent Client Protocol](https://github.com/anthropics/agent-protocol)-compatible coding CLI over stdio JSON-RPC.
+
+    This template deploys the Cursor variant using the `openab-cursor` image with `cursor-agent` as the agent backend.
+
+    ## Important Notes
+
+    - **Image tag:** This template uses a pinned version (`0.7.6`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor).
+    - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Auth credentials (`~/.cursor/`), MCP config, approvals, and settings survive restarts.
+    - **Config ownership:** The container starts as root and switches to `agent` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
+    - **Paid subscription required:** Cursor Agent CLI requires a paid Cursor subscription (Pro or Business).
+
+    ## Setup
+
+    ### 1. Get a Discord Bot Token
+
+    1. Go to https://discord.com/developers/applications and click **New Application**
+    2. Navigate to **Bot** tab → click **Reset Token** → copy the token
+    3. On the same page, scroll down and enable **Message Content Intent** under Privileged Gateway Intents
+    4. Go to **OAuth2 → URL Generator** → check scope `bot` → check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+    5. Copy the generated URL and open it in your browser to invite the bot to your server
+
+    ### 2. Authenticate Cursor (after deployment)
+
+    Cursor uses device flow for authentication — no API key is needed at deploy time. After the service is running, open the service terminal in Zeabur Dashboard and run:
+
+    ```
+    runuser -u agent -- cursor-agent login
+    ```
+
+    > ⚠️ Must run as `agent`. Running as `root` writes credentials to `/root/` which is not persisted; they will be lost on restart.
+
+    Follow the on-screen instructions to complete device flow authorization in your browser. Restart the service after login completes.
+
+    ### 3. Get Discord Channel IDs
+
+    1. Open Discord → go to **User Settings** (gear icon) → **Advanced** → enable **Developer Mode**
+    2. Right-click the channel where you want the bot to respond → **Copy Channel ID**
+    3. For multiple channels, separate IDs with commas: `123456789012345678,234567890123456789`
+
+    ### 4. Deploy
+
+    Fill in the Discord Bot Token and click deploy. The service connects to Discord automatically. Then authenticate Cursor using the method above.
+
+    ## Usage
+
+    - **@mention the bot** in an allowed channel to start a conversation
+    - OpenAB creates a **thread** for multi-turn conversations — no @mention needed for follow-ups
+    - Each thread maps to a persistent Cursor session (24h TTL)
+
+    ## GitHub Integration (Optional)
+
+    The agent can use `gh` (GitHub CLI) to review PRs, create issues, comment, merge, etc. Since the container is headless, authentication uses device flow:
+
+    1. Ask the bot in Discord: **"log in to GitHub"**
+    2. The bot will reply with a one-time code and a URL (e.g. `https://github.com/login/device`)
+    3. Open the URL on your phone or computer, enter the code, and authorize
+    4. The bot confirms login — `gh` is now authenticated for this session
+
+    See [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) for technical details.
+
+    ## Customization
+
+    | File | Description |
+    |------|-------------|
+    | `/home/agent/.config/openab/config.toml` | OpenAB config (sessions, reactions, STT, etc.) |
+
+    `config.toml` is created from a built-in template on first boot. After that, edit the file directly — environment variables are only used for initial setup. To reset to defaults, delete the file and restart: `rm /home/agent/.config/openab/config.toml`
+
+    For config options, see the [OpenAB documentation](https://github.com/openabdev/openab).
+
+    ## Disabling
+
+    Leave `Discord Bot Token` empty. The service sleeps instead of crashing.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-cursor:0.7.6
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell config on first boot (volume is empty)
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout /home/agent/ 2>/dev/null || true
+              fi
+
+              # Fix ownership for persistent volume
+              chown -R agent:agent /home/agent
+              chmod 755 /home/agent/.config 2>/dev/null || true
+
+              if [ -z "$DISCORD_BOT_TOKEN" ]; then
+                echo "openab: DISCORD_BOT_TOKEN not set — sleeping"
+                exec sleep infinity
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              # Generate config.toml on first boot only
+              # openab expands ${VAR} at runtime from process env
+              # To regenerate, delete the file and restart
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # Append allowed_channels/users if provided
+                if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
+                  IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
+                    id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
+                  sed -i "/^\[discord\]/a allowed_channels = [$(echo "$channels" | sed 's/,$//')]" "$CONFIG_FILE"
+                fi
+                if [ -n "$OPENAB_ALLOWED_USERS" ]; then
+                  IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do
+                    id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
+                  sed -i "/^\[discord\]/a allowed_users = [$(echo "$users" | sed 's/,$//')]" "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              chown -R agent:agent "$CONFIG_DIR"
+              exec runuser -u agent --preserve-environment -- openab run "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [discord]
+              bot_token = "${DISCORD_BOT_TOKEN}"
+
+              [agent]
+              command = "cursor-agent"
+              args = ["acp", "--model", "auto", "--workspace", "/home/agent"]
+              working_dir = "/home/agent"
+        env:
+          DISCORD_BOT_TOKEN:
+            default: ${DISCORD_BOT_TOKEN}
+          OPENAB_ALLOWED_CHANNELS:
+            default: ""
+          OPENAB_ALLOWED_USERS:
+            default: ""
+  locales:
+    zh-TW:
+      description: |
+        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro、Cursor）。此模板使用 Cursor Agent CLI 作為 agent 後端。
+        來源：https://github.com/openabdev/openab
+      variables:
+        - key: DISCORD_BOT_TOKEN
+          name: Discord Bot Token
+          description: 從 https://discord.com/developers/applications 取得的 Token
+        - key: OPENAB_ALLOWED_CHANNELS
+          name: Discord 頻道 ID（選填）
+          description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
+        - key: OPENAB_ALLOWED_USERS
+          name: Discord 用戶 ID（選填）
+          description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
+      readme: |
+        # OpenAB Cursor（中文）
+
+        [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+
+        此模板部署的是 Cursor 變體，使用 `openab-cursor` 映像搭配 `cursor-agent` 作為 agent 後端。
+
+        ## 注意事項
+
+        - **映像標籤：** 此模板使用固定版本（`0.7.6`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor)。
+        - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。認證資料（`~/.cursor/`）、MCP 設定、approvals 和設定會在重啟後保留。
+        - **檔案權限：** 容器以 root 啟動後切換為 agent 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
+        - **需要付費訂閱：** Cursor Agent CLI 需要付費的 Cursor 訂閱方案（Pro 或 Business）。
+
+        ## 設定步驟
+
+        ### 1. 取得 Discord Bot Token
+
+        1. 前往 https://discord.com/developers/applications，點擊 **New Application**
+        2. 進入 **Bot** 頁籤 → 點擊 **Reset Token** → 複製 token
+        3. 同一頁面往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
+        4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+        5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
+
+        ### 2. 認證 Cursor（部署後）
+
+        Cursor 使用 device flow 進行認證，部署時不需要 API 金鑰。服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
+
+        ```
+        runuser -u agent -- cursor-agent login
+        ```
+
+        > ⚠️ 必須以 `agent` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
+
+        依照畫面指示到瀏覽器完成授權。認證完成後請重啟服務。
+
+        ### 3. 取得 Discord 頻道 ID
+
+        1. 開啟 Discord → 前往 **使用者設定**（齒輪圖示）→ **進階** → 啟用 **開發者模式**
+        2. 對你要 Bot 回應的頻道按右鍵 → **複製頻道 ID**
+        3. 多個頻道用逗號分隔：`123456789012345678,234567890123456789`
+
+        ### 4. 部署
+
+        填入 Discord Bot Token 後點擊部署即可。服務會自動連線到 Discord。然後使用上述方法認證 Cursor。
+
+        ## 使用方式
+
+        - 在允許的頻道中 **@mention Bot** 即可開始對話
+        - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
+        - 每個 thread 對應一個持久的 Cursor session（預設 24 小時 TTL）
+
+        ## GitHub 整合（選用）
+
+        Agent 可以使用 `gh`（GitHub CLI）來 review PR、建立 issue、留言、合併等。由於容器沒有瀏覽器，認證使用 device flow：
+
+        1. 在 Discord 對 bot 說：**「登入 GitHub」**
+        2. Bot 會回覆一組一次性代碼和 URL（例如 `https://github.com/login/device`）
+        3. 在手機或電腦上開啟 URL，輸入代碼並授權
+        4. Bot 確認登入完成 — `gh` 已在此 session 中認證
+
+        詳見 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
+
+        ## 自訂設定
+
+        | 檔案 | 說明 |
+        |------|------|
+        | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT 等） |
+
+        `config.toml` 在首次啟動時從內建範本建立。之後請直接編輯檔案，環境變數僅用於初始設定。要恢復預設值請刪除後重啟：`rm /home/agent/.config/openab/config.toml`
+
+        設定選項請參閱 [OpenAB 文件](https://github.com/openabdev/openab)。
+
+        ## 停用
+
+        部署時將 `Discord Bot Token` 留空即可。服務會進入 sleep 狀態，不會崩潰。
+
+        ## 連結
+
+        - [OpenAB GitHub](https://github.com/openabdev/openab)
+        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+    zh-CN:
+      description: |
+        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro、Cursor）。此模板使用 Cursor Agent CLI 作为 agent 后端。
+        来源：https://github.com/openabdev/openab
+      variables:
+        - key: DISCORD_BOT_TOKEN
+          name: Discord Bot Token
+          description: 从 https://discord.com/developers/applications 获取的 Token
+        - key: OPENAB_ALLOWED_CHANNELS
+          name: Discord 频道 ID（选填）
+          description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
+        - key: OPENAB_ALLOWED_USERS
+          name: Discord 用户 ID（选填）
+          description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
+      readme: |
+        # OpenAB Cursor（简体中文）
+
+        [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+
+        此模板部署的是 Cursor 变体，使用 `openab-cursor` 镜像搭配 `cursor-agent` 作为 agent 后端。
+
+        ## 注意事项
+
+        - **镜像标签：** 此模板使用固定版本（`0.7.6`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor)。
+        - **持久化存储：** `/home/agent` 挂载为持久化磁盘。认证数据（`~/.cursor/`）、MCP 配置、approvals 和设置会在重启后保留。
+        - **文件权限：** 容器以 root 启动后切换为 agent 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
+        - **需要付费订阅：** Cursor Agent CLI 需要付费的 Cursor 订阅方案（Pro 或 Business）。
+
+        ## 设置步骤
+
+        ### 1. 获取 Discord Bot Token
+
+        1. 前往 https://discord.com/developers/applications，点击 **New Application**
+        2. 进入 **Bot** 页签 → 点击 **Reset Token** → 复制 token
+        3. 同一页面往下滑，在 Privileged Gateway Intents 下启用 **Message Content Intent**
+        4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+        5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
+
+        ### 2. 认证 Cursor（部署后）
+
+        Cursor 使用 device flow 进行认证，部署时不需要 API 密钥。服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
+
+        ```
+        runuser -u agent -- cursor-agent login
+        ```
+
+        > ⚠️ 必须以 `agent` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
+
+        按照屏幕指示到浏览器完成授权。认证完成后请重启服务。
+
+        ### 3. 获取 Discord 频道 ID
+
+        1. 打开 Discord → 前往 **用户设置**（齿轮图标）→ **高级** → 启用 **开发者模式**
+        2. 右键点击你要 Bot 回应的频道 → **复制频道 ID**
+        3. 多个频道用逗号分隔：`123456789012345678,234567890123456789`
+
+        ### 4. 部署
+
+        填入 Discord Bot Token 后点击部署即可。服务会自动连接到 Discord。然后使用上述方法认证 Cursor。
+
+        ## 使用方式
+
+        - 在允许的频道中 **@mention Bot** 即可开始对话
+        - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
+        - 每个 thread 对应一个持久的 Cursor session（默认 24 小时 TTL）
+
+        ## GitHub 集成（可选）
+
+        Agent 可以使用 `gh`（GitHub CLI）来 review PR、创建 issue、评论、合并等。由于容器没有浏览器，认证使用 device flow：
+
+        1. 在 Discord 对 bot 说：**"登录 GitHub"**
+        2. Bot 会回复一组一次性代码和 URL（例如 `https://github.com/login/device`）
+        3. 在手机或电脑上打开 URL，输入代码并授权
+        4. Bot 确认登录完成 — `gh` 已在此 session 中认证
+
+        详见 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
+
+        ## 自定义设置
+
+        | 文件 | 说明 |
+        |------|------|
+        | `/home/agent/.config/openab/config.toml` | OpenAB 设置（sessions、reactions、STT 等） |
+
+        `config.toml` 在首次启动时从内建模板创建。之后请直接编辑文件，环境变量仅用于初始设置。要恢复默认值请删除后重启：`rm /home/agent/.config/openab/config.toml`
+
+        设置选项请参阅 [OpenAB 文档](https://github.com/openabdev/openab)。
+
+        ## 停用
+
+        部署时将 `Discord Bot Token` 留空即可。服务会进入 sleep 状态，不会崩溃。
+
+        ## 链接
+
+        - [OpenAB GitHub](https://github.com/openabdev/openab)
+        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)

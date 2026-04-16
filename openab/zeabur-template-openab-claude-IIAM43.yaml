@@ -2,7 +2,7 @@
 apiVersion: zeabur.com/v1
 kind: Template
 metadata:
-  name: OpenAB Codex
+  name: OpenAB Claude
 spec:
   description: |
     Open Agent Broker — a lightweight Rust harness that bridges Discord to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC.
@@ -25,10 +25,10 @@ spec:
       type: STRING
       name: Discord Bot Token
       description: Token from https://discord.com/developers/applications
-    - key: OPENAI_API_KEY
+    - key: OPENAB_AUTH_TOKEN
       type: STRING
-      name: OpenAI API Key
-      description: API key from https://platform.openai.com/api-keys
+      name: Auth Token
+      description: "Anthropic API key, Zeabur AI Hub token, or Claude OAuth token (from: claude setup-token)"
     - key: OPENAB_ALLOWED_CHANNELS
       type: STRING
       name: Discord Channel IDs (optional)
@@ -38,15 +38,15 @@ spec:
       name: Discord User IDs (optional)
       description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone in the allowed channels."
   readme: |
-    # OpenAB Codex
+    # OpenAB
 
     [OpenAB](https://github.com/openabdev/openab) is a lightweight, open-source Rust harness that bridges Discord to any [Agent Client Protocol](https://github.com/anthropics/agent-protocol)-compatible coding CLI over stdio JSON-RPC.
 
-    This template deploys the Codex variant (`openab-codex`) which uses `codex-acp` as the agent backend.
+    This template deploys the Claude variant (`openab-claude`) which uses `claude-agent-acp` as the agent backend.
 
     ## Important Notes
 
-    - **Image tag:** This template uses `ghcr.io/openabdev/openab-codex:latest`. The image may receive breaking changes at any time. If you need stability, pin to a specific version in Zeabur Dashboard → Service → Settings (e.g. `ghcr.io/openabdev/openab-codex:v0.7.1`). Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+    - **Image tag:** This template uses a pinned version (`0.7.6`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-claude).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
     - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
 
@@ -60,10 +60,13 @@ spec:
     4. Go to **OAuth2 → URL Generator** → check scope `bot` → check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
     5. Copy the generated URL and open it in your browser to invite the bot to your server
 
-    ### 2. Get an OpenAI API Key
+    ### 2. Get an Auth Token (choose one)
 
-    1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-    2. Click **Create new secret key** → copy the key
+    | Method | How to get it |
+    |--------|--------------|
+    | **Anthropic API Key** | Go to [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → copy the `sk-ant-api...` key |
+    | **Zeabur AI Hub Token** | Go to [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → copy the token |
+    | **Claude OAuth Token** | Run `claude setup-token` in your terminal (requires Claude Pro/Max/Team/Enterprise subscription) → visit the URL it shows → authorize → paste the code back → copy the `sk-ant-oat...` token it outputs |
 
     ### 3. Get Discord Channel IDs
 
@@ -73,19 +76,32 @@ spec:
 
     ### 4. Deploy
 
-    Fill in the template variables and click deploy. The service connects to Discord automatically.
+    Fill in the three template variables and click deploy. The service connects to Discord automatically.
 
     ## Usage
 
     - **@mention the bot** in an allowed channel to start a conversation
     - OpenAB creates a **thread** for multi-turn conversations — no @mention needed for follow-ups
-    - Each thread maps to a persistent Codex session (24h TTL)
+    - Each thread maps to a persistent Claude session (24h TTL)
+
+    ## GitHub Integration (Optional)
+
+    The agent can use `gh` (GitHub CLI) to review PRs, create issues, comment, merge, etc. Since the container is headless, authentication uses device flow:
+
+    1. Ask the bot in Discord: **"log in to GitHub"**
+    2. The bot will reply with a one-time code and a URL (e.g. `https://github.com/login/device`)
+    3. Open the URL on your phone or computer, enter the code, and authorize
+    4. The bot confirms login — `gh` is now authenticated for this session
+
+    See [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) for technical details.
 
     ## Customization
 
     | File | Description |
     |------|-------------|
+    | `/home/node/CLAUDE.md` | Agent instructions — Claude reads this on every session |
     | `/home/node/.config/openab/config.toml` | OpenAB config (sessions, reactions, STT, etc.) |
+    | `/etc/claude-code/managed-settings.json` | Claude Code permission mode |
 
     `config.toml` is created from a built-in template on first boot. After that, edit the file directly — environment variables are only used for initial setup. To reset to defaults, delete the file and restart: `rm /home/node/.config/openab/config.toml`
 
@@ -99,14 +115,15 @@ spec:
 
     - [OpenAB GitHub](https://github.com/openabdev/openab)
     - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    - [OpenAI Platform](https://platform.openai.com/)
+    - [Anthropic Console](https://console.anthropic.com/)
+    - [Zeabur AI Hub](https://zeabur.com/ai-hub)
   services:
     - name: openab
       icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-codex:latest
+          image: ghcr.io/openabdev/openab-claude:0.7.6
           command:
             - /bin/sh
             - -c
@@ -130,10 +147,25 @@ spec:
               chown -R node:node /home/node
               chmod 755 /home/node/.config 2>/dev/null || true
 
-              if [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$OPENAI_API_KEY" ]; then
-                echo "openab: DISCORD_BOT_TOKEN or OPENAI_API_KEY not set — sleeping"
+              if [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$OPENAB_AUTH_TOKEN" ]; then
+                echo "openab: DISCORD_BOT_TOKEN or OPENAB_AUTH_TOKEN not set — sleeping"
                 exec sleep infinity
               fi
+
+              # Detect auth token type and export appropriate env var
+              case "$OPENAB_AUTH_TOKEN" in
+                sk-ant-oat*)
+                  export CLAUDE_CODE_OAUTH_TOKEN="$OPENAB_AUTH_TOKEN"
+                  ;;
+                sk-ant-*)
+                  export ANTHROPIC_API_KEY="$OPENAB_AUTH_TOKEN"
+                  ;;
+                *)
+                  export ANTHROPIC_API_KEY="$OPENAB_AUTH_TOKEN"
+                  export ANTHROPIC_BASE_URL="https://hnd1.aihub.zeabur.ai"
+                  export CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1
+                  ;;
+              esac
 
               CONFIG_DIR=/home/node/.config/openab
               CONFIG_FILE=$CONFIG_DIR/config.toml
@@ -163,22 +195,24 @@ spec:
               fi
 
               chown -R node:node "$CONFIG_DIR"
-              exec runuser -u node --preserve-environment -- openab "$CONFIG_FILE"
+              exec runuser -u node --preserve-environment -- openab run "$CONFIG_FILE"
           - path: /opt/config.toml.template
             template: |
               [discord]
               bot_token = "${DISCORD_BOT_TOKEN}"
 
               [agent]
-              command = "codex-acp"
+              command = "claude-agent-acp"
               args = []
               working_dir = "/home/node"
-              env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+          - path: /etc/claude-code/managed-settings.json
+            template: |
+              {"permissions":{"defaultMode":"bypassPermissions"}}
         env:
           DISCORD_BOT_TOKEN:
             default: ${DISCORD_BOT_TOKEN}
-          OPENAI_API_KEY:
-            default: ${OPENAI_API_KEY}
+          OPENAB_AUTH_TOKEN:
+            default: ${OPENAB_AUTH_TOKEN}
           OPENAB_ALLOWED_CHANNELS:
             default: ""
           OPENAB_ALLOWED_USERS:
@@ -192,9 +226,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Discord Bot Token
           description: 從 https://discord.com/developers/applications 取得的 Token
-        - key: OPENAI_API_KEY
-          name: OpenAI API Key
-          description: 從 https://platform.openai.com/api-keys 取得的 API 金鑰
+        - key: OPENAB_AUTH_TOKEN
+          name: 認證 Token
+          description: "Anthropic API 金鑰、Zeabur AI Hub token 或 Claude OAuth token（透過 claude setup-token 取得）"
         - key: OPENAB_ALLOWED_CHANNELS
           name: Discord 頻道 ID（選填）
           description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
@@ -202,15 +236,15 @@ spec:
           name: Discord 用戶 ID（選填）
           description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
       readme: |
-        # OpenAB Codex（中文）
+        # OpenAB（中文）
 
         [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-        此模板部署的是 Codex 變體（`openab-codex`），使用 `codex-acp` 作為 agent 後端。
+        此模板部署的是 Claude 變體（`openab-claude`），使用 `claude-agent-acp` 作為 agent 後端。
 
         ## 注意事項
 
-        - **映像標籤：** 此模板使用 `ghcr.io/openabdev/openab-codex:latest`，映像可能隨時有破壞性變更。如需穩定版本，請在 Zeabur Dashboard → 服務 → 設定中固定版本（例如 `ghcr.io/openabdev/openab-codex:v0.7.1`）。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+        - **映像標籤：** 此模板使用固定版本（`0.7.6`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-claude)。
         - **持久化儲存：** `/home/node` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
         - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
 
@@ -224,10 +258,13 @@ spec:
         4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
         5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
 
-        ### 2. 取得 OpenAI API Key
+        ### 2. 取得 Auth Token（擇一）
 
-        1. 前往 [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-        2. 點擊 **Create new secret key** → 複製金鑰
+        | 方式 | 取得方法 |
+        |------|---------|
+        | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 複製 `sk-ant-api...` 金鑰 |
+        | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 複製 token |
+        | **Claude OAuth Token** | 在終端執行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 訂閱）→ 開啟顯示的 URL → 授權 → 貼回驗證碼 → 複製輸出的 `sk-ant-oat...` token |
 
         ### 3. 取得 Discord 頻道 ID
 
@@ -237,19 +274,32 @@ spec:
 
         ### 4. 部署
 
-        填入模板變數後點擊部署即可。服務會自動連線到 Discord。
+        填入三個模板變數後點擊部署即可。服務會自動連線到 Discord。
 
         ## 使用方式
 
         - 在允許的頻道中 **@mention Bot** 即可開始對話
         - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
-        - 每個 thread 對應一個持久的 Codex session（預設 24 小時 TTL）
+        - 每個 thread 對應一個持久的 Claude session（預設 24 小時 TTL）
+
+        ## GitHub 整合（選用）
+
+        Agent 可以使用 `gh`（GitHub CLI）來 review PR、建立 issue、留言、合併等。由於容器沒有瀏覽器，認證使用 device flow：
+
+        1. 在 Discord 對 bot 說：**「登入 GitHub」**
+        2. Bot 會回覆一組一次性代碼和 URL（例如 `https://github.com/login/device`）
+        3. 在手機或電腦上開啟 URL，輸入代碼並授權
+        4. Bot 確認登入完成 — `gh` 已在此 session 中認證
+
+        詳見 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
 
         ## 自訂設定
 
         | 檔案 | 說明 |
         |------|------|
+        | `/home/node/CLAUDE.md` | Agent 指令 — Claude 每次 session 會自動讀取 |
         | `/home/node/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT 等） |
+        | `/etc/claude-code/managed-settings.json` | Claude Code 權限模式 |
 
         `config.toml` 在首次啟動時從內建範本建立。之後請直接編輯檔案，環境變數僅用於初始設定。要恢復預設值請刪除後重啟：`rm /home/node/.config/openab/config.toml`
 
@@ -263,7 +313,8 @@ spec:
 
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-        - [OpenAI Platform](https://platform.openai.com/)
+        - [Anthropic Console](https://console.anthropic.com/)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     zh-CN:
       description: |
         Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。
@@ -272,9 +323,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Discord Bot Token
           description: 从 https://discord.com/developers/applications 获取的 Token
-        - key: OPENAI_API_KEY
-          name: OpenAI API Key
-          description: 从 https://platform.openai.com/api-keys 获取的 API 密钥
+        - key: OPENAB_AUTH_TOKEN
+          name: 认证 Token
+          description: "Anthropic API 密钥、Zeabur AI Hub token 或 Claude OAuth token（通过 claude setup-token 获取）"
         - key: OPENAB_ALLOWED_CHANNELS
           name: Discord 频道 ID（选填）
           description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
@@ -282,15 +333,15 @@ spec:
           name: Discord 用户 ID（选填）
           description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
       readme: |
-        # OpenAB Codex（简体中文）
+        # OpenAB（简体中文）
 
         [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-        此模板部署的是 Codex 变体（`openab-codex`），使用 `codex-acp` 作为 agent 后端。
+        此模板部署的是 Claude 变体（`openab-claude`），使用 `claude-agent-acp` 作为 agent 后端。
 
         ## 注意事项
 
-        - **镜像标签：** 此模板使用 `ghcr.io/openabdev/openab-codex:latest`，镜像可能随时有破坏性变更。如需稳定版本，请在 Zeabur Dashboard → 服务 → 设置中固定版本（例如 `ghcr.io/openabdev/openab-codex:v0.7.1`）。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+        - **镜像标签：** 此模板使用固定版本（`0.7.6`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-claude)。
         - **持久化存储：** `/home/node` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
         - **文件权限：** 容器以 root 启动后切换为 node 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
 
@@ -304,10 +355,13 @@ spec:
         4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
         5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
 
-        ### 2. 获取 OpenAI API Key
+        ### 2. 获取 Auth Token（任选其一）
 
-        1. 前往 [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-        2. 点击 **Create new secret key** → 复制密钥
+        | 方式 | 获取方法 |
+        |------|---------|
+        | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 复制 `sk-ant-api...` 密钥 |
+        | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 复制 token |
+        | **Claude OAuth Token** | 在终端运行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 订阅）→ 打开显示的 URL → 授权 → 粘贴验证码 → 复制输出的 `sk-ant-oat...` token |
 
         ### 3. 获取 Discord 频道 ID
 
@@ -317,19 +371,32 @@ spec:
 
         ### 4. 部署
 
-        填入模板变量后点击部署即可。服务会自动连接到 Discord。
+        填入三个模板变量后点击部署即可。服务会自动连接到 Discord。
 
         ## 使用方式
 
         - 在允许的频道中 **@mention Bot** 即可开始对话
         - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
-        - 每个 thread 对应一个持久的 Codex session（默认 24 小时 TTL）
+        - 每个 thread 对应一个持久的 Claude session（默认 24 小时 TTL）
+
+        ## GitHub 集成（可选）
+
+        Agent 可以使用 `gh`（GitHub CLI）来 review PR、创建 issue、评论、合并等。由于容器没有浏览器，认证使用 device flow：
+
+        1. 在 Discord 对 bot 说：**"登录 GitHub"**
+        2. Bot 会回复一组一次性代码和 URL（例如 `https://github.com/login/device`）
+        3. 在手机或电脑上打开 URL，输入代码并授权
+        4. Bot 确认登录完成 — `gh` 已在此 session 中认证
+
+        详见 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
 
         ## 自定义设置
 
         | 文件 | 说明 |
         |------|------|
+        | `/home/node/CLAUDE.md` | Agent 指令 — Claude 每次 session 会自动读取 |
         | `/home/node/.config/openab/config.toml` | OpenAB 设置（sessions、reactions、STT 等） |
+        | `/etc/claude-code/managed-settings.json` | Claude Code 权限模式 |
 
         `config.toml` 在首次启动时从内建模板创建。之后请直接编辑文件，环境变量仅用于初始设置。要恢复默认值请删除后重启：`rm /home/node/.config/openab/config.toml`
 
@@ -343,7 +410,8 @@ spec:
 
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-        - [OpenAI Platform](https://platform.openai.com/)
+        - [Anthropic Console](https://console.anthropic.com/)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     ja-JP:
       description: |
         Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。
@@ -352,9 +420,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Discord Bot トークン
           description: https://discord.com/developers/applications から取得したトークン
-        - key: OPENAI_API_KEY
-          name: OpenAI API キー
-          description: https://platform.openai.com/api-keys から取得した API キー
+        - key: OPENAB_AUTH_TOKEN
+          name: 認証トークン
+          description: "Anthropic API キー、Zeabur AI Hub トークン、または Claude OAuth トークン（claude setup-token で取得）"
         - key: OPENAB_ALLOWED_CHANNELS
           name: Discord チャンネル ID（オプション）
           description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
@@ -362,15 +430,15 @@ spec:
           name: Discord ユーザー ID（オプション）
           description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
       readme: |
-        # OpenAB Codex（日本語）
+        # OpenAB（日本語）
 
         [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
 
-        このテンプレートは Codex バリアント（`openab-codex`）をデプロイし、`codex-acp` をエージェントバックエンドとして使用します。
+        このテンプレートは Claude バリアント（`openab-claude`）をデプロイし、`claude-agent-acp` をエージェントバックエンドとして使用します。
 
         ## 注意事項
 
-        - **イメージタグ：** このテンプレートは `ghcr.io/openabdev/openab-codex:latest` を使用しています。イメージはいつでも破壊的変更が入る可能性があります。安定版が必要な場合は、Zeabur Dashboard → サービス → 設定でバージョンを固定してください（例：`ghcr.io/openabdev/openab-codex:v0.7.1`）。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+        - **イメージタグ：** このテンプレートは固定バージョン（`0.7.6`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-claude)。
         - **永続ストレージ：** `/home/node` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
         - **ファイル権限：** コンテナは root で起動し、openab 実行前に node ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
 
@@ -384,10 +452,13 @@ spec:
         4. **OAuth2 → URL Generator** → scope `bot` にチェック → 権限にチェック：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
         5. 生成された URL をコピーし、ブラウザで開いて Bot をサーバーに招待
 
-        ### 2. OpenAI API キーの取得
+        ### 2. Auth Token の取得（いずれか一つ）
 
-        1. [platform.openai.com/api-keys](https://platform.openai.com/api-keys) にアクセス
-        2. **Create new secret key** をクリック → キーをコピー
+        | 方法 | 取得手順 |
+        |------|---------|
+        | **Anthropic API Key** | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → `sk-ant-api...` キーをコピー |
+        | **Zeabur AI Hub Token** | [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → token をコピー |
+        | **Claude OAuth Token** | ターミナルで `claude setup-token` を実行（Claude Pro/Max/Team/Enterprise サブスクリプションが必要）→ 表示された URL を開く → 認証 → コードを貼り付け → 出力された `sk-ant-oat...` token をコピー |
 
         ### 3. Discord チャンネル ID の取得
 
@@ -397,19 +468,32 @@ spec:
 
         ### 4. デプロイ
 
-        テンプレート変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。
+        3 つのテンプレート変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。
 
         ## 使い方
 
         - 許可されたチャンネルで **Bot を @mention** して会話を開始
         - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
-        - 各 thread は永続的な Codex session に対応（デフォルト 24 時間 TTL）
+        - 各 thread は永続的な Claude session に対応（デフォルト 24 時間 TTL）
+
+        ## GitHub 連携（オプション）
+
+        エージェントは `gh`（GitHub CLI）を使って PR レビュー、Issue 作成、コメント、マージなどができます。コンテナにはブラウザがないため、device flow で認証します：
+
+        1. Discord で Bot に **「GitHub にログイン」** と伝える
+        2. Bot がワンタイムコードと URL（例：`https://github.com/login/device`）を返信
+        3. スマートフォンまたは PC で URL を開き、コードを入力して認証
+        4. Bot がログイン完了を確認 — `gh` がこのセッションで認証済みになります
+
+        詳細は [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) を参照。
 
         ## カスタマイズ
 
         | ファイル | 説明 |
         |---------|------|
+        | `/home/node/CLAUDE.md` | エージェント指示 — Claude が毎セッション自動的に読み込みます |
         | `/home/node/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT など） |
+        | `/etc/claude-code/managed-settings.json` | Claude Code 権限モード |
 
         `config.toml` は初回起動時に内蔵テンプレートから作成されます。以降の変更はファイルを直接編集してください。環境変数は初期設定時のみ使用されます。デフォルトに戻すにはファイルを削除して再起動：`rm /home/node/.config/openab/config.toml`
 
@@ -423,87 +507,105 @@ spec:
 
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-        - [OpenAI Platform](https://platform.openai.com/)
+        - [Anthropic Console](https://console.anthropic.com/)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     es-ES:
       description: |
-        Open Agent Broker — un arnes ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a traves de stdio JSON-RPC.
+        Open Agent Broker — un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC.
         Fuente: https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
           name: Token del Bot de Discord
           description: Token obtenido de https://discord.com/developers/applications
-        - key: OPENAI_API_KEY
-          name: Clave API de OpenAI
-          description: Clave API obtenida de https://platform.openai.com/api-keys
+        - key: OPENAB_AUTH_TOKEN
+          name: Token de Autenticación
+          description: "Clave API de Anthropic, token de Zeabur AI Hub o token OAuth de Claude (obtenido con: claude setup-token)"
         - key: OPENAB_ALLOWED_CHANNELS
           name: IDs de Canales de Discord (opcional)
-          description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacio para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
+          description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacío para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
         - key: OPENAB_ALLOWED_USERS
           name: IDs de Usuarios de Discord (opcional)
-          description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacio para permitir a todos en los canales permitidos."
+          description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacío para permitir a todos en los canales permitidos."
       readme: |
-        # OpenAB Codex (Espanol)
+        # OpenAB (Español)
 
-        [OpenAB](https://github.com/openabdev/openab) es un arnes ligero de codigo abierto en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a traves de stdio JSON-RPC.
+        [OpenAB](https://github.com/openabdev/openab) es un arnés ligero de código abierto en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a través de stdio JSON-RPC.
 
-        Esta plantilla despliega la variante Codex (`openab-codex`), que utiliza `codex-acp` como backend de agente.
+        Esta plantilla despliega la variante Claude (`openab-claude`), que utiliza `claude-agent-acp` como backend de agente.
 
         ## Notas Importantes
 
-        - **Etiqueta de imagen:** Esta plantilla usa `ghcr.io/openabdev/openab-codex:latest`. La imagen puede recibir cambios incompatibles en cualquier momento. Si necesita estabilidad, fije una version en Zeabur Dashboard → Servicio → Configuracion (ej. `ghcr.io/openabdev/openab-codex:v0.7.1`). Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
-        - **Almacenamiento persistente:** `/home/node` esta montado como volumen persistente. Plugins, configuracion y credenciales se conservan entre reinicios.
-        - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario node (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automaticamente al arrancar.
+        - **Etiqueta de imagen:** Esta plantilla usa una versión fija (`0.7.6`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-claude).
+        - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente. Plugins, configuración y credenciales se conservan entre reinicios.
+        - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario node (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automáticamente al arrancar.
 
-        ## Configuracion
+        ## Configuración
 
         ### 1. Obtener el Discord Bot Token
 
         1. Ir a https://discord.com/developers/applications y hacer clic en **New Application**
-        2. Ir a la pestana **Bot** → clic en **Reset Token** → copiar el token
-        3. En la misma pagina, bajar y habilitar **Message Content Intent** en Privileged Gateway Intents
+        2. Ir a la pestaña **Bot** → clic en **Reset Token** → copiar el token
+        3. En la misma página, bajar y habilitar **Message Content Intent** en Privileged Gateway Intents
         4. Ir a **OAuth2 → URL Generator** → marcar scope `bot` → marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
         5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
 
-        ### 2. Obtener una Clave API de OpenAI
+        ### 2. Obtener un Auth Token (elegir uno)
 
-        1. Ir a [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-        2. Hacer clic en **Create new secret key** → copiar la clave
+        | Método | Cómo obtenerlo |
+        |--------|---------------|
+        | **Anthropic API Key** | Ir a [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → copiar la clave `sk-ant-api...` |
+        | **Zeabur AI Hub Token** | Ir a [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → copiar el token |
+        | **Claude OAuth Token** | Ejecutar `claude setup-token` en la terminal (requiere suscripción Claude Pro/Max/Team/Enterprise) → abrir la URL mostrada → autorizar → pegar el código → copiar el token `sk-ant-oat...` |
 
         ### 3. Obtener IDs de canales de Discord
 
         1. Abrir Discord → **Ajustes de usuario** (icono de engranaje) → **Avanzado** → activar **Modo desarrollador**
         2. Clic derecho en el canal donde quieres que el Bot responda → **Copiar ID del canal**
-        3. Para multiples canales, separar con comas: `123456789012345678,234567890123456789`
+        3. Para múltiples canales, separar con comas: `123456789012345678,234567890123456789`
 
         ### 4. Desplegar
 
-        Completar las variables de la plantilla y hacer clic en desplegar. El servicio se conecta a Discord automaticamente.
+        Completar las tres variables de la plantilla y hacer clic en desplegar. El servicio se conecta a Discord automáticamente.
 
         ## Uso
 
-        - **@mencionar al bot** en un canal permitido para iniciar una conversacion
-        - OpenAB crea un **thread** para conversaciones de multiples turnos — no se necesita @mencion en los mensajes siguientes
-        - Cada thread corresponde a una sesion persistente de Codex (TTL de 24h por defecto)
+        - **@mencionar al bot** en un canal permitido para iniciar una conversación
+        - OpenAB crea un **thread** para conversaciones de múltiples turnos — no se necesita @mención en los mensajes siguientes
+        - Cada thread corresponde a una sesión persistente de Claude (TTL de 24h por defecto)
 
-        ## Personalizacion
+        ## Integración con GitHub (Opcional)
 
-        | Archivo | Descripcion |
+        El agente puede usar `gh` (GitHub CLI) para revisar PRs, crear issues, comentar, fusionar, etc. Como el contenedor no tiene navegador, la autenticación usa device flow:
+
+        1. Dile al bot en Discord: **"log in to GitHub"**
+        2. El bot responderá con un código único y una URL (ej. `https://github.com/login/device`)
+        3. Abre la URL en tu teléfono o computadora, ingresa el código y autoriza
+        4. El bot confirma el inicio de sesión — `gh` está autenticado para esta sesión
+
+        Ver [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) para detalles técnicos.
+
+        ## Personalización
+
+        | Archivo | Descripción |
         |---------|-------------|
-        | `/home/node/.config/openab/config.toml` | Configuracion de OpenAB (sessions, reactions, STT, etc.) |
+        | `/home/node/CLAUDE.md` | Instrucciones del agente — Claude lo lee en cada sesión |
+        | `/home/node/.config/openab/config.toml` | Configuración de OpenAB (sessions, reactions, STT, etc.) |
+        | `/etc/claude-code/managed-settings.json` | Modo de permisos de Claude Code |
 
-        `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Despues, edite el archivo directamente — las variables de entorno solo se usan para la configuracion inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/node/.config/openab/config.toml`
+        `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Después, edite el archivo directamente — las variables de entorno solo se usan para la configuración inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/node/.config/openab/config.toml`
 
-        Para opciones de configuracion, consulte la [documentacion de OpenAB](https://github.com/openabdev/openab).
+        Para opciones de configuración, consulte la [documentación de OpenAB](https://github.com/openabdev/openab).
 
         ## Desactivar
 
-        Dejar `Discord Bot Token` vacio al desplegar. El servicio entrara en modo sleep sin fallar.
+        Dejar `Discord Bot Token` vacío al desplegar. El servicio entrará en modo sleep sin fallar.
 
         ## Enlaces
 
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-        - [OpenAI Platform](https://platform.openai.com/)
+        - [Anthropic Console](https://console.anthropic.com/)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     id-ID:
       description: |
         Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC.
@@ -512,9 +614,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Token Bot Discord
           description: Token dari https://discord.com/developers/applications
-        - key: OPENAI_API_KEY
-          name: Kunci API OpenAI
-          description: Kunci API dari https://platform.openai.com/api-keys
+        - key: OPENAB_AUTH_TOKEN
+          name: Token Autentikasi
+          description: "Kunci API Anthropic, token Zeabur AI Hub, atau token OAuth Claude (dari: claude setup-token)"
         - key: OPENAB_ALLOWED_CHANNELS
           name: ID Channel Discord (opsional)
           description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
@@ -522,15 +624,15 @@ spec:
           name: ID Pengguna Discord (opsional)
           description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
       readme: |
-        # OpenAB Codex (Bahasa Indonesia)
+        # OpenAB (Bahasa Indonesia)
 
         [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
 
-        Template ini men-deploy varian Codex (`openab-codex`) yang menggunakan `codex-acp` sebagai backend agen.
+        Template ini men-deploy varian Claude (`openab-claude`) yang menggunakan `claude-agent-acp` sebagai backend agen.
 
         ## Catatan Penting
 
-        - **Tag image:** Template ini menggunakan `ghcr.io/openabdev/openab-codex:latest`. Image dapat menerima perubahan yang merusak kapan saja. Jika membutuhkan stabilitas, pin ke versi tertentu di Zeabur Dashboard → Layanan → Pengaturan (mis. `ghcr.io/openabdev/openab-codex:v0.7.1`). Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+        - **Tag image:** Template ini menggunakan versi tetap (`0.7.6`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-claude).
         - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
         - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna node (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan — izin diperbaiki secara otomatis saat boot.
 
@@ -544,10 +646,13 @@ spec:
         4. Buka **OAuth2 → URL Generator** → centang scope `bot` → centang izin: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
         5. Salin URL yang dihasilkan dan buka di browser untuk mengundang Bot ke server Anda
 
-        ### 2. Dapatkan Kunci API OpenAI
+        ### 2. Dapatkan Auth Token (pilih salah satu)
 
-        1. Buka [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-        2. Klik **Create new secret key** → salin kunci
+        | Metode | Cara mendapatkan |
+        |--------|-----------------|
+        | **Anthropic API Key** | Buka [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → salin kunci `sk-ant-api...` |
+        | **Zeabur AI Hub Token** | Buka [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → salin token |
+        | **Claude OAuth Token** | Jalankan `claude setup-token` di terminal (memerlukan langganan Claude Pro/Max/Team/Enterprise) → buka URL yang ditampilkan → otorisasi → tempel kode → salin token `sk-ant-oat...` yang dihasilkan |
 
         ### 3. Dapatkan ID Channel Discord
 
@@ -557,19 +662,32 @@ spec:
 
         ### 4. Deploy
 
-        Isi variabel template dan klik deploy. Layanan akan terhubung ke Discord secara otomatis.
+        Isi tiga variabel template dan klik deploy. Layanan akan terhubung ke Discord secara otomatis.
 
         ## Penggunaan
 
         - **@mention bot** di channel yang diizinkan untuk memulai percakapan
         - OpenAB membuat **thread** untuk percakapan multi-giliran — tidak perlu @mention untuk pesan selanjutnya
-        - Setiap thread dipetakan ke sesi Codex yang persisten (TTL 24 jam secara default)
+        - Setiap thread dipetakan ke sesi Claude yang persisten (TTL 24 jam secara default)
+
+        ## Integrasi GitHub (Opsional)
+
+        Agent dapat menggunakan `gh` (GitHub CLI) untuk review PR, membuat issue, komentar, merge, dll. Karena container tidak memiliki browser, autentikasi menggunakan device flow:
+
+        1. Minta bot di Discord: **"log in to GitHub"**
+        2. Bot akan membalas dengan kode satu kali dan URL (mis. `https://github.com/login/device`)
+        3. Buka URL di ponsel atau komputer, masukkan kode dan otorisasi
+        4. Bot mengonfirmasi login — `gh` sudah terautentikasi untuk sesi ini
+
+        Lihat [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) untuk detail teknis.
 
         ## Kustomisasi
 
         | File | Deskripsi |
         |------|-----------|
+        | `/home/node/CLAUDE.md` | Instruksi agent — Claude membacanya di setiap sesi |
         | `/home/node/.config/openab/config.toml` | Konfigurasi OpenAB (sessions, reactions, STT, dll.) |
+        | `/etc/claude-code/managed-settings.json` | Mode izin Claude Code |
 
         `config.toml` dibuat dari template bawaan saat boot pertama. Setelah itu, edit file secara langsung — variabel lingkungan hanya digunakan untuk pengaturan awal. Untuk mengembalikan ke default, hapus dan restart: `rm /home/node/.config/openab/config.toml`
 
@@ -583,4 +701,5 @@ spec:
 
         - [OpenAB GitHub](https://github.com/openabdev/openab)
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-        - [OpenAI Platform](https://platform.openai.com/)
+        - [Anthropic Console](https://console.anthropic.com/)
+        - [Zeabur AI Hub](https://zeabur.com/ai-hub)
