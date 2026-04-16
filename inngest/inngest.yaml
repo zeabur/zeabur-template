@@ -16,6 +16,10 @@ spec:
       type: DOMAIN
       name: Dashboard Domain
       description: Public domain for the Inngest dashboard and API (port 8288)
+    - key: CONNECT_DOMAIN
+      type: DOMAIN
+      name: Connect Gateway Domain
+      description: Public domain for the Inngest Connect WebSocket gateway (port 8289). SDK workers use this to establish persistent connections.
     - key: INNGEST_EVENT_KEY
       type: STRING
       name: Event Key
@@ -36,7 +40,7 @@ spec:
     | Service | Port | Purpose |
     |---------|------|---------|
     | Inngest Dashboard & API | 8288 (HTTP) | UI, event ingestion, REST API |
-    | Inngest Connect Gateway | 8289 (TCP) | WebSocket gateway for SDK workers |
+    | Inngest Connect Gateway | 8289 (HTTP/WSS) | WebSocket gateway for SDK workers |
     | PostgreSQL | 5432 | Durable state storage |
     | Redis | 6379 | Queue and cache |
 
@@ -64,7 +68,16 @@ spec:
     });
     ```
 
-    For Connect (persistent WebSocket workers), use the forwarded address shown in the **Networking** tab of the Inngest service (port 8289).
+    For Connect (persistent WebSocket workers), override the gateway URL with your Connect domain:
+
+    ```ts
+    import { connect } from "inngest/connect";
+
+    await connect({
+      apps: [{ client: inngest, functions: [myFn] }],
+      gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+    });
+    ```
 
     ## License
 
@@ -178,7 +191,11 @@ spec:
       dependencies:
         - postgresql
         - redis
-      domainKey: PUBLIC_DOMAIN
+      domainKey:
+        - port: web
+          variable: PUBLIC_DOMAIN
+        - port: connect
+          variable: CONNECT_DOMAIN
       spec:
         source:
           image: inngest/inngest:v1.17.9
@@ -191,9 +208,7 @@ spec:
             type: HTTP
           - id: connect
             port: 8289
-            type: TCP
-        portForwarding:
-          enabled: true
+            type: HTTP
         healthCheck:
           type: HTTP
           port: web
@@ -217,6 +232,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: Dashboard 網域
         description: Inngest 儀表板與 API 的公開網域（Port 8288）
+      - key: CONNECT_DOMAIN
+        name: Connect Gateway 網域
+        description: Inngest Connect WebSocket 閘道的公開網域（Port 8289），SDK Worker 用此建立持久連線。
       - key: INNGEST_EVENT_KEY
         name: Event Key
         description: "用於事件驗證的十六進位字串（例如 a1b2c3d4e5f6），必須為偶數位。"
@@ -235,7 +253,7 @@ localization:
       | 服務 | Port | 用途 |
       |------|------|------|
       | Inngest Dashboard & API | 8288 (HTTP) | 介面、事件接收、REST API |
-      | Inngest Connect Gateway | 8289 (TCP) | SDK Worker 的 WebSocket 閘道 |
+      | Inngest Connect Gateway | 8289 (HTTP/WSS) | SDK Worker 的 WebSocket 閘道 |
       | PostgreSQL | 5432 | 持久狀態儲存 |
       | Redis | 6379 | 佇列與快取 |
 
@@ -260,7 +278,14 @@ localization:
       });
       ```
 
-      Connect 模式（WebSocket Worker）請使用 Inngest 服務 **Networking** 頁籤中顯示的轉發位址（Port 8289）。
+      Connect 模式（WebSocket Worker）需覆蓋 gateway URL，指向你的 Connect 域名：
+
+      ```ts
+      await connect({
+        apps: [{ client: inngest, functions: [myFn] }],
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+      });
+      ```
 
       ## 授權
 
@@ -274,6 +299,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: Dashboard 域名
         description: Inngest 仪表板与 API 的公开域名（Port 8288）
+      - key: CONNECT_DOMAIN
+        name: Connect Gateway 域名
+        description: Inngest Connect WebSocket 网关的公开域名（Port 8289），SDK Worker 用此建立持久连接。
       - key: INNGEST_EVENT_KEY
         name: Event Key
         description: "用于事件认证的十六进制字符串（例如 a1b2c3d4e5f6），必须为偶数位。"
@@ -292,7 +320,7 @@ localization:
       | 服务 | Port | 用途 |
       |------|------|------|
       | Inngest Dashboard & API | 8288 (HTTP) | 界面、事件接收、REST API |
-      | Inngest Connect Gateway | 8289 (TCP) | SDK Worker 的 WebSocket 网关 |
+      | Inngest Connect Gateway | 8289 (HTTP/WSS) | SDK Worker 的 WebSocket 网关 |
       | PostgreSQL | 5432 | 持久状态存储 |
       | Redis | 6379 | 队列与缓存 |
 
@@ -317,7 +345,14 @@ localization:
       });
       ```
 
-      Connect 模式（WebSocket Worker）请使用 Inngest 服务 **Networking** 标签页中显示的转发地址（Port 8289）。
+      Connect 模式（WebSocket Worker）需覆盖 gateway URL，指向你的 Connect 域名：
+
+      ```ts
+      await connect({
+        apps: [{ client: inngest, functions: [myFn] }],
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+      });
+      ```
 
       ## 授权
 
@@ -331,6 +366,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: ダッシュボードドメイン
         description: Inngest ダッシュボードと API の公開ドメイン（ポート 8288）
+      - key: CONNECT_DOMAIN
+        name: Connect ゲートウェイドメイン
+        description: Inngest Connect WebSocket ゲートウェイの公開ドメイン（ポート 8289）。SDK ワーカーが持続接続に使用します。
       - key: INNGEST_EVENT_KEY
         name: イベントキー
         description: "イベント認証用の16進数文字列（例：a1b2c3d4e5f6）。偶数桁である必要があります。"
@@ -349,7 +387,7 @@ localization:
       | サービス | ポート | 用途 |
       |----------|--------|------|
       | Inngest Dashboard & API | 8288 (HTTP) | UI、イベント受信、REST API |
-      | Inngest Connect Gateway | 8289 (TCP) | SDK ワーカー用 WebSocket ゲートウェイ |
+      | Inngest Connect Gateway | 8289 (HTTP/WSS) | SDK ワーカー用 WebSocket ゲートウェイ |
       | PostgreSQL | 5432 | 永続状態ストレージ |
       | Redis | 6379 | キューとキャッシュ |
 
@@ -374,7 +412,14 @@ localization:
       });
       ```
 
-      Connect モード（WebSocket ワーカー）の場合は、Inngest サービスの **Networking** タブに表示される転送アドレス（ポート 8289）を使用してください。
+      Connect モード（WebSocket ワーカー）の場合は、Connect ドメインを `gatewayUrl` に指定してください：
+
+      ```ts
+      await connect({
+        apps: [{ client: inngest, functions: [myFn] }],
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+      });
+      ```
 
       ## ライセンス
 
@@ -388,6 +433,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: Dominio del Dashboard
         description: Dominio público para el dashboard y API de Inngest (puerto 8288)
+      - key: CONNECT_DOMAIN
+        name: Dominio del Gateway de Connect
+        description: Dominio público para el gateway WebSocket de Inngest Connect (puerto 8289). Los workers del SDK usan esto para establecer conexiones persistentes.
       - key: INNGEST_EVENT_KEY
         name: Clave de Evento
         description: "Cadena hexadecimal para autenticar eventos (ej. a1b2c3d4e5f6). Debe tener número par de caracteres."
@@ -406,7 +454,7 @@ localization:
       | Servicio | Puerto | Propósito |
       |----------|--------|-----------|
       | Inngest Dashboard & API | 8288 (HTTP) | UI, ingesta de eventos, REST API |
-      | Inngest Connect Gateway | 8289 (TCP) | Puerta de enlace WebSocket para workers SDK |
+      | Inngest Connect Gateway | 8289 (HTTP/WSS) | Puerta de enlace WebSocket para workers SDK |
       | PostgreSQL | 5432 | Almacenamiento de estado persistente |
       | Redis | 6379 | Cola y caché |
 
@@ -431,7 +479,14 @@ localization:
       });
       ```
 
-      Para el modo Connect (workers WebSocket), usa la dirección de reenvío que aparece en la pestaña **Networking** del servicio Inngest (puerto 8289).
+      Para el modo Connect (workers WebSocket), especifica tu dominio Connect en `gatewayUrl`:
+
+      ```ts
+      await connect({
+        apps: [{ client: inngest, functions: [myFn] }],
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+      });
+      ```
 
       ## Licencia
 
@@ -445,6 +500,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: Domain Dashboard
         description: Domain publik untuk dashboard dan API Inngest (port 8288)
+      - key: CONNECT_DOMAIN
+        name: Domain Gateway Connect
+        description: Domain publik untuk gateway WebSocket Inngest Connect (port 8289). Worker SDK menggunakan ini untuk membuat koneksi persisten.
       - key: INNGEST_EVENT_KEY
         name: Event Key
         description: "String heksadesimal untuk autentikasi event (contoh: a1b2c3d4e5f6). Harus berjumlah karakter genap."
@@ -463,7 +521,7 @@ localization:
       | Layanan | Port | Fungsi |
       |---------|------|--------|
       | Inngest Dashboard & API | 8288 (HTTP) | UI, penerimaan event, REST API |
-      | Inngest Connect Gateway | 8289 (TCP) | Gateway WebSocket untuk SDK worker |
+      | Inngest Connect Gateway | 8289 (HTTP/WSS) | Gateway WebSocket untuk SDK worker |
       | PostgreSQL | 5432 | Penyimpanan state persisten |
       | Redis | 6379 | Antrean dan cache |
 
@@ -488,7 +546,14 @@ localization:
       });
       ```
 
-      Untuk mode Connect (WebSocket worker), gunakan alamat yang ditampilkan di tab **Networking** layanan Inngest (port 8289).
+      Untuk mode Connect (WebSocket worker), tentukan domain Connect di `gatewayUrl`:
+
+      ```ts
+      await connect({
+        apps: [{ client: inngest, functions: [myFn] }],
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+      });
+      ```
 
       ## Lisensi
 
