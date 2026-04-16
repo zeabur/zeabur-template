@@ -1,0 +1,137 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: New API
+spec:
+    description: 基于 One API 的二次开发版本，支持 Midjourney
+    icon: https://i.imgur.com/3pRJ59s.png
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Domain
+          description: What is the domain of your New API?
+    tags:
+        - Tool
+        - API
+    readme: |-
+        # New API
+
+        本项目为开源项目，在 [One API](https://github.com/songquanpeng/one-api) 的基础上进行二次开发，是一个次世代 LLM 网关和 AI 资产管理系统。使用者必须在遵循 OpenAI 的使用条款以及法律法规的情况下使用，不得用于非法用途。
+
+        ## 部署
+
+        点击右上角「Deploy」按钮，填入域名后即可部署。部署完成后访问 `https://<your-domain>.zeabur.app` 进入管理面板。
+
+        ## 默认管理员账号
+
+        - 用户名：`root`
+        - 密码：`123456`
+
+        ⚠️ 首次登录后请立即修改密码。自行注册的账号默认为普通用户，需管理员在后台手动提升权限。
+
+        ## 应用架构
+
+        - **MySQL** — 数据存储
+        - **New API** — API 管理面板与代理服务（端口 3000）
+
+        ## 主要变更
+
+        此分叉版本的主要变更如下：
+
+        - 全新的 UI 界面
+        - 添加 Midjourney-Proxy(Plus) 接口支持
+        - 支持在线充值功能（易支付）
+        - 支持用 key 查询使用额度
+        - 渠道显示已使用额度，支持指定组织访问
+        - 兼容原版 One API 的数据库
+        - 支持模型按次数收费
+        - 支持渠道加权随机
+        - 数据看板
+        - 可设置令牌能调用的模型
+        - 支持 Telegram 授权登录
+
+        ## 模型支持
+
+        支持 OpenAI、Azure、Anthropic Claude、Google Gemini、DeepSeek、Ollama、智谱 GLM-4v、零一万物等主流模型，统一转为 OpenAI 兼容 API。同时支持 Midjourney-Proxy(Plus) 图像生成接口。
+
+        更多信息请参考 [New API 文档](https://docs.newapi.pro/en/docs)。
+    services:
+        - name: MySQL
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/mysql.svg
+          template: PREBUILT
+          spec:
+            source:
+                image: mysql:8.0.33
+            ports:
+                - id: database
+                  port: 3306
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/mysql
+            instructions:
+                - title: Command to connect to your MySQL
+                  content: mysqlsh --sql --host=${PORT_FORWARDED_HOSTNAME} --port=${DATABASE_PORT_FORWARDED_PORT} --user=${MYSQL_USERNAME} --password=${MYSQL_PASSWORD} --schema=${MYSQL_DATABASE}
+                - title: MySQL username
+                  content: ${MYSQL_USERNAME}
+                - title: MySQL password
+                  content: ${MYSQL_PASSWORD}
+                - title: MySQL database
+                  content: ${MYSQL_DATABASE}
+                - title: MySQL host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: MySQL port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                MYSQL_DATABASE:
+                    default: zeabur
+                    expose: true
+                MYSQL_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                MYSQL_PASSWORD:
+                    default: ${MYSQL_ROOT_PASSWORD}
+                    expose: true
+                MYSQL_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                MYSQL_ROOT_PASSWORD:
+                    default: ${PASSWORD}
+                MYSQL_USERNAME:
+                    default: root
+                    expose: true
+            configs:
+                - path: /etc/my.cnf
+                  template: |
+                    [mysqld]
+                    default-authentication-plugin=mysql_native_password
+                    skip-host-cache
+                    skip-name-resolve
+                    datadir=/var/lib/mysql
+                    socket=/var/run/mysqld/mysqld.sock
+                    secure-file-priv=/var/lib/mysql-files
+                    user=mysql
+                    max_allowed_packet=10M
+
+                    pid-file=/var/run/mysqld/mysqld.pid
+                    [client]
+                    socket=/var/run/mysqld/mysqld.sock
+
+                    !includedir /etc/mysql/conf.d/
+                  permission: null
+                  envsubst: null
+        - name: New API
+          icon: https://i.imgur.com/3pRJ59s.png
+          template: PREBUILT
+          spec:
+            source:
+                image: calciumion/new-api:latest
+            ports:
+                - id: web
+                  port: 3000
+                  type: HTTP
+            env:
+                SQL_DSN:
+                    default: ${MYSQL_USERNAME}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DATABASE}
+          domainKey: PUBLIC_DOMAIN

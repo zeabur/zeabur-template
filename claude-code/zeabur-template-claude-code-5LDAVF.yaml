@@ -147,28 +147,27 @@ spec:
               #!/bin/sh
               chown -R node:node /home/node
 
-              # Install Claude Code on first boot (persisted in volume)
-              if [ ! -f /home/node/.local/bin/claude ]; then
-                runuser -u node -- bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
-              fi
-
-              # Homebrew setup (persisted in volume via symlink)
-              mkdir -p /home/node/.linuxbrew /home/linuxbrew
-              ln -sf /home/node/.linuxbrew /home/linuxbrew/.linuxbrew
+              # Homebrew - seed from image layer into volume on first boot (then live in volume so user installs persist)
               touch /.dockerenv
-              if [ ! -f /home/node/.linuxbrew/bin/brew ]; then
-                NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+              if [ ! -f /home/node/.linuxbrew/bin/brew ] && [ -f /home/linuxbrew/.linuxbrew/bin/brew ] && [ ! -L /home/linuxbrew/.linuxbrew ]; then
+                echo "[startup] Seeding brew from image into volume..."
+                mkdir -p /home/node/.linuxbrew
+                cp -a /home/linuxbrew/.linuxbrew/. /home/node/.linuxbrew/
+                rm -rf /home/linuxbrew/.linuxbrew
               fi
-              chown -R node:node /home/node/.linuxbrew /home/linuxbrew/.linuxbrew /home/node/.cache 2>/dev/null
-              # Pre-install channel plugins into ~/.claude/plugins/
+              mkdir -p /home/linuxbrew
+              if [ ! -L /home/linuxbrew/.linuxbrew ]; then
+                rm -rf /home/linuxbrew/.linuxbrew 2>/dev/null
+                ln -s /home/node/.linuxbrew /home/linuxbrew/.linuxbrew
+              fi
+              chown -R node:node /home/node/.linuxbrew 2>/dev/null
+
+              # Claude Code channel plugins - seed from image layer into volume on first boot
               PLUGINS_DIR=/home/node/.claude/plugins
               if [ ! -d "$PLUGINS_DIR/marketplaces/claude-plugins-official" ]; then
-                echo "Setting up channel plugins..."
+                echo "[startup] Seeding plugin marketplace from image..."
                 mkdir -p "$PLUGINS_DIR/marketplaces"
-                chown -R node:node /home/node/.claude
-                runuser -u node -- git clone --depth 1 \
-                  https://github.com/anthropics/claude-plugins-official.git \
-                  "$PLUGINS_DIR/marketplaces/claude-plugins-official"
+                cp -a /opt/claude-plugins-official "$PLUGINS_DIR/marketplaces/claude-plugins-official"
                 NOW=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
                 # Register marketplace
                 if [ ! -f "$PLUGINS_DIR/known_marketplaces.json" ]; then
@@ -203,12 +202,6 @@ spec:
                   fi
                 done
                 chown -R node:node "$PLUGINS_DIR"
-                for plugin in telegram discord fakechat; do
-                  cache_dir=$(find "$PLUGINS_DIR/cache/claude-plugins-official/$plugin" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | head -1)
-                  if [ -n "$cache_dir" ] && [ -f "$cache_dir/package.json" ]; then
-                    (cd "$cache_dir" && runuser -u node -- bun install --frozen-lockfile 2>/dev/null || runuser -u node -- bun install)
-                  fi
-                done
               fi
 
               # Ensure PATH includes claude, npm-global, and brew in login shell

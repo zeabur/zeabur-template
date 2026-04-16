@@ -1,0 +1,413 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Hermes Agent
+spec:
+  description: |
+    Hermes Agent by NousResearch — an autonomous AI agent with persistent memory, tool use, cron scheduling, and multi-platform messaging (Telegram, Discord, Slack). Includes an OpenAI-compatible API server.
+  icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/assets/banner.png
+  tags:
+    - AI
+    - Agent
+    - Chatbot
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: OPENROUTER_API_KEY
+      type: STRING
+      name: OpenRouter API Key
+      description: "API key from openrouter.ai — provides access to Claude, GPT, Gemini, and 200+ models through one key."
+    - key: TELEGRAM_BOT_TOKEN
+      type: STRING
+      name: Telegram Bot Token (optional)
+      description: "Bot token from @BotFather on Telegram. Leave empty to skip Telegram integration."
+    - key: TELEGRAM_ALLOWED_USERS
+      type: STRING
+      name: Telegram Allowed Users
+      description: "Comma-separated Telegram user IDs (required if bot token is set). Get your ID from @userinfobot on Telegram."
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: API Server Domain
+      description: "Domain for the OpenAI-compatible API server."
+  readme: |
+    # Hermes Agent
+
+    [Hermes Agent](https://github.com/NousResearch/hermes-agent) is an autonomous AI agent built by [Nous Research](https://nousresearch.com/). It features persistent memory, 40+ built-in tools, cron scheduling, and multi-platform messaging support.
+
+    ## Quick Start
+
+    1. **Deploy this template** — fill in your OpenRouter API key (required) and optionally a Telegram bot token.
+    2. **Access the API server** — after deployment, your instance exposes an OpenAI-compatible endpoint at your domain.
+    3. **Use the API** — send requests with your auto-generated API key (shown in the service instructions):
+
+    ```bash
+    curl https://YOUR_DOMAIN/v1/chat/completions \
+      -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
+    ```
+
+    ## Messaging Platforms
+
+    **Telegram** is configured at deploy time as an example. You can add other platforms (Discord, Slack, WhatsApp, etc.) by setting the corresponding environment variables after deployment.
+
+    See the official [Messaging Gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) for setup instructions for each platform.
+
+    ## Configuration
+
+    - **LLM providers, tools, and all other settings** — refer to the official [Configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) and [Environment Variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+    - **Edit config files** via the Zeabur Files tab at `/opt/data/`:
+      - `config.yaml` — model selection, terminal backend, platform settings
+      - `SOUL.md` — agent personality and system prompt
+      - `.env` — all environment variables
+    - After editing, restart the service to apply changes.
+
+    ## Notes
+
+    - The Docker image is ~4.5 GB (includes Playwright + Chromium for browser automation). First deployment may take several minutes to pull the image.
+    - First boot may take 30–60 seconds as the agent initializes config files and syncs skills.
+    - Using browser tools may cause high memory usage — if you encounter OOM (out of memory) errors, consider upgrading to a larger instance (recommended 4 vCPU / 8 GB RAM).
+
+    ## License
+
+    Hermes Agent is licensed under the [MIT License](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) by Nous Research.
+  services:
+    - name: hermes-agent
+      icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/assets/banner.png
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: nousresearch/hermes-agent:v2026.4.8
+          command:
+            - /opt/hermes/docker/entrypoint.sh
+            - gateway
+        ports:
+          - id: web
+            port: 5000
+            type: HTTP
+        volumes:
+          - id: data
+            dir: /opt/data
+        instructions:
+          - title: API Server URL
+            content: ${ZEABUR_WEB_URL}/v1/chat/completions
+          - title: API Server Key
+            content: ${API_SERVER_KEY}
+        env:
+          OPENROUTER_API_KEY:
+            default: ${OPENROUTER_API_KEY}
+          TELEGRAM_BOT_TOKEN:
+            default: ${TELEGRAM_BOT_TOKEN}
+          TELEGRAM_ALLOWED_USERS:
+            default: ${TELEGRAM_ALLOWED_USERS}
+          API_SERVER_ENABLED:
+            default: "true"
+            readonly: true
+          API_SERVER_PORT:
+            default: "5000"
+            readonly: true
+          API_SERVER_HOST:
+            default: "0.0.0.0"
+            readonly: true
+          API_SERVER_KEY:
+            default: ${PASSWORD}
+            expose: true
+            readonly: true
+      domainKey: PUBLIC_DOMAIN
+localization:
+  zh-TW:
+    description: |
+      Hermes Agent 由 NousResearch 開發，是一款具備持久記憶、工具使用、排程任務及多平台訊息整合（Telegram、Discord、Slack）的自主 AI 代理。內建 OpenAI 相容 API 伺服器。
+    variables:
+      - key: OPENROUTER_API_KEY
+        name: OpenRouter API 金鑰
+        description: "從 openrouter.ai 取得的 API 金鑰，可存取 Claude、GPT、Gemini 等 200 多種模型。"
+      - key: TELEGRAM_BOT_TOKEN
+        name: Telegram Bot Token（選填）
+        description: "從 Telegram @BotFather 取得的 Bot Token。留空則跳過 Telegram 整合。"
+      - key: TELEGRAM_ALLOWED_USERS
+        name: Telegram 允許的使用者
+        description: "以逗號分隔的 Telegram 使用者 ID（設定了 Bot Token 則為必填）。可透過 @userinfobot 取得 ID。"
+      - key: PUBLIC_DOMAIN
+        name: API 伺服器網域
+        description: "OpenAI 相容 API 伺服器的網域。"
+    readme: |
+      # Hermes Agent
+
+      [Hermes Agent](https://github.com/NousResearch/hermes-agent) 是由 [Nous Research](https://nousresearch.com/) 開發的自主 AI 代理，具備持久記憶、40 多種內建工具、排程任務及多平台訊息整合。
+
+      ## 快速開始
+
+      1. **部署此模板** — 填入 OpenRouter API 金鑰（必填），以及選填的 Telegram Bot Token。
+      2. **存取 API 伺服器** — 部署完成後，您的實例會在網域上提供 OpenAI 相容端點。
+      3. **使用 API** — 使用自動產生的 API 金鑰（顯示於服務說明中）發送請求：
+
+      ```bash
+      curl https://YOUR_DOMAIN/v1/chat/completions \
+        -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
+      ```
+
+      ## 訊息平台
+
+      部署時預設設定 **Telegram** 作為範例。您可以在部署後透過設定對應的環境變數來新增其他平台（Discord、Slack、WhatsApp 等）。
+
+      詳見官方 [Messaging Gateway 指南](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)。
+
+      ## 設定
+
+      - **LLM 供應商、工具及其他設定** — 請參閱官方 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)和[環境變數參考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
+      - 透過 Zeabur Files 分頁編輯 `/opt/data/` 中的設定檔：
+        - `config.yaml` — 模型選擇、終端後端、平台設定
+        - `SOUL.md` — 代理人格與系統提示詞
+        - `.env` — 所有環境變數
+      - 編輯後需重啟服務以套用變更。
+
+      ## 注意事項
+
+      - Docker 映像檔約 4.5 GB（含 Playwright + Chromium 瀏覽器自動化工具）。首次部署拉取映像檔可能需要數分鐘。
+      - 首次啟動需要 30-60 秒來初始化設定檔和同步技能。
+      - 使用瀏覽器工具可能導致記憶體用量過高，若遇到 OOM（記憶體不足）錯誤，建議升級至較大的實例（建議 4 vCPU / 8 GB RAM）。
+
+      ## 授權
+
+      Hermes Agent 由 Nous Research 以 [MIT 授權條款](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) 釋出。
+  zh-CN:
+    description: |
+      Hermes Agent 由 NousResearch 开发，是一款具备持久记忆、工具使用、定时任务及多平台消息集成（Telegram、Discord、Slack）的自主 AI 代理。内置 OpenAI 兼容 API 服务器。
+    variables:
+      - key: OPENROUTER_API_KEY
+        name: OpenRouter API 密钥
+        description: "从 openrouter.ai 获取的 API 密钥，可访问 Claude、GPT、Gemini 等 200 多种模型。"
+      - key: TELEGRAM_BOT_TOKEN
+        name: Telegram Bot Token（可选）
+        description: "从 Telegram @BotFather 获取的 Bot Token。留空则跳过 Telegram 集成。"
+      - key: TELEGRAM_ALLOWED_USERS
+        name: Telegram 允许的用户
+        description: "以逗号分隔的 Telegram 用户 ID（设置了 Bot Token 则为必填）。可通过 @userinfobot 获取 ID。"
+      - key: PUBLIC_DOMAIN
+        name: API 服务器域名
+        description: "OpenAI 兼容 API 服务器的域名。"
+    readme: |
+      # Hermes Agent
+
+      [Hermes Agent](https://github.com/NousResearch/hermes-agent) 是由 [Nous Research](https://nousresearch.com/) 开发的自主 AI 代理，具备持久记忆、40 多种内置工具、定时任务及多平台消息集成。
+
+      ## 快速开始
+
+      1. **部署此模板** — 填入 OpenRouter API 密钥（必填），以及可选的 Telegram Bot Token。
+      2. **访问 API 服务器** — 部署完成后，您的实例会在域名上提供 OpenAI 兼容端点。
+      3. **使用 API** — 使用自动生成的 API 密钥（显示在服务说明中）发送请求：
+
+      ```bash
+      curl https://YOUR_DOMAIN/v1/chat/completions \
+        -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
+      ```
+
+      ## 消息平台
+
+      部署时默认设置 **Telegram** 作为示例。您可以在部署后通过设置对应的环境变量来添加其他平台（Discord、Slack、WhatsApp 等）。
+
+      详见官方 [Messaging Gateway 指南](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)。
+
+      ## 配置
+
+      - **LLM 供应商、工具及其他设置** — 请参阅官方 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)和[环境变量参考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
+      - 通过 Zeabur Files 标签页编辑 `/opt/data/` 中的配置文件：
+        - `config.yaml` — 模型选择、终端后端、平台设置
+        - `SOUL.md` — 代理人设与系统提示词
+        - `.env` — 所有环境变量
+      - 编辑后需重启服务以应用更改。
+
+      ## 注意事项
+
+      - Docker 镜像约 4.5 GB（含 Playwright + Chromium 浏览器自动化工具）。首次部署拉取镜像可能需要数分钟。
+      - 首次启动需要 30-60 秒来初始化配置文件和同步技能。
+      - 使用浏览器工具可能导致内存占用过高，若遇到 OOM（内存不足）错误，建议升级至更大的实例（推荐 4 vCPU / 8 GB RAM）。
+
+      ## 许可证
+
+      Hermes Agent 由 Nous Research 以 [MIT 许可证](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) 发布。
+  ja-JP:
+    description: |
+      Hermes Agent（NousResearch 開発）— 永続メモリ、ツール使用、スケジュール実行、マルチプラットフォームメッセージング（Telegram、Discord、Slack）を備えた自律型 AI エージェント。OpenAI 互換 API サーバー内蔵。
+    variables:
+      - key: OPENROUTER_API_KEY
+        name: OpenRouter API キー
+        description: "openrouter.ai から取得した API キー。Claude、GPT、Gemini など 200 以上のモデルにアクセスできます。"
+      - key: TELEGRAM_BOT_TOKEN
+        name: Telegram Bot トークン（任意）
+        description: "Telegram の @BotFather から取得した Bot トークン。空欄にすると Telegram 連携をスキップします。"
+      - key: TELEGRAM_ALLOWED_USERS
+        name: Telegram 許可ユーザー
+        description: "カンマ区切りの Telegram ユーザー ID（Bot トークンを設定した場合は必須）。@userinfobot で ID を確認できます。"
+      - key: PUBLIC_DOMAIN
+        name: API サーバードメイン
+        description: "OpenAI 互換 API サーバーのドメイン。"
+    readme: |
+      # Hermes Agent
+
+      [Hermes Agent](https://github.com/NousResearch/hermes-agent) は [Nous Research](https://nousresearch.com/) が開発した自律型 AI エージェントです。永続メモリ、40 以上の組み込みツール、スケジュール実行、マルチプラットフォームメッセージングに対応しています。
+
+      ## クイックスタート
+
+      1. **このテンプレートをデプロイ** — OpenRouter API キー（必須）と、任意で Telegram Bot トークンを入力します。
+      2. **API サーバーにアクセス** — デプロイ後、ドメインに OpenAI 互換エンドポイントが公開されます。
+      3. **API を使用** — 自動生成された API キー（サービス説明に表示）でリクエストを送信：
+
+      ```bash
+      curl https://YOUR_DOMAIN/v1/chat/completions \
+        -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
+      ```
+
+      ## メッセージプラットフォーム
+
+      デプロイ時に **Telegram** を例として設定します。デプロイ後に環境変数を設定して他のプラットフォーム（Discord、Slack、WhatsApp など）を追加できます。
+
+      詳細は公式 [Messaging Gateway ガイド](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)をご覧ください。
+
+      ## 設定
+
+      - **LLM プロバイダー、ツール、その他の設定** — 公式 [Configuration ガイド](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)と[環境変数リファレンス](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)を参照してください。
+      - Zeabur の Files タブで `/opt/data/` 内の設定ファイルを編集：
+        - `config.yaml` — モデル選択、ターミナルバックエンド、プラットフォーム設定
+        - `SOUL.md` — エージェントの性格とシステムプロンプト
+        - `.env` — すべての環境変数
+      - 編集後、サービスを再起動して変更を適用してください。
+
+      ## 注意事項
+
+      - Docker イメージは約 4.5 GB（Playwright + Chromium ブラウザ自動化ツール含む）。初回デプロイ時のイメージ取得に数分かかる場合があります。
+      - 初回起動時、設定ファイルの初期化とスキル同期に 30〜60 秒かかります。
+      - ブラウザツールの使用によりメモリ使用量が増加する場合があります。OOM（メモリ不足）エラーが発生した場合は、より大きなインスタンスへのアップグレードをお勧めします（推奨 4 vCPU / 8 GB RAM）。
+
+      ## ライセンス
+
+      Hermes Agent は Nous Research により [MIT ライセンス](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE)で公開されています。
+  es-ES:
+    description: |
+      Hermes Agent de NousResearch — un agente de IA autónomo con memoria persistente, uso de herramientas, programación de tareas y mensajería multiplataforma (Telegram, Discord, Slack). Incluye un servidor API compatible con OpenAI.
+    variables:
+      - key: OPENROUTER_API_KEY
+        name: Clave API de OpenRouter
+        description: "Clave API de openrouter.ai — proporciona acceso a Claude, GPT, Gemini y más de 200 modelos con una sola clave."
+      - key: TELEGRAM_BOT_TOKEN
+        name: Token del Bot de Telegram (opcional)
+        description: "Token del bot obtenido de @BotFather en Telegram. Dejar vacío para omitir la integración con Telegram."
+      - key: TELEGRAM_ALLOWED_USERS
+        name: Usuarios permitidos en Telegram
+        description: "IDs de usuario de Telegram separados por comas (obligatorio si se configura el token del bot). Obtenga su ID en @userinfobot."
+      - key: PUBLIC_DOMAIN
+        name: Dominio del servidor API
+        description: "Dominio para el servidor API compatible con OpenAI."
+    readme: |
+      # Hermes Agent
+
+      [Hermes Agent](https://github.com/NousResearch/hermes-agent) es un agente de IA autónomo desarrollado por [Nous Research](https://nousresearch.com/). Cuenta con memoria persistente, más de 40 herramientas integradas, programación de tareas y soporte de mensajería multiplataforma.
+
+      ## Inicio rápido
+
+      1. **Despliegue esta plantilla** — introduzca su clave API de OpenRouter (obligatoria) y opcionalmente un token de bot de Telegram.
+      2. **Acceda al servidor API** — tras el despliegue, su instancia expone un endpoint compatible con OpenAI en su dominio.
+      3. **Use la API** — envíe solicitudes con su clave API generada automáticamente (mostrada en las instrucciones del servicio):
+
+      ```bash
+      curl https://YOUR_DOMAIN/v1/chat/completions \
+        -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
+      ```
+
+      ## Plataformas de mensajería
+
+      **Telegram** se configura durante el despliegue como ejemplo. Puede añadir otras plataformas (Discord, Slack, WhatsApp, etc.) configurando las variables de entorno correspondientes después del despliegue.
+
+      Consulte la guía oficial de [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) para instrucciones de configuración de cada plataforma.
+
+      ## Configuración
+
+      - **Proveedores de LLM, herramientas y demás ajustes** — consulte la guía oficial de [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) y la [referencia de variables de entorno](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+      - Edite los archivos de configuración en `/opt/data/` a través de la pestaña Files de Zeabur:
+        - `config.yaml` — selección de modelo, backend de terminal, configuración de plataformas
+        - `SOUL.md` — personalidad del agente y prompt del sistema
+        - `.env` — todas las variables de entorno
+      - Después de editar, reinicie el servicio para aplicar los cambios.
+
+      ## Notas
+
+      - La imagen Docker es de ~4.5 GB (incluye Playwright + Chromium para automatización del navegador). El primer despliegue puede tardar varios minutos en descargar la imagen.
+      - El primer arranque tarda 30-60 segundos en inicializar los archivos de configuración y sincronizar las habilidades.
+      - El uso de herramientas del navegador puede causar un alto consumo de memoria — si encuentra errores OOM (memoria insuficiente), considere actualizar a una instancia mayor (recomendado 4 vCPU / 8 GB RAM).
+
+      ## Licencia
+
+      Hermes Agent está licenciado bajo la [Licencia MIT](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) por Nous Research.
+  id-ID:
+    description: |
+      Hermes Agent oleh NousResearch — agen AI otonom dengan memori persisten, penggunaan alat, penjadwalan tugas, dan pesan multi-platform (Telegram, Discord, Slack). Dilengkapi server API yang kompatibel dengan OpenAI.
+    variables:
+      - key: OPENROUTER_API_KEY
+        name: Kunci API OpenRouter
+        description: "Kunci API dari openrouter.ai — menyediakan akses ke Claude, GPT, Gemini, dan 200+ model melalui satu kunci."
+      - key: TELEGRAM_BOT_TOKEN
+        name: Token Bot Telegram (opsional)
+        description: "Token bot dari @BotFather di Telegram. Kosongkan untuk melewati integrasi Telegram."
+      - key: TELEGRAM_ALLOWED_USERS
+        name: Pengguna Telegram yang Diizinkan
+        description: "ID pengguna Telegram dipisahkan koma (wajib jika token bot diisi). Dapatkan ID Anda dari @userinfobot."
+      - key: PUBLIC_DOMAIN
+        name: Domain Server API
+        description: "Domain untuk server API yang kompatibel dengan OpenAI."
+    readme: |
+      # Hermes Agent
+
+      [Hermes Agent](https://github.com/NousResearch/hermes-agent) adalah agen AI otonom yang dikembangkan oleh [Nous Research](https://nousresearch.com/). Dilengkapi dengan memori persisten, 40+ alat bawaan, penjadwalan tugas, dan dukungan pesan multi-platform.
+
+      ## Mulai Cepat
+
+      1. **Deploy template ini** — masukkan kunci API OpenRouter (wajib) dan opsional token bot Telegram.
+      2. **Akses server API** — setelah deployment, instance Anda menyediakan endpoint yang kompatibel dengan OpenAI di domain Anda.
+      3. **Gunakan API** — kirim permintaan dengan kunci API yang dibuat secara otomatis (ditampilkan di instruksi layanan):
+
+      ```bash
+      curl https://YOUR_DOMAIN/v1/chat/completions \
+        -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
+        -H "Content-Type: application/json" \
+        -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
+      ```
+
+      ## Platform Pesan
+
+      **Telegram** dikonfigurasi saat deployment sebagai contoh. Anda dapat menambahkan platform lain (Discord, Slack, WhatsApp, dll.) dengan mengatur variabel lingkungan yang sesuai setelah deployment.
+
+      Lihat panduan resmi [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) untuk instruksi pengaturan setiap platform.
+
+      ## Konfigurasi
+
+      - **Penyedia LLM, alat, dan pengaturan lainnya** — lihat panduan resmi [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) dan [referensi variabel lingkungan](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+      - Edit file konfigurasi di `/opt/data/` melalui tab Files Zeabur:
+        - `config.yaml` — pemilihan model, backend terminal, pengaturan platform
+        - `SOUL.md` — kepribadian agen dan system prompt
+        - `.env` — semua variabel lingkungan
+      - Setelah mengedit, restart layanan untuk menerapkan perubahan.
+
+      ## Catatan
+
+      - Image Docker berukuran ~4.5 GB (termasuk Playwright + Chromium untuk otomatisasi browser). Deployment pertama mungkin memerlukan beberapa menit untuk mengunduh image.
+      - Boot pertama memerlukan 30-60 detik untuk menginisialisasi file konfigurasi dan menyinkronkan skill.
+      - Penggunaan alat browser dapat menyebabkan penggunaan memori yang tinggi — jika mengalami error OOM (kehabisan memori), pertimbangkan untuk meningkatkan ke instance yang lebih besar (disarankan 4 vCPU / 8 GB RAM).
+
+      ## Lisensi
+
+      Hermes Agent dilisensikan di bawah [Lisensi MIT](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) oleh Nous Research.

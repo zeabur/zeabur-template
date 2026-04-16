@@ -33,6 +33,25 @@ RUN curl -fsSL https://bun.sh/install | bash && \
     cp /root/.bun/bin/bunx /usr/local/bin/bunx && \
     chmod +x /usr/local/bin/bun /usr/local/bin/bunx
 
+# Claude Code - installed outside /home/node so it survives volume mount at runtime
+RUN HOME=/opt/claude-home bash -c 'curl -fsSL https://claude.ai/install.sh | bash' && \
+    ln -sf /opt/claude-home/.local/bin/claude /usr/local/bin/claude && \
+    /usr/local/bin/claude --version
+
+# Homebrew - shallow clone at build time; startup.sh seeds it into volume on first boot
+RUN mkdir -p /home/linuxbrew/.linuxbrew && \
+    git clone --depth=1 https://github.com/Homebrew/brew.git /home/linuxbrew/.linuxbrew/Homebrew && \
+    mkdir -p /home/linuxbrew/.linuxbrew/bin && \
+    ln -s /home/linuxbrew/.linuxbrew/Homebrew/bin/brew /home/linuxbrew/.linuxbrew/bin/brew && \
+    chown -R node:node /home/linuxbrew
+
+# Claude plugins marketplace - preclone + preinstall plugin deps at build time
+RUN git clone --depth=1 https://github.com/anthropics/claude-plugins-official.git /opt/claude-plugins-official && \
+    for plugin in telegram discord fakechat; do \
+      src=/opt/claude-plugins-official/external_plugins/$plugin; \
+      if [ -f "$src/package.json" ]; then (cd "$src" && /usr/local/bin/bun install); fi; \
+    done
+
 RUN mkdir -p /home/node && chown node:node /home/node
 
 ENV HOME=/home/node
