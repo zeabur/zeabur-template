@@ -55,6 +55,12 @@ spec:
 
     Use one value for **Event Key** and another for **Signing Key**.
 
+    ## ⚠️ Security Warning
+
+    Inngest self-hosted has **no built-in UI authentication**. Anyone who can reach your Dashboard domain can view all apps, functions, and event history without logging in.
+
+    **Recommended:** restrict access at the network level — do not expose the Dashboard domain publicly unless your deployment is behind a VPN or access control layer. The Connect Gateway domain (port 8289) must remain publicly accessible for SDK workers to connect.
+
     ## Connecting SDK Workers
 
     After deployment, configure your Inngest SDK to point to your self-hosted instance:
@@ -275,6 +281,12 @@ localization:
 
       一組用於 **Event Key**，另一組用於 **Signing Key**。
 
+      ## ⚠️ 安全警告
+
+      Inngest self-hosted **沒有內建 UI 登入機制**。任何能連到 Dashboard 域名的人都可以在不登入的情況下查看所有 app、函式和事件記錄。
+
+      **建議：** 在網路層面限制存取，不要將 Dashboard 域名公開到網路，除非你的部署已在 VPN 或存取控制層之後。Connect Gateway 域名（port 8289）需保持公開，供 SDK Worker 連線。
+
       ## 連接 SDK Worker
 
       ```ts
@@ -349,6 +361,12 @@ localization:
       ```
 
       一个用于 **Event Key**，另一个用于 **Signing Key**。
+
+      ## ⚠️ 安全警告
+
+      Inngest self-hosted **没有内建 UI 登录机制**。任何能访问 Dashboard 域名的人都可以在不登录的情况下查看所有 app、函数和事件记录。
+
+      **建议：** 在网络层面限制访问，不要将 Dashboard 域名公开到网络，除非你的部署已在 VPN 或访问控制层之后。Connect Gateway 域名（port 8289）需保持公开，供 SDK Worker 连接。
 
       ## 连接 SDK Worker
 
@@ -425,6 +443,12 @@ localization:
 
       1つを **Event Key**、もう1つを **Signing Key** として使用してください。
 
+      ## ⚠️ セキュリティ警告
+
+      Inngest self-hosted には**UIのログイン機能が内蔵されていません**。Dashboardドメインにアクセスできる人は誰でも、ログインなしですべてのapp、関数、イベント履歴を閲覧できます。
+
+      **推奨：** ネットワークレベルでアクセスを制限し、VPNまたはアクセス制御層の後ろにない限り、Dashboardドメインを公開しないでください。SDK ワーカーが接続するためにConnect Gatewayドメイン（ポート8289）は公開が必要です。
+
       ## SDK ワーカーの接続
 
       ```ts
@@ -500,6 +524,12 @@ localization:
 
       Usa una para **Event Key** y otra para **Signing Key**.
 
+      ## ⚠️ Advertencia de seguridad
+
+      Inngest self-hosted **no tiene autenticación de UI integrada**. Cualquier persona que pueda acceder al dominio del Dashboard puede ver todas las apps, funciones e historial de eventos sin iniciar sesión.
+
+      **Recomendado:** restringe el acceso a nivel de red — no expongas el dominio del Dashboard públicamente a menos que tu despliegue esté detrás de una VPN o capa de control de acceso. El dominio del Connect Gateway (puerto 8289) debe permanecer público para que los workers del SDK puedan conectarse.
+
       ## Conectar workers SDK
 
       ```ts
@@ -574,6 +604,12 @@ localization:
       ```
 
       Gunakan satu untuk **Event Key** dan satu lagi untuk **Signing Key**.
+
+      ## ⚠️ Peringatan Keamanan
+
+      Inngest self-hosted **tidak memiliki autentikasi UI bawaan**. Siapa pun yang dapat mengakses domain Dashboard dapat melihat semua app, fungsi, dan riwayat event tanpa login.
+
+      **Disarankan:** batasi akses di level jaringan — jangan ekspos domain Dashboard secara publik kecuali deployment Anda berada di belakang VPN atau lapisan kontrol akses. Domain Connect Gateway (port 8289) harus tetap publik agar SDK worker dapat terhubung.
 
       ## Menghubungkan SDK Worker
 
