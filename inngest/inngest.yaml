@@ -75,7 +75,7 @@ spec:
 
     await connect({
       apps: [{ client: inngest, functions: [myFn] }],
-      gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+      gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
     });
     ```
 
@@ -283,7 +283,7 @@ localization:
       ```ts
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
-        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
 
@@ -350,7 +350,7 @@ localization:
       ```ts
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
-        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
 
@@ -417,7 +417,7 @@ localization:
       ```ts
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
-        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
 
@@ -484,7 +484,7 @@ localization:
       ```ts
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
-        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
 
@@ -551,7 +551,7 @@ localization:
       ```ts
       await connect({
         apps: [{ client: inngest, functions: [myFn] }],
-        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN",
+        gatewayUrl: "wss://YOUR_CONNECT_DOMAIN/v0/connect",
       });
       ```
 
