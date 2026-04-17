@@ -328,7 +328,10 @@ spec:
                   res.writeHead(proxyRes.statusCode, proxyRes.headers);
                   proxyRes.pipe(res);
                 });
-                proxyReq.on('error', () => { res.writeHead(502); res.end('Service starting...'); });
+                proxyReq.on('error', () => {
+                  if (!res.headersSent) res.writeHead(502);
+                  res.end('Service starting...');
+                });
                 req.pipe(proxyReq);
               });
 
