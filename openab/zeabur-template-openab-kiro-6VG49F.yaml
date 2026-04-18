@@ -98,9 +98,22 @@ spec:
 
     Follow the on-screen URL and code to complete device flow authorization in your browser. Restart the service after login completes.
 
+    ## Slack Setup (Optional)
+
+    OpenAB supports Slack via Socket Mode — no public URL needed.
+
+    1. Go to https://api.slack.com/apps → **Create New App** → **From scratch**
+    2. **Socket Mode** → Enable → generate an App-Level Token with scope `connections:write` → copy the `xapp-...` token (`SLACK_APP_TOKEN`)
+    3. **Event Subscriptions** → Enable Events → add bot events: `app_mention`, `message.channels`, `message.groups`
+    4. **OAuth & Permissions** → Bot Token Scopes → add: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+    5. **Install App** → Install to Workspace → copy the `xoxb-...` token (`SLACK_BOT_TOKEN`)
+    6. In each Slack channel you want the bot in, run `/invite @YourAppName`
+
+    Set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in the template variables before deploying. Both Discord and Slack can run simultaneously.
+
     ## Usage
 
-    - **@mention the bot** in an allowed channel to start a conversation
+    - **@mention the bot** in an allowed channel or Slack channel to start a conversation
     - OpenAB creates a **thread** for multi-turn conversations — no @mention needed for follow-ups
     - Each thread maps to a persistent Kiro session (24h TTL)
 
@@ -294,9 +307,22 @@ spec:
 
         依照畫面顯示的 URL 和 code 到瀏覽器完成授權。認證完成後請重啟服務。
 
+        ## Slack 設定（選用）
+
+        OpenAB 支援透過 Socket Mode 連接 Slack，不需要公開 URL。
+
+        1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → 啟用 → 產生 App-Level Token，scope 選 `connections:write` → 複製 `xapp-...` token（`SLACK_APP_TOKEN`）
+        3. **Event Subscriptions** → 啟用 → 新增 bot events：`app_mention`、`message.channels`、`message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → 新增：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+        5. **Install App** → 安裝到工作區 → 複製 `xoxb-...` token（`SLACK_BOT_TOKEN`）
+        6. 在每個要使用 Bot 的 Slack 頻道執行 `/invite @YourAppName`
+
+        部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 變數。Discord 和 Slack 可同時運作。
+
         ## 使用方式
 
-        - 在允許的頻道中 **@mention Bot** 即可開始對話
+        - 在允許的 Discord 或 Slack 頻道中 **@mention Bot** 即可開始對話
         - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
         - 每個 thread 對應一個持久的 Kiro session（預設 24 小時 TTL）
 
@@ -399,9 +425,22 @@ spec:
 
         按照屏幕显示的 URL 和 code 到浏览器完成授权。认证完成后请重启服务。
 
+        ## Slack 设置（可选）
+
+        OpenAB 支持通过 Socket Mode 连接 Slack，无需公开 URL。
+
+        1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → 启用 → 生成 App-Level Token，scope 选 `connections:write` → 复制 `xapp-...` token（`SLACK_APP_TOKEN`）
+        3. **Event Subscriptions** → 启用 → 添加 bot events：`app_mention`、`message.channels`、`message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → 添加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+        5. **Install App** → 安装到工作区 → 复制 `xoxb-...` token（`SLACK_BOT_TOKEN`）
+        6. 在每个要使用 Bot 的 Slack 频道执行 `/invite @YourAppName`
+
+        部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 变量。Discord 和 Slack 可同时运行。
+
         ## 使用方式
 
-        - 在允许的频道中 **@mention Bot** 即可开始对话
+        - 在允许的 Discord 或 Slack 频道中 **@mention Bot** 即可开始对话
         - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
         - 每个 thread 对应一个持久的 Kiro session（默认 24 小时 TTL）
 
@@ -504,9 +543,22 @@ spec:
 
         画面に表示される URL とコードをブラウザで開いて認証を完了してください。認証後はサービスを再起動してください。
 
+        ## Slack セットアップ（オプション）
+
+        OpenAB は Socket Mode 経由で Slack をサポートします — 公開 URL は不要です。
+
+        1. https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → 有効化 → scope `connections:write` で App-Level Token を生成 → `xapp-...` token をコピー（`SLACK_APP_TOKEN`）
+        3. **Event Subscriptions** → 有効化 → bot events を追加：`app_mention`、`message.channels`、`message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → 追加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+        5. **Install App** → ワークスペースにインストール → `xoxb-...` token をコピー（`SLACK_BOT_TOKEN`）
+        6. Bot を使用したい各 Slack チャンネルで `/invite @YourAppName` を実行
+
+        デプロイ前に `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` 変数を入力してください。Discord と Slack は同時に使用できます。
+
         ## 使い方
 
-        - 許可されたチャンネルで **Bot を @mention** して会話を開始
+        - 許可された Discord または Slack チャンネルで **Bot を @mention** して会話を開始
         - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
         - 各 thread は永続的な Kiro session に対応（デフォルト 24 時間 TTL）
 
@@ -609,9 +661,22 @@ spec:
 
         Sigue la URL y el código en pantalla para completar la autorización en tu navegador. Reinicia el servicio después de completar el login.
 
+        ## Configuración de Slack (Opcional)
+
+        OpenAB soporta Slack mediante Socket Mode — no se necesita URL pública.
+
+        1. Ir a https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → Habilitar → generar App-Level Token con scope `connections:write` → copiar el token `xapp-...` (`SLACK_APP_TOKEN`)
+        3. **Event Subscriptions** → Habilitar → añadir bot events: `app_mention`, `message.channels`, `message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → añadir: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+        5. **Install App** → Instalar en el workspace → copiar el token `xoxb-...` (`SLACK_BOT_TOKEN`)
+        6. En cada canal de Slack donde quieras usar el bot, ejecuta `/invite @YourAppName`
+
+        Rellena `SLACK_BOT_TOKEN` y `SLACK_APP_TOKEN` antes de desplegar. Discord y Slack pueden funcionar simultáneamente.
+
         ## Uso
 
-        - **@mencionar al bot** en un canal permitido para iniciar una conversación
+        - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
         - OpenAB crea un **thread** para conversaciones de múltiples turnos — no se necesita @mención en los mensajes siguientes
         - Cada thread corresponde a una sesión persistente de Kiro (TTL de 24h por defecto)
 
@@ -714,9 +779,22 @@ spec:
 
         Ikuti URL dan kode di layar untuk menyelesaikan otorisasi device flow di browser Anda. Restart layanan setelah login selesai.
 
+        ## Pengaturan Slack (Opsional)
+
+        OpenAB mendukung Slack melalui Socket Mode — tidak perlu URL publik.
+
+        1. Buka https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → Aktifkan → buat App-Level Token dengan scope `connections:write` → salin token `xapp-...` (`SLACK_APP_TOKEN`)
+        3. **Event Subscriptions** → Aktifkan → tambahkan bot events: `app_mention`, `message.channels`, `message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → tambahkan: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+        5. **Install App** → Install ke workspace → salin token `xoxb-...` (`SLACK_BOT_TOKEN`)
+        6. Di setiap channel Slack yang ingin menggunakan bot, jalankan `/invite @YourAppName`
+
+        Isi `SLACK_BOT_TOKEN` dan `SLACK_APP_TOKEN` sebelum deploy. Discord dan Slack dapat berjalan bersamaan.
+
         ## Penggunaan
 
-        - **@mention bot** di channel yang diizinkan untuk memulai percakapan
+        - **@mention bot** di channel Discord atau Slack yang diizinkan untuk memulai percakapan
         - OpenAB membuat **thread** untuk percakapan multi-giliran — tidak perlu @mention untuk pesan selanjutnya
         - Setiap thread dipetakan ke sesi Kiro yang persisten (TTL 24 jam secara default)
 
