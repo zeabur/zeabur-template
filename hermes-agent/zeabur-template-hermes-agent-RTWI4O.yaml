@@ -5,8 +5,9 @@ metadata:
   name: Hermes Agent
 spec:
   description: |
-    Hermes Agent by NousResearch — an autonomous AI agent with persistent memory, tool use, cron scheduling, and multi-platform messaging (Telegram, Discord, Slack). Includes an OpenAI-compatible API server.
-  icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/assets/banner.png
+    Hermes Agent by NousResearch — an autonomous AI agent with persistent memory, tool use, cron scheduling, and 14+ messaging platforms (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, WeChat, WeCom, Feishu, DingTalk, Email, and more). Includes an OpenAI-compatible API server.
+  icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/static/img/logo.png
+  coverImage: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/assets/banner.png
   tags:
     - AI
     - Agent
@@ -55,9 +56,21 @@ spec:
 
     ## Messaging Platforms
 
-    **Telegram** is configured at deploy time as an example. You can add other platforms (Discord, Slack, WhatsApp, etc.) by setting the corresponding environment variables after deployment.
+    **Telegram** is configured at deploy time as an example. You can add any of the 14+ supported platforms (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, generic webhooks) by setting the corresponding environment variables after deployment.
 
     See the official [Messaging Gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) for setup instructions for each platform.
+
+    ## Using Zeabur AI Hub (alternative to OpenRouter)
+
+    Instead of an OpenRouter key, you can use [Zeabur AI Hub](https://zeabur.com/ai) — an OpenAI-compatible aggregator. After deployment:
+
+    1. Put your AI Hub key in `OPENROUTER_API_KEY` (reuse the same variable).
+    2. Edit `/opt/data/config.yaml` via the Zeabur Files tab:
+       - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"` (or `hnd1` for Tokyo)
+       - `model.default: "claude-sonnet-4-5"` (or any [AI Hub model](https://zeabur.com/ai))
+    3. Restart the service.
+
+    Note: the `OPENROUTER_BASE_URL` env var does **not** override `config.yaml` — you must edit the file.
 
     ## Configuration
 
@@ -79,11 +92,11 @@ spec:
     Hermes Agent is licensed under the [MIT License](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) by Nous Research.
   services:
     - name: hermes-agent
-      icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/assets/banner.png
+      icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/static/img/logo.png
       template: PREBUILT_V2
       spec:
         source:
-          image: nousresearch/hermes-agent:v2026.4.8
+          image: nousresearch/hermes-agent:v2026.4.16
           command:
             - /opt/hermes/docker/entrypoint.sh
             - gateway
@@ -123,7 +136,7 @@ spec:
 localization:
   zh-TW:
     description: |
-      Hermes Agent 由 NousResearch 開發，是一款具備持久記憶、工具使用、排程任務及多平台訊息整合（Telegram、Discord、Slack）的自主 AI 代理。內建 OpenAI 相容 API 伺服器。
+      Hermes Agent 由 NousResearch 開發，是一款具備持久記憶、工具使用、排程任務及 14+ 訊息平台整合（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、微信、企業微信、飛書、釘釘、Email 等）的自主 AI 代理。內建 OpenAI 相容 API 伺服器。
     variables:
       - key: OPENROUTER_API_KEY
         name: OpenRouter API 金鑰
@@ -157,14 +170,26 @@ localization:
 
       ## 訊息平台
 
-      部署時預設設定 **Telegram** 作為範例。您可以在部署後透過設定對應的環境變數來新增其他平台（Discord、Slack、WhatsApp 等）。
+      部署時預設設定 **Telegram** 作為範例。您可以在部署後設定對應的環境變數，啟用 14+ 支援平台中的任一個（Discord、Slack、WhatsApp、Signal、Matrix、Email、微信、企業微信、飛書、釘釘、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、通用 webhook）。
 
       詳見官方 [Messaging Gateway 指南](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)。
+
+      ## 使用 Zeabur AI Hub（OpenRouter 替代方案）
+
+      除了 OpenRouter，也可以使用 [Zeabur AI Hub](https://zeabur.com/ai) — 一個 OpenAI 相容的 LLM 聚合服務。部署後：
+
+      1. 把 AI Hub 的金鑰填入 `OPENROUTER_API_KEY`（沿用同一個變數）。
+      2. 透過 Zeabur「檔案」分頁編輯 `/opt/data/config.yaml`：
+         - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"`（Tokyo 用 `hnd1`）
+         - `model.default: "claude-sonnet-4-5"`（或任一 [AI Hub 模型](https://zeabur.com/ai)）
+      3. 重啟服務。
+
+      注意：`OPENROUTER_BASE_URL` 環境變數**無法**覆寫 `config.yaml`，必須直接編輯該檔案。
 
       ## 設定
 
       - **LLM 供應商、工具及其他設定** — 請參閱官方 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)和[環境變數參考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
-      - 透過 Zeabur Files 分頁編輯 `/opt/data/` 中的設定檔：
+      - 透過 Zeabur「檔案」分頁編輯 `/opt/data/` 中的設定檔：
         - `config.yaml` — 模型選擇、終端後端、平台設定
         - `SOUL.md` — 代理人格與系統提示詞
         - `.env` — 所有環境變數
@@ -181,7 +206,7 @@ localization:
       Hermes Agent 由 Nous Research 以 [MIT 授權條款](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) 釋出。
   zh-CN:
     description: |
-      Hermes Agent 由 NousResearch 开发，是一款具备持久记忆、工具使用、定时任务及多平台消息集成（Telegram、Discord、Slack）的自主 AI 代理。内置 OpenAI 兼容 API 服务器。
+      Hermes Agent 由 NousResearch 开发，是一款具备持久记忆、工具使用、定时任务及 14+ 消息平台集成（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、微信、企业微信、飞书、钉钉、Email 等）的自主 AI 代理。内置 OpenAI 兼容 API 服务器。
     variables:
       - key: OPENROUTER_API_KEY
         name: OpenRouter API 密钥
@@ -215,14 +240,26 @@ localization:
 
       ## 消息平台
 
-      部署时默认设置 **Telegram** 作为示例。您可以在部署后通过设置对应的环境变量来添加其他平台（Discord、Slack、WhatsApp 等）。
+      部署时默认设置 **Telegram** 作为示例。您可以在部署后设置对应的环境变量，启用 14+ 支持平台中的任一个（Discord、Slack、WhatsApp、Signal、Matrix、Email、微信、企业微信、飞书、钉钉、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、通用 webhook）。
 
       详见官方 [Messaging Gateway 指南](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)。
+
+      ## 使用 Zeabur AI Hub（OpenRouter 替代方案）
+
+      除了 OpenRouter，也可以使用 [Zeabur AI Hub](https://zeabur.com/ai) — 一个 OpenAI 兼容的 LLM 聚合服务。部署后：
+
+      1. 把 AI Hub 密钥填入 `OPENROUTER_API_KEY`（沿用同一个变量）。
+      2. 通过 Zeabur「文件」标签页编辑 `/opt/data/config.yaml`：
+         - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"`（Tokyo 用 `hnd1`）
+         - `model.default: "claude-sonnet-4-5"`（或任一 [AI Hub 模型](https://zeabur.com/ai)）
+      3. 重启服务。
+
+      注意：`OPENROUTER_BASE_URL` 环境变量**无法**覆盖 `config.yaml`，必须直接编辑该文件。
 
       ## 配置
 
       - **LLM 供应商、工具及其他设置** — 请参阅官方 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)和[环境变量参考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
-      - 通过 Zeabur Files 标签页编辑 `/opt/data/` 中的配置文件：
+      - 通过 Zeabur「文件」标签页编辑 `/opt/data/` 中的配置文件：
         - `config.yaml` — 模型选择、终端后端、平台设置
         - `SOUL.md` — 代理人设与系统提示词
         - `.env` — 所有环境变量
@@ -239,7 +276,7 @@ localization:
       Hermes Agent 由 Nous Research 以 [MIT 许可证](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) 发布。
   ja-JP:
     description: |
-      Hermes Agent（NousResearch 開発）— 永続メモリ、ツール使用、スケジュール実行、マルチプラットフォームメッセージング（Telegram、Discord、Slack）を備えた自律型 AI エージェント。OpenAI 互換 API サーバー内蔵。
+      Hermes Agent（NousResearch 開発）— 永続メモリ、ツール使用、スケジュール実行、14+ メッセージングプラットフォーム（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、WeChat、WeCom、Feishu、DingTalk、Email など）を備えた自律型 AI エージェント。OpenAI 互換 API サーバー内蔵。
     variables:
       - key: OPENROUTER_API_KEY
         name: OpenRouter API キー
@@ -273,14 +310,26 @@ localization:
 
       ## メッセージプラットフォーム
 
-      デプロイ時に **Telegram** を例として設定します。デプロイ後に環境変数を設定して他のプラットフォーム（Discord、Slack、WhatsApp など）を追加できます。
+      デプロイ時に **Telegram** を例として設定します。デプロイ後に対応する環境変数を設定して、14+ のサポート対象プラットフォーム（Discord、Slack、WhatsApp、Signal、Matrix、Email、WeChat、WeCom、Feishu、DingTalk、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、汎用 webhook）から任意のものを有効化できます。
 
       詳細は公式 [Messaging Gateway ガイド](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)をご覧ください。
+
+      ## Zeabur AI Hub を使う（OpenRouter の代替）
+
+      OpenRouter の代わりに [Zeabur AI Hub](https://zeabur.com/ai)（OpenAI 互換の LLM アグリゲーター）を使えます。デプロイ後：
+
+      1. AI Hub のキーを `OPENROUTER_API_KEY` に設定（同じ変数を流用）。
+      2. Zeabur の「ファイル」タブから `/opt/data/config.yaml` を編集：
+         - `model.base_url: "https://hnd1.aihub.zeabur.ai/v1"`（SFO なら `sfo1`）
+         - `model.default: "claude-sonnet-4-5"`（または [AI Hub モデル](https://zeabur.com/ai) の任意のもの）
+      3. サービスを再起動。
+
+      注意：`OPENROUTER_BASE_URL` 環境変数は `config.yaml` を上書き**しません**。ファイルを直接編集してください。
 
       ## 設定
 
       - **LLM プロバイダー、ツール、その他の設定** — 公式 [Configuration ガイド](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)と[環境変数リファレンス](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)を参照してください。
-      - Zeabur の Files タブで `/opt/data/` 内の設定ファイルを編集：
+      - Zeabur の「ファイル」タブで `/opt/data/` 内の設定ファイルを編集：
         - `config.yaml` — モデル選択、ターミナルバックエンド、プラットフォーム設定
         - `SOUL.md` — エージェントの性格とシステムプロンプト
         - `.env` — すべての環境変数
@@ -297,7 +346,7 @@ localization:
       Hermes Agent は Nous Research により [MIT ライセンス](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE)で公開されています。
   es-ES:
     description: |
-      Hermes Agent de NousResearch — un agente de IA autónomo con memoria persistente, uso de herramientas, programación de tareas y mensajería multiplataforma (Telegram, Discord, Slack). Incluye un servidor API compatible con OpenAI.
+      Hermes Agent de NousResearch — un agente de IA autónomo con memoria persistente, uso de herramientas, programación de tareas y más de 14 plataformas de mensajería (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, WeChat, WeCom, Feishu, DingTalk, Email, y más). Incluye un servidor API compatible con OpenAI.
     variables:
       - key: OPENROUTER_API_KEY
         name: Clave API de OpenRouter
@@ -331,14 +380,26 @@ localization:
 
       ## Plataformas de mensajería
 
-      **Telegram** se configura durante el despliegue como ejemplo. Puede añadir otras plataformas (Discord, Slack, WhatsApp, etc.) configurando las variables de entorno correspondientes después del despliegue.
+      **Telegram** se configura durante el despliegue como ejemplo. Puede activar cualquiera de las más de 14 plataformas compatibles (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, webhooks genéricos) configurando las variables de entorno correspondientes después del despliegue.
 
       Consulte la guía oficial de [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) para instrucciones de configuración de cada plataforma.
+
+      ## Usando Zeabur AI Hub (alternativa a OpenRouter)
+
+      En lugar de una clave de OpenRouter, puede usar [Zeabur AI Hub](https://zeabur.com/ai) — un agregador compatible con OpenAI. Tras el despliegue:
+
+      1. Ponga su clave de AI Hub en `OPENROUTER_API_KEY` (reutilice la misma variable).
+      2. Edite `/opt/data/config.yaml` desde la pestaña «Archivos» de Zeabur:
+         - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"` (use `hnd1` para Tokio)
+         - `model.default: "claude-sonnet-4-5"` (o cualquier [modelo de AI Hub](https://zeabur.com/ai))
+      3. Reinicie el servicio.
+
+      Nota: la variable de entorno `OPENROUTER_BASE_URL` **no** sobrescribe `config.yaml`; debe editar el archivo.
 
       ## Configuración
 
       - **Proveedores de LLM, herramientas y demás ajustes** — consulte la guía oficial de [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) y la [referencia de variables de entorno](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
-      - Edite los archivos de configuración en `/opt/data/` a través de la pestaña Files de Zeabur:
+      - Edite los archivos de configuración en `/opt/data/` a través de la pestaña «Archivos» de Zeabur:
         - `config.yaml` — selección de modelo, backend de terminal, configuración de plataformas
         - `SOUL.md` — personalidad del agente y prompt del sistema
         - `.env` — todas las variables de entorno
@@ -355,7 +416,7 @@ localization:
       Hermes Agent está licenciado bajo la [Licencia MIT](https://github.com/NousResearch/hermes-agent/blob/main/LICENSE) por Nous Research.
   id-ID:
     description: |
-      Hermes Agent oleh NousResearch — agen AI otonom dengan memori persisten, penggunaan alat, penjadwalan tugas, dan pesan multi-platform (Telegram, Discord, Slack). Dilengkapi server API yang kompatibel dengan OpenAI.
+      Hermes Agent oleh NousResearch — agen AI otonom dengan memori persisten, penggunaan alat, penjadwalan tugas, dan 14+ platform pesan (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, WeChat, WeCom, Feishu, DingTalk, Email, dan lainnya). Dilengkapi server API yang kompatibel dengan OpenAI.
     variables:
       - key: OPENROUTER_API_KEY
         name: Kunci API OpenRouter
@@ -389,14 +450,26 @@ localization:
 
       ## Platform Pesan
 
-      **Telegram** dikonfigurasi saat deployment sebagai contoh. Anda dapat menambahkan platform lain (Discord, Slack, WhatsApp, dll.) dengan mengatur variabel lingkungan yang sesuai setelah deployment.
+      **Telegram** dikonfigurasi saat deployment sebagai contoh. Anda dapat mengaktifkan salah satu dari 14+ platform yang didukung (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, webhook umum) dengan mengatur variabel lingkungan yang sesuai setelah deployment.
 
       Lihat panduan resmi [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) untuk instruksi pengaturan setiap platform.
+
+      ## Menggunakan Zeabur AI Hub (alternatif OpenRouter)
+
+      Sebagai pengganti kunci OpenRouter, Anda dapat menggunakan [Zeabur AI Hub](https://zeabur.com/ai) — agregator yang kompatibel dengan OpenAI. Setelah deployment:
+
+      1. Masukkan kunci AI Hub Anda ke `OPENROUTER_API_KEY` (gunakan variabel yang sama).
+      2. Edit `/opt/data/config.yaml` melalui tab "Berkas" Zeabur:
+         - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"` (atau `hnd1` untuk Tokyo)
+         - `model.default: "claude-sonnet-4-5"` (atau [model AI Hub](https://zeabur.com/ai) lainnya)
+      3. Restart layanan.
+
+      Catatan: variabel lingkungan `OPENROUTER_BASE_URL` **tidak** menimpa `config.yaml`; Anda harus mengedit file tersebut.
 
       ## Konfigurasi
 
       - **Penyedia LLM, alat, dan pengaturan lainnya** — lihat panduan resmi [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) dan [referensi variabel lingkungan](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
-      - Edit file konfigurasi di `/opt/data/` melalui tab Files Zeabur:
+      - Edit file konfigurasi di `/opt/data/` melalui tab "Berkas" Zeabur:
         - `config.yaml` — pemilihan model, backend terminal, pengaturan platform
         - `SOUL.md` — kepribadian agen dan system prompt
         - `.env` — semua variabel lingkungan
