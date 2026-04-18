@@ -33,6 +33,10 @@ spec:
       type: STRING
       name: Discord User IDs (optional)
       description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone in the allowed channels."
+    - key: KIRO_API_KEY
+      type: STRING
+      name: Kiro API Key (optional, Pro+)
+      description: "Optional. API key for Kiro Pro/Pro+/Power subscribers. Leave empty to authenticate via device flow after deployment (free tier)."
     - key: SLACK_BOT_TOKEN
       type: STRING
       name: Slack Bot Token (optional)
@@ -66,7 +70,15 @@ spec:
 
     ### 2. Authenticate Kiro (after deployment)
 
-    Kiro uses device flow for authentication — no API key is needed at deploy time. After the service is running, open the service terminal in Zeabur Dashboard and run:
+    Choose one method depending on your Kiro subscription:
+
+    **Option A — API Key (Pro/Pro+/Power subscribers)**
+
+    Go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key, then paste it into the `KIRO_API_KEY` variable before deploying. No further steps needed.
+
+    **Option B — Device Flow (Free tier or no API key)**
+
+    Leave `KIRO_API_KEY` empty. After the service is running, open the service terminal in Zeabur Dashboard and run:
 
     ```
     runuser -u agent -- kiro-cli login --use-device-flow
@@ -201,6 +213,8 @@ spec:
         env:
           DISCORD_BOT_TOKEN:
             default: ${DISCORD_BOT_TOKEN}
+          KIRO_API_KEY:
+            default: ""
           OPENAB_ALLOWED_CHANNELS:
             default: ""
           OPENAB_ALLOWED_USERS:
@@ -218,6 +232,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Discord Bot Token
           description: 從 https://discord.com/developers/applications 取得的 Token
+        - key: KIRO_API_KEY
+          name: Kiro API Key（選填，Pro+ 方案）
+          description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
         - key: OPENAB_ALLOWED_CHANNELS
           name: Discord 頻道 ID（選填）
           description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
@@ -249,7 +266,15 @@ spec:
 
         ### 2. 認證 Kiro（部署後）
 
-        Kiro 使用 device flow 進行認證，部署時不需要 API 金鑰。服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
+        依照你的 Kiro 訂閱方案擇一：
+
+        **方式 A — API Key（Pro/Pro+/Power 訂閱者）**
+
+        前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，部署前填入 `KIRO_API_KEY` 變數即可，無需後續手動登入。
+
+        **方式 B — Device Flow（免費方案或未填 API Key）**
+
+        將 `KIRO_API_KEY` 留空。服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -312,6 +337,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Discord Bot Token
           description: 从 https://discord.com/developers/applications 获取的 Token
+        - key: KIRO_API_KEY
+          name: Kiro API Key（选填，Pro+ 方案）
+          description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
         - key: OPENAB_ALLOWED_CHANNELS
           name: Discord 频道 ID（选填）
           description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
@@ -343,7 +371,15 @@ spec:
 
         ### 2. 认证 Kiro（部署后）
 
-        Kiro 使用 device flow 进行认证，部署时不需要 API 密钥。服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
+        根据你的 Kiro 订阅方案选择一种方式：
+
+        **方式 A — API Key（Pro/Pro+/Power 订阅者）**
+
+        前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，部署前填入 `KIRO_API_KEY` 变量即可，无需后续手动登录。
+
+        **方式 B — Device Flow（免费方案或未填 API Key）**
+
+        将 `KIRO_API_KEY` 留空。服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -406,6 +442,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Discord Bot トークン
           description: https://discord.com/developers/applications から取得したトークン
+        - key: KIRO_API_KEY
+          name: Kiro API Key（オプション、Pro+ プラン）
+          description: "オプション。Kiro Pro/Pro+/Power 加入者は API Key を入力することで、デプロイ後の手動ログインが不要になります。無料プランは空にして、デプロイ後に device flow で認証してください。"
         - key: OPENAB_ALLOWED_CHANNELS
           name: Discord チャンネル ID（オプション）
           description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
@@ -437,7 +476,15 @@ spec:
 
         ### 2. Kiro の認証（デプロイ後）
 
-        Kiro は device flow を使用して認証します。デプロイ時に API キーは不要です。サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
+        Kiro のサブスクリプションに応じていずれかの方法を選択してください：
+
+        **方法 A — API Key（Pro/Pro+/Power 加入者）**
+
+        [kiro.dev](https://kiro.dev) → Settings → API Keys で key を作成し、デプロイ前に `KIRO_API_KEY` 変数に入力してください。手動ログインは不要です。
+
+        **方法 B — Device Flow（無料プランまたは API Key 未入力）**
+
+        `KIRO_API_KEY` を空のままにします。サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -500,6 +547,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Token del Bot de Discord
           description: Token obtenido de https://discord.com/developers/applications
+        - key: KIRO_API_KEY
+          name: Kiro API Key (opcional, plan Pro+)
+          description: "Opcional. Los suscriptores de Kiro Pro/Pro+/Power pueden ingresar su API Key para omitir el login manual tras el despliegue. Dejar vacío en el plan gratuito y autenticarse con device flow después."
         - key: OPENAB_ALLOWED_CHANNELS
           name: IDs de Canales de Discord (opcional)
           description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacío para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
@@ -531,7 +581,15 @@ spec:
 
         ### 2. Autenticar Kiro (después del despliegue)
 
-        Kiro usa device flow para autenticación — no se necesita clave API al desplegar. Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
+        Elige un método según tu suscripción de Kiro:
+
+        **Opción A — API Key (suscriptores Pro/Pro+/Power)**
+
+        Ve a [kiro.dev](https://kiro.dev) → Settings → API Keys, crea una key y pégala en la variable `KIRO_API_KEY` antes de desplegar. No se requieren pasos adicionales.
+
+        **Opción B — Device Flow (plan gratuito o sin API Key)**
+
+        Deja `KIRO_API_KEY` vacío. Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -594,6 +652,9 @@ spec:
         - key: DISCORD_BOT_TOKEN
           name: Token Bot Discord
           description: Token dari https://discord.com/developers/applications
+        - key: KIRO_API_KEY
+          name: Kiro API Key (opsional, paket Pro+)
+          description: "Opsional. Pelanggan Kiro Pro/Pro+/Power dapat memasukkan API Key agar tidak perlu login manual setelah deploy. Kosongkan untuk paket gratis dan autentikasi dengan device flow setelahnya."
         - key: OPENAB_ALLOWED_CHANNELS
           name: ID Channel Discord (opsional)
           description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
@@ -625,7 +686,15 @@ spec:
 
         ### 2. Autentikasi Kiro (setelah deploy)
 
-        Kiro menggunakan device flow untuk autentikasi — tidak perlu API key saat deploy. Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
+        Pilih salah satu metode sesuai langganan Kiro Anda:
+
+        **Opsi A — API Key (pelanggan Pro/Pro+/Power)**
+
+        Buka [kiro.dev](https://kiro.dev) → Settings → API Keys, buat key dan masukkan ke variabel `KIRO_API_KEY` sebelum deploy. Tidak perlu langkah login manual.
+
+        **Opsi B — Device Flow (paket gratis atau tanpa API Key)**
+
+        Kosongkan `KIRO_API_KEY`. Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
