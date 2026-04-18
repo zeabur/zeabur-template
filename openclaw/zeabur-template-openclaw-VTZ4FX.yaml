@@ -20,7 +20,7 @@ spec:
       - key: ZEABUR_AI_HUB_API_KEY
         type: AI_HUB_KEY
         name: Zeabur AI Hub API Key (Optional)
-        description: "Optional — leave blank to skip. If skipped, the default model is anthropic/claude-opus-4-7 (requires your own API key). With AI Hub, you get access to Gemini, GPT, Claude, DeepSeek. Can be added later in the Variables tab."
+        description: "Optional but recommended. The template defaults to zeabur-ai/glm-4.7-flash (cheap, fast) which needs this key. Without it, you'll need to switch to another provider and supply its own API key. Can be added later in the Variables tab."
     tags:
       - AI
       - Assistant
@@ -60,7 +60,7 @@ spec:
       |----------|----------|-------------|
       | **Domain** | Yes | The subdomain for accessing OpenClaw (e.g. `my-openclaw` → `my-openclaw.zeabur.app`). Can be removed after switching to loopback mode. |
       | **Enable Control UI** | Yes | `true` (default) — enables the web Control UI via your public domain. `false` — binds to loopback only, no public web access (more secure, use with Tailscale or supported channels like Telegram) |
-      | **Zeabur AI Hub API Key** | No | Leave blank to skip. Without it, the default model is `anthropic/claude-opus-4-7` (requires your own API key). With AI Hub, you get access to Gemini, GPT, Claude, DeepSeek out of the box. Can be added later in the service's **Variables** tab. |
+      | **Zeabur AI Hub API Key** | No | Leave blank to skip. The template defaults to `zeabur-ai/glm-4.7-flash` (cheap, fast) which needs this key — without it, you'll need to switch models and supply your own API key for another provider (Anthropic, OpenAI, etc.). Can be added later in the service's **Variables** tab. |
 
       ## Recommended Resources
       - **Minimum**: 2 vCPU / 4 GB RAM
@@ -74,7 +74,7 @@ spec:
       1. After deployment, open the service URL from the **Networking** tab. On the login page, paste the **Gateway Token** (found in the **Instructions** tab or **Environment Variables** → `OPENCLAW_GATEWAY_TOKEN`) and click **Connect**
       2. **Configure AI model** (choose one):
          - **Zeabur AI Hub** (default model: `glm-4.7-flash`): If you entered the API Key during deployment, go directly to step 3. You can also add `ZEABUR_AI_HUB_API_KEY` later via **Variables** tab in Zeabur dashboard (restart service after adding).
-         - **Other providers** (Anthropic, OpenAI, etc.): If you did not enter a Zeabur AI Hub API Key, the default model is `anthropic/claude-opus-4-7`. Go to Control UI Settings or add API key via environment variables. See: https://docs.openclaw.ai/providers/anthropic
+         - **Other providers** (Anthropic, OpenAI, etc.): The template default remains `zeabur-ai/glm-4.7-flash`. To use another provider, add its API key via environment variables, then switch model with `/model <id>` in chat or via Control UI Settings. See: https://docs.openclaw.ai/providers/anthropic
       3. Go to the **Chat** page to test if your AI model is working
       4. (Optional) Set up messaging platforms like Telegram, WhatsApp, etc.
 
@@ -227,9 +227,9 @@ spec:
       ## AI Model Configuration
 
       **Verify your setup:**
-      1. Your default model depends on deployment:
-         - With Zeabur AI Hub API Key → default model: `zeabur-ai/glm-4.7-flash`
-         - Without → default model: `anthropic/claude-opus-4-7` (requires API key)
+      1. The template seeds `zeabur-ai/glm-4.7-flash` as the default model on first boot:
+         - With Zeabur AI Hub API Key → it just works
+         - Without → the model won't respond; add an AI Hub key (recommended) or switch model + add your own provider API key
       2. Open **Chat** page and send a test message
       3. If you get a response → model is working
       4. If you get an error → check that your API key is configured correctly
@@ -425,7 +425,6 @@ spec:
       - Upgrade image to `2026.4.15` — default Anthropic model moved to Claude Opus 4.7, Gemini text-to-speech support, Model Auth status card in Control UI, LanceDB cloud storage for memory, GitHub Copilot embedding provider, experimental local-model lean defaults, and 50+ security/provider/channel fixes
       - Add Zeabur AI Hub model support: `claude-opus-4-7`, `claude-sonnet-4-6`, `glm-5`, `gpt-5.4-pro`
       - Remove retired Zeabur AI Hub models: `gemini-3-pro-preview`, `kimi-2.5`
-      - Update default non-AI-Hub model: `anthropic/claude-opus-4-6` → `anthropic/claude-opus-4-7`
 
       **2026/4/6**
       - Upgrade image to `2026.4.5` — video/music generation tools (`video_generate`, `music_generate`) with xAI/Runway/Alibaba Wan/Google Lyria/MiniMax providers, ComfyUI workflow plugin, new Qwen/Fireworks AI/StepFun/Amazon Bedrock Mantle providers, Control UI 12-language localization, Memory Dreaming (experimental background recall promotion), prompt cache stability improvements, Claude CLI loopback MCP bridge, ACPX embedded runtime, ClawHub skill install from Control UI, structured plan progress events, legacy config alias removal (run `openclaw doctor --fix`), 100+ security/channel/provider fixes
@@ -1443,7 +1442,7 @@ localization:
         description: "設為 'true' 透過公開網域啟用 Control UI（預設）。設為 'false' 僅本地連線（較安全）。"
       - key: ZEABUR_AI_HUB_API_KEY
         name: Zeabur AI Hub API 金鑰（選填）
-        description: 選填 — 可留空跳過。若跳過，預設模型為 anthropic/claude-opus-4-7（需自行設定 API Key）。填入後可透過 AI Hub 使用 Gemini、GPT、Claude、DeepSeek。之後可在「環境變數」分頁新增或修改。
+        description: 選填但建議填入。本模板預設模型為 zeabur-ai/glm-4.7-flash（便宜、快速），需要此金鑰才能運作。若未填入，需自行切換至其他供應商並提供對應的 API Key。之後可在「環境變數」分頁新增或修改。
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞（原 Clawdbot、Moltbot）是一個個人 AI 助手，可在本地運行並透過 WebSocket Gateway 架構連接多個訊息平台。
@@ -1467,7 +1466,7 @@ localization:
       |------|------|------|
       | **網域** | 是 | 用來存取 OpenClaw 的子網域（例如 `my-openclaw` → `my-openclaw.zeabur.app`）。切換為 loopback 模式後可移除。 |
       | **啟用 Control UI** | 是 | `true`（預設）— 透過公開網域啟用 Control UI。`false` — 僅綁定本地迴路，無公開網頁存取（較安全，搭配 Tailscale 或 Tailscale 或 Telegram 等支援的通訊頻道使用） |
-      | **Zeabur AI Hub API 金鑰** | 否 | 可留空跳過。若跳過，預設模型為 `anthropic/claude-opus-4-7`（需自行設定 API Key）。填入後可使用 Gemini、GPT、Claude、DeepSeek。之後可在服務的「環境變數」分頁新增。 |
+      | **Zeabur AI Hub API 金鑰** | 否 | 可留空跳過。本模板預設模型為 `zeabur-ai/glm-4.7-flash`（便宜、快速），需要此金鑰才能運作 — 若未填入，需自行切換模型並提供其他供應商（Anthropic、OpenAI 等）的 API Key。之後可在服務的「環境變數」分頁新增。 |
 
       ## 建議資源配置
       - **最低配置**：2 vCPU / 4 GB RAM
@@ -1481,7 +1480,7 @@ localization:
       1. 部署完成後，從**網路**頁籤開啟服務網址。在登入頁面貼上 **Gateway Token**（可在**使用說明**頁籤或**環境變數** → `OPENCLAW_GATEWAY_TOKEN` 中找到），點擊 **Connect**
       2. **設定 AI 模型**（二擇一）：
          - **Zeabur AI Hub**（預設模型：`glm-4.7-flash`）：若部署時已輸入 API Key，直接前往步驟 3。也可之後在 Zeabur 控制台的**變數**頁籤新增 `ZEABUR_AI_HUB_API_KEY`（新增後記得重新啟動服務）。
-         - **其他供應商**（Anthropic、OpenAI 等）：若未輸入 Zeabur AI Hub API Key，預設模型為 `anthropic/claude-opus-4-7`。前往 Control UI Settings 或環境變數新增 API 金鑰。詳情請見：https://docs.openclaw.ai/providers/anthropic
+         - **其他供應商**（Anthropic、OpenAI 等）：模板預設仍是 `zeabur-ai/glm-4.7-flash`。要改用其他供應商，請透過環境變數新增該供應商的 API Key,接著在聊天中用 `/model <id>` 或透過 Control UI Settings 切換模型。詳情請見：https://docs.openclaw.ai/providers/anthropic
       3. 前往 **Chat** 頁面測試 AI 模型是否正常運作
       4. （選擇性）設定 Telegram、WhatsApp 等通訊平台
 
@@ -1634,9 +1633,9 @@ localization:
       ## AI 模型設定
 
       **確認模型是否正常運作：**
-      1. 預設模型取決於部署方式：
-         - 有填 Zeabur AI Hub API Key → 預設模型：`zeabur-ai/glm-4.7-flash`
-         - 沒有填 → 預設模型：`anthropic/claude-opus-4-7`（需要 API 金鑰）
+      1. 本模板首次啟動時會將 `zeabur-ai/glm-4.7-flash` 寫入為預設模型：
+         - 有填 Zeabur AI Hub API Key → 開箱即用
+         - 沒有填 → 模型將無法回應；請加上 AI Hub 金鑰（建議）或切換模型並提供其他供應商的 API Key
       2. 開啟 **Chat** 頁面，發送一則測試訊息
       3. 如果收到回覆 → 模型正常運作
       4. 如果出現錯誤 → 確認 API 金鑰是否正確設定
@@ -1834,7 +1833,6 @@ localization:
       - 升級映像檔至 `2026.4.15` — 預設 Anthropic 模型改為 Claude Opus 4.7、Gemini 文字轉語音支援、Control UI 新增 Model Auth 狀態卡片、LanceDB 雲端儲存支援、GitHub Copilot embedding provider、實驗性本地模型精簡預設，以及 50+ 安全/provider/頻道修復
       - 新增 Zeabur AI Hub 模型支援：`claude-opus-4-7`、`claude-sonnet-4-6`、`glm-5`、`gpt-5.4-pro`
       - 移除已下架模型：`gemini-3-pro-preview`、`kimi-2.5`
-      - 無 AI Hub Key 時的預設模型：`anthropic/claude-opus-4-6` → `anthropic/claude-opus-4-7`
 
       **2026/4/6**
       - 升級映像檔至 `2026.4.5` — 影片/音樂生成工具（`video_generate`、`music_generate`），支援 xAI/Runway/阿里 Wan/Google Lyria/MiniMax provider、ComfyUI workflow 插件、新增 Qwen/Fireworks AI/StepFun/Amazon Bedrock Mantle provider、Control UI 12 語言在地化、Memory Dreaming（實驗性背景記憶晉升）、prompt cache 穩定性改善、Claude CLI loopback MCP bridge、ACPX 內嵌 runtime、Control UI 內 ClawHub skill 安裝、結構化計畫進度事件、移除 legacy config alias（需執行 `openclaw doctor --fix`），以及 100+ 安全/頻道/provider 修復
@@ -1960,7 +1958,7 @@ localization:
         description: "设为 'true' 通过公开域名启用 Control UI（默认）。设为 'false' 仅本地连接（更安全）。"
       - key: ZEABUR_AI_HUB_API_KEY
         name: Zeabur AI Hub API 密钥（选填）
-        description: 选填 — 可留空跳过。若跳过，默认模型为 anthropic/claude-opus-4-7（需自行设置 API Key）。填入后可通过 AI Hub 使用 Gemini、GPT、Claude、DeepSeek。之后可在「变量」页签新增或修改。
+        description: 选填但建议填入。本模板默认模型为 zeabur-ai/glm-4.7-flash（便宜、快速），需要此密钥才能运行。若未填入，需自行切换至其他供应商并提供对应的 API Key。之后可在「变量」页签新增或修改。
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞（原 Clawdbot、Moltbot）是一个个人 AI 助手，可在本地运行并通过 WebSocket Gateway 架构连接多个消息平台。
@@ -1984,7 +1982,7 @@ localization:
       |------|------|------|
       | **域名** | 是 | 用来访问 OpenClaw 的子域名（例如 `my-openclaw` → `my-openclaw.zeabur.app`）。切换为 loopback 模式后可移除。 |
       | **启用 Control UI** | 是 | `true`（默认）— 通过公开域名启用 Control UI。`false` — 仅绑定本地回环，无公开网页访问（更安全，配合 Tailscale 或 Tailscale 或 Telegram 等支持的通讯频道使用） |
-      | **Zeabur AI Hub API 密钥** | 否 | 可留空跳过。若跳过，默认模型为 `anthropic/claude-opus-4-7`（需自行设置 API Key）。填入后可使用 Gemini、GPT、Claude、DeepSeek。之后可在服务的「变量」页签新增。 |
+      | **Zeabur AI Hub API 密钥** | 否 | 可留空跳过。本模板默认模型为 `zeabur-ai/glm-4.7-flash`（便宜、快速），需要此密钥才能运行 — 若未填入，需自行切换模型并提供其他供应商（Anthropic、OpenAI 等）的 API Key。之后可在服务的「变量」页签新增。 |
 
       ## 建议资源配置
       - **最低配置**：2 vCPU / 4 GB RAM
@@ -1998,7 +1996,7 @@ localization:
       1. 部署完成后，从**网络**页签打开服务网址。在登录页面粘贴 **Gateway Token**（可在**使用说明**页签或**环境变量** → `OPENCLAW_GATEWAY_TOKEN` 中找到），点击 **Connect**
       2. **设置 AI 模型**（二选一）：
          - **Zeabur AI Hub**（默认模型：`glm-4.7-flash`）：若部署时已输入 API Key，直接前往步骤 3。也可之后在 Zeabur 控制台的**变量**页签添加 `ZEABUR_AI_HUB_API_KEY`（添加后记得重新启动服务）。
-         - **其他供应商**（Anthropic、OpenAI 等）：若未输入 Zeabur AI Hub API Key，默认模型为 `anthropic/claude-opus-4-7`。前往 Control UI Settings 或环境变量添加 API 密钥。详情请见：https://docs.openclaw.ai/providers/anthropic
+         - **其他供应商**（Anthropic、OpenAI 等）：模板默认仍是 `zeabur-ai/glm-4.7-flash`。要改用其他供应商，请通过环境变量添加该供应商的 API Key，接着在聊天中用 `/model <id>` 或通过 Control UI Settings 切换模型。详情请见：https://docs.openclaw.ai/providers/anthropic
       3. 前往 **Chat** 页面测试 AI 模型是否正常运作
       4. （可选）设置 Telegram、WhatsApp 等通讯平台
 
@@ -2151,9 +2149,9 @@ localization:
       ## AI 模型设置
 
       **确认模型是否正常运作：**
-      1. 默认模型取决于部署方式：
-         - 有填 Zeabur AI Hub API Key → 默认模型：`zeabur-ai/glm-4.7-flash`
-         - 没有填 → 默认模型：`anthropic/claude-opus-4-7`（需要 API 密钥）
+      1. 本模板首次启动时会将 `zeabur-ai/glm-4.7-flash` 写入为默认模型：
+         - 有填 Zeabur AI Hub API Key → 开箱即用
+         - 没有填 → 模型将无法回应；请加上 AI Hub 密钥（建议）或切换模型并提供其他供应商的 API Key
       2. 打开 **Chat** 页面，发送一条测试消息
       3. 如果收到回复 → 模型正常运作
       4. 如果出现错误 → 确认 API 密钥是否正确设置
@@ -2351,7 +2349,6 @@ localization:
       - 升级镜像至 `2026.4.15` — 默认 Anthropic 模型改为 Claude Opus 4.7、Gemini 文字转语音支持、Control UI 新增 Model Auth 状态卡片、LanceDB 云端存储支持、GitHub Copilot embedding provider、实验性本地模型精简默认，以及 50+ 安全/provider/频道修复
       - 新增 Zeabur AI Hub 模型支持：`claude-opus-4-7`、`claude-sonnet-4-6`、`glm-5`、`gpt-5.4-pro`
       - 移除已下架模型：`gemini-3-pro-preview`、`kimi-2.5`
-      - 无 AI Hub Key 时的默认模型：`anthropic/claude-opus-4-6` → `anthropic/claude-opus-4-7`
 
       **2026/4/6**
       - 升级镜像至 `2026.4.5` — 视频/音乐生成工具（`video_generate`、`music_generate`），支持 xAI/Runway/阿里 Wan/Google Lyria/MiniMax provider、ComfyUI workflow 插件、新增 Qwen/Fireworks AI/StepFun/Amazon Bedrock Mantle provider、Control UI 12 语言本地化、Memory Dreaming（实验性后台记忆晋升）、prompt cache 稳定性改善、Claude CLI loopback MCP bridge、ACPX 内嵌 runtime、Control UI 内 ClawHub skill 安装、结构化计划进度事件、移除 legacy config alias（需执行 `openclaw doctor --fix`），以及 100+ 安全/频道/provider 修复
@@ -2477,7 +2474,7 @@ localization:
         description: "'true' で公開ドメイン経由の Control UI を有効化（デフォルト）。'false' でローカル接続のみ（より安全）。"
       - key: ZEABUR_AI_HUB_API_KEY
         name: Zeabur AI Hub API キー（任意）
-        description: 任意 — 空欄でスキップできます。スキップした場合、デフォルトモデルは anthropic/claude-opus-4-7（別途 API キーが必要）です。AI Hub を使うと Gemini、GPT、Claude、DeepSeek を利用できます。後から「変数」タブで追加・変更可能です。
+        description: 任意（推奨）。本テンプレートのデフォルトモデルは zeabur-ai/glm-4.7-flash（安価・高速）で、このキーが必要です。未入力の場合は別プロバイダーに切り替えて独自の API キーを用意する必要があります。後から「変数」タブで追加・変更可能です。
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞（旧 Clawdbot、Moltbot）は、ローカルで実行され、WebSocket ベースの Gateway アーキテクチャを介して複数のメッセージングプラットフォームに接続する個人用 AI アシスタントです。
@@ -2501,7 +2498,7 @@ localization:
       |------|------|------|
       | **ドメイン** | はい | OpenClaw にアクセスするためのサブドメイン（例：`my-openclaw` → `my-openclaw.zeabur.app`）。loopback モードに切り替え後は削除可能。 |
       | **Control UI を有効化** | はい | `true`（デフォルト）— 公開ドメイン経由で Control UI を有効化。`false` — ローカルループバックのみ、公開 Web アクセスなし（より安全、Tailscale や Tailscale や Telegram 等の対応チャンネルと併用） |
-      | **Zeabur AI Hub API キー** | いいえ | 空欄でスキップ可能。スキップした場合、デフォルトモデルは `anthropic/claude-opus-4-7`（別途 API キーが必要）。AI Hub を使うと Gemini、GPT、Claude、DeepSeek を利用可能。後から「変数」タブで追加できます。 |
+      | **Zeabur AI Hub API キー** | いいえ | 空欄でスキップ可能。本テンプレートのデフォルトモデルは `zeabur-ai/glm-4.7-flash`（安価・高速）で、このキーが必要です — 未入力の場合はモデルを切り替え、他プロバイダー（Anthropic、OpenAI など）の API キーを用意する必要があります。後から「変数」タブで追加できます。 |
 
       ## 推奨リソース
       - **最小構成**：2 vCPU / 4 GB RAM
@@ -2515,7 +2512,7 @@ localization:
       1. デプロイ後、**ネットワーク**タブからサービス URL を開く。ログインページで **Gateway Token**（**手順**タブまたは**環境変数** → `OPENCLAW_GATEWAY_TOKEN` で確認）を貼り付け、**Connect** をクリック
       2. **AI モデルを設定**（いずれかを選択）：
          - **Zeabur AI Hub**（デフォルトモデル：`glm-4.7-flash`）：デプロイ時に API Key を入力済みの場合、ステップ 3 へ進む。後から Zeabur ダッシュボードの**変数**タブで `ZEABUR_AI_HUB_API_KEY` を追加も可能（追加後はサービスを再起動）。
-         - **他のプロバイダー**（Anthropic、OpenAI など）：Zeabur AI Hub API Key を入力しなかった場合、デフォルトモデルは `anthropic/claude-opus-4-7` です。Control UI Settings または環境変数で API キーを追加してください。詳細：https://docs.openclaw.ai/providers/anthropic
+         - **他のプロバイダー**（Anthropic、OpenAI など）：テンプレートのデフォルトは引き続き `zeabur-ai/glm-4.7-flash` です。他のプロバイダーを使うには、環境変数で API キーを追加してから、チャットで `/model <id>` または Control UI Settings からモデルを切り替えてください。詳細：https://docs.openclaw.ai/providers/anthropic
       3. **Chat** ページで AI モデルが正常に動作しているかテスト
       4. （オプション）Telegram、WhatsApp などのメッセージングプラットフォームを設定
 
@@ -2668,9 +2665,9 @@ localization:
       ## AI モデル設定
 
       **セットアップの確認：**
-      1. デフォルトモデルはデプロイ方法に依存します：
-         - Zeabur AI Hub API Key を入力した場合 → デフォルトモデル：`zeabur-ai/glm-4.7-flash`
-         - 入力しなかった場合 → デフォルトモデル：`anthropic/claude-opus-4-7`（API キーが必要）
+      1. 本テンプレートは初回起動時に `zeabur-ai/glm-4.7-flash` をデフォルトモデルとして書き込みます：
+         - Zeabur AI Hub API Key を入力した場合 → そのまま動作
+         - 入力しなかった場合 → モデルは応答しません。AI Hub キーを追加（推奨）するか、モデルを切り替えて他プロバイダーの API キーを用意してください
       2. **Chat** ページを開き、テストメッセージを送信
       3. 返答があれば → モデルは正常に動作しています
       4. エラーが出た場合 → API キーが正しく設定されているか確認
@@ -2868,7 +2865,6 @@ localization:
       - イメージを `2026.4.15` にアップグレード — デフォルトの Anthropic モデルが Claude Opus 4.7 に、Gemini テキスト読み上げ対応、Control UI に Model Auth ステータスカード追加、LanceDB クラウドストレージ対応、GitHub Copilot embedding プロバイダー、実験的ローカルモデル軽量デフォルト、50 以上のセキュリティ/プロバイダー/チャンネル修正
       - Zeabur AI Hub モデルサポート追加：`claude-opus-4-7`、`claude-sonnet-4-6`、`glm-5`、`gpt-5.4-pro`
       - 廃止モデルを削除：`gemini-3-pro-preview`、`kimi-2.5`
-      - AI Hub キーなしのデフォルトモデル：`anthropic/claude-opus-4-6` → `anthropic/claude-opus-4-7`
 
       **2026/4/6**
       - イメージを `2026.4.5` にアップグレード — 動画/音楽生成ツール（`video_generate`、`music_generate`）、xAI/Runway/Alibaba Wan/Google Lyria/MiniMax プロバイダー対応、ComfyUI ワークフロープラグイン、Qwen/Fireworks AI/StepFun/Amazon Bedrock Mantle プロバイダー追加、Control UI 12 言語ローカライズ、Memory Dreaming（実験的バックグラウンド記憶昇格）、プロンプトキャッシュ安定性改善、Claude CLI ループバック MCP ブリッジ、ACPX 組み込みランタイム、Control UI からの ClawHub スキルインストール、構造化プラン進捗イベント、レガシー設定エイリアス削除（`openclaw doctor --fix` の実行が必要）、100 以上のセキュリティ/チャンネル/プロバイダー修正
@@ -2994,7 +2990,7 @@ localization:
         description: "'true' para habilitar la Control UI vía dominio público (predeterminado). 'false' para solo conexiones locales (más seguro)."
       - key: ZEABUR_AI_HUB_API_KEY
         name: Clave API de Zeabur AI Hub (Opcional)
-        description: "Opcional — déjelo en blanco para omitir. Si se omite, el modelo predeterminado es anthropic/claude-opus-4-7 (requiere su propia clave API). Con AI Hub puede usar Gemini, GPT, Claude, DeepSeek. Puede añadirlo después en la pestaña Variables."
+        description: "Opcional pero recomendado. La plantilla usa zeabur-ai/glm-4.7-flash (económico, rápido) como modelo predeterminado, que requiere esta clave. Sin ella, deberá cambiar a otro proveedor y usar su propia clave API. Puede añadirlo después en la pestaña Variables."
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞 (anteriormente Clawdbot, Moltbot) es un asistente personal de IA que se ejecuta localmente y se conecta a múltiples plataformas de mensajería a través de una arquitectura Gateway basada en WebSocket.
@@ -3018,7 +3014,7 @@ localization:
       |----------|-----------|-------------|
       | **Dominio** | Sí | El subdominio para acceder a OpenClaw (ej. `my-openclaw` → `my-openclaw.zeabur.app`). Se puede eliminar después de cambiar al modo loopback. |
       | **Habilitar Control UI** | Sí | `true` (predeterminado) — habilita la Control UI web vía dominio público. `false` — solo loopback, sin acceso web público (más seguro, usar con Tailscale o canales compatibles como Telegram) |
-      | **Clave API de Zeabur AI Hub** | No | Déjelo en blanco para omitir. Sin ella, el modelo predeterminado es `anthropic/claude-opus-4-7` (requiere su propia clave API). Con AI Hub puede usar Gemini, GPT, Claude, DeepSeek. Puede añadirlo después en la pestaña **Variables**. |
+      | **Clave API de Zeabur AI Hub** | No | Déjelo en blanco para omitir. La plantilla usa `zeabur-ai/glm-4.7-flash` (económico, rápido) como modelo predeterminado, que requiere esta clave — sin ella, deberá cambiar de modelo y usar su propia clave API de otro proveedor (Anthropic, OpenAI, etc.). Puede añadirlo después en la pestaña **Variables**. |
 
       ## Recursos Recomendados
       - **Mínimo**: 2 vCPU / 4 GB RAM
@@ -3032,7 +3028,7 @@ localization:
       1. Después del despliegue, abra la URL del servicio desde la pestaña **Red**. En la página de inicio de sesión, pegue el **Gateway Token** (disponible en la pestaña **Instrucciones** o **Variables de entorno** → `OPENCLAW_GATEWAY_TOKEN`) y haga clic en **Connect**
       2. **Configure el modelo de AI** (elija uno):
          - **Zeabur AI Hub** (modelo predeterminado: `glm-4.7-flash`): Si ingresó la API Key durante el despliegue, vaya directamente al paso 3. También puede agregar `ZEABUR_AI_HUB_API_KEY` después en la pestaña **Variables** del panel de Zeabur (reinicie el servicio después de agregar).
-         - **Otros proveedores** (Anthropic, OpenAI, etc.): Si no ingresó una API Key de Zeabur AI Hub, el modelo predeterminado es `anthropic/claude-opus-4-7`. Vaya a Control UI Settings o agregue la clave API mediante variables de entorno. Más info: https://docs.openclaw.ai/providers/anthropic
+         - **Otros proveedores** (Anthropic, OpenAI, etc.): El predeterminado de la plantilla sigue siendo `zeabur-ai/glm-4.7-flash`. Para usar otro proveedor, agregue su clave API mediante variables de entorno, luego cambie el modelo con `/model <id>` en el chat o desde Control UI Settings. Más info: https://docs.openclaw.ai/providers/anthropic
       3. Vaya a la página **Chat** para probar si su modelo de AI funciona
       4. (Opcional) Configure plataformas de mensajería como Telegram, WhatsApp, etc.
 
@@ -3185,9 +3181,9 @@ localization:
       ## Configuración del Modelo de AI
 
       **Verifique su configuración:**
-      1. El modelo predeterminado depende del despliegue:
-         - Con Zeabur AI Hub API Key → modelo predeterminado: `zeabur-ai/glm-4.7-flash`
-         - Sin → modelo predeterminado: `anthropic/claude-opus-4-7` (requiere clave API)
+      1. La plantilla escribe `zeabur-ai/glm-4.7-flash` como modelo predeterminado en el primer arranque:
+         - Con Zeabur AI Hub API Key → funciona directamente
+         - Sin → el modelo no responderá; añada una clave de AI Hub (recomendado) o cambie el modelo + añada la clave API de otro proveedor
       2. Abra la página **Chat** y envíe un mensaje de prueba
       3. Si recibe una respuesta → el modelo funciona correctamente
       4. Si obtiene un error → verifique que su clave API esté configurada correctamente
@@ -3385,7 +3381,6 @@ localization:
       - Actualizar imagen a `2026.4.15` — modelo predeterminado de Anthropic cambiado a Claude Opus 4.7, soporte de texto a voz de Gemini, nueva tarjeta de estado Model Auth en Control UI, soporte de almacenamiento en la nube LanceDB, proveedor de embeddings de GitHub Copilot, valores por defecto experimentales para modelos locales ligeros, y más de 50 correcciones de seguridad/proveedores/canales
       - Agregar soporte de modelos de Zeabur AI Hub: `claude-opus-4-7`, `claude-sonnet-4-6`, `glm-5`, `gpt-5.4-pro`
       - Eliminar modelos retirados: `gemini-3-pro-preview`, `kimi-2.5`
-      - Modelo predeterminado sin AI Hub Key: `anthropic/claude-opus-4-6` → `anthropic/claude-opus-4-7`
 
       **2026/4/6**
       - Actualizar imagen a `2026.4.5` — herramientas de generación de video/música (`video_generate`, `music_generate`) con proveedores xAI/Runway/Alibaba Wan/Google Lyria/MiniMax, plugin de workflow ComfyUI, nuevos proveedores Qwen/Fireworks AI/StepFun/Amazon Bedrock Mantle, localización de Control UI en 12 idiomas, Memory Dreaming (promoción experimental de memoria en segundo plano), mejoras en estabilidad de prompt cache, puente MCP loopback de Claude CLI, runtime embebido ACPX, instalación de skills ClawHub desde Control UI, eventos de progreso de plan estructurado, eliminación de alias de configuración legacy (ejecutar `openclaw doctor --fix`), y 100+ correcciones de seguridad/canales/proveedores
@@ -3511,7 +3506,7 @@ localization:
         description: "'true' untuk mengaktifkan Control UI via domain publik (default). 'false' untuk hanya koneksi lokal (lebih aman)."
       - key: ZEABUR_AI_HUB_API_KEY
         name: Kunci API Zeabur AI Hub (Opsional)
-        description: "Opsional — kosongkan untuk melewati. Jika dilewati, model default adalah anthropic/claude-opus-4-7 (memerlukan API key sendiri). Dengan AI Hub, Anda dapat menggunakan Gemini, GPT, Claude, DeepSeek. Dapat ditambahkan nanti di tab Variabel."
+        description: "Opsional tapi disarankan. Template ini menggunakan zeabur-ai/glm-4.7-flash (murah, cepat) sebagai model default, yang memerlukan kunci ini. Tanpa kunci ini, Anda perlu beralih ke penyedia lain dan menyediakan API key sendiri. Dapat ditambahkan nanti di tab Variabel."
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞 (sebelumnya Clawdbot, Moltbot) adalah asisten AI pribadi yang berjalan secara lokal dan terhubung ke berbagai platform perpesanan melalui arsitektur Gateway berbasis WebSocket.
@@ -3535,7 +3530,7 @@ localization:
       |----------|-------|-----------|
       | **Domain** | Ya | Subdomain untuk mengakses OpenClaw (contoh `my-openclaw` → `my-openclaw.zeabur.app`). Dapat dihapus setelah beralih ke mode loopback. |
       | **Aktifkan Control UI** | Ya | `true` (default) — mengaktifkan Control UI web via domain publik. `false` — hanya loopback, tanpa akses web publik (lebih aman, gunakan dengan Tailscale atau channel yang didukung seperti Telegram) |
-      | **Kunci API Zeabur AI Hub** | Tidak | Kosongkan untuk melewati. Tanpa ini, model default adalah `anthropic/claude-opus-4-7` (memerlukan API key sendiri). Dengan AI Hub, Anda dapat menggunakan Gemini, GPT, Claude, DeepSeek. Dapat ditambahkan nanti di tab **Variabel**. |
+      | **Kunci API Zeabur AI Hub** | Tidak | Kosongkan untuk melewati. Template ini menggunakan `zeabur-ai/glm-4.7-flash` (murah, cepat) sebagai model default, yang memerlukan kunci ini — tanpa kunci ini, Anda perlu beralih model dan menyediakan API key dari penyedia lain (Anthropic, OpenAI, dll.). Dapat ditambahkan nanti di tab **Variabel**. |
 
       ## Sumber Daya yang Direkomendasikan
       - **Minimum**: 2 vCPU / 4 GB RAM
@@ -3549,7 +3544,7 @@ localization:
       1. Setelah deploy, buka URL layanan dari tab **Networking**. Di halaman login, tempelkan **Gateway Token** (tersedia di tab **Instruksi** atau **Variables** → `OPENCLAW_GATEWAY_TOKEN`) dan klik **Connect**
       2. **Konfigurasi model AI** (pilih salah satu):
          - **Zeabur AI Hub** (model default: `glm-4.7-flash`): Jika sudah memasukkan API Key saat deploy, langsung ke langkah 3. Bisa juga menambahkan `ZEABUR_AI_HUB_API_KEY` nanti di tab **Variables** dashboard Zeabur (restart layanan setelah menambahkan).
-         - **Penyedia lain** (Anthropic, OpenAI, dll.): Jika tidak memasukkan API Key Zeabur AI Hub, model default adalah `anthropic/claude-opus-4-7`. Buka Control UI Settings atau tambahkan kunci API melalui variabel lingkungan. Info: https://docs.openclaw.ai/providers/anthropic
+         - **Penyedia lain** (Anthropic, OpenAI, dll.): Default template tetap `zeabur-ai/glm-4.7-flash`. Untuk menggunakan penyedia lain, tambahkan API key-nya via variabel lingkungan, lalu beralih model dengan `/model <id>` di chat atau dari Control UI Settings. Info: https://docs.openclaw.ai/providers/anthropic
       3. Buka halaman **Chat** untuk menguji apakah model AI Anda berfungsi
       4. (Opsional) Atur platform pesan seperti Telegram, WhatsApp, dll.
 
@@ -3702,9 +3697,9 @@ localization:
       ## Konfigurasi Model AI
 
       **Verifikasi setup Anda:**
-      1. Model default tergantung pada cara deploy:
-         - Dengan Zeabur AI Hub API Key → model default: `zeabur-ai/glm-4.7-flash`
-         - Tanpa → model default: `anthropic/claude-opus-4-7` (memerlukan kunci API)
+      1. Template menulis `zeabur-ai/glm-4.7-flash` sebagai model default saat boot pertama:
+         - Dengan Zeabur AI Hub API Key → langsung berfungsi
+         - Tanpa → model tidak akan merespons; tambahkan kunci AI Hub (disarankan) atau beralih model + tambahkan kunci API penyedia lain
       2. Buka halaman **Chat** dan kirim pesan percobaan
       3. Jika mendapat balasan → model berfungsi dengan baik
       4. Jika ada error → pastikan kunci API sudah dikonfigurasi dengan benar
@@ -3902,7 +3897,6 @@ localization:
       - Upgrade image ke `2026.4.15` — model default Anthropic diubah ke Claude Opus 4.7, dukungan text-to-speech Gemini, kartu status Model Auth baru di Control UI, dukungan penyimpanan cloud LanceDB, provider embedding GitHub Copilot, default eksperimental untuk model lokal ringan, dan 50+ perbaikan keamanan/provider/channel
       - Tambah dukungan model Zeabur AI Hub: `claude-opus-4-7`, `claude-sonnet-4-6`, `glm-5`, `gpt-5.4-pro`
       - Hapus model yang sudah ditarik: `gemini-3-pro-preview`, `kimi-2.5`
-      - Model default tanpa AI Hub Key: `anthropic/claude-opus-4-6` → `anthropic/claude-opus-4-7`
 
       **2026/4/6**
       - Upgrade image ke `2026.4.5` — alat pembuatan video/musik (`video_generate`, `music_generate`) dengan provider xAI/Runway/Alibaba Wan/Google Lyria/MiniMax, plugin workflow ComfyUI, provider baru Qwen/Fireworks AI/StepFun/Amazon Bedrock Mantle, lokalisasi Control UI 12 bahasa, Memory Dreaming (promosi memori latar belakang eksperimental), peningkatan stabilitas prompt cache, Claude CLI loopback MCP bridge, ACPX embedded runtime, instalasi skill ClawHub dari Control UI, event progres rencana terstruktur, penghapusan alias konfigurasi legacy (jalankan `openclaw doctor --fix`), dan 100+ perbaikan keamanan/channel/provider
