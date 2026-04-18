@@ -68,17 +68,27 @@ spec:
     4. Go to **OAuth2 → URL Generator** → check scope `bot` → check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
     5. Copy the generated URL and open it in your browser to invite the bot to your server
 
-    ### 2. Authenticate Kiro (after deployment)
+    ### 2. Get Discord Channel IDs
 
-    Choose one method depending on your Kiro subscription:
+    1. Open Discord → go to **User Settings** (gear icon) → **Advanced** → enable **Developer Mode**
+    2. Right-click the channel where you want the bot to respond → **Copy Channel ID**
+    3. For multiple channels, separate IDs with commas: `123456789012345678,234567890123456789`
 
-    **Option A — API Key (Pro/Pro+/Power subscribers)**
+    ### 3. Get a Kiro API Key (Pro/Pro+/Power only)
 
-    Go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key, then paste it into the `KIRO_API_KEY` variable before deploying. No further steps needed.
+    If you have a paid Kiro subscription, go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key and paste it into the `KIRO_API_KEY` variable. This lets the bot authenticate automatically — no post-deploy steps needed.
 
-    **Option B — Device Flow (Free tier or no API key)**
+    Free tier users can leave `KIRO_API_KEY` empty and authenticate after deployment (see step 5).
 
-    Leave `KIRO_API_KEY` empty. After the service is running, open the service terminal in Zeabur Dashboard and run:
+    ### 4. Deploy
+
+    Fill in the variables and click deploy. The service connects to Discord automatically.
+
+    ### 5. Authenticate Kiro via Device Flow (Free tier only)
+
+    Skip this step if you set `KIRO_API_KEY` in step 3.
+
+    After the service is running, open the service terminal in Zeabur Dashboard and run:
 
     ```
     runuser -u agent -- kiro-cli login --use-device-flow
@@ -87,16 +97,6 @@ spec:
     > ⚠️ Must run as `agent`. Running as `root` writes credentials to `/root/` which is not persisted; they will be lost on restart.
 
     Follow the on-screen URL and code to complete device flow authorization in your browser. Restart the service after login completes.
-
-    ### 3. Get Discord Channel IDs
-
-    1. Open Discord → go to **User Settings** (gear icon) → **Advanced** → enable **Developer Mode**
-    2. Right-click the channel where you want the bot to respond → **Copy Channel ID**
-    3. For multiple channels, separate IDs with commas: `123456789012345678,234567890123456789`
-
-    ### 4. Deploy
-
-    Fill in the Discord Bot Token and click deploy. The service connects to Discord automatically. Then authenticate Kiro using one of the methods above.
 
     ## Usage
 
@@ -264,17 +264,27 @@ spec:
         4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
         5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
 
-        ### 2. 認證 Kiro（部署後）
+        ### 2. 取得 Discord 頻道 ID
 
-        依照你的 Kiro 訂閱方案擇一：
+        1. 開啟 Discord → 前往 **使用者設定**（齒輪圖示）→ **進階** → 啟用 **開發者模式**
+        2. 對你要 Bot 回應的頻道按右鍵 → **複製頻道 ID**
+        3. 多個頻道用逗號分隔：`123456789012345678,234567890123456789`
 
-        **方式 A — API Key（Pro/Pro+/Power 訂閱者）**
+        ### 3. 取得 Kiro API Key（僅 Pro/Pro+/Power 方案）
 
-        前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，部署前填入 `KIRO_API_KEY` 變數即可，無需後續手動登入。
+        如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY` 變數。服務將自動認證，無需部署後的手動操作。
 
-        **方式 B — Device Flow（免費方案或未填 API Key）**
+        免費方案用戶將 `KIRO_API_KEY` 留空，部署後執行步驟 5 認證。
 
-        將 `KIRO_API_KEY` 留空。服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
+        ### 4. 部署
+
+        填入變數後點擊部署即可。服務會自動連線到 Discord。
+
+        ### 5. 透過 Device Flow 認證 Kiro（僅免費方案）
+
+        若步驟 3 已填入 `KIRO_API_KEY`，跳過此步驟。
+
+        服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -283,16 +293,6 @@ spec:
         > ⚠️ 必須以 `agent` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
 
         依照畫面顯示的 URL 和 code 到瀏覽器完成授權。認證完成後請重啟服務。
-
-        ### 3. 取得 Discord 頻道 ID
-
-        1. 開啟 Discord → 前往 **使用者設定**（齒輪圖示）→ **進階** → 啟用 **開發者模式**
-        2. 對你要 Bot 回應的頻道按右鍵 → **複製頻道 ID**
-        3. 多個頻道用逗號分隔：`123456789012345678,234567890123456789`
-
-        ### 4. 部署
-
-        填入 Discord Bot Token 後點擊部署即可。服務會自動連線到 Discord。然後使用上述方法之一認證 Kiro。
 
         ## 使用方式
 
@@ -369,17 +369,27 @@ spec:
         4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
         5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
 
-        ### 2. 认证 Kiro（部署后）
+        ### 2. 获取 Discord 频道 ID
 
-        根据你的 Kiro 订阅方案选择一种方式：
+        1. 打开 Discord → 前往 **用户设置**（齿轮图标）→ **高级** → 启用 **开发者模式**
+        2. 右键点击你要 Bot 回应的频道 → **复制频道 ID**
+        3. 多个频道用逗号分隔：`123456789012345678,234567890123456789`
 
-        **方式 A — API Key（Pro/Pro+/Power 订阅者）**
+        ### 3. 获取 Kiro API Key（仅 Pro/Pro+/Power 方案）
 
-        前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，部署前填入 `KIRO_API_KEY` 变量即可，无需后续手动登录。
+        如果你有付费的 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY` 变量。服务将自动认证，无需部署后的手动操作。
 
-        **方式 B — Device Flow（免费方案或未填 API Key）**
+        免费方案用户将 `KIRO_API_KEY` 留空，部署后执行步骤 5 认证。
 
-        将 `KIRO_API_KEY` 留空。服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
+        ### 4. 部署
+
+        填入变量后点击部署即可。服务会自动连接到 Discord。
+
+        ### 5. 通过 Device Flow 认证 Kiro（仅免费方案）
+
+        若步骤 3 已填入 `KIRO_API_KEY`，跳过此步骤。
+
+        服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -388,16 +398,6 @@ spec:
         > ⚠️ 必须以 `agent` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
 
         按照屏幕显示的 URL 和 code 到浏览器完成授权。认证完成后请重启服务。
-
-        ### 3. 获取 Discord 频道 ID
-
-        1. 打开 Discord → 前往 **用户设置**（齿轮图标）→ **高级** → 启用 **开发者模式**
-        2. 右键点击你要 Bot 回应的频道 → **复制频道 ID**
-        3. 多个频道用逗号分隔：`123456789012345678,234567890123456789`
-
-        ### 4. 部署
-
-        填入 Discord Bot Token 后点击部署即可。服务会自动连接到 Discord。然后使用上述方法之一认证 Kiro。
 
         ## 使用方式
 
@@ -474,17 +474,27 @@ spec:
         4. **OAuth2 → URL Generator** → scope `bot` にチェック → 権限にチェック：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
         5. 生成された URL をコピーし、ブラウザで開いて Bot をサーバーに招待
 
-        ### 2. Kiro の認証（デプロイ後）
+        ### 2. Discord チャンネル ID の取得
 
-        Kiro のサブスクリプションに応じていずれかの方法を選択してください：
+        1. Discord を開く → **ユーザー設定**（歯車アイコン）→ **詳細設定** → **開発者モード** を有効化
+        2. Bot に応答させたいチャンネルを右クリック → **チャンネル ID をコピー**
+        3. 複数チャンネルはカンマで区切る：`123456789012345678,234567890123456789`
 
-        **方法 A — API Key（Pro/Pro+/Power 加入者）**
+        ### 3. Kiro API Key の取得（Pro/Pro+/Power プランのみ）
 
-        [kiro.dev](https://kiro.dev) → Settings → API Keys で key を作成し、デプロイ前に `KIRO_API_KEY` 変数に入力してください。手動ログインは不要です。
+        有料の Kiro サブスクリプションをお持ちの場合、[kiro.dev](https://kiro.dev) → Settings → API Keys で key を作成し、`KIRO_API_KEY` 変数に入力してください。サービスが自動的に認証されるため、デプロイ後の手動操作は不要です。
 
-        **方法 B — Device Flow（無料プランまたは API Key 未入力）**
+        無料プランのユーザーは `KIRO_API_KEY` を空のままにし、デプロイ後にステップ 5 で認証してください。
 
-        `KIRO_API_KEY` を空のままにします。サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
+        ### 4. デプロイ
+
+        変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。
+
+        ### 5. Device Flow で Kiro を認証（無料プランのみ）
+
+        ステップ 3 で `KIRO_API_KEY` を入力した場合はこのステップをスキップしてください。
+
+        サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -493,16 +503,6 @@ spec:
         > ⚠️ `agent` ユーザーで実行する必要があります。`root` で実行すると認証ファイルが `/root/` に書き込まれ、永続化されないため再起動時に失われます。
 
         画面に表示される URL とコードをブラウザで開いて認証を完了してください。認証後はサービスを再起動してください。
-
-        ### 3. Discord チャンネル ID の取得
-
-        1. Discord を開く → **ユーザー設定**（歯車アイコン）→ **詳細設定** → **開発者モード** を有効化
-        2. Bot に応答させたいチャンネルを右クリック → **チャンネル ID をコピー**
-        3. 複数チャンネルはカンマで区切る：`123456789012345678,234567890123456789`
-
-        ### 4. デプロイ
-
-        Discord Bot Token を入力してデプロイをクリック。サービスは自動的に Discord に接続します。その後、上記の方法で Kiro を認証してください。
 
         ## 使い方
 
@@ -579,17 +579,27 @@ spec:
         4. Ir a **OAuth2 → URL Generator** → marcar scope `bot` → marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
         5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
 
-        ### 2. Autenticar Kiro (después del despliegue)
+        ### 2. Obtener IDs de canales de Discord
 
-        Elige un método según tu suscripción de Kiro:
+        1. Abrir Discord → **Ajustes de usuario** (icono de engranaje) → **Avanzado** → activar **Modo desarrollador**
+        2. Clic derecho en el canal donde quieres que el Bot responda → **Copiar ID del canal**
+        3. Para múltiples canales, separar con comas: `123456789012345678,234567890123456789`
 
-        **Opción A — API Key (suscriptores Pro/Pro+/Power)**
+        ### 3. Obtener una Kiro API Key (solo plan Pro/Pro+/Power)
 
-        Ve a [kiro.dev](https://kiro.dev) → Settings → API Keys, crea una key y pégala en la variable `KIRO_API_KEY` antes de desplegar. No se requieren pasos adicionales.
+        Si tienes una suscripción de pago de Kiro, ve a [kiro.dev](https://kiro.dev) → Settings → API Keys, crea una key y pégala en la variable `KIRO_API_KEY`. El servicio se autenticará automáticamente sin pasos post-despliegue.
 
-        **Opción B — Device Flow (plan gratuito o sin API Key)**
+        Los usuarios del plan gratuito pueden dejar `KIRO_API_KEY` vacío y autenticarse después del despliegue en el paso 5.
 
-        Deja `KIRO_API_KEY` vacío. Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
+        ### 4. Desplegar
+
+        Completa las variables y haz clic en desplegar. El servicio se conecta a Discord automáticamente.
+
+        ### 5. Autenticar Kiro con Device Flow (solo plan gratuito)
+
+        Omite este paso si configuraste `KIRO_API_KEY` en el paso 3.
+
+        Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -598,16 +608,6 @@ spec:
         > ⚠️ Debe ejecutarse como `agent`. Ejecutar como `root` escribe las credenciales en `/root/`, que no es persistente y se perderán al reiniciar.
 
         Sigue la URL y el código en pantalla para completar la autorización en tu navegador. Reinicia el servicio después de completar el login.
-
-        ### 3. Obtener IDs de canales de Discord
-
-        1. Abrir Discord → **Ajustes de usuario** (icono de engranaje) → **Avanzado** → activar **Modo desarrollador**
-        2. Clic derecho en el canal donde quieres que el Bot responda → **Copiar ID del canal**
-        3. Para múltiples canales, separar con comas: `123456789012345678,234567890123456789`
-
-        ### 4. Desplegar
-
-        Completar el Discord Bot Token y hacer clic en desplegar. El servicio se conecta a Discord automáticamente. Luego autenticar Kiro usando uno de los métodos anteriores.
 
         ## Uso
 
@@ -684,17 +684,27 @@ spec:
         4. Buka **OAuth2 → URL Generator** → centang scope `bot` → centang izin: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
         5. Salin URL yang dihasilkan dan buka di browser untuk mengundang Bot ke server Anda
 
-        ### 2. Autentikasi Kiro (setelah deploy)
+        ### 2. Dapatkan ID Channel Discord
 
-        Pilih salah satu metode sesuai langganan Kiro Anda:
+        1. Buka Discord → **Pengaturan Pengguna** (ikon roda gigi) → **Lanjutan** → aktifkan **Mode Pengembang**
+        2. Klik kanan channel tempat Anda ingin Bot merespons → **Salin ID Channel**
+        3. Untuk beberapa channel, pisahkan dengan koma: `123456789012345678,234567890123456789`
 
-        **Opsi A — API Key (pelanggan Pro/Pro+/Power)**
+        ### 3. Dapatkan Kiro API Key (hanya paket Pro/Pro+/Power)
 
-        Buka [kiro.dev](https://kiro.dev) → Settings → API Keys, buat key dan masukkan ke variabel `KIRO_API_KEY` sebelum deploy. Tidak perlu langkah login manual.
+        Jika Anda memiliki langganan Kiro berbayar, buka [kiro.dev](https://kiro.dev) → Settings → API Keys, buat key dan masukkan ke variabel `KIRO_API_KEY`. Layanan akan otentikasi secara otomatis tanpa langkah manual setelah deploy.
 
-        **Opsi B — Device Flow (paket gratis atau tanpa API Key)**
+        Pengguna paket gratis dapat mengosongkan `KIRO_API_KEY` dan autentikasi setelah deploy di langkah 5.
 
-        Kosongkan `KIRO_API_KEY`. Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
+        ### 4. Deploy
+
+        Isi variabel dan klik deploy. Layanan akan terhubung ke Discord secara otomatis.
+
+        ### 5. Autentikasi Kiro via Device Flow (hanya paket gratis)
+
+        Lewati langkah ini jika Anda mengisi `KIRO_API_KEY` di langkah 3.
+
+        Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
 
         ```
         runuser -u agent -- kiro-cli login --use-device-flow
@@ -703,16 +713,6 @@ spec:
         > ⚠️ Harus dijalankan sebagai `agent`. Menjalankan sebagai `root` akan menulis kredensial ke `/root/` yang tidak dipersistenkan; akan hilang saat restart.
 
         Ikuti URL dan kode di layar untuk menyelesaikan otorisasi device flow di browser Anda. Restart layanan setelah login selesai.
-
-        ### 3. Dapatkan ID Channel Discord
-
-        1. Buka Discord → **Pengaturan Pengguna** (ikon roda gigi) → **Lanjutan** → aktifkan **Mode Pengembang**
-        2. Klik kanan channel tempat Anda ingin Bot merespons → **Salin ID Channel**
-        3. Untuk beberapa channel, pisahkan dengan koma: `123456789012345678,234567890123456789`
-
-        ### 4. Deploy
-
-        Isi Discord Bot Token dan klik deploy. Layanan akan terhubung ke Discord secara otomatis. Kemudian autentikasi Kiro menggunakan salah satu metode di atas.
 
         ## Penggunaan
 
