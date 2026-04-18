@@ -37,6 +37,14 @@ spec:
       type: STRING
       name: Discord User IDs (optional)
       description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone in the allowed channels."
+    - key: SLACK_BOT_TOKEN
+      type: STRING
+      name: Slack Bot Token (optional)
+      description: "Optional. Bot User OAuth Token (xoxb-...) from Slack App settings. Leave empty to disable Slack adapter."
+    - key: SLACK_APP_TOKEN
+      type: STRING
+      name: Slack App Token (optional)
+      description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
   readme: |
     # OpenAB Codex
 
@@ -46,7 +54,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template uses a pinned version (`0.7.5`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+    - **Image tag:** This template uses a pinned version (`0.7.7`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
     - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
 
@@ -114,7 +122,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-codex:0.7.5
+          image: ghcr.io/openabdev/openab-codex:0.7.7
           command:
             - /bin/sh
             - -c
@@ -138,8 +146,8 @@ spec:
               chown -R node:node /home/node
               chmod 755 /home/node/.config 2>/dev/null || true
 
-              if [ -z "$DISCORD_BOT_TOKEN" ]; then
-                echo "openab: DISCORD_BOT_TOKEN not set — sleeping"
+              if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ]; then
+                echo "openab: neither DISCORD_BOT_TOKEN nor SLACK_BOT_TOKEN set — sleeping"
                 exec sleep infinity
               fi
 
@@ -148,21 +156,28 @@ spec:
               mkdir -p "$CONFIG_DIR"
 
               # Generate config.toml on first boot only
-              # openab expands ${VAR} at runtime from process env
               # To regenerate, delete the file and restart
               if [ ! -f "$CONFIG_FILE" ]; then
                 cp /opt/config.toml.template "$CONFIG_FILE"
 
-                # Append allowed_channels/users if provided
-                if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
-                  IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
-                    id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
-                  sed -i "/^\[discord\]/a allowed_channels = [$(echo "$channels" | sed 's/,$//')]" "$CONFIG_FILE"
+                # Add [discord] section if token provided
+                if [ -n "$DISCORD_BOT_TOKEN" ]; then
+                  printf '\n[discord]\nbot_token = "%s"\n' "$DISCORD_BOT_TOKEN" >> "$CONFIG_FILE"
+                  if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
+                    IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
+                      id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
+                    printf 'allowed_channels = [%s]\n' "$(echo "$channels" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_USERS" ]; then
+                    IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do
+                      id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
+                    printf 'allowed_users = [%s]\n' "$(echo "$users" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
                 fi
-                if [ -n "$OPENAB_ALLOWED_USERS" ]; then
-                  IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do
-                    id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
-                  sed -i "/^\[discord\]/a allowed_users = [$(echo "$users" | sed 's/,$//')]" "$CONFIG_FILE"
+
+                # Add [slack] section if tokens provided
+                if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
+                  printf '\n[slack]\nbot_token = "%s"\napp_token = "%s"\n' "$SLACK_BOT_TOKEN" "$SLACK_APP_TOKEN" >> "$CONFIG_FILE"
                 fi
 
                 echo "openab: config.toml generated"
@@ -174,9 +189,6 @@ spec:
               exec runuser -u node --preserve-environment -- openab run "$CONFIG_FILE"
           - path: /opt/config.toml.template
             template: |
-              [discord]
-              bot_token = "${DISCORD_BOT_TOKEN}"
-
               [agent]
               command = "codex-acp"
               args = []
@@ -190,6 +202,10 @@ spec:
           OPENAB_ALLOWED_CHANNELS:
             default: ""
           OPENAB_ALLOWED_USERS:
+            default: ""
+          SLACK_BOT_TOKEN:
+            default: ""
+          SLACK_APP_TOKEN:
             default: ""
   locales:
     zh-TW:
@@ -218,7 +234,7 @@ spec:
 
         ## 注意事項
 
-        - **映像標籤：** 此模板使用固定版本（`0.7.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+        - **映像標籤：** 此模板使用固定版本（`0.7.7`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
         - **持久化儲存：** `/home/node` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
         - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
 
@@ -306,7 +322,7 @@ spec:
 
         ## 注意事项
 
-        - **镜像标签：** 此模板使用固定版本（`0.7.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+        - **镜像标签：** 此模板使用固定版本（`0.7.7`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
         - **持久化存储：** `/home/node` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
         - **文件权限：** 容器以 root 启动后切换为 node 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
 
@@ -394,7 +410,7 @@ spec:
 
         ## 注意事項
 
-        - **イメージタグ：** このテンプレートは固定バージョン（`0.7.5`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+        - **イメージタグ：** このテンプレートは固定バージョン（`0.7.7`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
         - **永続ストレージ：** `/home/node` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
         - **ファイル権限：** コンテナは root で起動し、openab 実行前に node ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
 
@@ -482,7 +498,7 @@ spec:
 
         ## Notas Importantes
 
-        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.7.5`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.7.7`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
         - **Almacenamiento persistente:** `/home/node` esta montado como volumen persistente. Plugins, configuracion y credenciales se conservan entre reinicios.
         - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario node (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automaticamente al arrancar.
 
@@ -570,7 +586,7 @@ spec:
 
         ## Catatan Penting
 
-        - **Tag image:** Template ini menggunakan versi yang dipin (`0.7.5`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+        - **Tag image:** Template ini menggunakan versi yang dipin (`0.7.7`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
         - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
         - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna node (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan — izin diperbaiki secara otomatis saat boot.
 
