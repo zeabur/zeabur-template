@@ -65,7 +65,7 @@ spec:
 
     - **Image tag:** This template uses a pinned version (`0.7.7`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
-    - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
+    - **Config ownership:** The container runs directly as `node` user (uid 1000). If you encounter permission issues on the persistent volume, restart the service.
 
     ## Setup
 
@@ -79,16 +79,18 @@ spec:
 
     ### 2. Authentication (choose one)
 
-    **Option A: OpenAI API Key**
+    **Option A: OpenAI API Key** (billed per token — [see pricing](https://developers.openai.com/codex/pricing))
     1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
     2. Click **Create new secret key** → copy the key
     3. Fill in the `OpenAI API Key` variable when deploying
+    4. The service automatically runs `codex login --with-api-key` on first boot — no manual steps needed
 
-    **Option B: Device Flow (after deployment)**
+    **Option B: ChatGPT Subscription** (Plus/Pro/Business — usage included in plan)
     1. Leave `OpenAI API Key` empty when deploying
     2. After the service starts, go to Zeabur Dashboard → Service → **Exec**
-    3. Run: `runuser -u node -- codex login --device-auth`
-    4. Follow the URL and authorize, then restart the service
+    3. Run: `codex login --device-auth`
+    4. Open the URL shown, authorize with your ChatGPT account, then restart the service
+    5. Credentials are saved on the persistent volume and auto-refreshed — this step is only needed once
 
     ### 3. Get Discord Channel IDs
 
@@ -149,6 +151,7 @@ spec:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
+        runAsUserID: 1000
         volumes:
           - id: node-home
             dir: /home/node
@@ -158,15 +161,6 @@ spec:
             template: |
               #!/bin/sh
               set -e
-
-              # Initialize shell config on first boot (volume is empty)
-              if [ ! -f /home/node/.bashrc ]; then
-                cp /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout /home/node/ 2>/dev/null || true
-              fi
-
-              # Fix ownership for persistent volume
-              chown -R node:node /home/node
-              chmod 755 /home/node/.config 2>/dev/null || true
 
               if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ]; then
                 echo "openab: neither DISCORD_BOT_TOKEN nor SLACK_BOT_TOKEN set — sleeping"
@@ -215,15 +209,18 @@ spec:
                 echo "openab: using existing config.toml (delete to regenerate)"
               fi
 
-              chown -R node:node "$CONFIG_DIR"
-              exec runuser -u node --preserve-environment -- openab run "$CONFIG_FILE"
+              # Authenticate codex with API key if not already logged in
+              if [ -n "$OPENAI_API_KEY" ] && [ ! -f "$HOME/.codex/auth.json" ]; then
+                printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
+              fi
+
+              exec openab run "$CONFIG_FILE"
           - path: /opt/config.toml.template
             template: |
               [agent]
               command = "codex-acp"
               args = []
               working_dir = "/home/node"
-              env = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
         env:
           DISCORD_BOT_TOKEN:
             default: ${DISCORD_BOT_TOKEN}
@@ -276,7 +273,7 @@ spec:
 
         - **映像標籤：** 此模板使用固定版本（`0.7.7`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
         - **持久化儲存：** `/home/node` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
-        - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
+        - **檔案權限：** 容器直接以 node 用戶（uid 1000）執行。如遇持久化磁碟的權限問題，重啟服務即可。
 
         ## 設定步驟
 
@@ -290,16 +287,18 @@ spec:
 
         ### 2. 認證（擇一）
 
-        **方式 A：OpenAI API Key**
+        **方式 A：OpenAI API Key**（依 token 計費 — [查看定價](https://developers.openai.com/codex/pricing)）
         1. 前往 [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
         2. 點擊 **Create new secret key** → 複製 key
         3. 部署時填入 `OpenAI API Key`
+        4. 服務首次啟動時會自動執行 `codex login --with-api-key`，無需手動操作
 
-        **方式 B：Device Flow（部署後）**
+        **方式 B：ChatGPT 訂閱**（Plus/Pro/Business — 使用量包含在方案內）
         1. 部署時將 `OpenAI API Key` 留空
         2. 服務啟動後，前往 Zeabur Dashboard → 服務 → **Exec**
-        3. 執行：`runuser -u node -- codex login --device-auth`
-        4. 依照 URL 授權，然後重啟服務
+        3. 執行：`codex login --device-auth`
+        4. 開啟顯示的 URL，用 ChatGPT 帳號授權，然後重啟服務
+        5. 認證資料儲存在持久化磁碟上並自動更新，此步驟只需做一次
 
         ### 3. 取得 Discord 頻道 ID
 
@@ -383,7 +382,7 @@ spec:
 
         - **镜像标签：** 此模板使用固定版本（`0.7.7`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
         - **持久化存储：** `/home/node` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
-        - **文件权限：** 容器以 root 启动后切换为 node 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
+        - **文件权限：** 容器直接以 node 用户（uid 1000）运行。如遇持久化存储权限问题，重启服务即可。
 
         ## 设置步骤
 
@@ -397,16 +396,18 @@ spec:
 
         ### 2. 认证（任选其一）
 
-        **方式 A：OpenAI API Key**
+        **方式 A：OpenAI API Key**（按 token 计费 — [查看定价](https://developers.openai.com/codex/pricing)）
         1. 前往 [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
         2. 点击 **Create new secret key** → 复制 key
         3. 部署时填入 `OpenAI API Key`
+        4. 服务首次启动时会自动执行 `codex login --with-api-key`，无需手动操作
 
-        **方式 B：Device Flow（部署后）**
+        **方式 B：ChatGPT 订阅**（Plus/Pro/Business — 使用量包含在套餐内）
         1. 部署时将 `OpenAI API Key` 留空
         2. 服务启动后，前往 Zeabur Dashboard → 服务 → **Exec**
-        3. 执行：`runuser -u node -- codex login --device-auth`
-        4. 按照 URL 授权，然后重启服务
+        3. 执行：`codex login --device-auth`
+        4. 打开显示的 URL，用 ChatGPT 账号授权，然后重启服务
+        5. 认证信息存储在持久化存储上并自动刷新，此步骤只需操作一次
 
         ### 3. 获取 Discord 频道 ID
 
@@ -490,7 +491,7 @@ spec:
 
         - **イメージタグ：** このテンプレートは固定バージョン（`0.7.7`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
         - **永続ストレージ：** `/home/node` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
-        - **ファイル権限：** コンテナは root で起動し、openab 実行前に node ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
+        - **ファイル権限：** コンテナは node ユーザー（uid 1000）として直接実行されます。永続ボリュームの権限問題が発生した場合、サービスを再起動してください。
 
         ## セットアップ
 
@@ -504,16 +505,18 @@ spec:
 
         ### 2. 認証（いずれか一つ）
 
-        **方法 A：OpenAI API Key**
+        **方法 A：OpenAI API Key**（トークン課金 — [料金を確認](https://developers.openai.com/codex/pricing)）
         1. [platform.openai.com/api-keys](https://platform.openai.com/api-keys) にアクセス
         2. **Create new secret key** をクリック → キーをコピー
         3. デプロイ時に `OpenAI API Key` に入力
+        4. サービスの初回起動時に `codex login --with-api-key` が自動実行されます — 手動操作不要
 
-        **方法 B：Device Flow（デプロイ後）**
+        **方法 B：ChatGPT サブスクリプション**（Plus/Pro/Business — 使用量はプランに含まれます）
         1. デプロイ時に `OpenAI API Key` を空のまま
         2. サービス起動後、Zeabur Dashboard → サービス → **Exec**
-        3. 実行：`runuser -u node -- codex login --device-auth`
-        4. URL に従って認証し、サービスを再起動
+        3. 実行：`codex login --device-auth`
+        4. 表示された URL を開き、ChatGPT アカウントで認証してサービスを再起動
+        5. 認証情報は永続ボリュームに保存され自動更新されます — この手順は一度だけ必要
 
         ### 3. Discord チャンネル ID の取得
 
@@ -597,7 +600,7 @@ spec:
 
         - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.7.7`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
         - **Almacenamiento persistente:** `/home/node` esta montado como volumen persistente. Plugins, configuracion y credenciales se conservan entre reinicios.
-        - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario node (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automaticamente al arrancar.
+        - **Permisos de archivos:** El contenedor se ejecuta directamente como el usuario node (uid 1000). Si encuentra problemas de permisos en el volumen persistente, reinicie el servicio.
 
         ## Configuracion
 
@@ -611,16 +614,18 @@ spec:
 
         ### 2. Autenticación (elegir una)
 
-        **Opción A: OpenAI API Key**
+        **Opción A: OpenAI API Key** (facturación por token — [ver precios](https://developers.openai.com/codex/pricing))
         1. Ir a [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
         2. Clic en **Create new secret key** → copiar la clave
         3. Completar `OpenAI API Key` al desplegar
+        4. El servicio ejecuta `codex login --with-api-key` automáticamente en el primer arranque — no se necesita intervención manual
 
-        **Opción B: Device Flow (después del despliegue)**
+        **Opción B: Suscripción ChatGPT** (Plus/Pro/Business — uso incluido en el plan)
         1. Dejar `OpenAI API Key` vacío al desplegar
         2. Después de que el servicio inicie, ir a Zeabur Dashboard → Servicio → **Exec**
-        3. Ejecutar: `runuser -u node -- codex login --device-auth`
-        4. Seguir la URL para autorizar, luego reiniciar el servicio
+        3. Ejecutar: `codex login --device-auth`
+        4. Abrir la URL mostrada, autorizar con la cuenta de ChatGPT y reiniciar el servicio
+        5. Las credenciales se guardan en el volumen persistente y se actualizan automáticamente — este paso solo es necesario una vez
 
         ### 3. Obtener IDs de canales de Discord
 
@@ -704,7 +709,7 @@ spec:
 
         - **Tag image:** Template ini menggunakan versi yang dipin (`0.7.7`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
         - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
-        - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna node (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan — izin diperbaiki secara otomatis saat boot.
+        - **Izin file:** Container berjalan langsung sebagai pengguna node (uid 1000). Jika mengalami masalah izin pada volume persisten, restart layanan.
 
         ## Pengaturan
 
@@ -718,16 +723,18 @@ spec:
 
         ### 2. Autentikasi (pilih salah satu)
 
-        **Opsi A: OpenAI API Key**
+        **Opsi A: OpenAI API Key** (tagihan per token — [lihat harga](https://developers.openai.com/codex/pricing))
         1. Buka [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
         2. Klik **Create new secret key** → salin key
         3. Isi `OpenAI API Key` saat deploy
+        4. Layanan otomatis menjalankan `codex login --with-api-key` saat pertama kali boot — tidak perlu langkah manual
 
-        **Opsi B: Device Flow (setelah deploy)**
+        **Opsi B: Langganan ChatGPT** (Plus/Pro/Business — penggunaan termasuk dalam paket)
         1. Kosongkan `OpenAI API Key` saat deploy
         2. Setelah layanan berjalan, buka Zeabur Dashboard → Layanan → **Exec**
-        3. Jalankan: `runuser -u node -- codex login --device-auth`
-        4. Ikuti URL untuk otorisasi, lalu restart layanan
+        3. Jalankan: `codex login --device-auth`
+        4. Buka URL yang ditampilkan, otorisasi dengan akun ChatGPT, lalu restart layanan
+        5. Kredensial disimpan di volume persisten dan diperbarui otomatis — langkah ini hanya diperlukan sekali
 
         ### 3. Dapatkan ID Channel Discord
 
