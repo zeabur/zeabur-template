@@ -65,7 +65,7 @@ spec:
 
     - **Image tag:** This template uses a pinned version (`0.7.7`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
     - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
-    - **Config ownership:** The container starts as root and switches to `agent` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
+    - **Config ownership:** The container runs directly as `agent` user (uid 1000). If you encounter permission issues on the persistent volume, restart the service.
 
     ## Setup
 
@@ -100,7 +100,7 @@ spec:
     After the service is running, open the service terminal in Zeabur Dashboard and run:
 
     ```
-    runuser -u agent -- kiro-cli login --use-device-flow
+    HOME=/home/agent kiro-cli login --use-device-flow
     ```
 
     > ⚠️ Must run as `agent`. Running as `root` writes credentials to `/root/` which is not persisted; they will be lost on restart.
@@ -166,6 +166,7 @@ spec:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
+        runAsUserID: 1000
         volumes:
           - id: agent-home
             dir: /home/agent
@@ -175,15 +176,6 @@ spec:
             template: |
               #!/bin/sh
               set -e
-
-              # Initialize shell config on first boot (volume is empty)
-              if [ ! -f /home/agent/.bashrc ]; then
-                cp /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout /home/agent/ 2>/dev/null || true
-              fi
-
-              # Fix ownership for persistent volume
-              chown -R agent:agent /home/agent
-              chmod 755 /home/agent/.config 2>/dev/null || true
 
               if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ]; then
                 echo "openab: neither DISCORD_BOT_TOKEN nor SLACK_BOT_TOKEN set — sleeping"
@@ -232,8 +224,7 @@ spec:
                 echo "openab: using existing config.toml (delete to regenerate)"
               fi
 
-              chown -R agent:agent "$CONFIG_DIR"
-              exec runuser -u agent --preserve-environment -- openab run "$CONFIG_FILE"
+              exec openab run "$CONFIG_FILE"
           - path: /opt/config.toml.template
             template: |
               [agent]
@@ -321,7 +312,7 @@ spec:
         服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
 
         ```
-        runuser -u agent -- kiro-cli login --use-device-flow
+        HOME=/home/agent kiro-cli login --use-device-flow
         ```
 
         > ⚠️ 必須以 `agent` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
@@ -439,7 +430,7 @@ spec:
         服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
 
         ```
-        runuser -u agent -- kiro-cli login --use-device-flow
+        HOME=/home/agent kiro-cli login --use-device-flow
         ```
 
         > ⚠️ 必须以 `agent` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
@@ -557,7 +548,7 @@ spec:
         サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
 
         ```
-        runuser -u agent -- kiro-cli login --use-device-flow
+        HOME=/home/agent kiro-cli login --use-device-flow
         ```
 
         > ⚠️ `agent` ユーザーで実行する必要があります。`root` で実行すると認証ファイルが `/root/` に書き込まれ、永続化されないため再起動時に失われます。
@@ -675,7 +666,7 @@ spec:
         Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
 
         ```
-        runuser -u agent -- kiro-cli login --use-device-flow
+        HOME=/home/agent kiro-cli login --use-device-flow
         ```
 
         > ⚠️ Debe ejecutarse como `agent`. Ejecutar como `root` escribe las credenciales en `/root/`, que no es persistente y se perderán al reiniciar.
@@ -793,7 +784,7 @@ spec:
         Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
 
         ```
-        runuser -u agent -- kiro-cli login --use-device-flow
+        HOME=/home/agent kiro-cli login --use-device-flow
         ```
 
         > ⚠️ Harus dijalankan sebagai `agent`. Menjalankan sebagai `root` akan menulis kredensial ke `/root/` yang tidak dipersistenkan; akan hilang saat restart.

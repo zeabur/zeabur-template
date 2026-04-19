@@ -65,7 +65,7 @@ spec:
 
     - **Image tag:** This template uses a pinned version (`0.7.7`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-claude).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
-    - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
+    - **Config ownership:** The container runs directly as `node` user (uid 1000). If you encounter permission issues on the persistent volume, restart the service.
 
     ## Setup
 
@@ -158,6 +158,7 @@ spec:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
+        runAsUserID: 1000
         volumes:
           - id: node-home
             dir: /home/node
@@ -167,15 +168,6 @@ spec:
             template: |
               #!/bin/sh
               set -e
-
-              # Initialize shell config on first boot (volume is empty)
-              if [ ! -f /home/node/.bashrc ]; then
-                cp /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout /home/node/ 2>/dev/null || true
-              fi
-
-              # Fix ownership for persistent volume
-              chown -R node:node /home/node
-              chmod 755 /home/node/.config 2>/dev/null || true
 
               if [ -z "$OPENAB_AUTH_TOKEN" ]; then
                 echo "openab: OPENAB_AUTH_TOKEN not set — sleeping"
@@ -244,8 +236,7 @@ spec:
                 echo "openab: using existing config.toml (delete to regenerate)"
               fi
 
-              chown -R node:node "$CONFIG_DIR"
-              exec runuser -u node --preserve-environment -- openab run "$CONFIG_FILE"
+              exec openab run "$CONFIG_FILE"
           - path: /opt/config.toml.template
             template: |
               [agent]
