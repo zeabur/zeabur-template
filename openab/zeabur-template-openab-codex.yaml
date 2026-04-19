@@ -90,7 +90,7 @@ spec:
     2. After the service starts, go to Zeabur Dashboard → Service → **Exec**
     3. The Exec terminal opens as root. Run with the correct HOME so credentials are saved to the right path:
        ```
-       su -s /bin/sh node -c 'codex login --device-auth'
+       HOME=/home/node codex login --device-auth
        ```
     4. Open the URL shown in the terminal, authorize with your ChatGPT account
     5. Restart the service from the dashboard
