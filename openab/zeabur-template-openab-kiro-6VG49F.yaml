@@ -49,6 +49,10 @@ spec:
       type: STRING
       name: Slack App Token (optional)
       description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
+    - key: OPENAB_MAX_SESSIONS
+      type: STRING
+      name: Max Concurrent Sessions (optional)
+      description: "Optional. Maximum number of concurrent agent sessions (default: 10). Oldest idle session is evicted when the limit is reached."
   readme: |
     # OpenAB Kiro
 
@@ -217,6 +221,11 @@ spec:
                   printf '\n[slack]\nbot_token = "%s"\napp_token = "%s"\n' "$SLACK_BOT_TOKEN" "$SLACK_APP_TOKEN" >> "$CONFIG_FILE"
                 fi
 
+                # Add [pool] section if max_sessions provided
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
                 echo "openab: config.toml generated"
               else
                 echo "openab: using existing config.toml (delete to regenerate)"
@@ -244,6 +253,8 @@ spec:
           SLACK_APP_TOKEN:
             default: ""
           OPENAB_ALLOW_BOT_MESSAGES:
+            default: ""
+          OPENAB_MAX_SESSIONS:
             default: ""
   locales:
     zh-TW:

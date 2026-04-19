@@ -5,7 +5,7 @@ metadata:
   name: OpenAB Claude
 spec:
   description: |
-    Open Agent Broker — a lightweight Rust harness that bridges Discord to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC.
+    Open Agent Broker — a lightweight Rust harness that bridges Discord and Slack to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC.
     Source: https://github.com/openabdev/openab
   icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
   coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
@@ -13,6 +13,7 @@ spec:
     - AI
     - Developer Tools
     - Discord
+    - Slack
   resourceRequirement:
     minConfig:
       cpu: 2
@@ -23,8 +24,8 @@ spec:
   variables:
     - key: DISCORD_BOT_TOKEN
       type: STRING
-      name: Discord Bot Token
-      description: Token from https://discord.com/developers/applications
+      name: Discord Bot Token (optional)
+      description: "Optional. Token from https://discord.com/developers/applications. Leave empty if using Slack only."
     - key: OPENAB_AUTH_TOKEN
       type: STRING
       name: Auth Token
@@ -45,6 +46,14 @@ spec:
       type: STRING
       name: Slack App Token (optional)
       description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
+    - key: OPENAB_ALLOW_BOT_MESSAGES
+      type: STRING
+      name: Allow Bot Messages (optional)
+      description: "Optional. Set to 'on' to allow messages from bots/webhooks to trigger the agent. Leave empty to disable (default)."
+    - key: OPENAB_MAX_SESSIONS
+      type: STRING
+      name: Max Concurrent Sessions (optional)
+      description: "Optional. Maximum number of concurrent agent sessions (default: 10). Oldest idle session is evicted when the limit is reached."
   readme: |
     # OpenAB
 
@@ -84,11 +93,24 @@ spec:
 
     ### 4. Deploy
 
-    Fill in the three template variables and click deploy. The service connects to Discord automatically.
+    Fill in the variables and click deploy. The service connects to Discord and/or Slack automatically.
+
+    ## Slack Setup (Optional)
+
+    OpenAB supports Slack via Socket Mode — no public URL needed.
+
+    1. Go to https://api.slack.com/apps → **Create New App** → **From scratch**
+    2. **Socket Mode** → Enable → generate an App-Level Token with scope `connections:write` → copy the `xapp-...` token (`SLACK_APP_TOKEN`)
+    3. **Event Subscriptions** → Enable Events → add bot events: `app_mention`, `message.channels`, `message.groups`
+    4. **OAuth & Permissions** → Bot Token Scopes → add: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+    5. **Install App** → Install to Workspace → copy the `xoxb-...` token (`SLACK_BOT_TOKEN`)
+    6. In each Slack channel you want the bot in, run `/invite @YourAppName`
+
+    Set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in the template variables before deploying. Both Discord and Slack can run simultaneously.
 
     ## Usage
 
-    - **@mention the bot** in an allowed channel to start a conversation
+    - **@mention the bot** in an allowed channel or Slack channel to start a conversation
     - OpenAB creates a **thread** for multi-turn conversations — no @mention needed for follow-ups
     - Each thread maps to a persistent Claude session (24h TTL)
 
@@ -192,6 +214,9 @@ spec:
                 # Add [discord] section if token provided
                 if [ -n "$DISCORD_BOT_TOKEN" ]; then
                   printf '\n[discord]\nbot_token = "%s"\n' "$DISCORD_BOT_TOKEN" >> "$CONFIG_FILE"
+                  if [ -n "$OPENAB_ALLOW_BOT_MESSAGES" ]; then
+                    printf 'allow_bot_messages = "%s"\n' "$OPENAB_ALLOW_BOT_MESSAGES" >> "$CONFIG_FILE"
+                  fi
                   if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
                     IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
                       id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
@@ -207,6 +232,11 @@ spec:
                 # Add [slack] section if tokens provided
                 if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
                   printf '\n[slack]\nbot_token = "%s"\napp_token = "%s"\n' "$SLACK_BOT_TOKEN" "$SLACK_APP_TOKEN" >> "$CONFIG_FILE"
+                fi
+
+                # Add [pool] section if max_sessions provided
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
                 fi
 
                 echo "openab: config.toml generated"
@@ -238,15 +268,19 @@ spec:
             default: ""
           SLACK_APP_TOKEN:
             default: ""
+          OPENAB_ALLOW_BOT_MESSAGES:
+            default: ""
+          OPENAB_MAX_SESSIONS:
+            default: ""
   locales:
     zh-TW:
       description: |
-        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。
+        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。
         來源：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
-          name: Discord Bot Token
-          description: 從 https://discord.com/developers/applications 取得的 Token
+          name: Discord Bot Token（選填）
+          description: "選填。從 https://discord.com/developers/applications 取得的 Token。僅使用 Slack 時可留空。"
         - key: OPENAB_AUTH_TOKEN
           name: 認證 Token
           description: "Anthropic API 金鑰、Zeabur AI Hub token 或 Claude OAuth token（透過 claude setup-token 取得）"
@@ -256,6 +290,12 @@ spec:
         - key: OPENAB_ALLOWED_USERS
           name: Discord 用戶 ID（選填）
           description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
+        - key: SLACK_BOT_TOKEN
+          name: Slack Bot Token（選填）
+          description: "選填。Slack App 設定中的 Bot User OAuth Token（xoxb-...）。留空則停用 Slack。"
+        - key: SLACK_APP_TOKEN
+          name: Slack App Token（選填）
+          description: "選填。Socket Mode 用的 App-Level Token（xapp-...）。設定 Slack Bot Token 時必填。"
       readme: |
         # OpenAB（中文）
 
@@ -295,11 +335,24 @@ spec:
 
         ### 4. 部署
 
-        填入三個模板變數後點擊部署即可。服務會自動連線到 Discord。
+        填入變數後點擊部署即可。服務會自動連線到 Discord 和/或 Slack。
+
+        ## Slack 設定（選用）
+
+        OpenAB 支援透過 Socket Mode 連接 Slack，不需要公開 URL。
+
+        1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → 啟用 → 產生 App-Level Token，scope 選 `connections:write` → 複製 `xapp-...` token（`SLACK_APP_TOKEN`）
+        3. **Event Subscriptions** → 啟用 → 新增 bot events：`app_mention`、`message.channels`、`message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → 新增：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+        5. **Install App** → 安裝到工作區 → 複製 `xoxb-...` token（`SLACK_BOT_TOKEN`）
+        6. 在每個要使用 Bot 的 Slack 頻道執行 `/invite @YourAppName`
+
+        部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 變數。Discord 和 Slack 可同時運作。
 
         ## 使用方式
 
-        - 在允許的頻道中 **@mention Bot** 即可開始對話
+        - 在允許的 Discord 或 Slack 頻道中 **@mention Bot** 即可開始對話
         - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
         - 每個 thread 對應一個持久的 Claude session（預設 24 小時 TTL）
 
@@ -338,12 +391,12 @@ spec:
         - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     zh-CN:
       description: |
-        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。
+        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。
         来源：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
-          name: Discord Bot Token
-          description: 从 https://discord.com/developers/applications 获取的 Token
+          name: Discord Bot Token（选填）
+          description: "选填。从 https://discord.com/developers/applications 获取的 Token。仅使用 Slack 时可留空。"
         - key: OPENAB_AUTH_TOKEN
           name: 认证 Token
           description: "Anthropic API 密钥、Zeabur AI Hub token 或 Claude OAuth token（通过 claude setup-token 获取）"
@@ -353,6 +406,12 @@ spec:
         - key: OPENAB_ALLOWED_USERS
           name: Discord 用户 ID（选填）
           description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
+        - key: SLACK_BOT_TOKEN
+          name: Slack Bot Token（选填）
+          description: "选填。Slack App 设置中的 Bot User OAuth Token（xoxb-...）。留空则禁用 Slack。"
+        - key: SLACK_APP_TOKEN
+          name: Slack App Token（选填）
+          description: "选填。Socket Mode 用的 App-Level Token（xapp-...）。设置 Slack Bot Token 时必填。"
       readme: |
         # OpenAB（简体中文）
 
@@ -392,11 +451,24 @@ spec:
 
         ### 4. 部署
 
-        填入三个模板变量后点击部署即可。服务会自动连接到 Discord。
+        填入变量后点击部署即可。服务会自动连接到 Discord 和/或 Slack。
+
+        ## Slack 设置（可选）
+
+        OpenAB 支持通过 Socket Mode 连接 Slack，无需公开 URL。
+
+        1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → 启用 → 生成 App-Level Token，scope 选 `connections:write` → 复制 `xapp-...` token（`SLACK_APP_TOKEN`）
+        3. **Event Subscriptions** → 启用 → 添加 bot events：`app_mention`、`message.channels`、`message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → 添加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+        5. **Install App** → 安装到工作区 → 复制 `xoxb-...` token（`SLACK_BOT_TOKEN`）
+        6. 在每个要使用 Bot 的 Slack 频道执行 `/invite @YourAppName`
+
+        部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 变量。Discord 和 Slack 可同时运行。
 
         ## 使用方式
 
-        - 在允许的频道中 **@mention Bot** 即可开始对话
+        - 在允许的 Discord 或 Slack 频道中 **@mention Bot** 即可开始对话
         - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
         - 每个 thread 对应一个持久的 Claude session（默认 24 小时 TTL）
 
@@ -435,12 +507,12 @@ spec:
         - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     ja-JP:
       description: |
-        Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。
+        Open Agent Broker — stdio JSON-RPC を通じて Discord と Slack を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。
         ソース：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
-          name: Discord Bot トークン
-          description: https://discord.com/developers/applications から取得したトークン
+          name: Discord Bot トークン（オプション）
+          description: "オプション。https://discord.com/developers/applications から取得したトークン。Slack のみ使用する場合は空欄でも可。"
         - key: OPENAB_AUTH_TOKEN
           name: 認証トークン
           description: "Anthropic API キー、Zeabur AI Hub トークン、または Claude OAuth トークン（claude setup-token で取得）"
@@ -450,6 +522,12 @@ spec:
         - key: OPENAB_ALLOWED_USERS
           name: Discord ユーザー ID（オプション）
           description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
+        - key: SLACK_BOT_TOKEN
+          name: Slack Bot トークン（オプション）
+          description: "オプション。Slack App 設定の Bot User OAuth Token（xoxb-...）。空の場合、Slack アダプターは無効。"
+        - key: SLACK_APP_TOKEN
+          name: Slack App トークン（オプション）
+          description: "オプション。Socket Mode 用の App-Level Token（xapp-...）。Slack Bot Token を設定する場合は必須。"
       readme: |
         # OpenAB（日本語）
 
@@ -489,11 +567,24 @@ spec:
 
         ### 4. デプロイ
 
-        3 つのテンプレート変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。
+        変数を入力してデプロイをクリック。サービスは自動的に Discord および/または Slack に接続します。
+
+        ## Slack セットアップ（オプション）
+
+        OpenAB は Socket Mode 経由で Slack をサポートします — 公開 URL は不要です。
+
+        1. https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → 有効化 → scope `connections:write` で App-Level Token を生成 → `xapp-...` token をコピー（`SLACK_APP_TOKEN`）
+        3. **Event Subscriptions** → 有効化 → bot events を追加：`app_mention`、`message.channels`、`message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → 追加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+        5. **Install App** → ワークスペースにインストール → `xoxb-...` token をコピー（`SLACK_BOT_TOKEN`）
+        6. Bot を使用したい各 Slack チャンネルで `/invite @YourAppName` を実行
+
+        デプロイ前に `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` 変数を入力してください。Discord と Slack は同時に使用できます。
 
         ## 使い方
 
-        - 許可されたチャンネルで **Bot を @mention** して会話を開始
+        - 許可された Discord または Slack チャンネルで **Bot を @mention** して会話を開始
         - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
         - 各 thread は永続的な Claude session に対応（デフォルト 24 時間 TTL）
 
@@ -532,12 +623,12 @@ spec:
         - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     es-ES:
       description: |
-        Open Agent Broker — un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC.
+        Open Agent Broker — un arnés ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC.
         Fuente: https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
-          name: Token del Bot de Discord
-          description: Token obtenido de https://discord.com/developers/applications
+          name: Token del Bot de Discord (opcional)
+          description: "Opcional. Token obtenido de https://discord.com/developers/applications. Dejar vacío si solo usa Slack."
         - key: OPENAB_AUTH_TOKEN
           name: Token de Autenticación
           description: "Clave API de Anthropic, token de Zeabur AI Hub o token OAuth de Claude (obtenido con: claude setup-token)"
@@ -547,6 +638,12 @@ spec:
         - key: OPENAB_ALLOWED_USERS
           name: IDs de Usuarios de Discord (opcional)
           description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacío para permitir a todos en los canales permitidos."
+        - key: SLACK_BOT_TOKEN
+          name: Token de Bot de Slack (opcional)
+          description: "Opcional. Bot User OAuth Token (xoxb-...) de la configuración de la Slack App. Dejar vacío para deshabilitar Slack."
+        - key: SLACK_APP_TOKEN
+          name: Token de App de Slack (opcional)
+          description: "Opcional. App-Level Token (xapp-...) para Socket Mode. Requerido cuando se configura el Slack Bot Token."
       readme: |
         # OpenAB (Español)
 
@@ -586,11 +683,24 @@ spec:
 
         ### 4. Desplegar
 
-        Completar las tres variables de la plantilla y hacer clic en desplegar. El servicio se conecta a Discord automáticamente.
+        Completar las variables y hacer clic en desplegar. El servicio se conecta a Discord y/o Slack automáticamente.
+
+        ## Configuración de Slack (Opcional)
+
+        OpenAB soporta Slack mediante Socket Mode — no se necesita URL pública.
+
+        1. Ir a https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → Habilitar → generar App-Level Token con scope `connections:write` → copiar el token `xapp-...` (`SLACK_APP_TOKEN`)
+        3. **Event Subscriptions** → Habilitar → añadir bot events: `app_mention`, `message.channels`, `message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → añadir: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+        5. **Install App** → Instalar en el workspace → copiar el token `xoxb-...` (`SLACK_BOT_TOKEN`)
+        6. En cada canal de Slack donde quieras usar el bot, ejecuta `/invite @YourAppName`
+
+        Rellena `SLACK_BOT_TOKEN` y `SLACK_APP_TOKEN` antes de desplegar. Discord y Slack pueden funcionar simultáneamente.
 
         ## Uso
 
-        - **@mencionar al bot** en un canal permitido para iniciar una conversación
+        - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
         - OpenAB crea un **thread** para conversaciones de múltiples turnos — no se necesita @mención en los mensajes siguientes
         - Cada thread corresponde a una sesión persistente de Claude (TTL de 24h por defecto)
 
@@ -629,12 +739,12 @@ spec:
         - [Zeabur AI Hub](https://zeabur.com/ai-hub)
     id-ID:
       description: |
-        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC.
+        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC.
         Sumber: https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
-          name: Token Bot Discord
-          description: Token dari https://discord.com/developers/applications
+          name: Token Bot Discord (opsional)
+          description: "Opsional. Token dari https://discord.com/developers/applications. Kosongkan jika hanya menggunakan Slack."
         - key: OPENAB_AUTH_TOKEN
           name: Token Autentikasi
           description: "Kunci API Anthropic, token Zeabur AI Hub, atau token OAuth Claude (dari: claude setup-token)"
@@ -644,6 +754,12 @@ spec:
         - key: OPENAB_ALLOWED_USERS
           name: ID Pengguna Discord (opsional)
           description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
+        - key: SLACK_BOT_TOKEN
+          name: Token Bot Slack (opsional)
+          description: "Opsional. Bot User OAuth Token (xoxb-...) dari pengaturan Slack App. Kosongkan untuk menonaktifkan Slack."
+        - key: SLACK_APP_TOKEN
+          name: Token App Slack (opsional)
+          description: "Opsional. App-Level Token (xapp-...) untuk Socket Mode. Diperlukan saat Slack Bot Token diatur."
       readme: |
         # OpenAB (Bahasa Indonesia)
 
@@ -683,11 +799,24 @@ spec:
 
         ### 4. Deploy
 
-        Isi tiga variabel template dan klik deploy. Layanan akan terhubung ke Discord secara otomatis.
+        Isi variabel dan klik deploy. Layanan akan terhubung ke Discord dan/atau Slack secara otomatis.
+
+        ## Pengaturan Slack (Opsional)
+
+        OpenAB mendukung Slack melalui Socket Mode — tidak perlu URL publik.
+
+        1. Buka https://api.slack.com/apps → **Create New App** → **From scratch**
+        2. **Socket Mode** → Aktifkan → buat App-Level Token dengan scope `connections:write` → salin token `xapp-...` (`SLACK_APP_TOKEN`)
+        3. **Event Subscriptions** → Aktifkan → tambahkan bot events: `app_mention`, `message.channels`, `message.groups`
+        4. **OAuth & Permissions** → Bot Token Scopes → tambahkan: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+        5. **Install App** → Install ke workspace → salin token `xoxb-...` (`SLACK_BOT_TOKEN`)
+        6. Di setiap channel Slack yang ingin menggunakan bot, jalankan `/invite @YourAppName`
+
+        Isi `SLACK_BOT_TOKEN` dan `SLACK_APP_TOKEN` sebelum deploy. Discord dan Slack dapat berjalan bersamaan.
 
         ## Penggunaan
 
-        - **@mention bot** di channel yang diizinkan untuk memulai percakapan
+        - **@mention bot** di channel Discord atau Slack yang diizinkan untuk memulai percakapan
         - OpenAB membuat **thread** untuk percakapan multi-giliran — tidak perlu @mention untuk pesan selanjutnya
         - Setiap thread dipetakan ke sesi Claude yang persisten (TTL 24 jam secara default)
 
