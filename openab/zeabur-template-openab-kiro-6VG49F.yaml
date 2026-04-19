@@ -5,7 +5,7 @@ metadata:
   name: OpenAB Kiro
 spec:
   description: |
-    Open Agent Broker — a lightweight Rust harness that bridges Discord to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC. This template uses the Kiro CLI as the agent backend.
+    Open Agent Broker — a lightweight Rust harness that bridges Discord and Slack to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC. This template uses the Kiro CLI as the agent backend.
     Source: https://github.com/openabdev/openab
   icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
   coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
@@ -13,6 +13,7 @@ spec:
     - AI
     - Developer Tools
     - Discord
+    - Slack
   resourceRequirement:
     minConfig:
       cpu: 2
@@ -259,7 +260,7 @@ spec:
   locales:
     zh-TW:
       description: |
-        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作為 agent 後端。
+        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作為 agent 後端。
         來源：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -377,7 +378,7 @@ spec:
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
     zh-CN:
       description: |
-        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作为 agent 后端。
+        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作为 agent 后端。
         来源：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -495,7 +496,7 @@ spec:
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
     ja-JP:
       description: |
-        Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。このテンプレートは Kiro CLI をエージェントバックエンドとして使用します。
+        Open Agent Broker — stdio JSON-RPC を通じて Discord と Slack を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。このテンプレートは Kiro CLI をエージェントバックエンドとして使用します。
         ソース：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -613,7 +614,7 @@ spec:
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
     es-ES:
       description: |
-        Open Agent Broker — un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC. Esta plantilla usa Kiro CLI como backend de agente.
+        Open Agent Broker — un arnés ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC. Esta plantilla usa Kiro CLI como backend de agente.
         Fuente: https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -731,7 +732,7 @@ spec:
         - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
     id-ID:
       description: |
-        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC. Template ini menggunakan Kiro CLI sebagai backend agen.
+        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC. Template ini menggunakan Kiro CLI sebagai backend agen.
         Sumber: https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
