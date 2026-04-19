@@ -302,7 +302,7 @@ spec:
         2. 服務啟動後，前往 Zeabur Dashboard → 服務 → **Exec**
         3. Exec 終端機以 root 開啟，需先切換到 `node` 使用者再登入：
            ```
-           su -s /bin/sh node -c 'codex login --device-auth'
+           runuser -u node -- codex login --device-auth
            ```
         4. 開啟終端機顯示的 URL，用 ChatGPT 帳號授權
         5. 從 Dashboard 重啟服務
@@ -415,7 +415,7 @@ spec:
         2. 服务启动后，前往 Zeabur Dashboard → 服务 → **Exec**
         3. Exec 终端以 root 打开，需先切换到 `node` 用户再登录：
            ```
-           su -s /bin/sh node -c 'codex login --device-auth'
+           runuser -u node -- codex login --device-auth
            ```
         4. 打开终端显示的 URL，用 ChatGPT 账号授权
         5. 从 Dashboard 重启服务
@@ -528,7 +528,7 @@ spec:
         2. サービス起動後、Zeabur Dashboard → サービス → **Exec**
         3. Exec ターミナルは root で開きます。先に `node` ユーザーに切り替えてからログイン：
            ```
-           su -s /bin/sh node -c 'codex login --device-auth'
+           runuser -u node -- codex login --device-auth
            ```
         4. ターミナルに表示された URL を開き、ChatGPT アカウントで認証
         5. Dashboard からサービスを再起動
@@ -641,7 +641,7 @@ spec:
         2. Después de que el servicio inicie, ir a Zeabur Dashboard → Servicio → **Exec**
         3. El terminal Exec se abre como root. Cambiar primero al usuario `node` y luego iniciar sesión:
            ```
-           su -s /bin/sh node -c 'codex login --device-auth'
+           runuser -u node -- codex login --device-auth
            ```
         4. Abrir la URL mostrada en el terminal y autorizar con la cuenta de ChatGPT
         5. Reiniciar el servicio desde el Dashboard
@@ -754,7 +754,7 @@ spec:
         2. Setelah layanan berjalan, buka Zeabur Dashboard → Layanan → **Exec**
         3. Terminal Exec terbuka sebagai root. Pindah ke user `node` terlebih dahulu, lalu login:
            ```
-           su -s /bin/sh node -c 'codex login --device-auth'
+           runuser -u node -- codex login --device-auth
            ```
         4. Buka URL yang ditampilkan di terminal, otorisasi dengan akun ChatGPT
         5. Restart layanan dari Dashboard
