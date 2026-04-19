@@ -33,6 +33,10 @@ spec:
       type: STRING
       name: Discord User IDs (optional)
       description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone in the allowed channels."
+    - key: OPENAB_ALLOW_BOT_MESSAGES
+      type: STRING
+      name: Allow Bot Messages (optional)
+      description: "Optional. Set to 'on' to allow messages from bots/webhooks to trigger the agent. Leave empty to disable (default)."
     - key: KIRO_API_KEY
       type: STRING
       name: Kiro API Key (optional, Pro+)
@@ -193,6 +197,9 @@ spec:
                 # Add [discord] section if token provided
                 if [ -n "$DISCORD_BOT_TOKEN" ]; then
                   printf '\n[discord]\nbot_token = "%s"\n' "$DISCORD_BOT_TOKEN" >> "$CONFIG_FILE"
+                  if [ -n "$OPENAB_ALLOW_BOT_MESSAGES" ]; then
+                    printf 'allow_bot_messages = "%s"\n' "$OPENAB_ALLOW_BOT_MESSAGES" >> "$CONFIG_FILE"
+                  fi
                   if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
                     IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
                       id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
@@ -235,6 +242,8 @@ spec:
           SLACK_BOT_TOKEN:
             default: ""
           SLACK_APP_TOKEN:
+            default: ""
+          OPENAB_ALLOW_BOT_MESSAGES:
             default: ""
   locales:
     zh-TW:
