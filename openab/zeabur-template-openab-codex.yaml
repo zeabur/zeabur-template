@@ -88,7 +88,7 @@ spec:
     **Option B: ChatGPT Subscription** (Plus/Pro/Business — usage included in plan)
     1. Leave `OpenAI API Key` empty when deploying
     2. After the service starts, go to Zeabur Dashboard → Service → **Exec**
-    3. The Exec terminal opens as root. Switch to the `node` user first, then log in:
+    3. The Exec terminal opens as root. Run with the correct HOME so credentials are saved to the right path:
        ```
        su -s /bin/sh node -c 'codex login --device-auth'
        ```
@@ -300,9 +300,9 @@ spec:
         **方式 B：ChatGPT 訂閱**（Plus/Pro/Business — 使用量包含在方案內）
         1. 部署時將 `OpenAI API Key` 留空
         2. 服務啟動後，前往 Zeabur Dashboard → 服務 → **Exec**
-        3. Exec 終端機以 root 開啟，需先切換到 `node` 使用者再登入：
+        3. Exec 終端機以 root 開啟，指定正確的 HOME 路徑讓認證資料存到正確位置：
            ```
-           runuser -u node -- codex login --device-auth
+           HOME=/home/node codex login --device-auth
            ```
         4. 開啟終端機顯示的 URL，用 ChatGPT 帳號授權
         5. 從 Dashboard 重啟服務
@@ -413,9 +413,9 @@ spec:
         **方式 B：ChatGPT 订阅**（Plus/Pro/Business — 使用量包含在套餐内）
         1. 部署时将 `OpenAI API Key` 留空
         2. 服务启动后，前往 Zeabur Dashboard → 服务 → **Exec**
-        3. Exec 终端以 root 打开，需先切换到 `node` 用户再登录：
+        3. Exec 终端以 root 打开，指定正确的 HOME 路径让认证信息存储到正确位置：
            ```
-           runuser -u node -- codex login --device-auth
+           HOME=/home/node codex login --device-auth
            ```
         4. 打开终端显示的 URL，用 ChatGPT 账号授权
         5. 从 Dashboard 重启服务
@@ -526,9 +526,9 @@ spec:
         **方法 B：ChatGPT サブスクリプション**（Plus/Pro/Business — 使用量はプランに含まれます）
         1. デプロイ時に `OpenAI API Key` を空のまま
         2. サービス起動後、Zeabur Dashboard → サービス → **Exec**
-        3. Exec ターミナルは root で開きます。先に `node` ユーザーに切り替えてからログイン：
+        3. Exec ターミナルは root で開きます。認証情報を正しい場所に保存するため HOME を指定して実行：
            ```
-           runuser -u node -- codex login --device-auth
+           HOME=/home/node codex login --device-auth
            ```
         4. ターミナルに表示された URL を開き、ChatGPT アカウントで認証
         5. Dashboard からサービスを再起動
@@ -639,9 +639,9 @@ spec:
         **Opción B: Suscripción ChatGPT** (Plus/Pro/Business — uso incluido en el plan)
         1. Dejar `OpenAI API Key` vacío al desplegar
         2. Después de que el servicio inicie, ir a Zeabur Dashboard → Servicio → **Exec**
-        3. El terminal Exec se abre como root. Cambiar primero al usuario `node` y luego iniciar sesión:
+        3. El terminal Exec se abre como root. Especifica el HOME correcto para guardar las credenciales en el lugar adecuado:
            ```
-           runuser -u node -- codex login --device-auth
+           HOME=/home/node codex login --device-auth
            ```
         4. Abrir la URL mostrada en el terminal y autorizar con la cuenta de ChatGPT
         5. Reiniciar el servicio desde el Dashboard
@@ -752,9 +752,9 @@ spec:
         **Opsi B: Langganan ChatGPT** (Plus/Pro/Business — penggunaan termasuk dalam paket)
         1. Kosongkan `OpenAI API Key` saat deploy
         2. Setelah layanan berjalan, buka Zeabur Dashboard → Layanan → **Exec**
-        3. Terminal Exec terbuka sebagai root. Pindah ke user `node` terlebih dahulu, lalu login:
+        3. Terminal Exec terbuka sebagai root. Tentukan HOME yang benar agar kredensial tersimpan di lokasi yang tepat:
            ```
-           runuser -u node -- codex login --device-auth
+           HOME=/home/node codex login --device-auth
            ```
         4. Buka URL yang ditampilkan di terminal, otorisasi dengan akun ChatGPT
         5. Restart layanan dari Dashboard
