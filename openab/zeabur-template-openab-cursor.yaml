@@ -180,23 +180,16 @@ spec:
               CONFIG_FILE=$CONFIG_DIR/config.toml
               mkdir -p "$CONFIG_DIR"
 
-              # Auto-regenerate if Discord bot token changed
-              if [ -f "$CONFIG_FILE" ] && [ -n "$DISCORD_BOT_TOKEN" ]; then
-                stored=$(grep -m1 'bot_token' "$CONFIG_FILE" 2>/dev/null | sed 's/.*= "\(.*\)"/\1/' || true)
-                if [ "$stored" != "$DISCORD_BOT_TOKEN" ]; then
-                  echo "openab: Discord bot token changed — regenerating config.toml"
-                  rm -f "$CONFIG_FILE"
-                fi
-              fi
-
               # Generate config.toml on first boot only
-              # To regenerate, delete the file and restart
+              # bot_token uses ${DISCORD_BOT_TOKEN} syntax — openab expands env vars at load time,
+              # so token changes (env var update) take effect on next restart without regenerating.
+              # To regenerate (e.g. to reset allowed_channels/users), delete the file and restart.
               if [ ! -f "$CONFIG_FILE" ]; then
                 cp /opt/config.toml.template "$CONFIG_FILE"
 
                 # Add [discord] section if token provided
                 if [ -n "$DISCORD_BOT_TOKEN" ]; then
-                  printf '\n[discord]\nbot_token = "%s"\n' "$DISCORD_BOT_TOKEN" >> "$CONFIG_FILE"
+                  printf '\n[discord]\nbot_token = "${DISCORD_BOT_TOKEN}"\n' >> "$CONFIG_FILE"
                   if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
                     IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
                       id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
@@ -211,7 +204,7 @@ spec:
 
                 # Add [slack] section if tokens provided
                 if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
-                  printf '\n[slack]\nbot_token = "%s"\napp_token = "%s"\n' "$SLACK_BOT_TOKEN" "$SLACK_APP_TOKEN" >> "$CONFIG_FILE"
+                  printf '\n[slack]\nbot_token = "${SLACK_BOT_TOKEN}"\napp_token = "${SLACK_APP_TOKEN}"\n' >> "$CONFIG_FILE"
                 fi
 
                 echo "openab: config.toml generated"
