@@ -216,7 +216,7 @@ spec:
 
                 # Add [discord] section if token provided
                 if [ -n "$DISCORD_BOT_TOKEN" ]; then
-                  printf '\n[discord]\nbot_token = "%s"\n' "$DISCORD_BOT_TOKEN" >> "$CONFIG_FILE"
+                  printf '\n[discord]\nbot_token = "${DISCORD_BOT_TOKEN}"\n' >> "$CONFIG_FILE"
                   if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
                     IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
                       id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
@@ -231,7 +231,7 @@ spec:
 
                 # Add [slack] section if tokens provided
                 if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
-                  printf '\n[slack]\nbot_token = "%s"\napp_token = "%s"\n' "$SLACK_BOT_TOKEN" "$SLACK_APP_TOKEN" >> "$CONFIG_FILE"
+                  printf '\n[slack]\nbot_token = "${SLACK_BOT_TOKEN}"\napp_token = "${SLACK_APP_TOKEN}"\n' >> "$CONFIG_FILE"
                 fi
 
                 echo "openab: config.toml generated"
