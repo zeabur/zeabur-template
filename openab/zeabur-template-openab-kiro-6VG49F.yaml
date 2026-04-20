@@ -161,7 +161,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab:0.7.7
+          image: ghcr.io/openabdev/openab:0.8.0
           command:
             - /bin/sh
             - -c
