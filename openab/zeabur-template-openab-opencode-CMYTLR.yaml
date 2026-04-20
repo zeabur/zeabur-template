@@ -64,9 +64,26 @@ spec:
     4. Go to **OAuth2 -> URL Generator** -> check scope `bot` -> check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
     5. Copy the generated URL and open it in your browser to invite the bot to your server
 
-    ### 2. Authenticate OpenCode (after deployment)
+    ### 2. Configure an LLM Provider (after deployment)
 
-    OpenCode uses interactive browser OAuth for authentication. After the service is running, open the service terminal in Zeabur Dashboard and run:
+    OpenCode needs access to an LLM provider. The simplest approach is to set an environment variable in Zeabur Dashboard -> Service -> Variables:
+
+    | Variable | Provider |
+    |----------|----------|
+    | `OPENCODE_API_KEY` | OpenCode (native, get key at [opencode.ai](https://opencode.ai)) |
+    | `ANTHROPIC_API_KEY` | Anthropic Claude |
+    | `OPENAI_API_KEY` | OpenAI GPT |
+    | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
+    | `GROQ_API_KEY` | Groq |
+    | `MISTRAL_API_KEY` | Mistral |
+    | `DEEPSEEK_API_KEY` | DeepSeek |
+    | `OPENROUTER_API_KEY` | OpenRouter (proxies 100+ models) |
+
+    Set at least one variable and restart the service. OpenCode picks it up automatically.
+
+    **Alternative: Interactive login**
+
+    For providers that use browser OAuth (e.g. AWS Bedrock, Azure OpenAI), open the service terminal in Zeabur Dashboard and run:
 
     ```
     runuser -u node -- opencode auth login
@@ -74,11 +91,9 @@ spec:
 
     > **Warning:** Must run as `node`. Running as `root` writes credentials to `/root/` which is not persisted; they will be lost on restart.
 
-    Follow the on-screen instructions to complete authentication in your browser. Restart the service after login completes.
-
     ### 3. Model Selection (optional)
 
-    OpenCode supports 75+ LLM providers out of the box. To configure a specific model, create or edit `/home/node/opencode.json`:
+    To configure a specific model, create or edit `/home/node/opencode.json`:
 
     ```json
     {
@@ -87,7 +102,7 @@ spec:
     }
     ```
 
-    See [OpenCode documentation](https://opencode.ai) for all available providers and models.
+    See [OpenCode documentation](https://opencode.ai/docs/providers) for all available providers and models.
 
     ### 4. Get Discord Channel IDs
 
@@ -128,6 +143,23 @@ spec:
 
     For config options, see the [OpenAB documentation](https://github.com/openabdev/openab).
 
+    ## Webhook / Bot Integration
+
+    By default, openab ignores messages from other bots and webhooks. To allow webhook-triggered messages (e.g. automated testing or CI pipelines), add the following to your `config.toml`:
+
+    ```toml
+    [discord]
+    allow_bot_messages = "mentions"
+    ```
+
+    With this setting, openab responds to any bot or webhook message that @mentions it. To restrict to a specific webhook, also add:
+
+    ```toml
+    trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+    ```
+
+    The webhook user ID is the numeric ID in the webhook URL: `https://discord.com/api/webhooks/<ID>/...`
+
     ## Disabling
 
     Leave `Discord Bot Token` empty. The service sleeps instead of crashing.
@@ -148,6 +180,7 @@ spec:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
+        runAsUserID: 1000
         volumes:
           - id: node-home
             dir: /home/node
@@ -263,9 +296,26 @@ spec:
         4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
         5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
 
-        ### 2. 認證 OpenCode（部署後）
+        ### 2. 設定 LLM 供應商（部署後）
 
-        OpenCode 使用互動式瀏覽器 OAuth 認證。服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
+        OpenCode 需要連接 LLM 供應商。最簡單的方式是在 Zeabur Dashboard → 服務 → 變數中設定環境變數：
+
+        | 變數名 | 供應商 |
+        |--------|--------|
+        | `OPENCODE_API_KEY` | OpenCode 原生（在 [opencode.ai](https://opencode.ai) 取得） |
+        | `ANTHROPIC_API_KEY` | Anthropic Claude |
+        | `OPENAI_API_KEY` | OpenAI GPT |
+        | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
+        | `GROQ_API_KEY` | Groq |
+        | `MISTRAL_API_KEY` | Mistral |
+        | `DEEPSEEK_API_KEY` | DeepSeek |
+        | `OPENROUTER_API_KEY` | OpenRouter（代理 100+ 模型） |
+
+        設定至少一個變數後重啟服務，OpenCode 會自動讀取。
+
+        **互動式登入（替代方式）**
+
+        如需使用瀏覽器 OAuth 的供應商（如 AWS Bedrock、Azure OpenAI），在 Zeabur Dashboard 開啟服務終端並執行：
 
         ```
         runuser -u node -- opencode auth login
@@ -273,11 +323,18 @@ spec:
 
         > ⚠️ 必須以 `node` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
 
-        依照畫面指示在瀏覽器中完成認證。認證完成後請重啟服務。
-
         ### 3. 模型選擇（選填）
 
-        OpenCode 支援 75+ LLM 供應商。如需設定特定模型，建立或編輯 `/home/node/opencode.json`。
+        如需設定特定模型，建立或編輯 `/home/node/opencode.json`：
+
+        ```json
+        {
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-20250514"
+        }
+        ```
+
+        詳見 [OpenCode 文件](https://opencode.ai/docs/providers)。
 
         ### 4. 取得 Discord 頻道 ID
 
@@ -352,9 +409,26 @@ spec:
         4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
         5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
 
-        ### 2. 认证 OpenCode（部署后）
+        ### 2. 配置 LLM 供应商（部署后）
 
-        OpenCode 使用交互式浏览器 OAuth 认证。服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
+        OpenCode 需要连接 LLM 供应商。最简单的方式是在 Zeabur Dashboard → 服务 → 变量中设置环境变量：
+
+        | 变量名 | 供应商 |
+        |--------|--------|
+        | `OPENCODE_API_KEY` | OpenCode 原生（在 [opencode.ai](https://opencode.ai) 获取） |
+        | `ANTHROPIC_API_KEY` | Anthropic Claude |
+        | `OPENAI_API_KEY` | OpenAI GPT |
+        | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
+        | `GROQ_API_KEY` | Groq |
+        | `MISTRAL_API_KEY` | Mistral |
+        | `DEEPSEEK_API_KEY` | DeepSeek |
+        | `OPENROUTER_API_KEY` | OpenRouter（代理 100+ 模型） |
+
+        设置至少一个变量后重启服务，OpenCode 会自动读取。
+
+        **交互式登录（替代方式）**
+
+        如需使用浏览器 OAuth 的供应商（如 AWS Bedrock、Azure OpenAI），在 Zeabur Dashboard 打开服务终端并运行：
 
         ```
         runuser -u node -- opencode auth login
@@ -362,11 +436,18 @@ spec:
 
         > ⚠️ 必须以 `node` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
 
-        按照屏幕指示在浏览器中完成认证。认证完成后请重启服务。
-
         ### 3. 模型选择（选填）
 
-        OpenCode 支持 75+ LLM 供应商。如需设置特定模型，创建或编辑 `/home/node/opencode.json`。
+        如需设置特定模型，创建或编辑 `/home/node/opencode.json`：
+
+        ```json
+        {
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-20250514"
+        }
+        ```
+
+        详见 [OpenCode 文档](https://opencode.ai/docs/providers)。
 
         ### 4. 获取 Discord 频道 ID
 

@@ -114,6 +114,23 @@ spec:
 
     For config options, see the [OpenAB documentation](https://github.com/openabdev/openab).
 
+    ## Webhook / Bot Integration
+
+    By default, openab ignores messages from other bots and webhooks. To allow webhook-triggered messages (e.g. automated testing or CI pipelines), add the following to your `config.toml`:
+
+    ```toml
+    [discord]
+    allow_bot_messages = "mentions"
+    ```
+
+    With this setting, openab responds to any bot or webhook message that @mentions it. To restrict to a specific webhook, also add:
+
+    ```toml
+    trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+    ```
+
+    The webhook user ID is the numeric ID in the webhook URL: `https://discord.com/api/webhooks/<ID>/...`
+
     ## Disabling
 
     Leave `Discord Bot Token` empty. The service sleeps instead of crashing.
@@ -133,6 +150,7 @@ spec:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
+        runAsUserID: 1000
         volumes:
           - id: agent-home
             dir: /home/agent
