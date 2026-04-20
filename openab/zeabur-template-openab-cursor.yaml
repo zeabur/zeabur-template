@@ -180,6 +180,15 @@ spec:
               CONFIG_FILE=$CONFIG_DIR/config.toml
               mkdir -p "$CONFIG_DIR"
 
+              # Auto-regenerate if Discord bot token changed
+              if [ -f "$CONFIG_FILE" ] && [ -n "$DISCORD_BOT_TOKEN" ]; then
+                stored=$(grep -m1 'bot_token' "$CONFIG_FILE" 2>/dev/null | sed 's/.*= "\(.*\)"/\1/' || true)
+                if [ "$stored" != "$DISCORD_BOT_TOKEN" ]; then
+                  echo "openab: Discord bot token changed — regenerating config.toml"
+                  rm -f "$CONFIG_FILE"
+                fi
+              fi
+
               # Generate config.toml on first boot only
               # To regenerate, delete the file and restart
               if [ ! -f "$CONFIG_FILE" ]; then
