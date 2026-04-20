@@ -5,7 +5,7 @@ metadata:
   name: OpenAB Gemini
 spec:
   description: |
-    Open Agent Broker — a lightweight Rust harness that bridges Discord to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC. This template deploys the Gemini variant.
+    Open Agent Broker — a lightweight Rust harness that bridges Discord to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro, Cursor) over stdio JSON-RPC. This template deploys the Gemini variant.
     Source: https://github.com/openabdev/openab
   icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
   coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
@@ -46,7 +46,7 @@ spec:
       name: Slack App Token (optional)
       description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
   readme: |
-    # OpenAB
+    # OpenAB Gemini
 
     [OpenAB](https://github.com/openabdev/openab) is a lightweight, open-source Rust harness that bridges Discord to any [Agent Client Protocol](https://github.com/anthropics/agent-protocol)-compatible coding CLI over stdio JSON-RPC.
 
@@ -100,6 +100,23 @@ spec:
 
     For config options, see the [OpenAB documentation](https://github.com/openabdev/openab).
 
+    ## Webhook / Bot Integration
+
+    By default, openab ignores messages from other bots and webhooks. To allow webhook-triggered messages (e.g. automated testing or CI pipelines), add the following to your `config.toml`:
+
+    ```toml
+    [discord]
+    allow_bot_messages = "mentions"
+    ```
+
+    With this setting, openab responds to any bot or webhook message that @mentions it. To restrict to a specific webhook, also add:
+
+    ```toml
+    trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+    ```
+
+    The webhook user ID is the numeric ID in the webhook URL: `https://discord.com/api/webhooks/<ID>/...`
+
     ## Disabling
 
     Leave `Discord Bot Token` empty. The service sleeps instead of crashing.
@@ -120,6 +137,7 @@ spec:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
+        runAsUserID: 1000
         volumes:
           - id: node-home
             dir: /home/node
@@ -191,7 +209,6 @@ spec:
               command = "gemini"
               args = ["--acp", "--approval-mode", "yolo"]
               working_dir = "/home/node"
-              env = { GEMINI_API_KEY = "${GEMINI_API_KEY}" }
         env:
           DISCORD_BOT_TOKEN:
             default: ${DISCORD_BOT_TOKEN}
@@ -208,7 +225,7 @@ spec:
   locales:
     zh-TW:
       description: |
-        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板部署 Gemini 變體。
+        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro、Cursor）。此模板部署 Gemini 變體。
         來源：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -224,7 +241,7 @@ spec:
           name: Discord 用戶 ID（選填）
           description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
       readme: |
-        # OpenAB（中文）
+        # OpenAB Gemini（中文）
 
         [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
@@ -278,6 +295,23 @@ spec:
 
         設定選項請參閱 [OpenAB 文件](https://github.com/openabdev/openab)。
 
+        ## Webhook / Bot 整合
+
+        OpenAB 預設忽略其他 bot 和 webhook 的訊息。若要允許 webhook 觸發的訊息（例如自動化測試或 CI pipeline），在 `config.toml` 加入以下設定：
+
+        ```toml
+        [discord]
+        allow_bot_messages = "mentions"
+        ```
+
+        設定後，openab 會回應任何 @mention 它的 bot 或 webhook 訊息。若要限制為特定 webhook，也可加入：
+
+        ```toml
+        trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+        ```
+
+        Webhook 用戶 ID 為 webhook URL 中的數字 ID：`https://discord.com/api/webhooks/<ID>/...`
+
         ## 停用
 
         部署時將 `Discord Bot Token` 留空即可。服務會進入 sleep 狀態，不會崩潰。
@@ -289,7 +323,7 @@ spec:
         - [Google AI Studio](https://aistudio.google.com/)
     zh-CN:
       description: |
-        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板部署 Gemini 变体。
+        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro、Cursor）。此模板部署 Gemini 变体。
         来源：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -305,7 +339,7 @@ spec:
           name: Discord 用户 ID（选填）
           description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
       readme: |
-        # OpenAB（简体中文）
+        # OpenAB Gemini（简体中文）
 
         [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
@@ -359,6 +393,23 @@ spec:
 
         设置选项请参阅 [OpenAB 文档](https://github.com/openabdev/openab)。
 
+        ## Webhook / Bot 集成
+
+        OpenAB 默认忽略来自其他 bot 和 webhook 的消息。要允许 webhook 触发的消息（例如自动化测试或 CI 流水线），在 `config.toml` 中添加以下配置：
+
+        ```toml
+        [discord]
+        allow_bot_messages = "mentions"
+        ```
+
+        设置后，openab 会响应任何 @mention 它的 bot 或 webhook 消息。若要限制为特定 webhook，还可添加：
+
+        ```toml
+        trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+        ```
+
+        Webhook 用户 ID 为 webhook URL 中的数字 ID：`https://discord.com/api/webhooks/<ID>/...`
+
         ## 停用
 
         部署时将 `Discord Bot Token` 留空即可。服务会进入 sleep 状态，不会崩溃。
@@ -370,7 +421,7 @@ spec:
         - [Google AI Studio](https://aistudio.google.com/)
     ja-JP:
       description: |
-        Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。このテンプレートは Gemini バリアントをデプロイします。
+        Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro、Cursor）にブリッジする軽量な Rust ハーネス。このテンプレートは Gemini バリアントをデプロイします。
         ソース：https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -440,6 +491,23 @@ spec:
 
         設定オプションは [OpenAB ドキュメント](https://github.com/openabdev/openab) を参照。
 
+        ## Webhook / Bot 連携
+
+        デフォルトでは、openab は他の bot や webhook からのメッセージを無視します。webhook がトリガーするメッセージ（自動テストや CI パイプラインなど）を許可するには、`config.toml` に以下を追加してください：
+
+        ```toml
+        [discord]
+        allow_bot_messages = "mentions"
+        ```
+
+        この設定で、openab は @mention するすべての bot や webhook メッセージに応答します。特定の webhook に制限するには、次も追加：
+
+        ```toml
+        trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+        ```
+
+        webhook ユーザー ID は webhook URL 内の数字 ID です：`https://discord.com/api/webhooks/<ID>/...`
+
         ## 無効化
 
         デプロイ時に `Discord Bot Token` を空にしてください。サービスはクラッシュせずスリープ状態になります。
@@ -451,7 +519,7 @@ spec:
         - [Google AI Studio](https://aistudio.google.com/)
     es-ES:
       description: |
-        Open Agent Broker — un arnes ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a traves de stdio JSON-RPC. Esta plantilla despliega la variante Gemini.
+        Open Agent Broker — un arnes ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro, Cursor) a traves de stdio JSON-RPC. Esta plantilla despliega la variante Gemini.
         Fuente: https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -521,6 +589,23 @@ spec:
 
         Para opciones de configuracion, consulte la [documentacion de OpenAB](https://github.com/openabdev/openab).
 
+        ## Webhook / Integracion con Bots
+
+        Por defecto, openab ignora los mensajes de otros bots y webhooks. Para permitir mensajes activados por webhook (por ejemplo, pruebas automatizadas o pipelines de CI), agregar lo siguiente a `config.toml`:
+
+        ```toml
+        [discord]
+        allow_bot_messages = "mentions"
+        ```
+
+        Con esta configuracion, openab responde a cualquier bot o mensaje de webhook que lo @mencione. Para restringir a un webhook especifico, agregar tambien:
+
+        ```toml
+        trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+        ```
+
+        El ID de usuario del webhook es el ID numerico en la URL del webhook: `https://discord.com/api/webhooks/<ID>/...`
+
         ## Desactivar
 
         Dejar `Discord Bot Token` vacio al desplegar. El servicio entrara en modo sleep sin fallar.
@@ -532,7 +617,7 @@ spec:
         - [Google AI Studio](https://aistudio.google.com/)
     id-ID:
       description: |
-        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC. Template ini men-deploy varian Gemini.
+        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro, Cursor) melalui stdio JSON-RPC. Template ini men-deploy varian Gemini.
         Sumber: https://github.com/openabdev/openab
       variables:
         - key: DISCORD_BOT_TOKEN
@@ -601,6 +686,23 @@ spec:
         `config.toml` dibuat dari template bawaan saat boot pertama. Setelah itu, edit file secara langsung -- variabel lingkungan hanya digunakan untuk pengaturan awal. Untuk mengembalikan ke default, hapus dan restart: `rm /home/node/.config/openab/config.toml`
 
         Untuk opsi konfigurasi, lihat [dokumentasi OpenAB](https://github.com/openabdev/openab).
+
+        ## Webhook / Integrasi Bot
+
+        Secara default, openab mengabaikan pesan dari bot dan webhook lain. Untuk mengizinkan pesan yang dipicu webhook (misalnya pengujian otomatis atau pipeline CI), tambahkan berikut ke `config.toml`:
+
+        ```toml
+        [discord]
+        allow_bot_messages = "mentions"
+        ```
+
+        Dengan pengaturan ini, openab merespons pesan bot atau webhook apa pun yang @mention-nya. Untuk membatasi ke webhook tertentu, tambahkan juga:
+
+        ```toml
+        trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+        ```
+
+        ID pengguna webhook adalah ID numerik dalam URL webhook: `https://discord.com/api/webhooks/<ID>/...`
 
         ## Menonaktifkan
 
