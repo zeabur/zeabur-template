@@ -54,7 +54,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template uses a pinned version (`0.7.7`). To upgrade, change the image tag in Zeabur Dashboard -> Service -> Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
+    - **Image tag:** This template uses a pinned version (`0.8.0`). To upgrade, change the image tag in Zeabur Dashboard -> Service -> Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
     - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service -- ownership is fixed automatically on boot.
 
@@ -249,7 +249,7 @@ spec:
 
         ## 注意事項
 
-        - **映像標籤：** 此模板使用固定版本（`0.7.7`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
+        - **映像標籤：** 此模板使用固定版本（`0.8.0`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
         - **持久化儲存：** `/home/node` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
         - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
 
@@ -347,7 +347,7 @@ spec:
 
         ## 注意事项
 
-        - **镜像标签：** 此模板使用固定版本（`0.7.7`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
+        - **镜像标签：** 此模板使用固定版本（`0.8.0`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
         - **持久化存储：** `/home/node` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
         - **文件权限：** 容器以 root 启动后切换为 node 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
 
@@ -445,7 +445,7 @@ spec:
 
         ## 注意事項
 
-        - **イメージタグ：** このテンプレートは固定バージョン（`0.7.7`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
+        - **イメージタグ：** このテンプレートは固定バージョン（`0.8.0`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini)。
         - **永続ストレージ：** `/home/node` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
         - **ファイル権限：** コンテナは root で起動し、openab 実行前に node ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
 
@@ -543,7 +543,7 @@ spec:
 
         ## Notas Importantes
 
-        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.7.7`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard -> Servicio -> Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
+        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.0`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard -> Servicio -> Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
         - **Almacenamiento persistente:** `/home/node` esta montado como volumen persistente. Plugins, configuracion y credenciales se conservan entre reinicios.
         - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario node (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio -- los permisos se corrigen automaticamente al arrancar.
 
@@ -641,7 +641,7 @@ spec:
 
         ## Catatan Penting
 
-        - **Tag image:** Template ini menggunakan versi yang dipin (`0.7.7`). Untuk upgrade, ubah tag image di Zeabur Dashboard -> Layanan -> Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
+        - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.0`). Untuk upgrade, ubah tag image di Zeabur Dashboard -> Layanan -> Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
         - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
         - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna node (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan -- izin diperbaiki secara otomatis saat boot.
 

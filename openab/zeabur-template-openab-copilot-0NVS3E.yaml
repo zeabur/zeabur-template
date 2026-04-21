@@ -53,7 +53,7 @@ spec:
     - **Paid subscription required:** GitHub Copilot CLI requires a **paid** Copilot plan (Pro, Pro+, Business, or Enterprise). The Free tier does not include CLI/ACP access.
     - **Public preview:** Copilot CLI ACP support has been in [public preview](https://github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview/) since Jan 2026. Behavior may change.
     - **Auth after deploy:** Unlike Claude/Codex, there is no API-key env var for Copilot. You must run `gh auth login` inside the container after the first deploy (see below).
-    - **Image tag:** This template uses a pinned version (`0.7.7`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot).
+    - **Image tag:** This template uses a pinned version (`0.8.0`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and GitHub OAuth credentials (`~/.config/gh/`) survive restarts.
     - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
 
@@ -263,7 +263,7 @@ spec:
         - **需付費訂閱：** GitHub Copilot CLI 需要**付費** Copilot 方案（Pro、Pro+、Business 或 Enterprise），免費版不支援 CLI/ACP。
         - **Public preview：** Copilot CLI 的 ACP 支援自 2026 年 1 月起進入 [public preview](https://github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview/)，行為可能變動。
         - **部署後才認證：** 與 Claude/Codex 不同，Copilot 沒有 API key 環境變數。首次部署後需進入容器執行 `gh auth login`（見下方步驟）。
-        - **映像標籤：** 此模板使用固定版本（`0.7.7`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot)。
+        - **映像標籤：** 此模板使用固定版本（`0.8.0`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot)。
         - **持久化儲存：** `/home/node` 掛載為持久化磁碟，plugins、設定、config、GitHub OAuth 認證（`~/.config/gh/`）都會保留。
         - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。
 
@@ -356,7 +356,7 @@ spec:
         - **需付费订阅：** GitHub Copilot CLI 需要**付费** Copilot 方案（Pro、Pro+、Business 或 Enterprise），免费版不支持 CLI/ACP。
         - **Public preview：** Copilot CLI 的 ACP 支持自 2026 年 1 月起进入 public preview，行为可能变动。
         - **部署后才认证：** 与 Claude/Codex 不同，Copilot 没有 API key 环境变量。首次部署后需进入容器运行 `gh auth login`（见下方）。
-        - **镜像标签：** 此模板使用固定版本（`0.7.7`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
+        - **镜像标签：** 此模板使用固定版本（`0.8.0`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
         - **持久化存储：** `/home/node` 挂载为持久化磁盘，包括 GitHub OAuth 凭证 `~/.config/gh/`。
         - **文件权限：** 容器以 root 启动后切换为 node 用户运行 openab。
 
@@ -420,7 +420,7 @@ spec:
         - **有料サブスクリプション必須：** Copilot CLI には有料 Copilot プラン（Pro、Pro+、Business、Enterprise）が必要です。Free プランでは CLI/ACP が使用できません。
         - **Public preview：** Copilot CLI の ACP サポートは 2026 年 1 月から public preview で、動作が変わる可能性があります。
         - **デプロイ後に認証：** Claude/Codex と異なり、API キー環境変数はありません。初回デプロイ後にコンテナ内で `gh auth login` を実行してください。
-        - **イメージタグ：** このテンプレートは固定バージョン（`0.7.7`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
+        - **イメージタグ：** このテンプレートは固定バージョン（`0.8.0`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
         - **永続ストレージ：** `/home/node` が永続ボリュームで、GitHub OAuth 認証情報（`~/.config/gh/`）も保持されます。
 
         ## セットアップ
@@ -469,7 +469,7 @@ spec:
         - **Suscripción de pago requerida:** Copilot CLI requiere un plan de pago (Pro, Pro+, Business o Enterprise). El plan Free no incluye acceso CLI/ACP.
         - **Public preview:** El soporte ACP de Copilot CLI está en public preview desde enero de 2026.
         - **Autenticación después del despliegue:** A diferencia de Claude/Codex, no hay variable de API key. Debe ejecutar `gh auth login` dentro del contenedor tras el primer despliegue.
-        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.7.7`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración.
+        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.0`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración.
         - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente e incluye las credenciales OAuth de GitHub.
 
         ## Configuración
@@ -518,7 +518,7 @@ spec:
         - **Butuh langganan berbayar:** Copilot CLI membutuhkan paket Copilot berbayar (Pro, Pro+, Business, atau Enterprise). Paket Free tidak mendukung CLI/ACP.
         - **Public preview:** Dukungan ACP Copilot CLI dalam public preview sejak Januari 2026.
         - **Autentikasi setelah deploy:** Tidak seperti Claude/Codex, tidak ada env var API key. Anda perlu menjalankan `gh auth login` di dalam container setelah deploy pertama.
-        - **Tag image:** Template ini menggunakan versi yang dipin (`0.7.7`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan.
+        - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.0`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan.
         - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten, termasuk kredensial OAuth GitHub.
 
         ## Pengaturan
