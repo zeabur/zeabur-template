@@ -70,10 +70,24 @@ spec:
 
     ## Changelog
 
+    ### 2026-04-22 — v2026.416.0
+
+    - Updated image to upstream release `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
+    - New: External adapter plugin system with dynamic UI parsers and declarative config schemas
+    - New: Issue hierarchy display with collapse/expand, sub-task counts, and persisted state
+    - New: Feedback voting and thumbs-capture flow for evals
+    - New: Execution workspaces with runtime controls and per-project workspace tab
+    - New: Workspace-aware routine runs
+    - Improved: Inbox mail-client keyboard shortcuts and "Today" divider
+    - Improved: Mobile layouts, dark mode, and adapter override UI
+    - Security: `BETTER_AUTH_SECRET` and `PAPERCLIP_AGENT_JWT_SECRET` are now strictly required at startup (template already sets these)
+
     ### 2026-04-07 — v2026.403.0
 
     - Updated image to upstream release `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
     - Switched from Docker Hub (`zeabur/paperclip`) to upstream GitHub Container Registry (`ghcr.io/paperclipai/paperclip`)
+    - Changed persistent volume path from `/home/node/` to `/paperclip/`
+    - Switched CLI command prefix from `runuser -u node --` to `gosu node`
     - New: First-class blocker/dependency relations with wake-on-subtasks-done
     - Improved: Bearer token redaction in server logs
     - Improved: CEO agent onboarding with relative paths
@@ -148,7 +162,7 @@ spec:
         - postgresql
       spec:
         source:
-          image: ghcr.io/paperclipai/paperclip:sha-a072377
+          image: ghcr.io/paperclipai/paperclip:sha-b8725c5
           command:
             - /bin/sh
             - -c
@@ -216,7 +230,7 @@ localization:
          ```
       4. 複製輸出的邀請連結，在瀏覽器中開啟並註冊。
       5. 登入您偏好的 AI 工具 — Codex 或 Claude Code（請參閱下方 **AI 代理認證**）。
-      6. 建立代理時，將 **Working directory** 設定為 `/home/node/` 下的路徑（例如 `/home/node/workspaces/my-project`）。
+      6. 建立代理時，將 **Working directory** 設定為 `/paperclip/` 下的路徑（例如 `/paperclip/workspaces/my-project`）。
       7. 點擊 **Test now** 執行適配器環境檢查。成功結果會顯示 `hello probe succeeded`。
       8. 設定完成後，將 Zeabur 環境變數 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 設為 `true` 以禁止未授權的註冊。
 
@@ -226,22 +240,46 @@ localization:
 
       | 工具 | 指令登入 |
       |------|--------|
-      | Codex | runuser -u node -- codex login --device-auth |
-      | Claude Code | runuser -u node -- claude login |
+      | Codex | `gosu node codex login --device-auth` |
+      | Claude Code | `gosu node claude login` |
 
       ### 注意事項
 
-      - **請務必使用 `runuser -u node --` 前綴**執行指令中的 CLI 工具。以 root 執行會導致權限問題。
+      - **請務必使用 `gosu node` 前綴**執行指令中的 CLI 工具。以 root 執行會導致權限問題。
       - **Codex 裝置驗證：** 執行登入指令前，請先至 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 開啟「Enable device code authorization for Codex」。
       - **`OPENAI_API_KEY is not set` 警告：** 如果您已透過 `codex login` 驗證，可以安全忽略此警告。
 
       ## 重要事項
 
-      - **持久化儲存：** 僅 `/home/node/` 下的資料在重啟後保留。其他路徑皆為暫存。
-      - **工作目錄：** 請勿使用 `/app`——該路徑包含 Paperclip 原始碼，更新時會被覆蓋。請使用 `/home/node/` 下的路徑（持久化）。
+      - **持久化儲存：** 僅 `/paperclip/` 下的資料在重啟後保留。其他路徑皆為暫存。
+      - **工作目錄：** 請勿使用 `/app`——該路徑包含 Paperclip 原始碼，更新時會被覆蓋。請使用 `/paperclip/` 下的路徑（持久化）。
       - **註冊控管：** 建立管理員帳號後，將 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 設為 `true`。需要邀請新使用者時暫時設為 `false`，完成後再改回 `true`。
 
       ## 變更紀錄
+
+      ### 2026-04-22 — v2026.416.0
+
+      - 更新映像至上游版本 `v2026.416.0`（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
+      - 新增：外部適配器插件系統，支援動態 UI 解析器與宣告式設定 schema
+      - 新增：議題層級顯示（可摺疊、子任務計數、狀態持久化）
+      - 新增：回饋投票與評估用的拇指投票流程
+      - 新增：執行工作區，支援執行階段控制與專案工作區分頁
+      - 新增：工作區感知的 Routine 執行
+      - 改進：收件匣郵件客戶端式鍵盤快捷鍵與「今天」分隔線
+      - 改進：行動版版型、深色模式、適配器覆寫 UI
+      - 安全性：`BETTER_AUTH_SECRET` 與 `PAPERCLIP_AGENT_JWT_SECRET` 啟動時現為必要（本模板已預設）
+
+      ### 2026-04-07 — v2026.403.0
+
+      - 更新映像至上游版本 `v2026.403.0`（`ghcr.io/paperclipai/paperclip:sha-a072377`）
+      - 從 Docker Hub（`zeabur/paperclip`）切換至上游 GitHub Container Registry（`ghcr.io/paperclipai/paperclip`）
+      - 持久化磁碟路徑由 `/home/node/` 改為 `/paperclip/`
+      - CLI 指令前綴由 `runuser -u node --` 改為 `gosu node`
+      - 新增：一級阻礙/依賴關係支援，子任務完成時自動喚醒
+      - 改進：伺服器 log 中的 Bearer token 遮罩
+      - 改進：CEO 代理 onboarding 改用相對路徑
+      - 改進：行內編輯器貼上 markdown 自動格式化
+      - 多項 UI 路由、側邊欄、worktree 及代理流程的錯誤修正
 
       ### 2026-03-30 — v2026.325.0
 
@@ -293,7 +331,7 @@ localization:
          ```
       4. 复制输出的邀请链接，在浏览器中打开并注册。
       5. 登录您偏好的 AI 工具 — Codex 或 Claude Code（请参阅下方 **AI 代理认证**）。
-      6. 建立代理时，将 **Working directory** 设置为 `/home/node/` 下的路径（例如 `/home/node/workspaces/my-project`）。
+      6. 建立代理时，将 **Working directory** 设置为 `/paperclip/` 下的路径（例如 `/paperclip/workspaces/my-project`）。
       7. 点击 **Test now** 执行适配器环境检查。成功结果会显示 `hello probe succeeded`。
       8. 设置完成后，将 Zeabur 环境变量 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 设为 `true` 以禁止未授权的注册。
 
@@ -303,22 +341,46 @@ localization:
 
       | 工具 | 命令登录 |
       |------|--------|
-      | Codex | runuser -u node -- codex login --device-auth |
-      | Claude Code | runuser -u node -- claude login |
+      | Codex | `gosu node codex login --device-auth` |
+      | Claude Code | `gosu node claude login` |
 
       ### 注意事项
 
-      - **请务必使用 `runuser -u node --` 前缀**执行命令中的 CLI 工具。以 root 执行会导致权限问题。
+      - **请务必使用 `gosu node` 前缀**执行命令中的 CLI 工具。以 root 执行会导致权限问题。
       - **Codex 设备验证：** 执行登录命令前，请先在 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 中启用「Enable device code authorization for Codex」。
       - **`OPENAI_API_KEY is not set` 警告：** 如果您已通过 `codex login` 验证，可以安全忽略此警告。
 
       ## 重要事项
 
-      - **持久化存储：** 仅 `/home/node/` 下的数据在重启后保留。其他路径均为临时存储。
-      - **工作目录：** 请勿使用 `/app`——该路径包含 Paperclip 源代码，更新时会被覆盖。请使用 `/home/node/` 下的路径（持久化）。
+      - **持久化存储：** 仅 `/paperclip/` 下的数据在重启后保留。其他路径均为临时存储。
+      - **工作目录：** 请勿使用 `/app`——该路径包含 Paperclip 源代码，更新时会被覆盖。请使用 `/paperclip/` 下的路径（持久化）。
       - **注册管控：** 创建管理员账号后，将 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 设为 `true`。需要邀请新用户时暂时设为 `false`，完成后再改回 `true`。
 
       ## 变更记录
+
+      ### 2026-04-22 — v2026.416.0
+
+      - 更新镜像至上游版本 `v2026.416.0`（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
+      - 新增：外部适配器插件系统，支持动态 UI 解析器与声明式配置 schema
+      - 新增：议题层级显示（可折叠、子任务计数、状态持久化）
+      - 新增：反馈投票与评估用的拇指投票流程
+      - 新增：执行工作区，支持运行时控制与项目工作区标签页
+      - 新增：工作区感知的 Routine 运行
+      - 改进：收件箱邮件客户端式键盘快捷键与「今天」分隔线
+      - 改进：移动端布局、深色模式、适配器覆盖 UI
+      - 安全性：`BETTER_AUTH_SECRET` 与 `PAPERCLIP_AGENT_JWT_SECRET` 启动时现为必需（本模板已预设）
+
+      ### 2026-04-07 — v2026.403.0
+
+      - 更新镜像至上游版本 `v2026.403.0`（`ghcr.io/paperclipai/paperclip:sha-a072377`）
+      - 从 Docker Hub（`zeabur/paperclip`）切换至上游 GitHub Container Registry（`ghcr.io/paperclipai/paperclip`）
+      - 持久化卷路径由 `/home/node/` 改为 `/paperclip/`
+      - CLI 命令前缀由 `runuser -u node --` 改为 `gosu node`
+      - 新增：一级阻碍/依赖关系支持，子任务完成时自动唤醒
+      - 改进：服务器 log 中的 Bearer token 遮罩
+      - 改进：CEO 代理 onboarding 改用相对路径
+      - 改进：行内编辑器粘贴 markdown 自动格式化
+      - 多项 UI 路由、侧边栏、worktree 及代理流程的错误修正
 
       ### 2026-03-30 — v2026.325.0
 
@@ -370,7 +432,7 @@ localization:
          ```
       4. 出力された招待URLをコピーし、ブラウザで開いて登録します。
       5. お好みのAIツール（Codex または Claude Code）にログインします（下記の **AIエージェント認証** を参照）。
-      6. エージェント作成時、**Working directory** を `/home/node/` 配下のパスに設定します（例：`/home/node/workspaces/my-project`）。
+      6. エージェント作成時、**Working directory** を `/paperclip/` 配下のパスに設定します（例：`/paperclip/workspaces/my-project`）。
       7. **Test now** をクリックしてアダプター環境チェックを実行します。成功すると `hello probe succeeded` と表示されます。
       8. セットアップ完了後、Zeabur環境変数の `PAPERCLIP_AUTH_DISABLE_SIGN_UP` を `true` に設定し、不正な登録を防止します。
 
@@ -380,22 +442,46 @@ localization:
 
       | ツール | ターミナルログイン |
       |--------|----------------|
-      | Codex | runuser -u node -- codex login --device-auth |
-      | Claude Code | runuser -u node -- claude login |
+      | Codex | `gosu node codex login --device-auth` |
+      | Claude Code | `gosu node claude login` |
 
       ### 注意事項
 
-      - **ターミナルで CLIツールを実行する際は必ず `runuser -u node --` プレフィックスを使用してください。** rootで実行すると権限の問題が発生します。
+      - **ターミナルで CLIツールを実行する際は必ず `gosu node` プレフィックスを使用してください。** rootで実行すると権限の問題が発生します。
       - **Codexデバイス認証：** ログインコマンドを実行する前に、[ChatGPT Security Settings](https://chatgpt.com/settings/security) で「Enable device code authorization for Codex」を有効にしてください。
       - **`OPENAI_API_KEY is not set` 警告：** `codex login` で認証済みの場合、この警告は無視して問題ありません。
 
       ## 重要事項
 
-      - **永続ストレージ：** `/home/node/` 配下のデータのみ再起動後も保持されます。その他のパスは一時的です。
-      - **作業ディレクトリ：** `/app` は使用しないでください。Paperclipのソースコードが含まれており、更新時に上書きされます。必ず `/home/node/` 配下のパス（永続化）を使用してください。
+      - **永続ストレージ：** `/paperclip/` 配下のデータのみ再起動後も保持されます。その他のパスは一時的です。
+      - **作業ディレクトリ：** `/app` は使用しないでください。Paperclipのソースコードが含まれており、更新時に上書きされます。必ず `/paperclip/` 配下のパス（永続化）を使用してください。
       - **登録制御：** 管理者アカウント作成後、`PAPERCLIP_AUTH_DISABLE_SIGN_UP` を `true` に設定してください。新しいユーザーを招待する際は一時的に `false` に変更し、完了後 `true` に戻してください。
 
       ## 変更履歴
+
+      ### 2026-04-22 — v2026.416.0
+
+      - イメージをアップストリームリリース `v2026.416.0` に更新（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
+      - 新機能：動的UIパーサーと宣言的設定スキーマを備えた外部アダプタープラグインシステム
+      - 新機能：Issue階層表示（折りたたみ/展開、サブタスク数、状態の永続化）
+      - 新機能：評価用のフィードバック投票・サムズキャプチャフロー
+      - 新機能：実行ワークスペース（ランタイム制御、プロジェクト単位のワークスペースタブ）
+      - 新機能：ワークスペース対応のRoutine実行
+      - 改善：受信トレイのメールクライアント風キーボードショートカット、「今日」区切り線
+      - 改善：モバイルレイアウト、ダークモード、アダプターオーバーライドUI
+      - セキュリティ：`BETTER_AUTH_SECRET` と `PAPERCLIP_AGENT_JWT_SECRET` が起動時に必須となりました（本テンプレートは既に設定済み）
+
+      ### 2026-04-07 — v2026.403.0
+
+      - イメージをアップストリームリリース `v2026.403.0` に更新（`ghcr.io/paperclipai/paperclip:sha-a072377`）
+      - Docker Hub（`zeabur/paperclip`）から上流のGitHub Container Registry（`ghcr.io/paperclipai/paperclip`）に切り替え
+      - 永続ボリュームのパスを `/home/node/` から `/paperclip/` に変更
+      - CLIコマンドのプレフィックスを `runuser -u node --` から `gosu node` に変更
+      - 新機能：ファーストクラスのブロッカー/依存関係、サブタスク完了時の自動起動付き
+      - 改善：サーバーログ内のBearerトークンの秘匿化
+      - 改善：CEOエージェントのオンボーディングを相対パス化
+      - 改善：インラインエディタでのmarkdown貼り付けの自動フォーマット
+      - UIルーティング、サイドバー、worktree、エージェントフローに関する複数のバグ修正
 
       ### 2026-03-30 — v2026.325.0
 
@@ -447,7 +533,7 @@ localization:
          ```
       4. Copie la URL de invitación de la salida y ábrala en su navegador para registrarse.
       5. Inicie sesión en su herramienta de IA preferida — Codex o Claude Code (consulte **Autenticación de agentes IA** más abajo).
-      6. Al crear un agente, establezca **Working directory** en una ruta bajo `/home/node/` (ej. `/home/node/workspaces/my-project`).
+      6. Al crear un agente, establezca **Working directory** en una ruta bajo `/paperclip/` (ej. `/paperclip/workspaces/my-project`).
       7. Haga clic en **Test now** para ejecutar la verificación del adaptador. Un resultado exitoso muestra `hello probe succeeded`.
       8. Después de la configuración, establezca `PAPERCLIP_AUTH_DISABLE_SIGN_UP` en `true` en las variables de entorno de Zeabur para evitar registros no autorizados.
 
@@ -457,22 +543,46 @@ localization:
 
       | Herramienta | Login en Terminal |
       |-------------|------------------|
-      | Codex | runuser -u node -- codex login --device-auth |
-      | Claude Code | runuser -u node -- claude login |
+      | Codex | `gosu node codex login --device-auth` |
+      | Claude Code | `gosu node claude login` |
 
       ### Notas
 
-      - **Use siempre el prefijo `runuser -u node --`** al ejecutar herramientas CLI en el Terminal. Ejecutar como root causará problemas de permisos.
+      - **Use siempre el prefijo `gosu node`** al ejecutar herramientas CLI en el Terminal. Ejecutar como root causará problemas de permisos.
       - **Autenticación de dispositivo Codex:** Habilite "Enable device code authorization for Codex" en [ChatGPT Security Settings](https://chatgpt.com/settings/security) antes de ejecutar el comando de inicio de sesión.
       - **Advertencia `OPENAI_API_KEY is not set`:** Esta advertencia puede ignorarse de forma segura si se autenticó mediante `codex login`.
 
       ## Notas importantes
 
-      - **Almacenamiento persistente:** Solo los datos bajo `/home/node/` sobreviven a los reinicios. Todas las demás rutas son efímeras.
-      - **Directorio de trabajo:** No use `/app` — contiene el código fuente de Paperclip y se sobrescribirá en actualizaciones. Use siempre rutas bajo `/home/node/` (persistente).
+      - **Almacenamiento persistente:** Solo los datos bajo `/paperclip/` sobreviven a los reinicios. Todas las demás rutas son efímeras.
+      - **Directorio de trabajo:** No use `/app` — contiene el código fuente de Paperclip y se sobrescribirá en actualizaciones. Use siempre rutas bajo `/paperclip/` (persistente).
       - **Control de registro:** Establezca `PAPERCLIP_AUTH_DISABLE_SIGN_UP` en `true` después de crear su cuenta de administrador. Cambie temporalmente a `false` cuando necesite invitar nuevos usuarios, luego vuelva a `true`.
 
       ## Registro de cambios
+
+      ### 2026-04-22 — v2026.416.0
+
+      - Imagen actualizada a la versión upstream `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
+      - Nuevo: Sistema de plugins de adaptadores externos con parsers UI dinámicos y esquemas de configuración declarativos
+      - Nuevo: Visualización de jerarquía de issues (contraer/expandir, conteo de subtareas, estado persistido)
+      - Nuevo: Flujo de votación y captura con pulgar para evaluaciones
+      - Nuevo: Espacios de trabajo de ejecución con controles de runtime y pestaña por proyecto
+      - Nuevo: Ejecuciones de Routine conscientes del workspace
+      - Mejorado: Atajos de teclado estilo cliente de correo en la bandeja de entrada y divisor "Hoy"
+      - Mejorado: Diseños móviles, modo oscuro e interfaz de override de adaptadores
+      - Seguridad: `BETTER_AUTH_SECRET` y `PAPERCLIP_AGENT_JWT_SECRET` son ahora estrictamente requeridos al inicio (la plantilla ya los establece)
+
+      ### 2026-04-07 — v2026.403.0
+
+      - Imagen actualizada a la versión upstream `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
+      - Migración desde Docker Hub (`zeabur/paperclip`) al GitHub Container Registry upstream (`ghcr.io/paperclipai/paperclip`)
+      - Ruta del volumen persistente cambiada de `/home/node/` a `/paperclip/`
+      - Prefijo de comandos CLI cambiado de `runuser -u node --` a `gosu node`
+      - Nuevo: Relaciones de primera clase de bloqueadores/dependencias con reactivación al completar subtareas
+      - Mejorado: Ocultación de tokens Bearer en los logs del servidor
+      - Mejorado: Onboarding del agente CEO con rutas relativas
+      - Mejorado: Formato automático al pegar markdown en el editor en línea
+      - Múltiples correcciones en enrutamiento UI, barra lateral, worktree y flujos de agentes
 
       ### 2026-03-30 — v2026.325.0
 
@@ -524,7 +634,7 @@ localization:
          ```
       4. Salin URL undangan dari output dan buka di browser untuk mendaftar.
       5. Login ke alat AI pilihan Anda — Codex atau Claude Code (lihat **Autentikasi Agen AI** di bawah).
-      6. Saat membuat agen, atur **Working directory** ke path di bawah `/home/node/` (contoh: `/home/node/workspaces/my-project`).
+      6. Saat membuat agen, atur **Working directory** ke path di bawah `/paperclip/` (contoh: `/paperclip/workspaces/my-project`).
       7. Klik **Test now** untuk menjalankan pemeriksaan adapter. Hasil sukses menampilkan `hello probe succeeded`.
       8. Setelah selesai, atur `PAPERCLIP_AUTH_DISABLE_SIGN_UP` menjadi `true` di variabel lingkungan Zeabur untuk mencegah pendaftaran tidak sah.
 
@@ -534,22 +644,46 @@ localization:
 
       | Alat | Login Terminal |
       |------|----------------|
-      | Codex | runuser -u node -- codex login --device-auth |
-      | Claude Code | runuser -u node -- claude login |
+      | Codex | `gosu node codex login --device-auth` |
+      | Claude Code | `gosu node claude login` |
 
       ### Catatan
 
-      - **Selalu gunakan prefiks `runuser -u node --`** saat menjalankan alat CLI di Terminal. Menjalankan sebagai root akan menyebabkan masalah izin.
+      - **Selalu gunakan prefiks `gosu node`** saat menjalankan alat CLI di Terminal. Menjalankan sebagai root akan menyebabkan masalah izin.
       - **Autentikasi perangkat Codex:** Aktifkan "Enable device code authorization for Codex" di [ChatGPT Security Settings](https://chatgpt.com/settings/security) sebelum menjalankan perintah login.
       - **Peringatan `OPENAI_API_KEY is not set`:** Peringatan ini dapat diabaikan dengan aman jika Anda telah melakukan autentikasi melalui `codex login`.
 
       ## Catatan Penting
 
-      - **Penyimpanan persisten:** Hanya data di bawah `/home/node/` yang bertahan setelah restart. Semua path lainnya bersifat sementara.
-      - **Direktori kerja:** Jangan gunakan `/app` — berisi kode sumber Paperclip dan akan ditimpa saat pembaruan. Selalu gunakan path di bawah `/home/node/` (persisten).
+      - **Penyimpanan persisten:** Hanya data di bawah `/paperclip/` yang bertahan setelah restart. Semua path lainnya bersifat sementara.
+      - **Direktori kerja:** Jangan gunakan `/app` — berisi kode sumber Paperclip dan akan ditimpa saat pembaruan. Selalu gunakan path di bawah `/paperclip/` (persisten).
       - **Kontrol pendaftaran:** Atur `PAPERCLIP_AUTH_DISABLE_SIGN_UP` menjadi `true` setelah membuat akun admin Anda. Ubah sementara ke `false` saat perlu mengundang pengguna baru, lalu kembalikan ke `true`.
 
       ## Catatan Perubahan
+
+      ### 2026-04-22 — v2026.416.0
+
+      - Image diperbarui ke rilis upstream `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
+      - Baru: Sistem plugin adaptor eksternal dengan parser UI dinamis dan skema konfigurasi deklaratif
+      - Baru: Tampilan hierarki issue (ciutkan/perluas, jumlah sub-tugas, status persisten)
+      - Baru: Alur voting umpan balik dan jempol untuk evaluasi
+      - Baru: Ruang kerja eksekusi dengan kontrol runtime dan tab ruang kerja per proyek
+      - Baru: Eksekusi Routine yang sadar ruang kerja
+      - Ditingkatkan: Pintasan keyboard ala klien email di kotak masuk dan pembatas "Hari Ini"
+      - Ditingkatkan: Tata letak mobile, mode gelap, dan UI override adaptor
+      - Keamanan: `BETTER_AUTH_SECRET` dan `PAPERCLIP_AGENT_JWT_SECRET` kini wajib saat startup (template sudah mengaturnya)
+
+      ### 2026-04-07 — v2026.403.0
+
+      - Image diperbarui ke rilis upstream `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
+      - Beralih dari Docker Hub (`zeabur/paperclip`) ke GitHub Container Registry upstream (`ghcr.io/paperclipai/paperclip`)
+      - Path volume persisten diubah dari `/home/node/` ke `/paperclip/`
+      - Prefiks perintah CLI diubah dari `runuser -u node --` ke `gosu node`
+      - Baru: Relasi blocker/dependency kelas satu dengan pembangunan otomatis saat sub-tugas selesai
+      - Ditingkatkan: Penyembunyian token Bearer di log server
+      - Ditingkatkan: Onboarding agen CEO dengan path relatif
+      - Ditingkatkan: Format otomatis saat tempel markdown di editor inline
+      - Berbagai perbaikan untuk routing UI, sidebar, worktree, dan alur agen
 
       ### 2026-03-30 — v2026.325.0
 
