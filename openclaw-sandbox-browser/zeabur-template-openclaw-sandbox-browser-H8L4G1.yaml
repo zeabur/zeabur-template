@@ -103,7 +103,7 @@ spec:
         template: PREBUILT
         spec:
           source:
-            image: zeabur/openclaw-sandbox-browser:main
+            image: zeabur/openclaw-sandbox-browser:latest
           ports:
           - id: cdp
             port: 9222
