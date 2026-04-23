@@ -1,0 +1,560 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: OpenClaw Browser Sandbox
+spec:
+    description: |
+      Headless Chromium browser sandbox that can be controlled via Chrome DevTools Protocol (CDP). Use this with OpenClaw or other services that need browser automation capabilities.
+    icon: https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/pixel-lobster.svg
+    tags:
+      - Browser
+      - Automation
+      - Chromium
+      - CDP
+
+    readme: |
+      # OpenClaw Browser Sandbox
+      A headless Chromium browser that can be controlled via Chrome DevTools Protocol (CDP).
+
+      ## Use Cases
+      - Browser automation with OpenClaw
+      - Web scraping
+      - Automated testing
+      - Screenshot services
+
+      ## How to Connect
+      Other services in the same Zeabur project can connect via:
+      ```
+      http://openclaw-sandbox-browser:9222
+      ```
+
+      ## CDP Endpoints
+      - `GET /json/version` - Browser version info
+      - `GET /json/list` - List open tabs
+      - `GET /json/new?url=<url>` - Open new tab
+      - WebSocket connections for DevTools protocol
+
+      ## Configuration for OpenClaw
+
+      **Option 1: Paste config to OpenClaw**
+      Copy the following configuration and paste it to OpenClaw chat, asking it to update your config file:
+      ```json
+      "browser": {
+        "enabled": true,
+        "attachOnly": true,
+        "defaultProfile": "remote",
+        "profiles": {
+          "remote": {
+            "cdpUrl": "http://openclaw-sandbox-browser:9222",
+            "color": "#FF4500"
+          }
+        }
+      }
+      ```
+      Example prompt: "Please add this browser configuration to my openclaw.json file"
+
+      **Option 2: OpenClaw Web UI**
+      1. Open OpenClaw Web UI (click the domain link in Zeabur dashboard)
+      2. Go to **Settings** page
+      3. Find **Browser** section and enable **Browser Tool**
+      4. Enable **Attach Only** mode
+      5. Set **Default Profile** to `remote`
+      6. Expand **Profiles** section and click **+ Add Entry**
+      7. Fill in the profile settings:
+         - Profile name: `remote`
+         - **Cdp Url**: `http://openclaw-sandbox-browser:9222`
+         - **Color**: `#FF4500` (optional)
+      8. Save settings - changes apply automatically
+      
+      For detailed configuration options, see the [official documentation](https://docs.openclaw.ai/tools/browser#configuration).
+
+
+      ## Resources
+      - **Recommended**: 1 vCPU, 1 GB RAM
+      - **Heavy usage**: 2 vCPU, 2 GB RAM
+
+      ## Testing Connection
+      After deploying, test the connection using curl from OpenClaw terminal:
+      ```bash
+      curl http://openclaw-sandbox-browser:9222/json/version
+      ```
+      
+      If successful, you should see a JSON response like:
+      ```json
+      {"Browser":"Chrome/...","Protocol-Version":"1.3",...}
+      ```
+
+
+      ## Ignorable Errors
+      The following error messages in logs are normal and can be safely ignored:
+      - `Failed to connect to the bus` - No D-Bus in container (expected)
+      - `Failed to adjust OOM score` - Permission limitation (doesn't affect functionality)
+      - `DEPRECATED_ENDPOINT` - Google Cloud Messaging not needed for headless mode
+
+      ## Documentation
+      - OpenClaw Template: https://zeabur.com/templates/VTZ4FX
+      - OpenClaw Browser Tool: https://docs.openclaw.ai/tools/browser
+      - GitHub: https://github.com/canyugs/openclaw-sandbox-browser
+
+    services:
+      - name: openclaw-sandbox-browser
+        icon: https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/pixel-lobster.svg
+        template: PREBUILT
+        spec:
+          source:
+            image: zeabur/openclaw-sandbox-browser:main
+          ports:
+          - id: cdp
+            port: 9222
+            type: HTTP
+          healthCheck:
+            type: TCP
+            port: cdp
+          env:
+            OPENCLAW_BROWSER_HEADLESS:
+              default: "1"
+            OPENCLAW_BROWSER_CDP_PORT:
+              default: "9222"
+              readonly: true
+
+localization:
+  zh-TW:
+    name: OpenClaw 瀏覽器沙盒
+    description: |
+      無頭 Chromium 瀏覽器沙盒，可透過 Chrome DevTools Protocol (CDP) 控制。可搭配 OpenClaw 或其他需要瀏覽器自動化功能的服務使用。
+    readme: |
+      # OpenClaw 瀏覽器沙盒
+      可透過 Chrome DevTools Protocol (CDP) 控制的無頭 Chromium 瀏覽器。
+
+      ## 使用場景
+      - 搭配 OpenClaw 進行瀏覽器自動化
+      - 網頁爬蟲
+      - 自動化測試
+      - 截圖服務
+
+      ## 連線方式
+      同一個 Zeabur 專案中的其他服務可透過以下方式連線：
+      ```
+      http://openclaw-sandbox-browser:9222
+      ```
+
+      ## CDP 端點
+      - `GET /json/version` - 瀏覽器版本資訊
+      - `GET /json/list` - 列出已開啟的分頁
+      - `GET /json/new?url=<url>` - 開啟新分頁
+      - WebSocket 連線用於 DevTools 協議
+
+      ## OpenClaw 設定
+
+      **方式一：將設定貼給 OpenClaw**
+      複製以下設定並貼到 OpenClaw 對話中，請它幫您更新設定檔：
+      ```json
+      "browser": {
+        "enabled": true,
+        "attachOnly": true,
+        "defaultProfile": "remote",
+        "profiles": {
+          "remote": {
+            "cdpUrl": "http://openclaw-sandbox-browser:9222",
+            "color": "#FF4500"
+          }
+        }
+      }
+      ```
+      範例提示詞："請將這個瀏覽器設定加到我的 openclaw.json 檔案中"
+
+      **方式二：OpenClaw Web UI**
+      1. 開啟 OpenClaw Web UI（點擊 Zeabur 控制台中的網域連結）
+      2. 前往 **Settings** 頁面
+      3. 找到 **Browser** 區塊並啟用 **Browser Tool**
+      4. 啟用 **Attach Only** 模式
+      5. 將 **Default Profile** 設為 `remote`
+      6. 展開 **Profiles** 區塊並點擊 **+ Add Entry**
+      7. 填入設定檔資訊：
+         - 設定檔名稱：`remote`
+         - **Cdp Url**：`http://openclaw-sandbox-browser:9222`
+         - **Color**：`#FF4500`（選填）
+      8. 儲存設定 - 變更會自動套用
+      
+      詳細設定選項請參考[官方文件](https://docs.openclaw.ai/tools/browser#configuration)。
+
+
+      ## 資源需求
+      - **建議配置**：1 vCPU、1 GB RAM
+      - **大量使用**：2 vCPU、2 GB RAM
+
+      ## 測試連線
+      部署完成後，從 OpenClaw 終端機使用 curl 測試連線：
+      ```bash
+      curl http://openclaw-sandbox-browser:9222/json/version
+      ```
+      
+      成功的話，您會看到類似以下的 JSON 回應：
+      ```json
+      {"Browser":"Chrome/...","Protocol-Version":"1.3",...}
+      ```
+
+
+      ## 可忽略的錯誤
+      以下日誌中的錯誤訊息是正常的，可以安全忽略：
+      - `Failed to connect to the bus` - 容器內沒有 D-Bus（正常現象）
+      - `Failed to adjust OOM score` - 權限限制（不影響功能）
+      - `DEPRECATED_ENDPOINT` - 無頭模式不需要 Google Cloud Messaging
+
+      ## 文件
+      - OpenClaw 模板：https://zeabur.com/templates/VTZ4FX
+      - OpenClaw 瀏覽器工具：https://docs.openclaw.ai/tools/browser
+      - GitHub：https://github.com/canyugs/openclaw-sandbox-browser
+
+  zh-CN:
+    name: OpenClaw 浏览器沙盒
+    description: |
+      无头 Chromium 浏览器沙盒，可通过 Chrome DevTools Protocol (CDP) 控制。可搭配 OpenClaw 或其他需要浏览器自动化功能的服务使用。
+    readme: |
+      # OpenClaw 浏览器沙盒
+      可通过 Chrome DevTools Protocol (CDP) 控制的无头 Chromium 浏览器。
+
+      ## 使用场景
+      - 搭配 OpenClaw 进行浏览器自动化
+      - 网页爬虫
+      - 自动化测试
+      - 截图服务
+
+      ## 连接方式
+      同一个 Zeabur 项目中的其他服务可通过以下方式连接：
+      ```
+      http://openclaw-sandbox-browser:9222
+      ```
+
+      ## CDP 端点
+      - `GET /json/version` - 浏览器版本信息
+      - `GET /json/list` - 列出已打开的标签页
+      - `GET /json/new?url=<url>` - 打开新标签页
+      - WebSocket 连接用于 DevTools 协议
+
+      ## OpenClaw 配置
+
+      **方式一：将配置贴给 OpenClaw**
+      复制以下配置并贴到 OpenClaw 对话中，请它帮您更新配置文件：
+      ```json
+      "browser": {
+        "enabled": true,
+        "attachOnly": true,
+        "defaultProfile": "remote",
+        "profiles": {
+          "remote": {
+            "cdpUrl": "http://openclaw-sandbox-browser:9222",
+            "color": "#FF4500"
+          }
+        }
+      }
+      ```
+      示例提示词："请将这个浏览器配置添加到我的 openclaw.json 文件中"
+
+      **方式二：OpenClaw Web UI**
+      1. 打开 OpenClaw Web UI（点击 Zeabur 控制台中的域名链接）
+      2. 前往 **Settings** 页面
+      3. 找到 **Browser** 区块并启用 **Browser Tool**
+      4. 启用 **Attach Only** 模式
+      5. 将 **Default Profile** 设为 `remote`
+      6. 展开 **Profiles** 区块并点击 **+ Add Entry**
+      7. 填入配置文件信息：
+         - 配置文件名称：`remote`
+         - **Cdp Url**：`http://openclaw-sandbox-browser:9222`
+         - **Color**：`#FF4500`（选填）
+      8. 保存设置 - 变更会自动应用
+      
+      详细配置选项请参考[官方文档](https://docs.openclaw.ai/tools/browser#configuration)。
+
+
+      ## 资源需求
+      - **建议配置**：1 vCPU、1 GB RAM
+      - **大量使用**：2 vCPU、2 GB RAM
+
+      ## 测试连线
+      部署完成后，从 OpenClaw 终端使用 curl 测试连线：
+      ```bash
+      curl http://openclaw-sandbox-browser:9222/json/version
+      ```
+      
+      成功的话，您会看到类似以下的 JSON 响应：
+      ```json
+      {"Browser":"Chrome/...","Protocol-Version":"1.3",...}
+      ```
+
+
+      ## 可忽略的错误
+      以下日志中的错误信息是正常的，可以安全忽略：
+      - `Failed to connect to the bus` - 容器内没有 D-Bus（正常现象）
+      - `Failed to adjust OOM score` - 权限限制（不影响功能）
+      - `DEPRECATED_ENDPOINT` - 无头模式不需要 Google Cloud Messaging
+
+      ## 文档
+      - OpenClaw 模板：https://zeabur.com/templates/VTZ4FX
+      - OpenClaw 浏览器工具：https://docs.openclaw.ai/tools/browser
+      - GitHub：https://github.com/canyugs/openclaw-sandbox-browser
+
+  ja:
+    name: OpenClaw ブラウザサンドボックス
+    description: |
+      Chrome DevTools Protocol (CDP) で制御可能なヘッドレス Chromium ブラウザサンドボックス。OpenClaw やブラウザ自動化が必要な他のサービスと組み合わせて使用できます。
+    readme: |
+      # OpenClaw ブラウザサンドボックス
+      Chrome DevTools Protocol (CDP) で制御可能なヘッドレス Chromium ブラウザ。
+
+      ## ユースケース
+      - OpenClaw でのブラウザ自動化
+      - ウェブスクレイピング
+      - 自動テスト
+      - スクリーンショットサービス
+
+      ## 接続方法
+      同じ Zeabur プロジェクト内の他のサービスから以下で接続できます：
+      ```
+      http://openclaw-sandbox-browser:9222
+      ```
+
+      ## CDP エンドポイント
+      - `GET /json/version` - ブラウザバージョン情報
+      - `GET /json/list` - 開いているタブの一覧
+      - `GET /json/new?url=<url>` - 新しいタブを開く
+      - DevTools プロトコル用 WebSocket 接続
+
+      ## OpenClaw 設定
+
+      **方法1：設定を OpenClaw に貼り付け**
+      以下の設定をコピーして OpenClaw のチャットに貼り付け、設定ファイルの更新を依頼してください：
+      ```json
+      "browser": {
+        "enabled": true,
+        "attachOnly": true,
+        "defaultProfile": "remote",
+        "profiles": {
+          "remote": {
+            "cdpUrl": "http://openclaw-sandbox-browser:9222",
+            "color": "#FF4500"
+          }
+        }
+      }
+      ```
+      プロンプト例：「このブラウザ設定を私の openclaw.json ファイルに追加してください」
+
+      **方法2：OpenClaw Web UI**
+      1. OpenClaw Web UI を開く（Zeabur ダッシュボードでドメインリンクをクリック）
+      2. **Settings** ページに移動
+      3. **Browser** セクションを見つけて **Browser Tool** を有効化
+      4. **Attach Only** モードを有効化
+      5. **Default Profile** を `remote` に設定
+      6. **Profiles** セクションを展開して **+ Add Entry** をクリック
+      7. プロファイル設定を入力：
+         - プロファイル名：`remote`
+         - **Cdp Url**：`http://openclaw-sandbox-browser:9222`
+         - **Color**：`#FF4500`（任意）
+      8. 設定を保存 - 変更は自動的に適用されます
+      
+      詳細な設定オプションは[公式ドキュメント](https://docs.openclaw.ai/tools/browser#configuration)をご覧ください。
+
+
+      ## リソース要件
+      - **推奨構成**：1 vCPU、1 GB RAM
+      - **高負荷使用**：2 vCPU、2 GB RAM
+
+      ## 接続テスト
+      デプロイ後、OpenClaw ターミナルから curl で接続をテスト：
+      ```bash
+      curl http://openclaw-sandbox-browser:9222/json/version
+      ```
+      
+      成功すると、以下のような JSON レスポンスが表示されます：
+      ```json
+      {"Browser":"Chrome/...","Protocol-Version":"1.3",...}
+      ```
+
+
+      ## 無視できるエラー
+      以下のログエラーメッセージは正常であり、安全に無視できます：
+      - `Failed to connect to the bus` - コンテナ内に D-Bus がない（想定通り）
+      - `Failed to adjust OOM score` - 権限の制限（機能に影響なし）
+      - `DEPRECATED_ENDPOINT` - ヘッドレスモードでは Google Cloud Messaging 不要
+
+      ## ドキュメント
+      - OpenClaw テンプレート：https://zeabur.com/templates/VTZ4FX
+      - OpenClaw ブラウザツール：https://docs.openclaw.ai/tools/browser
+      - GitHub：https://github.com/canyugs/openclaw-sandbox-browser
+
+  id:
+    name: OpenClaw Browser Sandbox
+    description: |
+      Sandbox browser Chromium headless yang dapat dikontrol melalui Chrome DevTools Protocol (CDP). Gunakan dengan OpenClaw atau layanan lain yang membutuhkan kemampuan otomatisasi browser.
+    readme: |
+      # OpenClaw Browser Sandbox
+      Browser Chromium headless yang dapat dikontrol melalui Chrome DevTools Protocol (CDP).
+
+      ## Kasus Penggunaan
+      - Otomatisasi browser dengan OpenClaw
+      - Web scraping
+      - Pengujian otomatis
+      - Layanan screenshot
+
+      ## Cara Menghubungkan
+      Layanan lain dalam proyek Zeabur yang sama dapat terhubung melalui:
+      ```
+      http://openclaw-sandbox-browser:9222
+      ```
+
+      ## Endpoint CDP
+      - `GET /json/version` - Info versi browser
+      - `GET /json/list` - Daftar tab yang terbuka
+      - `GET /json/new?url=<url>` - Buka tab baru
+      - Koneksi WebSocket untuk protokol DevTools
+
+      ## Konfigurasi untuk OpenClaw
+
+      **Opsi 1: Tempelkan konfigurasi ke OpenClaw**
+      Salin konfigurasi berikut dan tempelkan ke chat OpenClaw, minta untuk memperbarui file konfigurasi Anda:
+      ```json
+      "browser": {
+        "enabled": true,
+        "attachOnly": true,
+        "defaultProfile": "remote",
+        "profiles": {
+          "remote": {
+            "cdpUrl": "http://openclaw-sandbox-browser:9222",
+            "color": "#FF4500"
+          }
+        }
+      }
+      ```
+      Contoh prompt: "Tolong tambahkan konfigurasi browser ini ke file openclaw.json saya"
+
+      **Opsi 2: OpenClaw Web UI**
+      1. Buka OpenClaw Web UI (klik tautan domain di dashboard Zeabur)
+      2. Buka halaman **Settings**
+      3. Temukan bagian **Browser** dan aktifkan **Browser Tool**
+      4. Aktifkan mode **Attach Only**
+      5. Atur **Default Profile** ke `remote`
+      6. Perluas bagian **Profiles** dan klik **+ Add Entry**
+      7. Isi pengaturan profil:
+         - Nama profil: `remote`
+         - **Cdp Url**: `http://openclaw-sandbox-browser:9222`
+         - **Color**: `#FF4500` (opsional)
+      8. Simpan pengaturan - perubahan diterapkan secara otomatis
+      
+      Untuk opsi konfigurasi detail, lihat [dokumentasi resmi](https://docs.openclaw.ai/tools/browser#configuration).
+
+
+      ## Kebutuhan Sumber Daya
+      - **Rekomendasi**: 1 vCPU, 1 GB RAM
+      - **Penggunaan berat**: 2 vCPU, 2 GB RAM
+
+      ## Menguji Koneksi
+      Setelah deploy, uji koneksi menggunakan curl dari terminal OpenClaw:
+      ```bash
+      curl http://openclaw-sandbox-browser:9222/json/version
+      ```
+      
+      Jika berhasil, Anda akan melihat respons JSON seperti:
+      ```json
+      {"Browser":"Chrome/...","Protocol-Version":"1.3",...}
+      ```
+
+
+      ## Error yang Dapat Diabaikan
+      Pesan error berikut di log adalah normal dan dapat diabaikan dengan aman:
+      - `Failed to connect to the bus` - Tidak ada D-Bus di container (normal)
+      - `Failed to adjust OOM score` - Batasan izin (tidak mempengaruhi fungsi)
+      - `DEPRECATED_ENDPOINT` - Google Cloud Messaging tidak diperlukan untuk mode headless
+
+      ## Dokumentasi
+      - Template OpenClaw: https://zeabur.com/templates/VTZ4FX
+      - OpenClaw Browser Tool: https://docs.openclaw.ai/tools/browser
+      - GitHub: https://github.com/canyugs/openclaw-sandbox-browser
+
+  es:
+    name: OpenClaw Browser Sandbox
+    description: |
+      Sandbox de navegador Chromium headless que puede ser controlado a través del Chrome DevTools Protocol (CDP). Úsalo con OpenClaw u otros servicios que necesiten capacidades de automatización de navegador.
+    readme: |
+      # OpenClaw Browser Sandbox
+      Navegador Chromium headless que puede ser controlado a través del Chrome DevTools Protocol (CDP).
+
+      ## Casos de Uso
+      - Automatización de navegador con OpenClaw
+      - Web scraping
+      - Pruebas automatizadas
+      - Servicios de captura de pantalla
+
+      ## Cómo Conectar
+      Otros servicios en el mismo proyecto de Zeabur pueden conectarse a través de:
+      ```
+      http://openclaw-sandbox-browser:9222
+      ```
+
+      ## Endpoints CDP
+      - `GET /json/version` - Información de versión del navegador
+      - `GET /json/list` - Listar pestañas abiertas
+      - `GET /json/new?url=<url>` - Abrir nueva pestaña
+      - Conexiones WebSocket para el protocolo DevTools
+
+      ## Configuración para OpenClaw
+
+      **Opción 1: Pegar configuración a OpenClaw**
+      Copie la siguiente configuración y péguela en el chat de OpenClaw, pidiéndole que actualice su archivo de configuración:
+      ```json
+      "browser": {
+        "enabled": true,
+        "attachOnly": true,
+        "defaultProfile": "remote",
+        "profiles": {
+          "remote": {
+            "cdpUrl": "http://openclaw-sandbox-browser:9222",
+            "color": "#FF4500"
+          }
+        }
+      }
+      ```
+      Ejemplo de prompt: "Por favor agregue esta configuración del navegador a mi archivo openclaw.json"
+
+      **Opción 2: OpenClaw Web UI**
+      1. Abra OpenClaw Web UI (haga clic en el enlace del dominio en el panel de Zeabur)
+      2. Vaya a la página **Settings**
+      3. Encuentre la sección **Browser** y habilite **Browser Tool**
+      4. Habilite el modo **Attach Only**
+      5. Establezca **Default Profile** en `remote`
+      6. Expanda la sección **Profiles** y haga clic en **+ Add Entry**
+      7. Complete la configuración del perfil:
+         - Nombre del perfil: `remote`
+         - **Cdp Url**: `http://openclaw-sandbox-browser:9222`
+         - **Color**: `#FF4500` (opcional)
+      8. Guarde la configuración - los cambios se aplican automáticamente
+      
+      Para opciones de configuración detalladas, consulte la [documentación oficial](https://docs.openclaw.ai/tools/browser#configuration).
+
+
+      ## Recursos
+      - **Recomendado**: 1 vCPU, 1 GB RAM
+      - **Uso intensivo**: 2 vCPU, 2 GB RAM
+
+      ## Probar Conexión
+      Después de desplegar, pruebe la conexión usando curl desde la terminal de OpenClaw:
+      ```bash
+      curl http://openclaw-sandbox-browser:9222/json/version
+      ```
+      
+      Si tiene éxito, verá una respuesta JSON como:
+      ```json
+      {"Browser":"Chrome/...","Protocol-Version":"1.3",...}
+      ```
+
+
+      ## Errores Ignorables
+      Los siguientes mensajes de error en los logs son normales y pueden ignorarse de forma segura:
+      - `Failed to connect to the bus` - No hay D-Bus en el contenedor (esperado)
+      - `Failed to adjust OOM score` - Limitación de permisos (no afecta la funcionalidad)
+      - `DEPRECATED_ENDPOINT` - Google Cloud Messaging no es necesario para el modo headless
+
+      ## Documentación
+      - Plantilla OpenClaw: https://zeabur.com/templates/VTZ4FX
+      - OpenClaw Browser Tool: https://docs.openclaw.ai/tools/browser
+      - GitHub: https://github.com/canyugs/openclaw-sandbox-browser
