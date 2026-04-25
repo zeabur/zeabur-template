@@ -173,353 +173,353 @@ spec:
             default: ${LINE_CHANNEL_ACCESS_TOKEN}
           TELEGRAM_SECRET_TOKEN:
             default: ${PASSWORD}
-  locales:
-    zh-TW:
-      description: |
-        OpenAB 獨立 Webhook Gateway — 透過 WebSocket 將 Telegram 和／或 LINE 橋接到任何正在運行的 OAB 實例。部署於現有 OpenAB 服務旁，即可啟用 Telegram 和／或 LINE 支援。至少須設定一個平台。
-        來源：https://github.com/openabdev/openab
-      variables:
-        - key: TELEGRAM_BOT_TOKEN
-          name: Telegram Bot Token（選填）
-          description: "選填。來自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空則停用 Telegram。Telegram 和 LINE 至少須填寫其中一個。"
-        - key: LINE_CHANNEL_SECRET
-          name: LINE Channel Secret（選填）
-          description: "選填。來自 LINE Developers Console 的 Channel Secret。留空則停用 LINE。"
-        - key: LINE_CHANNEL_ACCESS_TOKEN
-          name: LINE Channel Access Token（選填）
-          description: "選填。來自 LINE Developers Console 的 Channel Access Token。填寫 LINE Channel Secret 時必填。"
-        - key: PUBLIC_DOMAIN
-          name: Gateway 網域
-          description: "用於接收 Telegram 和 LINE Webhook 的公開 HTTPS 網域。"
-      readme: |
-        # OpenAB Gateway
+localization:
+  zh-TW:
+    description: |
+      OpenAB 獨立 Webhook Gateway — 透過 WebSocket 將 Telegram 和／或 LINE 橋接到任何正在運行的 OAB 實例。部署於現有 OpenAB 服務旁，即可啟用 Telegram 和／或 LINE 支援。至少須設定一個平台。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: TELEGRAM_BOT_TOKEN
+        name: Telegram Bot Token（選填）
+        description: "選填。來自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空則停用 Telegram。Telegram 和 LINE 至少須填寫其中一個。"
+      - key: LINE_CHANNEL_SECRET
+        name: LINE Channel Secret（選填）
+        description: "選填。來自 LINE Developers Console 的 Channel Secret。留空則停用 LINE。"
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        name: LINE Channel Access Token（選填）
+        description: "選填。來自 LINE Developers Console 的 Channel Access Token。填寫 LINE Channel Secret 時必填。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 網域
+        description: "用於接收 Telegram 和 LINE Webhook 的公開 HTTPS 網域。"
+    readme: |
+      # OpenAB Gateway
 
-        [OpenAB Gateway](https://github.com/openabdev/openab) 是一個獨立的 Webhook 橋接服務，透過 WebSocket 將 Telegram 和 LINE 連接到任何正在運行的 [OpenAB](https://github.com/openabdev/openab) 實例。
+      [OpenAB Gateway](https://github.com/openabdev/openab) 是一個獨立的 Webhook 橋接服務，透過 WebSocket 將 Telegram 和 LINE 連接到任何正在運行的 [OpenAB](https://github.com/openabdev/openab) 實例。
 
-        ```
-        Telegram ──POST──▶ ┌──────────────────┐
-        LINE     ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
-                           │     :8080        │   （OAB 主動對外連線）
-                           └──────────────────┘
-        ```
+      ```
+      Telegram ──POST──▶ ┌──────────────────┐
+      LINE     ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
+                         │     :8080        │   （OAB 主動對外連線）
+                         └──────────────────┘
+      ```
 
-        將此 template 部署於現有 OpenAB 服務（Claude、Cursor、Codex 等）旁，無需重新部署 OAB 即可新增 Telegram 和 LINE 支援。
+      將此 template 部署於現有 OpenAB 服務（Claude、Cursor、Codex 等）旁，無需重新部署 OAB 即可新增 Telegram 和 LINE 支援。
 
-        ## 前置條件
+      ## 前置條件
 
-        - 同一個 Zeabur 專案中已有正在運行的 OpenAB 服務
-        - **至少需要以下其中一個：**
-          - 來自 [@BotFather](https://t.me/BotFather) 的 Telegram Bot Token
-          - 已啟用 Messaging API 的 LINE 官方帳號（LINE Channel Secret + Access Token）
+      - 同一個 Zeabur 專案中已有正在運行的 OpenAB 服務
+      - **至少需要以下其中一個：**
+        - 來自 [@BotFather](https://t.me/BotFather) 的 Telegram Bot Token
+        - 已啟用 Messaging API 的 LINE 官方帳號（LINE Channel Secret + Access Token）
 
-        ## 設定步驟
+      ## 設定步驟
 
-        ### 1. 建立 Telegram Bot
+      ### 1. 建立 Telegram Bot
 
-        1. 在 Telegram 開啟 [@BotFather](https://t.me/BotFather)
-        2. 發送 `/newbot` 並依照提示操作
-        3. 複製 Bot Token（例如 `123456:ABC-DEF...`）→ 貼到 **Telegram Bot Token**
-        4. 選填：發送 `/setprivacy` → `Disable`，讓 Bot 可以看到群組中所有訊息
-
-        ### 2. 部署
-
-        填入想啟用平台的 Token 後點擊部署。系統會自動分配公開 HTTPS 網域。可以只啟用 Telegram、只啟用 LINE，或兩者同時啟用。
+      1. 在 Telegram 開啟 [@BotFather](https://t.me/BotFather)
+      2. 發送 `/newbot` 並依照提示操作
+      3. 複製 Bot Token（例如 `123456:ABC-DEF...`）→ 貼到 **Telegram Bot Token**
+      4. 選填：發送 `/setprivacy` → `Disable`，讓 Bot 可以看到群組中所有訊息
+
+      ### 2. 部署
+
+      填入想啟用平台的 Token 後點擊部署。系統會自動分配公開 HTTPS 網域。可以只啟用 Telegram、只啟用 LINE，或兩者同時啟用。
 
-        ### 3. 註冊 Telegram Webhook
+      ### 3. 註冊 Telegram Webhook
 
-        部署完成後，向 Telegram 註冊你的 Gateway URL（替換 `YOUR_TOKEN`、`YOUR_DOMAIN`，選填 `YOUR_SECRET`）：
+      部署完成後，向 Telegram 註冊你的 Gateway URL（替換 `YOUR_TOKEN`、`YOUR_DOMAIN`，選填 `YOUR_SECRET`）：
 
-        ```bash
-        # 不帶 webhook secret（較簡單）
-        curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
+      ```bash
+      # 不帶 webhook secret（較簡單）
+      curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
 
-        # 帶 webhook secret（建議 — 與 TELEGRAM_SECRET_TOKEN 一致）
-        curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram&secret_token=YOUR_SECRET"
-        ```
+      # 帶 webhook secret（建議 — 與 TELEGRAM_SECRET_TOKEN 一致）
+      curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram&secret_token=YOUR_SECRET"
+      ```
 
-        預期回應：`{"ok":true,"result":true,"description":"Webhook was set"}`
+      預期回應：`{"ok":true,"result":true,"description":"Webhook was set"}`
 
-        ### 4. 設定 OAB 使用 Gateway
+      ### 4. 設定 OAB 使用 Gateway
 
-        在同一個 Zeabur 專案的 OpenAB 服務中，編輯 `/home/agent/.config/openab/config.toml` 並加入：
+      在同一個 Zeabur 專案的 OpenAB 服務中，編輯 `/home/agent/.config/openab/config.toml` 並加入：
 
-        ```toml
-        [gateway]
-        url = "ws://openab-gateway:8080/ws"
-        ```
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      ```
 
-        儲存後重啟 OpenAB 服務。OAB 會主動對外連線到 Gateway，OAB 本身不需要開放任何 inbound 連接埠。
+      儲存後重啟 OpenAB 服務。OAB 會主動對外連線到 Gateway，OAB 本身不需要開放任何 inbound 連接埠。
 
-        > **內部 Hostname：** `openab-gateway` 在同一個 Zeabur 專案內透過內部 DNS 解析。若你的 Gateway 服務名稱不同，請改用對應名稱。
+      > **內部 Hostname：** `openab-gateway` 在同一個 Zeabur 專案內透過內部 DNS 解析。若你的 Gateway 服務名稱不同，請改用對應名稱。
 
-        ### 5. 測試
+      ### 5. 測試
 
-        向你的 Telegram Bot 發送訊息。Gateway 收到後透過 WebSocket 轉發給 OAB，OAB 處理後透過 Gateway 回覆。
+      向你的 Telegram Bot 發送訊息。Gateway 收到後透過 WebSocket 轉發給 OAB，OAB 處理後透過 Gateway 回覆。
 
-        ## LINE 設定（選填）
+      ## LINE 設定（選填）
 
-        ### 1. 建立 LINE 官方帳號
+      ### 1. 建立 LINE 官方帳號
 
-        1. 前往 [LINE 官方帳號管理後台](https://manager.line.biz) 建立帳號
-        2. **設定** → **Messaging API** → **啟用 Messaging API**
-        3. 開啟 [LINE Developers Console](https://developers.line.biz) → 你的 Channel：
-           - **Basic settings** → **Channel secret** → 複製 → 貼到 **LINE Channel Secret**
-           - **Messaging API** → **Channel access token** → Issue → 複製 → 貼到 **LINE Channel Access Token**
+      1. 前往 [LINE 官方帳號管理後台](https://manager.line.biz) 建立帳號
+      2. **設定** → **Messaging API** → **啟用 Messaging API**
+      3. 開啟 [LINE Developers Console](https://developers.line.biz) → 你的 Channel：
+         - **Basic settings** → **Channel secret** → 複製 → 貼到 **LINE Channel Secret**
+         - **Messaging API** → **Channel access token** → Issue → 複製 → 貼到 **LINE Channel Access Token**
 
-        ### 2. 設定 Webhook URL
+      ### 2. 設定 Webhook URL
 
-        在 LINE Developers Console → **Messaging API** 頁籤：
+      在 LINE Developers Console → **Messaging API** 頁籤：
 
-        1. **Webhook URL** → 編輯 → 輸入：`https://YOUR_DOMAIN/webhook/line`
-        2. **Use webhook** → 開啟
-        3. **Auto-reply messages** → 關閉
-        4. 點擊 **Verify**
+      1. **Webhook URL** → 編輯 → 輸入：`https://YOUR_DOMAIN/webhook/line`
+      2. **Use webhook** → 開啟
+      3. **Auto-reply messages** → 關閉
+      4. 點擊 **Verify**
 
-        ### 3. 設定 OAB 使用 LINE
+      ### 3. 設定 OAB 使用 LINE
 
-        在 `config.toml` 的 gateway 區塊加入 `platform = "line"`：
-
-        ```toml
-        [gateway]
-        url = "ws://openab-gateway:8080/ws"
-        platform = "line"
-        ```
-
-        儲存後重啟 OpenAB 服務。
-
-        ## Webhook 端點
+      在 `config.toml` 的 gateway 區塊加入 `platform = "line"`：
+
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      platform = "line"
+      ```
+
+      儲存後重啟 OpenAB 服務。
+
+      ## Webhook 端點
 
-        | 路徑 | 平台 |
-        |------|------|
-        | `POST /webhook/telegram` | Telegram |
-        | `POST /webhook/line` | LINE |
-        | `GET /ws` | OAB WebSocket（內部使用） |
-        | `GET /health` | 健康檢查 |
+      | 路徑 | 平台 |
+      |------|------|
+      | `POST /webhook/telegram` | Telegram |
+      | `POST /webhook/line` | LINE |
+      | `GET /ws` | OAB WebSocket（內部使用） |
+      | `GET /health` | 健康檢查 |
 
-        ## 連結
+      ## 連結
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Telegram 設定指南](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
-        - [LINE 設定指南](https://github.com/openabdev/openab/blob/main/docs/line.md)
-        - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
-    zh-CN:
-      description: |
-        OpenAB 独立 Webhook Gateway — 通过 WebSocket 将 Telegram 和/或 LINE 桥接到任何正在运行的 OAB 实例。部署于现有 OpenAB 服务旁，即可启用 Telegram 和/或 LINE 支持。至少须配置一个平台。
-        来源：https://github.com/openabdev/openab
-      variables:
-        - key: TELEGRAM_BOT_TOKEN
-          name: Telegram Bot Token（选填）
-          description: "选填。来自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空则禁用 Telegram。Telegram 和 LINE 至少须填写其中一个。"
-        - key: LINE_CHANNEL_SECRET
-          name: LINE Channel Secret（选填）
-          description: "选填。来自 LINE Developers Console 的 Channel Secret。留空则禁用 LINE。"
-        - key: LINE_CHANNEL_ACCESS_TOKEN
-          name: LINE Channel Access Token（选填）
-          description: "选填。来自 LINE Developers Console 的 Channel Access Token。填写 LINE Channel Secret 时必填。"
-        - key: PUBLIC_DOMAIN
-          name: Gateway 域名
-          description: "用于接收 Telegram 和 LINE Webhook 的公开 HTTPS 域名。"
-      readme: |
-        # OpenAB Gateway（简体中文）
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Telegram 設定指南](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
+      - [LINE 設定指南](https://github.com/openabdev/openab/blob/main/docs/line.md)
+      - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
+  zh-CN:
+    description: |
+      OpenAB 独立 Webhook Gateway — 通过 WebSocket 将 Telegram 和/或 LINE 桥接到任何正在运行的 OAB 实例。部署于现有 OpenAB 服务旁，即可启用 Telegram 和/或 LINE 支持。至少须配置一个平台。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: TELEGRAM_BOT_TOKEN
+        name: Telegram Bot Token（选填）
+        description: "选填。来自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空则禁用 Telegram。Telegram 和 LINE 至少须填写其中一个。"
+      - key: LINE_CHANNEL_SECRET
+        name: LINE Channel Secret（选填）
+        description: "选填。来自 LINE Developers Console 的 Channel Secret。留空则禁用 LINE。"
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        name: LINE Channel Access Token（选填）
+        description: "选填。来自 LINE Developers Console 的 Channel Access Token。填写 LINE Channel Secret 时必填。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 域名
+        description: "用于接收 Telegram 和 LINE Webhook 的公开 HTTPS 域名。"
+    readme: |
+      # OpenAB Gateway（简体中文）
 
-        [OpenAB Gateway](https://github.com/openabdev/openab) 是一个独立的 Webhook 桥接服务，通过 WebSocket 将 Telegram 和 LINE 连接到任何正在运行的 [OpenAB](https://github.com/openabdev/openab) 实例。
+      [OpenAB Gateway](https://github.com/openabdev/openab) 是一个独立的 Webhook 桥接服务，通过 WebSocket 将 Telegram 和 LINE 连接到任何正在运行的 [OpenAB](https://github.com/openabdev/openab) 实例。
 
-        将此模板部署于现有 OpenAB 服务（Claude、Cursor、Codex 等）旁，无需重新部署 OAB 即可添加 Telegram 和 LINE 支持。
+      将此模板部署于现有 OpenAB 服务（Claude、Cursor、Codex 等）旁，无需重新部署 OAB 即可添加 Telegram 和 LINE 支持。
 
-        ## 设置步骤
+      ## 设置步骤
 
-        ### 1. 创建 Telegram Bot
+      ### 1. 创建 Telegram Bot
 
-        1. 在 Telegram 打开 [@BotFather](https://t.me/BotFather)，发送 `/newbot`
-        2. 复制 Bot Token → 粘贴到 **Telegram Bot Token**
+      1. 在 Telegram 打开 [@BotFather](https://t.me/BotFather)，发送 `/newbot`
+      2. 复制 Bot Token → 粘贴到 **Telegram Bot Token**
 
-        ### 2. 部署
-
-        填入 Telegram Bot Token 后点击部署。系统自动分配公开 HTTPS 域名。
-
-        ### 3. 注册 Telegram Webhook
-
-        ```bash
-        curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
-        ```
+      ### 2. 部署
+
+      填入 Telegram Bot Token 后点击部署。系统自动分配公开 HTTPS 域名。
+
+      ### 3. 注册 Telegram Webhook
+
+      ```bash
+      curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
+      ```
 
-        ### 4. 配置 OAB 使用 Gateway
+      ### 4. 配置 OAB 使用 Gateway
 
-        在 OpenAB 服务中编辑 `/home/agent/.config/openab/config.toml`：
+      在 OpenAB 服务中编辑 `/home/agent/.config/openab/config.toml`：
 
-        ```toml
-        [gateway]
-        url = "ws://openab-gateway:8080/ws"
-        ```
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      ```
 
-        重启 OpenAB 服务。
+      重启 OpenAB 服务。
 
-        ## LINE 设置（选填）
+      ## LINE 设置（选填）
 
-        设置 `LINE_CHANNEL_SECRET` 和 `LINE_CHANNEL_ACCESS_TOKEN` 环境变量，在 LINE Developers Console 设置 Webhook URL 为 `https://YOUR_DOMAIN/webhook/line`，并在 OAB `config.toml` 加入 `platform = "line"`。
+      设置 `LINE_CHANNEL_SECRET` 和 `LINE_CHANNEL_ACCESS_TOKEN` 环境变量，在 LINE Developers Console 设置 Webhook URL 为 `https://YOUR_DOMAIN/webhook/line`，并在 OAB `config.toml` 加入 `platform = "line"`。
 
-        详见 [LINE 设置指南](https://github.com/openabdev/openab/blob/main/docs/line.md)。
+      详见 [LINE 设置指南](https://github.com/openabdev/openab/blob/main/docs/line.md)。
 
-        ## 链接
+      ## 链接
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
-    ja-JP:
-      description: |
-        OpenAB スタンドアロン Webhook Gateway — WebSocket を通じて Telegram または LINE（あるいは両方）を既存の OAB インスタンスに接続します。少なくとも一方のプラットフォームを設定する必要があります。
-        ソース：https://github.com/openabdev/openab
-      variables:
-        - key: TELEGRAM_BOT_TOKEN
-          name: Telegram Bot トークン（オプション）
-          description: "オプション。@BotFather から取得した Bot トークン（https://t.me/BotFather）。空の場合、Telegram は無効。Telegram か LINE のどちらか一方は必ず設定してください。"
-        - key: LINE_CHANNEL_SECRET
-          name: LINE Channel Secret（オプション）
-          description: "オプション。LINE Developers Console の Channel Secret。空の場合、LINE は無効。"
-        - key: LINE_CHANNEL_ACCESS_TOKEN
-          name: LINE Channel Access Token（オプション）
-          description: "オプション。LINE Developers Console の Channel Access Token。LINE Channel Secret を設定する場合は必須。"
-        - key: PUBLIC_DOMAIN
-          name: Gateway ドメイン
-          description: "Telegram・LINE の Webhook を受信する公開 HTTPS ドメイン。"
-      readme: |
-        # OpenAB Gateway（日本語）
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
+  ja-JP:
+    description: |
+      OpenAB スタンドアロン Webhook Gateway — WebSocket を通じて Telegram または LINE（あるいは両方）を既存の OAB インスタンスに接続します。少なくとも一方のプラットフォームを設定する必要があります。
+      ソース：https://github.com/openabdev/openab
+    variables:
+      - key: TELEGRAM_BOT_TOKEN
+        name: Telegram Bot トークン（オプション）
+        description: "オプション。@BotFather から取得した Bot トークン（https://t.me/BotFather）。空の場合、Telegram は無効。Telegram か LINE のどちらか一方は必ず設定してください。"
+      - key: LINE_CHANNEL_SECRET
+        name: LINE Channel Secret（オプション）
+        description: "オプション。LINE Developers Console の Channel Secret。空の場合、LINE は無効。"
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        name: LINE Channel Access Token（オプション）
+        description: "オプション。LINE Developers Console の Channel Access Token。LINE Channel Secret を設定する場合は必須。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway ドメイン
+        description: "Telegram・LINE の Webhook を受信する公開 HTTPS ドメイン。"
+    readme: |
+      # OpenAB Gateway（日本語）
 
-        [OpenAB Gateway](https://github.com/openabdev/openab) は、Telegram と LINE を WebSocket 経由で既存の OpenAB インスタンスに接続するスタンドアロン Webhook ブリッジです。
+      [OpenAB Gateway](https://github.com/openabdev/openab) は、Telegram と LINE を WebSocket 経由で既存の OpenAB インスタンスに接続するスタンドアロン Webhook ブリッジです。
 
-        ## セットアップ
+      ## セットアップ
 
-        ### 1. Telegram Bot を作成
+      ### 1. Telegram Bot を作成
 
-        [@BotFather](https://t.me/BotFather) で `/newbot` を送信し、Bot Token を取得して **Telegram Bot Token** に入力してください。
+      [@BotFather](https://t.me/BotFather) で `/newbot` を送信し、Bot Token を取得して **Telegram Bot Token** に入力してください。
 
-        ### 2. デプロイ
+      ### 2. デプロイ
 
-        Telegram Bot Token を入力してデプロイします。公開 HTTPS ドメインが自動割り当てされます。
+      Telegram Bot Token を入力してデプロイします。公開 HTTPS ドメインが自動割り当てされます。
 
-        ### 3. Telegram Webhook を登録
+      ### 3. Telegram Webhook を登録
 
-        ```bash
-        curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
-        ```
+      ```bash
+      curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
+      ```
 
-        ### 4. OAB に Gateway を設定
+      ### 4. OAB に Gateway を設定
 
-        OpenAB サービスの `/home/agent/.config/openab/config.toml` を編集して追加：
+      OpenAB サービスの `/home/agent/.config/openab/config.toml` を編集して追加：
 
-        ```toml
-        [gateway]
-        url = "ws://openab-gateway:8080/ws"
-        ```
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      ```
 
-        OpenAB サービスを再起動してください。
+      OpenAB サービスを再起動してください。
 
-        ## リンク
+      ## リンク
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
-    es-ES:
-      description: |
-        Gateway Webhook independiente para OpenAB — conecta Telegram y/o LINE a cualquier instancia de OAB en ejecución mediante WebSocket. Se debe configurar al menos una plataforma.
-        Fuente: https://github.com/openabdev/openab
-      variables:
-        - key: TELEGRAM_BOT_TOKEN
-          name: Token de Bot de Telegram (opcional)
-          description: "Opcional. Token del bot obtenido de @BotFather (https://t.me/BotFather). Dejar vacío para deshabilitar Telegram. Al menos uno de Telegram o LINE debe configurarse."
-        - key: LINE_CHANNEL_SECRET
-          name: LINE Channel Secret (opcional)
-          description: "Opcional. Channel Secret de LINE Developers Console. Dejar vacío para deshabilitar LINE."
-        - key: LINE_CHANNEL_ACCESS_TOKEN
-          name: LINE Channel Access Token (opcional)
-          description: "Opcional. Channel Access Token de LINE Developers Console. Requerido si se configura LINE Channel Secret."
-        - key: PUBLIC_DOMAIN
-          name: Dominio del Gateway
-          description: "Dominio HTTPS público para recibir webhooks de Telegram y LINE."
-      readme: |
-        # OpenAB Gateway (Español)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
+  es-ES:
+    description: |
+      Gateway Webhook independiente para OpenAB — conecta Telegram y/o LINE a cualquier instancia de OAB en ejecución mediante WebSocket. Se debe configurar al menos una plataforma.
+      Fuente: https://github.com/openabdev/openab
+    variables:
+      - key: TELEGRAM_BOT_TOKEN
+        name: Token de Bot de Telegram (opcional)
+        description: "Opcional. Token del bot obtenido de @BotFather (https://t.me/BotFather). Dejar vacío para deshabilitar Telegram. Al menos uno de Telegram o LINE debe configurarse."
+      - key: LINE_CHANNEL_SECRET
+        name: LINE Channel Secret (opcional)
+        description: "Opcional. Channel Secret de LINE Developers Console. Dejar vacío para deshabilitar LINE."
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        name: LINE Channel Access Token (opcional)
+        description: "Opcional. Channel Access Token de LINE Developers Console. Requerido si se configura LINE Channel Secret."
+      - key: PUBLIC_DOMAIN
+        name: Dominio del Gateway
+        description: "Dominio HTTPS público para recibir webhooks de Telegram y LINE."
+    readme: |
+      # OpenAB Gateway (Español)
 
-        Gateway Webhook independiente que conecta Telegram y LINE a cualquier instancia de [OpenAB](https://github.com/openabdev/openab) mediante WebSocket.
+      Gateway Webhook independiente que conecta Telegram y LINE a cualquier instancia de [OpenAB](https://github.com/openabdev/openab) mediante WebSocket.
 
-        ## Configuración
+      ## Configuración
 
-        ### 1. Crear Bot de Telegram
+      ### 1. Crear Bot de Telegram
 
-        Abrir [@BotFather](https://t.me/BotFather), enviar `/newbot` y copiar el token en **Token de Bot de Telegram**.
+      Abrir [@BotFather](https://t.me/BotFather), enviar `/newbot` y copiar el token en **Token de Bot de Telegram**.
 
-        ### 2. Desplegar
+      ### 2. Desplegar
 
-        Introducir el token y desplegar. Se asignará un dominio HTTPS automáticamente.
+      Introducir el token y desplegar. Se asignará un dominio HTTPS automáticamente.
 
-        ### 3. Registrar Webhook de Telegram
+      ### 3. Registrar Webhook de Telegram
 
-        ```bash
-        curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
-        ```
+      ```bash
+      curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
+      ```
 
-        ### 4. Configurar OAB
+      ### 4. Configurar OAB
 
-        Editar `/home/agent/.config/openab/config.toml` en el servicio OpenAB:
+      Editar `/home/agent/.config/openab/config.toml` en el servicio OpenAB:
 
-        ```toml
-        [gateway]
-        url = "ws://openab-gateway:8080/ws"
-        ```
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      ```
 
-        Reiniciar el servicio OpenAB.
+      Reiniciar el servicio OpenAB.
 
-        ## Enlaces
+      ## Enlaces
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
-    id-ID:
-      description: |
-        Gateway Webhook mandiri untuk OpenAB — menghubungkan Telegram dan/atau LINE ke instansi OAB mana pun melalui WebSocket. Setidaknya satu platform harus dikonfigurasi.
-        Sumber: https://github.com/openabdev/openab
-      variables:
-        - key: TELEGRAM_BOT_TOKEN
-          name: Token Bot Telegram (opsional)
-          description: "Opsional. Token bot dari @BotFather (https://t.me/BotFather). Kosongkan untuk menonaktifkan Telegram. Setidaknya satu antara Telegram atau LINE harus dikonfigurasi."
-        - key: LINE_CHANNEL_SECRET
-          name: LINE Channel Secret (opsional)
-          description: "Opsional. Channel Secret dari LINE Developers Console. Kosongkan untuk menonaktifkan LINE."
-        - key: LINE_CHANNEL_ACCESS_TOKEN
-          name: LINE Channel Access Token (opsional)
-          description: "Opsional. Channel Access Token dari LINE Developers Console. Wajib jika LINE Channel Secret diisi."
-        - key: PUBLIC_DOMAIN
-          name: Domain Gateway
-          description: "Domain HTTPS publik untuk menerima webhook Telegram dan LINE."
-      readme: |
-        # OpenAB Gateway (Bahasa Indonesia)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
+  id-ID:
+    description: |
+      Gateway Webhook mandiri untuk OpenAB — menghubungkan Telegram dan/atau LINE ke instansi OAB mana pun melalui WebSocket. Setidaknya satu platform harus dikonfigurasi.
+      Sumber: https://github.com/openabdev/openab
+    variables:
+      - key: TELEGRAM_BOT_TOKEN
+        name: Token Bot Telegram (opsional)
+        description: "Opsional. Token bot dari @BotFather (https://t.me/BotFather). Kosongkan untuk menonaktifkan Telegram. Setidaknya satu antara Telegram atau LINE harus dikonfigurasi."
+      - key: LINE_CHANNEL_SECRET
+        name: LINE Channel Secret (opsional)
+        description: "Opsional. Channel Secret dari LINE Developers Console. Kosongkan untuk menonaktifkan LINE."
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        name: LINE Channel Access Token (opsional)
+        description: "Opsional. Channel Access Token dari LINE Developers Console. Wajib jika LINE Channel Secret diisi."
+      - key: PUBLIC_DOMAIN
+        name: Domain Gateway
+        description: "Domain HTTPS publik untuk menerima webhook Telegram dan LINE."
+    readme: |
+      # OpenAB Gateway (Bahasa Indonesia)
 
-        Gateway Webhook mandiri yang menghubungkan Telegram dan LINE ke instansi [OpenAB](https://github.com/openabdev/openab) mana pun melalui WebSocket.
+      Gateway Webhook mandiri yang menghubungkan Telegram dan LINE ke instansi [OpenAB](https://github.com/openabdev/openab) mana pun melalui WebSocket.
 
-        ## Pengaturan
+      ## Pengaturan
 
-        ### 1. Buat Bot Telegram
+      ### 1. Buat Bot Telegram
 
-        Buka [@BotFather](https://t.me/BotFather), kirim `/newbot`, dan salin token ke **Token Bot Telegram**.
+      Buka [@BotFather](https://t.me/BotFather), kirim `/newbot`, dan salin token ke **Token Bot Telegram**.
 
-        ### 2. Deploy
+      ### 2. Deploy
 
-        Masukkan token dan klik deploy. Domain HTTPS publik akan ditetapkan secara otomatis.
+      Masukkan token dan klik deploy. Domain HTTPS publik akan ditetapkan secara otomatis.
 
-        ### 3. Daftarkan Webhook Telegram
+      ### 3. Daftarkan Webhook Telegram
 
-        ```bash
-        curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
-        ```
+      ```bash
+      curl "https://api.telegram.org/botYOUR_TOKEN/setWebhook?url=https://YOUR_DOMAIN/webhook/telegram"
+      ```
 
-        ### 4. Konfigurasikan OAB
+      ### 4. Konfigurasikan OAB
 
-        Edit `/home/agent/.config/openab/config.toml` di layanan OpenAB:
+      Edit `/home/agent/.config/openab/config.toml` di layanan OpenAB:
 
-        ```toml
-        [gateway]
-        url = "ws://openab-gateway:8080/ws"
-        ```
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      ```
 
-        Restart layanan OpenAB.
+      Restart layanan OpenAB.
 
-        ## Tautan
+      ## Tautan
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
