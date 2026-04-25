@@ -65,7 +65,7 @@ spec:
 
     - **Image tag:** This template uses a pinned version (`0.8.1-beta.5`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-claude).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
-    - **Config ownership:** The container runs directly as `node` user (uid 1000). If you encounter permission issues on the persistent volume, restart the service.
+    - **Config ownership:** The container starts as root then switches to `node` user (uid 1000) to run openab. If you encounter permission issues on the persistent volume, restart the service — permissions are auto-fixed on boot.
 
     ## Setup
 
@@ -546,17 +546,6 @@ localization:
       - 許可された Discord または Slack チャンネルで **Bot を @mention** して会話を開始
       - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
       - 各 thread は永続的な Claude session に対応（デフォルト 24 時間 TTL）
-
-      ## GitHub 連携（オプション）
-
-      エージェントは `gh`（GitHub CLI）を使って PR レビュー、Issue 作成、コメント、マージなどができます。コンテナにはブラウザがないため、device flow で認証します：
-
-      1. Discord で Bot に **「GitHub にログイン」** と伝える
-      2. Bot がワンタイムコードと URL（例：`https://github.com/login/device`）を返信
-      3. スマートフォンまたは PC で URL を開き、コードを入力して認証
-      4. Bot がログイン完了を確認 — `gh` がこのセッションで認証済みになります
-
-      詳細は [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) を参照。
 
       ## カスタマイズ
 
