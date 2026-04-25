@@ -324,7 +324,21 @@ localization:
 
       [OpenAB Gateway](https://github.com/openabdev/openab) 是一个独立的 Webhook 桥接服务，通过 WebSocket 将 Telegram 和 LINE 连接到任何正在运行的 [OpenAB](https://github.com/openabdev/openab) 实例。
 
+      ```
+      Telegram ──POST──▶ ┌──────────────────┐
+      LINE     ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
+                         │     :8080        │   （OAB 主动向外连线）
+                         └──────────────────┘
+      ```
+
       将此模板部署于现有 OpenAB 服务（Claude、Cursor、Codex 等）旁，无需重新部署 OAB 即可添加 Telegram 和 LINE 支持。
+
+      ## 前置条件
+
+      - 同一个 Zeabur 项目中已有正在运行的 OpenAB 服务
+      - **至少需要以下其中一个：**
+        - 来自 [@BotFather](https://t.me/BotFather) 的 Telegram Bot Token
+        - 已启用 Messaging API 的 LINE 官方账号（LINE Channel Secret + Access Token）
 
       ## 设置步骤
 
@@ -356,9 +370,43 @@ localization:
 
       ## LINE 设置（选填）
 
-      设置 `LINE_CHANNEL_SECRET` 和 `LINE_CHANNEL_ACCESS_TOKEN` 环境变量，在 LINE Developers Console 设置 Webhook URL 为 `https://YOUR_DOMAIN/webhook/line`，并在 OAB `config.toml` 加入 `platform = "line"`。
+      ### 1. 创建 LINE 官方账号
 
-      详见 [LINE 设置指南](https://github.com/openabdev/openab/blob/main/docs/line.md)。
+      1. 前往 [LINE 官方账号管理后台](https://manager.line.biz) 创建账号
+      2. **设置** → **Messaging API** → **启用 Messaging API**
+      3. 打开 [LINE Developers Console](https://developers.line.biz) → 你的 Channel：
+         - **Basic settings** → **Channel secret** → 复制 → 粘贴到 **LINE Channel Secret**
+         - **Messaging API** → **Channel access token** → Issue → 复制 → 粘贴到 **LINE Channel Access Token**
+
+      ### 2. 设置 Webhook URL
+
+      在 LINE Developers Console → **Messaging API** 标签：
+
+      1. **Webhook URL** → 编辑 → 输入：`https://YOUR_DOMAIN/webhook/line`
+      2. **Use webhook** → 开启
+      3. **Auto-reply messages** → 关闭
+      4. 点击 **Verify**
+
+      ### 3. 配置 OAB 使用 LINE
+
+      在 `config.toml` 的 gateway 区块加入 `platform = "line"`：
+
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      platform = "line"
+      ```
+
+      保存后重启 OpenAB 服务。
+
+      ## Webhook 端点
+
+      | 路径 | 平台 |
+      |------|------|
+      | `POST /webhook/telegram` | Telegram |
+      | `POST /webhook/line` | LINE |
+      | `GET /ws` | OAB WebSocket（内部使用） |
+      | `GET /health` | 健康检查 |
 
       ## 链接
 
@@ -385,6 +433,13 @@ localization:
       # OpenAB Gateway
 
       [OpenAB Gateway](https://github.com/openabdev/openab) は、Telegram と LINE を WebSocket 経由で既存の OpenAB インスタンスに接続するスタンドアロン Webhook ブリッジです。
+
+      ## 前提条件
+
+      - 同じ Zeabur プロジェクト内に稼働中の OpenAB サービスが必要
+      - **以下のいずれか一方（または両方）：**
+        - [@BotFather](https://t.me/BotFather) から取得した Telegram Bot Token
+        - Messaging API が有効な LINE 公式アカウント（LINE Channel Secret + Access Token）
 
       ## セットアップ
 
@@ -413,9 +468,51 @@ localization:
 
       OpenAB サービスを再起動してください。
 
+      ## LINE 設定（オプション）
+
+      ### 1. LINE 公式アカウントを作成
+
+      1. [LINE Official Account Manager](https://manager.line.biz) でアカウントを作成
+      2. **設定** → **Messaging API** → **Messaging API を利用する**
+      3. [LINE Developers Console](https://developers.line.biz) → チャンネルを開く：
+         - **Basic settings** → **Channel secret** → コピー → **LINE Channel Secret** に貼り付け
+         - **Messaging API** → **Channel access token** → 発行 → コピー → **LINE Channel Access Token** に貼り付け
+
+      ### 2. Webhook URL を設定
+
+      LINE Developers Console → **Messaging API** タブ：
+
+      1. **Webhook URL** → 編集 → 入力：`https://YOUR_DOMAIN/webhook/line`
+      2. **Webhookの利用** → ON
+      3. **応答メッセージ** → OFF
+      4. **検証** をクリック
+
+      ### 3. OAB に LINE を設定
+
+      `config.toml` の gateway セクションに `platform = "line"` を追加：
+
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      platform = "line"
+      ```
+
+      保存後、OpenAB サービスを再起動してください。
+
+      ## Webhook エンドポイント
+
+      | パス | プラットフォーム |
+      |------|----------------|
+      | `POST /webhook/telegram` | Telegram |
+      | `POST /webhook/line` | LINE |
+      | `GET /ws` | OAB WebSocket（内部） |
+      | `GET /health` | ヘルスチェック |
+
       ## リンク
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Telegram 設定ガイド](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
+      - [LINE 設定ガイド](https://github.com/openabdev/openab/blob/main/docs/line.md)
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   es-ES:
     description: |
@@ -438,6 +535,13 @@ localization:
       # OpenAB Gateway
 
       Gateway Webhook independiente que conecta Telegram y LINE a cualquier instancia de [OpenAB](https://github.com/openabdev/openab) mediante WebSocket.
+
+      ## Requisitos previos
+
+      - Un servicio OpenAB en ejecución en el mismo proyecto de Zeabur
+      - **Al menos uno** de los siguientes:
+        - Un token de bot de Telegram de [@BotFather](https://t.me/BotFather)
+        - Una cuenta oficial de LINE con Messaging API habilitada (LINE Channel Secret + Access Token)
 
       ## Configuración
 
@@ -466,9 +570,51 @@ localization:
 
       Reiniciar el servicio OpenAB.
 
+      ## Configuración de LINE (Opcional)
+
+      ### 1. Crear una cuenta oficial de LINE
+
+      1. Ir a [LINE Official Account Manager](https://manager.line.biz) y crear una cuenta
+      2. **Configuración** → **Messaging API** → **Habilitar Messaging API**
+      3. Abrir [LINE Developers Console](https://developers.line.biz) → tu canal:
+         - **Basic settings** → **Channel secret** → copiar → pegar en **LINE Channel Secret**
+         - **Messaging API** → **Channel access token** → Emitir → copiar → pegar en **LINE Channel Access Token**
+
+      ### 2. Configurar URL de Webhook
+
+      En LINE Developers Console → pestaña **Messaging API**:
+
+      1. **Webhook URL** → Editar → introducir: `https://YOUR_DOMAIN/webhook/line`
+      2. **Usar webhook** → Activar
+      3. **Mensajes de respuesta automática** → Desactivar
+      4. Clic en **Verificar**
+
+      ### 3. Configurar OAB para LINE
+
+      En `config.toml`, añadir `platform = "line"` en la sección gateway:
+
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      platform = "line"
+      ```
+
+      Reiniciar el servicio OpenAB tras guardar.
+
+      ## Endpoints de Webhook
+
+      | Ruta | Plataforma |
+      |------|-----------|
+      | `POST /webhook/telegram` | Telegram |
+      | `POST /webhook/line` | LINE |
+      | `GET /ws` | OAB WebSocket (interno) |
+      | `GET /health` | Health check |
+
       ## Enlaces
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Guía de configuración de Telegram](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
+      - [Guía de configuración de LINE](https://github.com/openabdev/openab/blob/main/docs/line.md)
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   id-ID:
     description: |
@@ -491,6 +637,13 @@ localization:
       # OpenAB Gateway
 
       Gateway Webhook mandiri yang menghubungkan Telegram dan LINE ke instansi [OpenAB](https://github.com/openabdev/openab) mana pun melalui WebSocket.
+
+      ## Prasyarat
+
+      - Layanan OpenAB yang sedang berjalan di proyek Zeabur yang sama
+      - **Setidaknya salah satu** dari berikut:
+        - Token bot Telegram dari [@BotFather](https://t.me/BotFather)
+        - Akun resmi LINE dengan Messaging API aktif (LINE Channel Secret + Access Token)
 
       ## Pengaturan
 
@@ -519,7 +672,49 @@ localization:
 
       Restart layanan OpenAB.
 
+      ## Pengaturan LINE (Opsional)
+
+      ### 1. Buat Akun Resmi LINE
+
+      1. Buka [LINE Official Account Manager](https://manager.line.biz) dan buat akun
+      2. **Pengaturan** → **Messaging API** → **Aktifkan Messaging API**
+      3. Buka [LINE Developers Console](https://developers.line.biz) → channel Anda:
+         - **Basic settings** → **Channel secret** → salin → tempel ke **LINE Channel Secret**
+         - **Messaging API** → **Channel access token** → Issue → salin → tempel ke **LINE Channel Access Token**
+
+      ### 2. Atur Webhook URL
+
+      Di LINE Developers Console → tab **Messaging API**:
+
+      1. **Webhook URL** → Edit → masukkan: `https://YOUR_DOMAIN/webhook/line`
+      2. **Gunakan webhook** → Aktifkan
+      3. **Pesan balasan otomatis** → Nonaktifkan
+      4. Klik **Verifikasi**
+
+      ### 3. Konfigurasi OAB untuk LINE
+
+      Di `config.toml`, tambahkan `platform = "line"` ke bagian gateway:
+
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      platform = "line"
+      ```
+
+      Restart layanan OpenAB setelah menyimpan.
+
+      ## Endpoint Webhook
+
+      | Path | Platform |
+      |------|---------|
+      | `POST /webhook/telegram` | Telegram |
+      | `POST /webhook/line` | LINE |
+      | `GET /ws` | OAB WebSocket (internal) |
+      | `GET /health` | Health check |
+
       ## Tautan
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Panduan Telegram](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
+      - [Panduan LINE](https://github.com/openabdev/openab/blob/main/docs/line.md)
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
