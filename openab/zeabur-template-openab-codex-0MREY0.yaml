@@ -584,47 +584,47 @@ localization:
       - [OpenAI Platform](https://platform.openai.com/)
   es-ES:
     description: |
-      Open Agent Broker — un arnes ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a traves de stdio JSON-RPC.
+      Open Agent Broker — un arnés ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC.
       Fuente: https://github.com/openabdev/openab
     variables:
       - key: DISCORD_BOT_TOKEN
         name: Token del Bot de Discord (opcional)
-        description: "Opcional. Token obtenido de https://discord.com/developers/applications. Dejar vacio si solo usa Slack."
+        description: "Opcional. Token obtenido de https://discord.com/developers/applications. Dejar vacío si solo usa Slack."
       - key: OPENAI_API_KEY
         name: OpenAI API Key (opcional)
         description: "Opcional. API key de https://platform.openai.com/api-keys — o dejar vacío y usar device flow después del despliegue."
       - key: OPENAB_ALLOWED_CHANNELS
         name: IDs de Canales de Discord (opcional)
-        description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacio para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
+        description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacío para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
       - key: OPENAB_ALLOWED_USERS
         name: IDs de Usuarios de Discord (opcional)
-        description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacio para permitir a todos en los canales permitidos."
+        description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacío para permitir a todos en los canales permitidos."
       - key: SLACK_BOT_TOKEN
         name: Slack Bot Token (opcional)
-        description: "Opcional. Bot User OAuth Token (xoxb-...) de la configuracion de Slack App. Dejar vacio para deshabilitar el adaptador de Slack."
+        description: "Opcional. Bot User OAuth Token (xoxb-...) de la configuración de Slack App. Dejar vacío para deshabilitar el adaptador de Slack."
       - key: SLACK_APP_TOKEN
         name: Slack App Token (opcional)
         description: "Opcional. App-Level Token (xapp-...) para Socket Mode. Requerido cuando se configura Slack Bot Token."
     readme: |
       # OpenAB Codex
 
-      [OpenAB](https://github.com/openabdev/openab) es un arnes ligero de codigo abierto en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a traves de stdio JSON-RPC.
+      [OpenAB](https://github.com/openabdev/openab) es un arnés ligero de código abierto en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a través de stdio JSON-RPC.
 
       Esta plantilla despliega la variante Codex (`openab-codex`), que utiliza `codex-acp` como backend de agente.
 
       ## Notas Importantes
 
       - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.1-beta.5`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
-      - **Almacenamiento persistente:** `/home/node` esta montado como volumen persistente. Plugins, configuracion y credenciales se conservan entre reinicios.
+      - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente. Plugins, configuración y credenciales se conservan entre reinicios.
       - **Permisos de archivos:** El contenedor se ejecuta directamente como el usuario node (uid 1000). Si encuentra problemas de permisos en el volumen persistente, reinicie el servicio.
 
-      ## Configuracion
+      ## Configuración
 
       ### 1. Obtener el Discord Bot Token
 
       1. Ir a https://discord.com/developers/applications y hacer clic en **New Application**
-      2. Ir a la pestana **Bot** → clic en **Reset Token** → copiar el token
-      3. En la misma pagina, bajar y habilitar **Message Content Intent** en Privileged Gateway Intents
+      2. Ir a la pestaña **Bot** → clic en **Reset Token** → copiar el token
+      3. En la misma página, bajar y habilitar **Message Content Intent** en Privileged Gateway Intents
       4. Ir a **OAuth2 → URL Generator** → marcar scope `bot` → marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
       5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
 
@@ -651,11 +651,11 @@ localization:
 
       1. Abrir Discord → **Ajustes de usuario** (icono de engranaje) → **Avanzado** → activar **Modo desarrollador**
       2. Clic derecho en el canal donde quieres que el Bot responda → **Copiar ID del canal**
-      3. Para multiples canales, separar con comas: `123456789012345678,234567890123456789`
+      3. Para múltiples canales, separar con comas: `123456789012345678,234567890123456789`
 
       ### 4. Desplegar
 
-      Completar las variables y hacer clic en desplegar. El servicio se conecta a Discord y/o Slack automaticamente.
+      Completar las variables y hacer clic en desplegar. El servicio se conecta a Discord y/o Slack automáticamente.
 
       ## Configuración de Slack (Opcional)
 
@@ -672,23 +672,23 @@ localization:
 
       ## Uso
 
-      - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversacion
+      - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
       - OpenAB crea un **thread** para conversaciones de multiples turnos — no se necesita @mencion en los mensajes siguientes
-      - Cada thread corresponde a una sesion persistente de Codex (TTL de 24h por defecto)
+      - Cada thread corresponde a una sesión persistente de Codex (TTL de 24h por defecto)
 
-      ## Personalizacion
+      ## Personalización
 
-      | Archivo | Descripcion |
+      | Archivo | Descripción |
       |---------|-------------|
-      | `/home/node/.config/openab/config.toml` | Configuracion de OpenAB (sessions, reactions, STT, etc.) |
+      | `/home/node/.config/openab/config.toml` | Configuración de OpenAB (sessions, reactions, STT, etc.) |
 
-      `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Despues, edite el archivo directamente — las variables de entorno solo se usan para la configuracion inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/node/.config/openab/config.toml`
+      `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Después, edite el archivo directamente — las variables de entorno solo se usan para la configuración inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/node/.config/openab/config.toml`
 
-      Para opciones de configuracion, consulte la [documentacion de OpenAB](https://github.com/openabdev/openab).
+      Para opciones de configuración, consulte la [documentación de OpenAB](https://github.com/openabdev/openab).
 
       ## Desactivar
 
-      Dejar `Discord Bot Token` y `Slack Bot Token` vacios al desplegar. El servicio entrara en modo sleep sin fallar.
+      Dejar `Discord Bot Token` y `Slack Bot Token` vacios al desplegar. El servicio entrará en modo sleep sin fallar.
 
       ## Enlaces
 
