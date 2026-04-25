@@ -437,7 +437,7 @@ localization:
         name: Discord ユーザー ID（オプション）
         description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
     readme: |
-      # OpenAB
+      # OpenAB Gemini
 
       [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
 
@@ -535,7 +535,7 @@ localization:
         name: IDs de Usuarios de Discord (opcional)
         description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacio para permitir a todos en los canales permitidos."
     readme: |
-      # OpenAB
+      # OpenAB Gemini
 
       [OpenAB](https://github.com/openabdev/openab) es un arnes ligero de codigo abierto en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a traves de stdio JSON-RPC.
 
@@ -633,7 +633,7 @@ localization:
         name: ID Pengguna Discord (opsional)
         description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
     readme: |
-      # OpenAB
+      # OpenAB Gemini
 
       [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
 
