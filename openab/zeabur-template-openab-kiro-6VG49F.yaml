@@ -126,17 +126,6 @@ spec:
     - OpenAB creates a **thread** for multi-turn conversations — no @mention needed for follow-ups
     - Each thread maps to a persistent Kiro session (24h TTL)
 
-    ## GitHub Integration (Optional)
-
-    The agent can use `gh` (GitHub CLI) to review PRs, create issues, comment, merge, etc. Since the container is headless, authentication uses device flow:
-
-    1. Ask the bot in Discord: **"log in to GitHub"**
-    2. The bot will reply with a one-time code and a URL (e.g. `https://github.com/login/device`)
-    3. Open the URL on your phone or computer, enter the code, and authorize
-    4. The bot confirms login — `gh` is now authenticated for this session
-
-    See [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) for technical details.
-
     ## Customization
 
     | File | Description |
@@ -338,17 +327,6 @@ localization:
       - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
       - 每個 thread 對應一個持久的 Kiro session（預設 24 小時 TTL）
 
-      ## GitHub 整合（選用）
-
-      Agent 可以使用 `gh`（GitHub CLI）來 review PR、建立 issue、留言、合併等。由於容器沒有瀏覽器，認證使用 device flow：
-
-      1. 在 Discord 對 bot 說：**「登入 GitHub」**
-      2. Bot 會回覆一組一次性代碼和 URL（例如 `https://github.com/login/device`）
-      3. 在手機或電腦上開啟 URL，輸入代碼並授權
-      4. Bot 確認登入完成 — `gh` 已在此 session 中認證
-
-      詳見 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
-
       ## 自訂設定
 
       | 檔案 | 說明 |
@@ -455,17 +433,6 @@ localization:
       - 在允许的 Discord 或 Slack 频道中 **@mention Bot** 即可开始对话
       - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
       - 每个 thread 对应一个持久的 Kiro session（默认 24 小时 TTL）
-
-      ## GitHub 集成（可选）
-
-      Agent 可以使用 `gh`（GitHub CLI）来 review PR、创建 issue、评论、合并等。由于容器没有浏览器，认证使用 device flow：
-
-      1. 在 Discord 对 bot 说：**"登录 GitHub"**
-      2. Bot 会回复一组一次性代码和 URL（例如 `https://github.com/login/device`）
-      3. 在手机或电脑上打开 URL，输入代码并授权
-      4. Bot 确认登录完成 — `gh` 已在此 session 中认证
-
-      详见 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
 
       ## 自定义设置
 
@@ -809,17 +776,6 @@ localization:
       - **@mention bot** di channel Discord atau Slack yang diizinkan untuk memulai percakapan
       - OpenAB membuat **thread** untuk percakapan multi-giliran — tidak perlu @mention untuk pesan selanjutnya
       - Setiap thread dipetakan ke sesi Kiro yang persisten (TTL 24 jam secara default)
-
-      ## Integrasi GitHub (Opsional)
-
-      Agent dapat menggunakan `gh` (GitHub CLI) untuk review PR, membuat issue, komentar, merge, dll. Karena container tidak memiliki browser, autentikasi menggunakan device flow:
-
-      1. Minta bot di Discord: **"log in to GitHub"**
-      2. Bot akan membalas dengan kode satu kali dan URL (mis. `https://github.com/login/device`)
-      3. Buka URL di ponsel atau komputer, masukkan kode dan otorisasi
-      4. Bot mengonfirmasi login — `gh` sudah terautentikasi untuk sesi ini
-
-      Lihat [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) untuk detail teknis.
 
       ## Kustomisasi
 

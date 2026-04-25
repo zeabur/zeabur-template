@@ -120,17 +120,6 @@ spec:
     - OpenAB creates a **thread** for multi-turn conversations -- no @mention needed for follow-ups
     - Each thread maps to a persistent OpenCode session (24h TTL)
 
-    ## GitHub Integration (Optional)
-
-    The agent can use `gh` (GitHub CLI) to review PRs, create issues, comment, merge, etc. Since the container is headless, authentication uses device flow:
-
-    1. Ask the bot in Discord: **"log in to GitHub"**
-    2. The bot will reply with a one-time code and a URL (e.g. `https://github.com/login/device`)
-    3. Open the URL on your phone or computer, enter the code, and authorize
-    4. The bot confirms login -- `gh` is now authenticated for this session
-
-    See [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) for technical details.
-
     ## Customization
 
     | File | Description |
@@ -352,10 +341,6 @@ localization:
       - OpenAB 會自動建立 **thread** 進行多輪對話
       - 每個 thread 對應一個持久的 OpenCode session（預設 24 小時 TTL）
 
-      ## GitHub 整合（選用）
-
-      Agent 可以使用 `gh`（GitHub CLI）來 review PR、建立 issue 等。在 Discord 對 bot 說「登入 GitHub」即可透過 device flow 認證。
-
       ## 自訂設定
 
       | 檔案 | 說明 |
@@ -464,10 +449,6 @@ localization:
       - 在允许的频道中 **@mention Bot** 即可开始对话
       - OpenAB 会自动创建 **thread** 进行多轮对话
       - 每个 thread 对应一个持久的 OpenCode session（默认 24 小时 TTL）
-
-      ## GitHub 集成（可选）
-
-      Agent 可以使用 `gh`（GitHub CLI）来 review PR、创建 issue 等。在 Discord 对 bot 说"登录 GitHub"即可通过 device flow 认证。
 
       ## 自定义设置
 
