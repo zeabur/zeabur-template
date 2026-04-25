@@ -241,7 +241,7 @@ localization:
         name: Discord 用戶 ID（選填）
         description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
     readme: |
-      # OpenAB Gemini（中文）
+      # OpenAB Gemini
 
       [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
@@ -339,7 +339,7 @@ localization:
         name: Discord 用户 ID（选填）
         description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
     readme: |
-      # OpenAB Gemini（简体中文）
+      # OpenAB Gemini
 
       [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
@@ -437,7 +437,7 @@ localization:
         name: Discord ユーザー ID（オプション）
         description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
     readme: |
-      # OpenAB（日本語）
+      # OpenAB
 
       [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
 
@@ -535,7 +535,7 @@ localization:
         name: IDs de Usuarios de Discord (opcional)
         description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacio para permitir a todos en los canales permitidos."
     readme: |
-      # OpenAB (Espanol)
+      # OpenAB
 
       [OpenAB](https://github.com/openabdev/openab) es un arnes ligero de codigo abierto en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a traves de stdio JSON-RPC.
 
@@ -633,7 +633,7 @@ localization:
         name: ID Pengguna Discord (opsional)
         description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
     readme: |
-      # OpenAB (Bahasa Indonesia)
+      # OpenAB
 
       [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
 

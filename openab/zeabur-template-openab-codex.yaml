@@ -267,7 +267,7 @@ localization:
         name: Slack App Token（選填）
         description: "選填。Socket Mode 用的 App-Level Token（xapp-...）。設定 Slack Bot Token 時必填。"
     readme: |
-      # OpenAB Codex（中文）
+      # OpenAB Codex
 
       [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
@@ -380,7 +380,7 @@ localization:
         name: Slack App Token（选填）
         description: "选填。Socket Mode 用的 App-Level Token（xapp-...）。设置 Slack Bot Token 时必填。"
     readme: |
-      # OpenAB Codex（简体中文）
+      # OpenAB Codex
 
       [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
@@ -493,7 +493,7 @@ localization:
         name: Slack App トークン（オプション）
         description: "オプション。Socket Mode 用の App-Level Token（xapp-...）。Slack Bot Token を設定する場合は必須。"
     readme: |
-      # OpenAB Codex（日本語）
+      # OpenAB Codex
 
       [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord と Slack を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
 
@@ -606,7 +606,7 @@ localization:
         name: Slack App Token (opcional)
         description: "Opcional. App-Level Token (xapp-...) para Socket Mode. Requerido cuando se configura Slack Bot Token."
     readme: |
-      # OpenAB Codex (Espanol)
+      # OpenAB Codex
 
       [OpenAB](https://github.com/openabdev/openab) es un arnes ligero de codigo abierto en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a traves de stdio JSON-RPC.
 
@@ -719,7 +719,7 @@ localization:
         name: Slack App Token (opsional)
         description: "Opsional. App-Level Token (xapp-...) untuk Socket Mode. Diperlukan saat Slack Bot Token diisi."
     readme: |
-      # OpenAB Codex (Bahasa Indonesia)
+      # OpenAB Codex
 
       [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
 

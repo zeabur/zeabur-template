@@ -320,7 +320,7 @@ localization:
         name: Gateway 域名
         description: "用于接收 Telegram 和 LINE Webhook 的公开 HTTPS 域名。"
     readme: |
-      # OpenAB Gateway（简体中文）
+      # OpenAB Gateway
 
       [OpenAB Gateway](https://github.com/openabdev/openab) 是一个独立的 Webhook 桥接服务，通过 WebSocket 将 Telegram 和 LINE 连接到任何正在运行的 [OpenAB](https://github.com/openabdev/openab) 实例。
 
@@ -382,7 +382,7 @@ localization:
         name: Gateway ドメイン
         description: "Telegram・LINE の Webhook を受信する公開 HTTPS ドメイン。"
     readme: |
-      # OpenAB Gateway（日本語）
+      # OpenAB Gateway
 
       [OpenAB Gateway](https://github.com/openabdev/openab) は、Telegram と LINE を WebSocket 経由で既存の OpenAB インスタンスに接続するスタンドアロン Webhook ブリッジです。
 
@@ -435,7 +435,7 @@ localization:
         name: Dominio del Gateway
         description: "Dominio HTTPS público para recibir webhooks de Telegram y LINE."
     readme: |
-      # OpenAB Gateway (Español)
+      # OpenAB Gateway
 
       Gateway Webhook independiente que conecta Telegram y LINE a cualquier instancia de [OpenAB](https://github.com/openabdev/openab) mediante WebSocket.
 
@@ -488,7 +488,7 @@ localization:
         name: Domain Gateway
         description: "Domain HTTPS publik untuk menerima webhook Telegram dan LINE."
     readme: |
-      # OpenAB Gateway (Bahasa Indonesia)
+      # OpenAB Gateway
 
       Gateway Webhook mandiri yang menghubungkan Telegram dan LINE ke instansi [OpenAB](https://github.com/openabdev/openab) mana pun melalui WebSocket.
 

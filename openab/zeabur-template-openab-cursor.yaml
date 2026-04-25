@@ -247,7 +247,7 @@ localization:
         name: Discord 用戶 ID（選填）
         description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
     readme: |
-      # OpenAB Cursor（中文）
+      # OpenAB Cursor
 
       [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
@@ -359,7 +359,7 @@ localization:
         name: Discord 用户 ID（选填）
         description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
     readme: |
-      # OpenAB Cursor（简体中文）
+      # OpenAB Cursor
 
       [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
@@ -471,7 +471,7 @@ localization:
         name: Discord ユーザー ID（オプション）
         description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。"
     readme: |
-      # OpenAB Cursor（日本語）
+      # OpenAB Cursor
 
       [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
 
@@ -534,7 +534,7 @@ localization:
         name: IDs de Usuarios de Discord (opcional)
         description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot."
     readme: |
-      # OpenAB Cursor (Español)
+      # OpenAB Cursor
 
       Esta plantilla despliega la variante Cursor de [OpenAB](https://github.com/openabdev/openab), usando `cursor-agent` como backend de agente.
 
@@ -595,7 +595,7 @@ localization:
         name: ID Pengguna Discord (opsional)
         description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot."
     readme: |
-      # OpenAB Cursor (Bahasa Indonesia)
+      # OpenAB Cursor
 
       Template ini men-deploy varian Cursor dari [OpenAB](https://github.com/openabdev/openab), menggunakan `cursor-agent` sebagai backend agen.
 
