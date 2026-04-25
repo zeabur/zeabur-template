@@ -541,17 +541,6 @@ localization:
       - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
       - 各 thread は永続的な Kiro session に対応（デフォルト 24 時間 TTL）
 
-      ## GitHub 連携（オプション）
-
-      エージェントは `gh`（GitHub CLI）を使って PR レビュー、Issue 作成、コメント、マージなどができます。コンテナにはブラウザがないため、device flow で認証します：
-
-      1. Discord で Bot に **「GitHub にログイン」** と伝える
-      2. Bot がワンタイムコードと URL（例：`https://github.com/login/device`）を返信
-      3. スマートフォンまたは PC で URL を開き、コードを入力して認証
-      4. Bot がログイン完了を確認 — `gh` がこのセッションで認証済みになります
-
-      詳細は [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) を参照。
-
       ## カスタマイズ
 
       | ファイル | 説明 |
@@ -658,17 +647,6 @@ localization:
       - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
       - OpenAB crea un **thread** para conversaciones de múltiples turnos — no se necesita @mención en los mensajes siguientes
       - Cada thread corresponde a una sesión persistente de Kiro (TTL de 24h por defecto)
-
-      ## Integración con GitHub (Opcional)
-
-      El agente puede usar `gh` (GitHub CLI) para revisar PRs, crear issues, comentar, fusionar, etc. Como el contenedor no tiene navegador, la autenticación usa device flow:
-
-      1. Dile al bot en Discord: **"log in to GitHub"**
-      2. El bot responderá con un código único y una URL (ej. `https://github.com/login/device`)
-      3. Abre la URL en tu teléfono o computadora, ingresa el código y autoriza
-      4. El bot confirma el inicio de sesión — `gh` está autenticado para esta sesión
-
-      Ver [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) para detalles técnicos.
 
       ## Personalización
 
