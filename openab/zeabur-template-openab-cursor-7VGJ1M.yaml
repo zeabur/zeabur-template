@@ -482,6 +482,35 @@ localization:
       - OpenAB は自動的に thread を作成してマルチターン会話
       - 各 thread は永続的な Cursor session にマッピングされます（24 時間 TTL）
 
+      ## カスタマイズ
+
+      | ファイル | 説明 |
+      |---------|------|
+      | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT など） |
+
+      `config.toml` は初回起動時に内蔵テンプレートから作成されます。以降は直接ファイルを編集してください。デフォルトにリセットするには：`rm /home/agent/.config/openab/config.toml`
+
+      ## Webhook / Bot 連携
+
+      デフォルトでは、openab は他の bot や webhook からのメッセージを無視します。webhook トリガーのメッセージ（自動テストや CI パイプラインなど）を許可するには、`config.toml` に以下を追加してください：
+
+      ```toml
+      [discord]
+      allow_bot_messages = "mentions"
+      ```
+
+      この設定により、openab は @mention された bot や webhook のメッセージに応答します。特定の webhook のみに制限するには、さらに追加：
+
+      ```toml
+      trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+      ```
+
+      Webhook ユーザー ID は webhook URL の数字 ID です：`https://discord.com/api/webhooks/<ID>/...`
+
+      ## 無効化
+
+      `Discord Bot Token` を空のままにすると、サービスはクラッシュせずにスリープモードに入ります。
+
       ## リンク
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
@@ -543,6 +572,35 @@ localization:
       - OpenAB crea un thread para conversaciones multi-turno
       - Cada thread mapea a una sesión de Cursor persistente (TTL de 24 horas)
 
+      ## Personalización
+
+      | Archivo | Descripción |
+      |---------|-------------|
+      | `/home/agent/.config/openab/config.toml` | Configuración de OpenAB (sessions, reactions, STT, etc.) |
+
+      `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Después, edite el archivo directamente. Para restablecer los valores predeterminados: `rm /home/agent/.config/openab/config.toml`
+
+      ## Webhook / Bot Integration
+
+      Por defecto, openab ignora los mensajes de otros bots y webhooks. Para permitir mensajes activados por webhook (por ejemplo, pruebas automatizadas o pipelines de CI), añada lo siguiente a su `config.toml`:
+
+      ```toml
+      [discord]
+      allow_bot_messages = "mentions"
+      ```
+
+      Con esta configuración, openab responde a cualquier bot o webhook que lo @mencione. Para restringir a un webhook específico, añada también:
+
+      ```toml
+      trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+      ```
+
+      El ID de usuario del webhook es el ID numérico en la URL del webhook: `https://discord.com/api/webhooks/<ID>/...`
+
+      ## Desactivar
+
+      Deje `Discord Bot Token` vacío. El servicio entra en modo sleep sin fallar.
+
       ## Enlaces
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
@@ -603,6 +661,35 @@ localization:
       - **@mention bot** di channel yang diizinkan untuk memulai percakapan
       - OpenAB membuat thread untuk percakapan multi-turn
       - Setiap thread dipetakan ke sesi Cursor yang persisten (TTL 24 jam)
+
+      ## Kustomisasi
+
+      | File | Keterangan |
+      |------|-----------|
+      | `/home/agent/.config/openab/config.toml` | Konfigurasi OpenAB (sessions, reactions, STT, dll.) |
+
+      `config.toml` dibuat dari template bawaan saat pertama kali boot. Setelah itu, edit file langsung. Untuk mereset ke default: `rm /home/agent/.config/openab/config.toml`
+
+      ## Webhook / Bot Integration
+
+      Secara default, openab mengabaikan pesan dari bot dan webhook lain. Untuk mengizinkan pesan yang dipicu webhook (misalnya pengujian otomatis atau pipeline CI), tambahkan berikut ke `config.toml`:
+
+      ```toml
+      [discord]
+      allow_bot_messages = "mentions"
+      ```
+
+      Dengan pengaturan ini, openab merespons pesan bot atau webhook yang @mention-nya. Untuk membatasi ke webhook tertentu, tambahkan juga:
+
+      ```toml
+      trusted_bot_ids = ["YOUR_WEBHOOK_USER_ID"]
+      ```
+
+      ID pengguna webhook adalah ID numerik di URL webhook: `https://discord.com/api/webhooks/<ID>/...`
+
+      ## Nonaktifkan
+
+      Kosongkan `Discord Bot Token`. Layanan akan masuk mode sleep tanpa crash.
 
       ## Tautan
 
