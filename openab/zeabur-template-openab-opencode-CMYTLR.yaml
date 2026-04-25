@@ -258,450 +258,450 @@ spec:
             default: ""
           SLACK_APP_TOKEN:
             default: ""
-  locales:
-    zh-TW:
-      description: |
-        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI。此模板使用 OpenCode 作為 agent 後端，支援 75+ LLM 供應商（Ollama Cloud、OpenAI、Anthropic、Google 等）。
-        來源：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot Token
-          description: 從 https://discord.com/developers/applications 取得的 Token
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord 頻道 ID（選填）
-          description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord 用戶 ID（選填）
-          description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
-      readme: |
-        # OpenAB OpenCode（中文）
+localization:
+  zh-TW:
+    description: |
+      Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI。此模板使用 OpenCode 作為 agent 後端，支援 75+ LLM 供應商（Ollama Cloud、OpenAI、Anthropic、Google 等）。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot Token
+        description: 從 https://discord.com/developers/applications 取得的 Token
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 頻道 ID（選填）
+        description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用戶 ID（選填）
+        description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
+    readme: |
+      # OpenAB OpenCode（中文）
 
-        [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+      [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-        此模板使用 [OpenCode](https://opencode.ai) 作為 agent 後端，支援 75+ LLM 供應商。
+      此模板使用 [OpenCode](https://opencode.ai) 作為 agent 後端，支援 75+ LLM 供應商。
 
-        ## 注意事項
+      ## 注意事項
 
-        - **映像標籤：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。
-        - **持久化儲存：** `/home/node` 掛載為持久化磁碟。設定、config、認證資料和 `opencode.json` 會在重啟後保留。
-        - **檔案權限：** 容器以 root 啟動後切換為 `node` 用戶執行 openab。如遇權限問題，重啟服務即可。
+      - **映像標籤：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。
+      - **持久化儲存：** `/home/node` 掛載為持久化磁碟。設定、config、認證資料和 `opencode.json` 會在重啟後保留。
+      - **檔案權限：** 容器以 root 啟動後切換為 `node` 用戶執行 openab。如遇權限問題，重啟服務即可。
 
-        ## 設定步驟
+      ## 設定步驟
 
-        ### 1. 取得 Discord Bot Token
+      ### 1. 取得 Discord Bot Token
 
-        1. 前往 https://discord.com/developers/applications，點擊 **New Application**
-        2. 進入 **Bot** 頁籤 → 點擊 **Reset Token** → 複製 token
-        3. 同一頁面往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
-        4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
-        5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
+      1. 前往 https://discord.com/developers/applications，點擊 **New Application**
+      2. 進入 **Bot** 頁籤 → 點擊 **Reset Token** → 複製 token
+      3. 同一頁面往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
+      4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
 
-        ### 2. 設定 LLM 供應商（部署後）
+      ### 2. 設定 LLM 供應商（部署後）
 
-        OpenCode 需要連接 LLM 供應商。最簡單的方式是在 Zeabur Dashboard → 服務 → 變數中設定環境變數：
+      OpenCode 需要連接 LLM 供應商。最簡單的方式是在 Zeabur Dashboard → 服務 → 變數中設定環境變數：
 
-        | 變數名 | 供應商 |
-        |--------|--------|
-        | `OPENCODE_API_KEY` | OpenCode 原生（在 [opencode.ai](https://opencode.ai) 取得） |
-        | `ANTHROPIC_API_KEY` | Anthropic Claude |
-        | `OPENAI_API_KEY` | OpenAI GPT |
-        | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
-        | `GROQ_API_KEY` | Groq |
-        | `MISTRAL_API_KEY` | Mistral |
-        | `DEEPSEEK_API_KEY` | DeepSeek |
-        | `OPENROUTER_API_KEY` | OpenRouter（代理 100+ 模型） |
+      | 變數名 | 供應商 |
+      |--------|--------|
+      | `OPENCODE_API_KEY` | OpenCode 原生（在 [opencode.ai](https://opencode.ai) 取得） |
+      | `ANTHROPIC_API_KEY` | Anthropic Claude |
+      | `OPENAI_API_KEY` | OpenAI GPT |
+      | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
+      | `GROQ_API_KEY` | Groq |
+      | `MISTRAL_API_KEY` | Mistral |
+      | `DEEPSEEK_API_KEY` | DeepSeek |
+      | `OPENROUTER_API_KEY` | OpenRouter（代理 100+ 模型） |
 
-        設定至少一個變數後重啟服務，OpenCode 會自動讀取。
+      設定至少一個變數後重啟服務，OpenCode 會自動讀取。
 
-        **互動式登入（替代方式）**
+      **互動式登入（替代方式）**
 
-        如需使用瀏覽器 OAuth 的供應商（如 AWS Bedrock、Azure OpenAI），在 Zeabur Dashboard 開啟服務終端並執行：
+      如需使用瀏覽器 OAuth 的供應商（如 AWS Bedrock、Azure OpenAI），在 Zeabur Dashboard 開啟服務終端並執行：
 
-        ```
-        runuser -u node -- opencode auth login
-        ```
+      ```
+      runuser -u node -- opencode auth login
+      ```
 
-        > ⚠️ 必須以 `node` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
+      > ⚠️ 必須以 `node` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
 
-        ### 3. 模型選擇（選填）
+      ### 3. 模型選擇（選填）
 
-        如需設定特定模型，建立或編輯 `/home/node/opencode.json`：
+      如需設定特定模型，建立或編輯 `/home/node/opencode.json`：
 
-        ```json
-        {
-          "provider": "anthropic",
-          "model": "claude-sonnet-4-20250514"
-        }
-        ```
+      ```json
+      {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514"
+      }
+      ```
 
-        詳見 [OpenCode 文件](https://opencode.ai/docs/providers)。
+      詳見 [OpenCode 文件](https://opencode.ai/docs/providers)。
 
-        ### 4. 取得 Discord 頻道 ID
+      ### 4. 取得 Discord 頻道 ID
 
-        1. 開啟 Discord → 前往 **使用者設定** → **進階** → 啟用 **開發者模式**
-        2. 對頻道按右鍵 → **複製頻道 ID**
-        3. 多個頻道用逗號分隔
+      1. 開啟 Discord → 前往 **使用者設定** → **進階** → 啟用 **開發者模式**
+      2. 對頻道按右鍵 → **複製頻道 ID**
+      3. 多個頻道用逗號分隔
 
-        ### 5. 部署
+      ### 5. 部署
 
-        填入 Discord Bot Token 後點擊部署。服務會自動連線到 Discord。然後使用上述方法認證 OpenCode。
+      填入 Discord Bot Token 後點擊部署。服務會自動連線到 Discord。然後使用上述方法認證 OpenCode。
 
-        ## 使用方式
+      ## 使用方式
 
-        - 在允許的頻道中 **@mention Bot** 即可開始對話
-        - OpenAB 會自動建立 **thread** 進行多輪對話
-        - 每個 thread 對應一個持久的 OpenCode session（預設 24 小時 TTL）
+      - 在允許的頻道中 **@mention Bot** 即可開始對話
+      - OpenAB 會自動建立 **thread** 進行多輪對話
+      - 每個 thread 對應一個持久的 OpenCode session（預設 24 小時 TTL）
 
-        ## GitHub 整合（選用）
+      ## GitHub 整合（選用）
 
-        Agent 可以使用 `gh`（GitHub CLI）來 review PR、建立 issue 等。在 Discord 對 bot 說「登入 GitHub」即可透過 device flow 認證。
+      Agent 可以使用 `gh`（GitHub CLI）來 review PR、建立 issue 等。在 Discord 對 bot 說「登入 GitHub」即可透過 device flow 認證。
 
-        ## 自訂設定
+      ## 自訂設定
 
-        | 檔案 | 說明 |
-        |------|------|
-        | `/home/node/.config/openab/config.toml` | OpenAB 設定 |
-        | `/home/node/opencode.json` | OpenCode 模型/供應商設定 |
+      | 檔案 | 說明 |
+      |------|------|
+      | `/home/node/.config/openab/config.toml` | OpenAB 設定 |
+      | `/home/node/opencode.json` | OpenCode 模型/供應商設定 |
 
-        ## 停用
+      ## 停用
 
-        部署時將 `Discord Bot Token` 留空即可。
+      部署時將 `Discord Bot Token` 留空即可。
 
-        ## 連結
+      ## 連結
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [OpenCode](https://opencode.ai)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    zh-CN:
-      description: |
-        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI。此模板使用 OpenCode 作为 agent 后端，支持 75+ LLM 供应商（Ollama Cloud、OpenAI、Anthropic、Google 等）。
-        来源：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot Token
-          description: 从 https://discord.com/developers/applications 获取的 Token
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord 频道 ID（选填）
-          description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord 用户 ID（选填）
-          description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
-      readme: |
-        # OpenAB OpenCode（简体中文）
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [OpenCode](https://opencode.ai)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  zh-CN:
+    description: |
+      Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI。此模板使用 OpenCode 作为 agent 后端，支持 75+ LLM 供应商（Ollama Cloud、OpenAI、Anthropic、Google 等）。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot Token
+        description: 从 https://discord.com/developers/applications 获取的 Token
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 频道 ID（选填）
+        description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用户 ID（选填）
+        description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
+    readme: |
+      # OpenAB OpenCode（简体中文）
 
-        [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+      [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-        此模板使用 [OpenCode](https://opencode.ai) 作为 agent 后端，支持 75+ LLM 供应商。
+      此模板使用 [OpenCode](https://opencode.ai) 作为 agent 后端，支持 75+ LLM 供应商。
 
-        ## 注意事项
+      ## 注意事项
 
-        - **镜像标签：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
-        - **持久化存储：** `/home/node` 挂载为持久化磁盘。设置、config、认证数据和 `opencode.json` 会在重启后保留。
-        - **文件权限：** 容器以 root 启动后切换为 `node` 用户运行 openab。如遇权限问题，重启服务即可。
+      - **镜像标签：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
+      - **持久化存储：** `/home/node` 挂载为持久化磁盘。设置、config、认证数据和 `opencode.json` 会在重启后保留。
+      - **文件权限：** 容器以 root 启动后切换为 `node` 用户运行 openab。如遇权限问题，重启服务即可。
 
-        ## 设置步骤
+      ## 设置步骤
 
-        ### 1. 获取 Discord Bot Token
+      ### 1. 获取 Discord Bot Token
 
-        1. 前往 https://discord.com/developers/applications，点击 **New Application**
-        2. 进入 **Bot** 页签 → 点击 **Reset Token** → 复制 token
-        3. 同一页面往下滑，在 Privileged Gateway Intents 下启用 **Message Content Intent**
-        4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
-        5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
+      1. 前往 https://discord.com/developers/applications，点击 **New Application**
+      2. 进入 **Bot** 页签 → 点击 **Reset Token** → 复制 token
+      3. 同一页面往下滑，在 Privileged Gateway Intents 下启用 **Message Content Intent**
+      4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
 
-        ### 2. 配置 LLM 供应商（部署后）
+      ### 2. 配置 LLM 供应商（部署后）
 
-        OpenCode 需要连接 LLM 供应商。最简单的方式是在 Zeabur Dashboard → 服务 → 变量中设置环境变量：
+      OpenCode 需要连接 LLM 供应商。最简单的方式是在 Zeabur Dashboard → 服务 → 变量中设置环境变量：
 
-        | 变量名 | 供应商 |
-        |--------|--------|
-        | `OPENCODE_API_KEY` | OpenCode 原生（在 [opencode.ai](https://opencode.ai) 获取） |
-        | `ANTHROPIC_API_KEY` | Anthropic Claude |
-        | `OPENAI_API_KEY` | OpenAI GPT |
-        | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
-        | `GROQ_API_KEY` | Groq |
-        | `MISTRAL_API_KEY` | Mistral |
-        | `DEEPSEEK_API_KEY` | DeepSeek |
-        | `OPENROUTER_API_KEY` | OpenRouter（代理 100+ 模型） |
+      | 变量名 | 供应商 |
+      |--------|--------|
+      | `OPENCODE_API_KEY` | OpenCode 原生（在 [opencode.ai](https://opencode.ai) 获取） |
+      | `ANTHROPIC_API_KEY` | Anthropic Claude |
+      | `OPENAI_API_KEY` | OpenAI GPT |
+      | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
+      | `GROQ_API_KEY` | Groq |
+      | `MISTRAL_API_KEY` | Mistral |
+      | `DEEPSEEK_API_KEY` | DeepSeek |
+      | `OPENROUTER_API_KEY` | OpenRouter（代理 100+ 模型） |
 
-        设置至少一个变量后重启服务，OpenCode 会自动读取。
+      设置至少一个变量后重启服务，OpenCode 会自动读取。
 
-        **交互式登录（替代方式）**
+      **交互式登录（替代方式）**
 
-        如需使用浏览器 OAuth 的供应商（如 AWS Bedrock、Azure OpenAI），在 Zeabur Dashboard 打开服务终端并运行：
+      如需使用浏览器 OAuth 的供应商（如 AWS Bedrock、Azure OpenAI），在 Zeabur Dashboard 打开服务终端并运行：
 
-        ```
-        runuser -u node -- opencode auth login
-        ```
+      ```
+      runuser -u node -- opencode auth login
+      ```
 
-        > ⚠️ 必须以 `node` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
+      > ⚠️ 必须以 `node` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
 
-        ### 3. 模型选择（选填）
+      ### 3. 模型选择（选填）
 
-        如需设置特定模型，创建或编辑 `/home/node/opencode.json`：
+      如需设置特定模型，创建或编辑 `/home/node/opencode.json`：
 
-        ```json
-        {
-          "provider": "anthropic",
-          "model": "claude-sonnet-4-20250514"
-        }
-        ```
+      ```json
+      {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514"
+      }
+      ```
 
-        详见 [OpenCode 文档](https://opencode.ai/docs/providers)。
+      详见 [OpenCode 文档](https://opencode.ai/docs/providers)。
 
-        ### 4. 获取 Discord 频道 ID
+      ### 4. 获取 Discord 频道 ID
 
-        1. 打开 Discord → 前往 **用户设置** → **高级** → 启用 **开发者模式**
-        2. 右键点击频道 → **复制频道 ID**
-        3. 多个频道用逗号分隔
+      1. 打开 Discord → 前往 **用户设置** → **高级** → 启用 **开发者模式**
+      2. 右键点击频道 → **复制频道 ID**
+      3. 多个频道用逗号分隔
 
-        ### 5. 部署
+      ### 5. 部署
 
-        填入 Discord Bot Token 后点击部署。服务会自动连接到 Discord。然后使用上述方法认证 OpenCode。
+      填入 Discord Bot Token 后点击部署。服务会自动连接到 Discord。然后使用上述方法认证 OpenCode。
 
-        ## 使用方式
+      ## 使用方式
 
-        - 在允许的频道中 **@mention Bot** 即可开始对话
-        - OpenAB 会自动创建 **thread** 进行多轮对话
-        - 每个 thread 对应一个持久的 OpenCode session（默认 24 小时 TTL）
+      - 在允许的频道中 **@mention Bot** 即可开始对话
+      - OpenAB 会自动创建 **thread** 进行多轮对话
+      - 每个 thread 对应一个持久的 OpenCode session（默认 24 小时 TTL）
 
-        ## GitHub 集成（可选）
+      ## GitHub 集成（可选）
 
-        Agent 可以使用 `gh`（GitHub CLI）来 review PR、创建 issue 等。在 Discord 对 bot 说"登录 GitHub"即可通过 device flow 认证。
+      Agent 可以使用 `gh`（GitHub CLI）来 review PR、创建 issue 等。在 Discord 对 bot 说"登录 GitHub"即可通过 device flow 认证。
 
-        ## 自定义设置
+      ## 自定义设置
 
-        | 文件 | 说明 |
-        |------|------|
-        | `/home/node/.config/openab/config.toml` | OpenAB 设置 |
-        | `/home/node/opencode.json` | OpenCode 模型/供应商设置 |
+      | 文件 | 说明 |
+      |------|------|
+      | `/home/node/.config/openab/config.toml` | OpenAB 设置 |
+      | `/home/node/opencode.json` | OpenCode 模型/供应商设置 |
 
-        ## 停用
+      ## 停用
 
-        部署时将 `Discord Bot Token` 留空即可。
+      部署时将 `Discord Bot Token` 留空即可。
 
-        ## 链接
+      ## 链接
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [OpenCode](https://opencode.ai)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    ja-JP:
-      description: |
-        Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI にブリッジする軽量な Rust ハーネス。このテンプレートは OpenCode を使用し、75+ の LLM プロバイダーをサポートします。
-        ソース：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot トークン
-          description: https://discord.com/developers/applications から取得したトークン
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord チャンネル ID（オプション）
-          description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord ユーザー ID（オプション）
-          description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。"
-      readme: |
-        # OpenAB OpenCode（日本語）
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [OpenCode](https://opencode.ai)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  ja-JP:
+    description: |
+      Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI にブリッジする軽量な Rust ハーネス。このテンプレートは OpenCode を使用し、75+ の LLM プロバイダーをサポートします。
+      ソース：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot トークン
+        description: https://discord.com/developers/applications から取得したトークン
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord チャンネル ID（オプション）
+        description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord ユーザー ID（オプション）
+        description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。"
+    readme: |
+      # OpenAB OpenCode（日本語）
 
-        [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
+      [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
 
-        このテンプレートは [OpenCode](https://opencode.ai) をエージェントバックエンドとして使用し、75+ の LLM プロバイダーをサポートします。
+      このテンプレートは [OpenCode](https://opencode.ai) をエージェントバックエンドとして使用し、75+ の LLM プロバイダーをサポートします。
 
-        ## 注意事項
+      ## 注意事項
 
-        - **イメージタグ：** このテンプレートは固定バージョン（`0.8.1-beta.5`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
-        - **永続ストレージ：** `/home/node` が永続ボリュームです。設定、認証情報、`opencode.json` が再起動後も保持されます。
-        - **ファイル権限：** コンテナは root で起動後、`node` ユーザーに切り替えて openab を実行します。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.1-beta.5`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
+      - **永続ストレージ：** `/home/node` が永続ボリュームです。設定、認証情報、`opencode.json` が再起動後も保持されます。
+      - **ファイル権限：** コンテナは root で起動後、`node` ユーザーに切り替えて openab を実行します。
 
-        ## セットアップ
+      ## セットアップ
 
-        ### 1. Discord Bot トークンを取得
+      ### 1. Discord Bot トークンを取得
 
-        1. https://discord.com/developers/applications で **New Application** をクリック
-        2. **Bot** タブ → **Reset Token** → トークンをコピー
-        3. 同ページで **Message Content Intent** を有効化
-        4. **OAuth2 → URL Generator** → scope `bot` → 必要な権限を選択 → URLでBotを招待
+      1. https://discord.com/developers/applications で **New Application** をクリック
+      2. **Bot** タブ → **Reset Token** → トークンをコピー
+      3. 同ページで **Message Content Intent** を有効化
+      4. **OAuth2 → URL Generator** → scope `bot` → 必要な権限を選択 → URLでBotを招待
 
-        ### 2. LLM プロバイダーを設定（デプロイ後）
+      ### 2. LLM プロバイダーを設定（デプロイ後）
 
-        Zeabur Dashboard → サービス → 変数 で以下の環境変数を設定します：
+      Zeabur Dashboard → サービス → 変数 で以下の環境変数を設定します：
 
-        | 変数名 | プロバイダー |
-        |--------|------------|
-        | `OPENCODE_API_KEY` | OpenCode ネイティブ（[opencode.ai](https://opencode.ai) で取得） |
-        | `ANTHROPIC_API_KEY` | Anthropic Claude |
-        | `OPENAI_API_KEY` | OpenAI GPT |
-        | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
-        | `GROQ_API_KEY` | Groq |
-        | `MISTRAL_API_KEY` | Mistral |
-        | `DEEPSEEK_API_KEY` | DeepSeek |
-        | `OPENROUTER_API_KEY` | OpenRouter（100+ モデルをプロキシ） |
+      | 変数名 | プロバイダー |
+      |--------|------------|
+      | `OPENCODE_API_KEY` | OpenCode ネイティブ（[opencode.ai](https://opencode.ai) で取得） |
+      | `ANTHROPIC_API_KEY` | Anthropic Claude |
+      | `OPENAI_API_KEY` | OpenAI GPT |
+      | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
+      | `GROQ_API_KEY` | Groq |
+      | `MISTRAL_API_KEY` | Mistral |
+      | `DEEPSEEK_API_KEY` | DeepSeek |
+      | `OPENROUTER_API_KEY` | OpenRouter（100+ モデルをプロキシ） |
 
-        少なくとも 1 つ設定してサービスを再起動してください。
+      少なくとも 1 つ設定してサービスを再起動してください。
 
-        **インタラクティブログイン（代替方法）**
+      **インタラクティブログイン（代替方法）**
 
-        ```
-        runuser -u node -- opencode auth login
-        ```
+      ```
+      runuser -u node -- opencode auth login
+      ```
 
-        > ⚠️ 必ず `node` ユーザーで実行してください。
+      > ⚠️ 必ず `node` ユーザーで実行してください。
 
-        ### 3. チャンネル ID を取得
+      ### 3. チャンネル ID を取得
 
-        Discord → ユーザー設定 → 詳細 → 開発者モードを有効化 → チャンネルを右クリック → チャンネル ID をコピー
+      Discord → ユーザー設定 → 詳細 → 開発者モードを有効化 → チャンネルを右クリック → チャンネル ID をコピー
 
-        ## 使い方
+      ## 使い方
 
-        - 許可されたチャンネルで **Bot を @mention** して会話を開始
-        - OpenAB は自動的に thread を作成してマルチターン会話
-        - 各 thread は OpenCode セッション（デフォルト 24 時間 TTL）に対応
+      - 許可されたチャンネルで **Bot を @mention** して会話を開始
+      - OpenAB は自動的に thread を作成してマルチターン会話
+      - 各 thread は OpenCode セッション（デフォルト 24 時間 TTL）に対応
 
-        ## リンク
+      ## リンク
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [OpenCode](https://opencode.ai)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    es-ES:
-      description: |
-        Open Agent Broker — un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP a través de stdio JSON-RPC. Este template usa OpenCode como backend, soportando 75+ proveedores LLM.
-        Fuente: https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Token del Bot de Discord
-          description: Token obtenido de https://discord.com/developers/applications
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: IDs de Canales de Discord (opcional)
-          description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas."
-        - key: OPENAB_ALLOWED_USERS
-          name: IDs de Usuarios de Discord (opcional)
-          description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot."
-      readme: |
-        # OpenAB OpenCode (Español)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [OpenCode](https://opencode.ai)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  es-ES:
+    description: |
+      Open Agent Broker — un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP a través de stdio JSON-RPC. Este template usa OpenCode como backend, soportando 75+ proveedores LLM.
+      Fuente: https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token del Bot de Discord
+        description: Token obtenido de https://discord.com/developers/applications
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: IDs de Canales de Discord (opcional)
+        description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas."
+      - key: OPENAB_ALLOWED_USERS
+        name: IDs de Usuarios de Discord (opcional)
+        description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot."
+    readme: |
+      # OpenAB OpenCode (Español)
 
-        [OpenAB](https://github.com/openabdev/openab) es un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) vía stdio JSON-RPC.
+      [OpenAB](https://github.com/openabdev/openab) es un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) vía stdio JSON-RPC.
 
-        Este template usa [OpenCode](https://opencode.ai) como backend, soportando 75+ proveedores LLM.
+      Este template usa [OpenCode](https://opencode.ai) como backend, soportando 75+ proveedores LLM.
 
-        ## Notas Importantes
+      ## Notas Importantes
 
-        - **Etiqueta de imagen:** Este template usa una versión fijada (`0.8.1-beta.5`). Para actualizar, cambie la etiqueta en Zeabur Dashboard → Servicio → Configuración.
-        - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente.
-        - **Permisos:** El contenedor inicia como root y cambia a `node` antes de ejecutar openab.
+      - **Etiqueta de imagen:** Este template usa una versión fijada (`0.8.1-beta.5`). Para actualizar, cambie la etiqueta en Zeabur Dashboard → Servicio → Configuración.
+      - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente.
+      - **Permisos:** El contenedor inicia como root y cambia a `node` antes de ejecutar openab.
 
-        ## Configuración
+      ## Configuración
 
-        ### 1. Obtener Discord Bot Token
+      ### 1. Obtener Discord Bot Token
 
-        1. Ir a https://discord.com/developers/applications → **New Application**
-        2. **Bot** → **Reset Token** → copiar token
-        3. Habilitar **Message Content Intent**
-        4. **OAuth2 → URL Generator** → scope `bot` → invitar bot
+      1. Ir a https://discord.com/developers/applications → **New Application**
+      2. **Bot** → **Reset Token** → copiar token
+      3. Habilitar **Message Content Intent**
+      4. **OAuth2 → URL Generator** → scope `bot` → invitar bot
 
-        ### 2. Configurar un Proveedor LLM (después del despliegue)
+      ### 2. Configurar un Proveedor LLM (después del despliegue)
 
-        En Zeabur Dashboard → Servicio → Variables, establecer al menos una variable:
+      En Zeabur Dashboard → Servicio → Variables, establecer al menos una variable:
 
-        | Variable | Proveedor |
-        |----------|-----------|
-        | `OPENCODE_API_KEY` | OpenCode nativo (obtener en [opencode.ai](https://opencode.ai)) |
-        | `ANTHROPIC_API_KEY` | Anthropic Claude |
-        | `OPENAI_API_KEY` | OpenAI GPT |
-        | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
-        | `GROQ_API_KEY` | Groq |
-        | `MISTRAL_API_KEY` | Mistral |
-        | `DEEPSEEK_API_KEY` | DeepSeek |
-        | `OPENROUTER_API_KEY` | OpenRouter (más de 100 modelos) |
+      | Variable | Proveedor |
+      |----------|-----------|
+      | `OPENCODE_API_KEY` | OpenCode nativo (obtener en [opencode.ai](https://opencode.ai)) |
+      | `ANTHROPIC_API_KEY` | Anthropic Claude |
+      | `OPENAI_API_KEY` | OpenAI GPT |
+      | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
+      | `GROQ_API_KEY` | Groq |
+      | `MISTRAL_API_KEY` | Mistral |
+      | `DEEPSEEK_API_KEY` | DeepSeek |
+      | `OPENROUTER_API_KEY` | OpenRouter (más de 100 modelos) |
 
-        Reiniciar el servicio tras configurar la variable.
+      Reiniciar el servicio tras configurar la variable.
 
-        **Login interactivo (alternativa):**
+      **Login interactivo (alternativa):**
 
-        ```
-        runuser -u node -- opencode auth login
-        ```
+      ```
+      runuser -u node -- opencode auth login
+      ```
 
-        > ⚠️ Debe ejecutarse como `node`.
+      > ⚠️ Debe ejecutarse como `node`.
 
-        ## Uso
+      ## Uso
 
-        - **@mencionar al bot** en un canal permitido para iniciar conversación
-        - OpenAB crea threads para conversaciones multi-turno
-        - Cada thread corresponde a una sesión OpenCode (TTL 24h por defecto)
+      - **@mencionar al bot** en un canal permitido para iniciar conversación
+      - OpenAB crea threads para conversaciones multi-turno
+      - Cada thread corresponde a una sesión OpenCode (TTL 24h por defecto)
 
-        ## Enlaces
+      ## Enlaces
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [OpenCode](https://opencode.ai)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    id-ID:
-      description: |
-        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP melalui stdio JSON-RPC. Template ini menggunakan OpenCode sebagai backend, mendukung 75+ penyedia LLM.
-        Sumber: https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Token Bot Discord
-          description: Token dari https://discord.com/developers/applications
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: ID Channel Discord (opsional)
-          description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma."
-        - key: OPENAB_ALLOWED_USERS
-          name: ID Pengguna Discord (opsional)
-          description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot."
-      readme: |
-        # OpenAB OpenCode (Bahasa Indonesia)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [OpenCode](https://opencode.ai)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  id-ID:
+    description: |
+      Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP melalui stdio JSON-RPC. Template ini menggunakan OpenCode sebagai backend, mendukung 75+ penyedia LLM.
+      Sumber: https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token Bot Discord
+        description: Token dari https://discord.com/developers/applications
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: ID Channel Discord (opsional)
+        description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma."
+      - key: OPENAB_ALLOWED_USERS
+        name: ID Pengguna Discord (opsional)
+        description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot."
+    readme: |
+      # OpenAB OpenCode (Bahasa Indonesia)
 
-        [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
+      [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
 
-        Template ini menggunakan [OpenCode](https://opencode.ai) sebagai backend, mendukung 75+ penyedia LLM.
+      Template ini menggunakan [OpenCode](https://opencode.ai) sebagai backend, mendukung 75+ penyedia LLM.
 
-        ## Catatan Penting
+      ## Catatan Penting
 
-        - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.1-beta.5`). Untuk upgrade, ubah tag di Zeabur Dashboard → Layanan → Pengaturan.
-        - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten.
-        - **Izin file:** Container dimulai sebagai root lalu beralih ke user `node` sebelum menjalankan openab.
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.1-beta.5`). Untuk upgrade, ubah tag di Zeabur Dashboard → Layanan → Pengaturan.
+      - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten.
+      - **Izin file:** Container dimulai sebagai root lalu beralih ke user `node` sebelum menjalankan openab.
 
-        ## Pengaturan
+      ## Pengaturan
 
-        ### 1. Dapatkan Discord Bot Token
+      ### 1. Dapatkan Discord Bot Token
 
-        1. Buka https://discord.com/developers/applications → **New Application**
-        2. **Bot** → **Reset Token** → salin token
-        3. Aktifkan **Message Content Intent**
-        4. **OAuth2 → URL Generator** → scope `bot` → undang bot
+      1. Buka https://discord.com/developers/applications → **New Application**
+      2. **Bot** → **Reset Token** → salin token
+      3. Aktifkan **Message Content Intent**
+      4. **OAuth2 → URL Generator** → scope `bot` → undang bot
 
-        ### 2. Konfigurasi Penyedia LLM (setelah deploy)
+      ### 2. Konfigurasi Penyedia LLM (setelah deploy)
 
-        Di Zeabur Dashboard → Layanan → Variabel, atur minimal satu variabel:
+      Di Zeabur Dashboard → Layanan → Variabel, atur minimal satu variabel:
 
-        | Variabel | Penyedia |
-        |----------|----------|
-        | `OPENCODE_API_KEY` | OpenCode native (dapatkan di [opencode.ai](https://opencode.ai)) |
-        | `ANTHROPIC_API_KEY` | Anthropic Claude |
-        | `OPENAI_API_KEY` | OpenAI GPT |
-        | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
-        | `GROQ_API_KEY` | Groq |
-        | `MISTRAL_API_KEY` | Mistral |
-        | `DEEPSEEK_API_KEY` | DeepSeek |
-        | `OPENROUTER_API_KEY` | OpenRouter (100+ model) |
+      | Variabel | Penyedia |
+      |----------|----------|
+      | `OPENCODE_API_KEY` | OpenCode native (dapatkan di [opencode.ai](https://opencode.ai)) |
+      | `ANTHROPIC_API_KEY` | Anthropic Claude |
+      | `OPENAI_API_KEY` | OpenAI GPT |
+      | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini |
+      | `GROQ_API_KEY` | Groq |
+      | `MISTRAL_API_KEY` | Mistral |
+      | `DEEPSEEK_API_KEY` | DeepSeek |
+      | `OPENROUTER_API_KEY` | OpenRouter (100+ model) |
 
-        Restart layanan setelah mengatur variabel.
+      Restart layanan setelah mengatur variabel.
 
-        **Login interaktif (alternatif):**
+      **Login interaktif (alternatif):**
 
-        ```
-        runuser -u node -- opencode auth login
-        ```
+      ```
+      runuser -u node -- opencode auth login
+      ```
 
-        > ⚠️ Harus dijalankan sebagai `node`.
+      > ⚠️ Harus dijalankan sebagai `node`.
 
-        ## Penggunaan
+      ## Penggunaan
 
-        - **@mention bot** di channel yang diizinkan untuk memulai percakapan
-        - OpenAB membuat thread untuk percakapan multi-turn
-        - Setiap thread sesuai dengan sesi OpenCode (TTL 24 jam secara default)
+      - **@mention bot** di channel yang diizinkan untuk memulai percakapan
+      - OpenAB membuat thread untuk percakapan multi-turn
+      - Setiap thread sesuai dengan sesi OpenCode (TTL 24 jam secara default)
 
-        ## Tautan
+      ## Tautan
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [OpenCode](https://opencode.ai)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [OpenCode](https://opencode.ai)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)

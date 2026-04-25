@@ -248,594 +248,594 @@ spec:
             default: ""
           OPENAB_MAX_SESSIONS:
             default: ""
-  locales:
-    zh-TW:
-      description: |
-        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作為 agent 後端。
-        來源：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot Token
-          description: 從 https://discord.com/developers/applications 取得的 Token
-        - key: KIRO_API_KEY
-          name: Kiro API Key（選填，Pro+ 方案）
-          description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord 頻道 ID（選填）
-          description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord 用戶 ID（選填）
-          description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
-      readme: |
-        # OpenAB Kiro（中文）
+localization:
+  zh-TW:
+    description: |
+      Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作為 agent 後端。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot Token
+        description: 從 https://discord.com/developers/applications 取得的 Token
+      - key: KIRO_API_KEY
+        name: Kiro API Key（選填，Pro+ 方案）
+        description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 頻道 ID（選填）
+        description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用戶 ID（選填）
+        description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
+    readme: |
+      # OpenAB Kiro（中文）
 
-        [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+      [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-        此模板部署的是 Kiro 變體，使用基礎 `openab` 映像搭配 `kiro-cli` 作為 agent 後端。
+      此模板部署的是 Kiro 變體，使用基礎 `openab` 映像搭配 `kiro-cli` 作為 agent 後端。
 
-        ## 注意事項
+      ## 注意事項
 
-        - **映像標籤：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
-        - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
-        - **檔案權限：** 容器以 root 啟動後切換為 agent 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
+      - **映像標籤：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
+      - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
+      - **檔案權限：** 容器以 root 啟動後切換為 agent 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
 
-        ## 設定步驟
+      ## 設定步驟
 
-        ### 1. 取得 Discord Bot Token
+      ### 1. 取得 Discord Bot Token
 
-        1. 前往 https://discord.com/developers/applications，點擊 **New Application**
-        2. 進入 **Bot** 頁籤 → 點擊 **Reset Token** → 複製 token
-        3. 同一頁面往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
-        4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
-        5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
+      1. 前往 https://discord.com/developers/applications，點擊 **New Application**
+      2. 進入 **Bot** 頁籤 → 點擊 **Reset Token** → 複製 token
+      3. 同一頁面往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
+      4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
 
-        ### 2. 取得 Discord 頻道 ID
+      ### 2. 取得 Discord 頻道 ID
 
-        1. 開啟 Discord → 前往 **使用者設定**（齒輪圖示）→ **進階** → 啟用 **開發者模式**
-        2. 對你要 Bot 回應的頻道按右鍵 → **複製頻道 ID**
-        3. 多個頻道用逗號分隔：`123456789012345678,234567890123456789`
+      1. 開啟 Discord → 前往 **使用者設定**（齒輪圖示）→ **進階** → 啟用 **開發者模式**
+      2. 對你要 Bot 回應的頻道按右鍵 → **複製頻道 ID**
+      3. 多個頻道用逗號分隔：`123456789012345678,234567890123456789`
 
-        ### 3. 取得 Kiro API Key（僅 Pro/Pro+/Power 方案）
+      ### 3. 取得 Kiro API Key（僅 Pro/Pro+/Power 方案）
 
-        如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY` 變數。服務將自動認證，無需部署後的手動操作。
+      如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY` 變數。服務將自動認證，無需部署後的手動操作。
 
-        免費方案用戶將 `KIRO_API_KEY` 留空，部署後執行步驟 5 認證。
+      免費方案用戶將 `KIRO_API_KEY` 留空，部署後執行步驟 5 認證。
 
-        ### 4. 部署
+      ### 4. 部署
 
-        填入變數後點擊部署即可。服務會自動連線到 Discord。
+      填入變數後點擊部署即可。服務會自動連線到 Discord。
 
-        ### 5. 透過 Device Flow 認證 Kiro（僅免費方案）
+      ### 5. 透過 Device Flow 認證 Kiro（僅免費方案）
 
-        若步驟 3 已填入 `KIRO_API_KEY`，跳過此步驟。
+      若步驟 3 已填入 `KIRO_API_KEY`，跳過此步驟。
 
-        服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
+      服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
 
-        ```
-        HOME=/home/agent kiro-cli login --use-device-flow
-        ```
+      ```
+      HOME=/home/agent kiro-cli login --use-device-flow
+      ```
 
-        > ⚠️ 必須以 `agent` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
+      > ⚠️ 必須以 `agent` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
 
-        依照畫面顯示的 URL 和 code 到瀏覽器完成授權。認證完成後請重啟服務。
+      依照畫面顯示的 URL 和 code 到瀏覽器完成授權。認證完成後請重啟服務。
 
-        ## Slack 設定（選用）
+      ## Slack 設定（選用）
 
-        OpenAB 支援透過 Socket Mode 連接 Slack，不需要公開 URL。
+      OpenAB 支援透過 Socket Mode 連接 Slack，不需要公開 URL。
 
-        1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
-        2. **Socket Mode** → 啟用 → 產生 App-Level Token，scope 選 `connections:write` → 複製 `xapp-...` token（`SLACK_APP_TOKEN`）
-        3. **Event Subscriptions** → 啟用 → 新增 bot events：`app_mention`、`message.channels`、`message.groups`
-        4. **OAuth & Permissions** → Bot Token Scopes → 新增：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
-        5. **Install App** → 安裝到工作區 → 複製 `xoxb-...` token（`SLACK_BOT_TOKEN`）
-        6. 在每個要使用 Bot 的 Slack 頻道執行 `/invite @YourAppName`
+      1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → 啟用 → 產生 App-Level Token，scope 選 `connections:write` → 複製 `xapp-...` token（`SLACK_APP_TOKEN`）
+      3. **Event Subscriptions** → 啟用 → 新增 bot events：`app_mention`、`message.channels`、`message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → 新增：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+      5. **Install App** → 安裝到工作區 → 複製 `xoxb-...` token（`SLACK_BOT_TOKEN`）
+      6. 在每個要使用 Bot 的 Slack 頻道執行 `/invite @YourAppName`
 
-        部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 變數。Discord 和 Slack 可同時運作。
+      部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 變數。Discord 和 Slack 可同時運作。
 
-        ## 使用方式
+      ## 使用方式
 
-        - 在允許的 Discord 或 Slack 頻道中 **@mention Bot** 即可開始對話
-        - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
-        - 每個 thread 對應一個持久的 Kiro session（預設 24 小時 TTL）
+      - 在允許的 Discord 或 Slack 頻道中 **@mention Bot** 即可開始對話
+      - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
+      - 每個 thread 對應一個持久的 Kiro session（預設 24 小時 TTL）
 
-        ## GitHub 整合（選用）
+      ## GitHub 整合（選用）
 
-        Agent 可以使用 `gh`（GitHub CLI）來 review PR、建立 issue、留言、合併等。由於容器沒有瀏覽器，認證使用 device flow：
+      Agent 可以使用 `gh`（GitHub CLI）來 review PR、建立 issue、留言、合併等。由於容器沒有瀏覽器，認證使用 device flow：
 
-        1. 在 Discord 對 bot 說：**「登入 GitHub」**
-        2. Bot 會回覆一組一次性代碼和 URL（例如 `https://github.com/login/device`）
-        3. 在手機或電腦上開啟 URL，輸入代碼並授權
-        4. Bot 確認登入完成 — `gh` 已在此 session 中認證
+      1. 在 Discord 對 bot 說：**「登入 GitHub」**
+      2. Bot 會回覆一組一次性代碼和 URL（例如 `https://github.com/login/device`）
+      3. 在手機或電腦上開啟 URL，輸入代碼並授權
+      4. Bot 確認登入完成 — `gh` 已在此 session 中認證
 
-        詳見 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
+      詳見 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
 
-        ## 自訂設定
+      ## 自訂設定
 
-        | 檔案 | 說明 |
-        |------|------|
-        | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT 等） |
+      | 檔案 | 說明 |
+      |------|------|
+      | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT 等） |
 
-        `config.toml` 在首次啟動時從內建範本建立。之後請直接編輯檔案，環境變數僅用於初始設定。要恢復預設值請刪除後重啟：`rm /home/agent/.config/openab/config.toml`
+      `config.toml` 在首次啟動時從內建範本建立。之後請直接編輯檔案，環境變數僅用於初始設定。要恢復預設值請刪除後重啟：`rm /home/agent/.config/openab/config.toml`
 
-        設定選項請參閱 [OpenAB 文件](https://github.com/openabdev/openab)。
+      設定選項請參閱 [OpenAB 文件](https://github.com/openabdev/openab)。
 
-        ## 停用
+      ## 停用
 
-        部署時將 `Discord Bot Token` 留空即可。服務會進入 sleep 狀態，不會崩潰。
+      部署時將 `Discord Bot Token` 留空即可。服務會進入 sleep 狀態，不會崩潰。
 
-        ## 連結
+      ## 連結
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    zh-CN:
-      description: |
-        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作为 agent 后端。
-        来源：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot Token
-          description: 从 https://discord.com/developers/applications 获取的 Token
-        - key: KIRO_API_KEY
-          name: Kiro API Key（选填，Pro+ 方案）
-          description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord 频道 ID（选填）
-          description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord 用户 ID（选填）
-          description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
-      readme: |
-        # OpenAB Kiro（简体中文）
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  zh-CN:
+    description: |
+      Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作为 agent 后端。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot Token
+        description: 从 https://discord.com/developers/applications 获取的 Token
+      - key: KIRO_API_KEY
+        name: Kiro API Key（选填，Pro+ 方案）
+        description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 频道 ID（选填）
+        description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用户 ID（选填）
+        description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
+    readme: |
+      # OpenAB Kiro（简体中文）
 
-        [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+      [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-        此模板部署的是 Kiro 变体，使用基础 `openab` 镜像搭配 `kiro-cli` 作为 agent 后端。
+      此模板部署的是 Kiro 变体，使用基础 `openab` 镜像搭配 `kiro-cli` 作为 agent 后端。
 
-        ## 注意事项
+      ## 注意事项
 
-        - **镜像标签：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
-        - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
-        - **文件权限：** 容器以 root 启动后切换为 agent 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
+      - **镜像标签：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
+      - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
+      - **文件权限：** 容器以 root 启动后切换为 agent 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
 
-        ## 设置步骤
+      ## 设置步骤
 
-        ### 1. 获取 Discord Bot Token
+      ### 1. 获取 Discord Bot Token
 
-        1. 前往 https://discord.com/developers/applications，点击 **New Application**
-        2. 进入 **Bot** 页签 → 点击 **Reset Token** → 复制 token
-        3. 同一页面往下滑，在 Privileged Gateway Intents 下启用 **Message Content Intent**
-        4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
-        5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
+      1. 前往 https://discord.com/developers/applications，点击 **New Application**
+      2. 进入 **Bot** 页签 → 点击 **Reset Token** → 复制 token
+      3. 同一页面往下滑，在 Privileged Gateway Intents 下启用 **Message Content Intent**
+      4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
 
-        ### 2. 获取 Discord 频道 ID
+      ### 2. 获取 Discord 频道 ID
 
-        1. 打开 Discord → 前往 **用户设置**（齿轮图标）→ **高级** → 启用 **开发者模式**
-        2. 右键点击你要 Bot 回应的频道 → **复制频道 ID**
-        3. 多个频道用逗号分隔：`123456789012345678,234567890123456789`
+      1. 打开 Discord → 前往 **用户设置**（齿轮图标）→ **高级** → 启用 **开发者模式**
+      2. 右键点击你要 Bot 回应的频道 → **复制频道 ID**
+      3. 多个频道用逗号分隔：`123456789012345678,234567890123456789`
 
-        ### 3. 获取 Kiro API Key（仅 Pro/Pro+/Power 方案）
+      ### 3. 获取 Kiro API Key（仅 Pro/Pro+/Power 方案）
 
-        如果你有付费的 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY` 变量。服务将自动认证，无需部署后的手动操作。
+      如果你有付费的 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY` 变量。服务将自动认证，无需部署后的手动操作。
 
-        免费方案用户将 `KIRO_API_KEY` 留空，部署后执行步骤 5 认证。
+      免费方案用户将 `KIRO_API_KEY` 留空，部署后执行步骤 5 认证。
 
-        ### 4. 部署
+      ### 4. 部署
 
-        填入变量后点击部署即可。服务会自动连接到 Discord。
+      填入变量后点击部署即可。服务会自动连接到 Discord。
 
-        ### 5. 通过 Device Flow 认证 Kiro（仅免费方案）
+      ### 5. 通过 Device Flow 认证 Kiro（仅免费方案）
 
-        若步骤 3 已填入 `KIRO_API_KEY`，跳过此步骤。
+      若步骤 3 已填入 `KIRO_API_KEY`，跳过此步骤。
 
-        服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
+      服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
 
-        ```
-        HOME=/home/agent kiro-cli login --use-device-flow
-        ```
+      ```
+      HOME=/home/agent kiro-cli login --use-device-flow
+      ```
 
-        > ⚠️ 必须以 `agent` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
+      > ⚠️ 必须以 `agent` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
 
-        按照屏幕显示的 URL 和 code 到浏览器完成授权。认证完成后请重启服务。
+      按照屏幕显示的 URL 和 code 到浏览器完成授权。认证完成后请重启服务。
 
-        ## Slack 设置（可选）
+      ## Slack 设置（可选）
 
-        OpenAB 支持通过 Socket Mode 连接 Slack，无需公开 URL。
+      OpenAB 支持通过 Socket Mode 连接 Slack，无需公开 URL。
 
-        1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
-        2. **Socket Mode** → 启用 → 生成 App-Level Token，scope 选 `connections:write` → 复制 `xapp-...` token（`SLACK_APP_TOKEN`）
-        3. **Event Subscriptions** → 启用 → 添加 bot events：`app_mention`、`message.channels`、`message.groups`
-        4. **OAuth & Permissions** → Bot Token Scopes → 添加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
-        5. **Install App** → 安装到工作区 → 复制 `xoxb-...` token（`SLACK_BOT_TOKEN`）
-        6. 在每个要使用 Bot 的 Slack 频道执行 `/invite @YourAppName`
+      1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → 启用 → 生成 App-Level Token，scope 选 `connections:write` → 复制 `xapp-...` token（`SLACK_APP_TOKEN`）
+      3. **Event Subscriptions** → 启用 → 添加 bot events：`app_mention`、`message.channels`、`message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → 添加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+      5. **Install App** → 安装到工作区 → 复制 `xoxb-...` token（`SLACK_BOT_TOKEN`）
+      6. 在每个要使用 Bot 的 Slack 频道执行 `/invite @YourAppName`
 
-        部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 变量。Discord 和 Slack 可同时运行。
+      部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 变量。Discord 和 Slack 可同时运行。
 
-        ## 使用方式
+      ## 使用方式
 
-        - 在允许的 Discord 或 Slack 频道中 **@mention Bot** 即可开始对话
-        - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
-        - 每个 thread 对应一个持久的 Kiro session（默认 24 小时 TTL）
+      - 在允许的 Discord 或 Slack 频道中 **@mention Bot** 即可开始对话
+      - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
+      - 每个 thread 对应一个持久的 Kiro session（默认 24 小时 TTL）
 
-        ## GitHub 集成（可选）
+      ## GitHub 集成（可选）
 
-        Agent 可以使用 `gh`（GitHub CLI）来 review PR、创建 issue、评论、合并等。由于容器没有浏览器，认证使用 device flow：
+      Agent 可以使用 `gh`（GitHub CLI）来 review PR、创建 issue、评论、合并等。由于容器没有浏览器，认证使用 device flow：
 
-        1. 在 Discord 对 bot 说：**"登录 GitHub"**
-        2. Bot 会回复一组一次性代码和 URL（例如 `https://github.com/login/device`）
-        3. 在手机或电脑上打开 URL，输入代码并授权
-        4. Bot 确认登录完成 — `gh` 已在此 session 中认证
+      1. 在 Discord 对 bot 说：**"登录 GitHub"**
+      2. Bot 会回复一组一次性代码和 URL（例如 `https://github.com/login/device`）
+      3. 在手机或电脑上打开 URL，输入代码并授权
+      4. Bot 确认登录完成 — `gh` 已在此 session 中认证
 
-        详见 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
+      详见 [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md)。
 
-        ## 自定义设置
+      ## 自定义设置
 
-        | 文件 | 说明 |
-        |------|------|
-        | `/home/agent/.config/openab/config.toml` | OpenAB 设置（sessions、reactions、STT 等） |
+      | 文件 | 说明 |
+      |------|------|
+      | `/home/agent/.config/openab/config.toml` | OpenAB 设置（sessions、reactions、STT 等） |
 
-        `config.toml` 在首次启动时从内建模板创建。之后请直接编辑文件，环境变量仅用于初始设置。要恢复默认值请删除后重启：`rm /home/agent/.config/openab/config.toml`
+      `config.toml` 在首次启动时从内建模板创建。之后请直接编辑文件，环境变量仅用于初始设置。要恢复默认值请删除后重启：`rm /home/agent/.config/openab/config.toml`
 
-        设置选项请参阅 [OpenAB 文档](https://github.com/openabdev/openab)。
+      设置选项请参阅 [OpenAB 文档](https://github.com/openabdev/openab)。
 
-        ## 停用
+      ## 停用
 
-        部署时将 `Discord Bot Token` 留空即可。服务会进入 sleep 状态，不会崩溃。
+      部署时将 `Discord Bot Token` 留空即可。服务会进入 sleep 状态，不会崩溃。
 
-        ## 链接
+      ## 链接
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    ja-JP:
-      description: |
-        Open Agent Broker — stdio JSON-RPC を通じて Discord と Slack を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。このテンプレートは Kiro CLI をエージェントバックエンドとして使用します。
-        ソース：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot トークン
-          description: https://discord.com/developers/applications から取得したトークン
-        - key: KIRO_API_KEY
-          name: Kiro API Key（オプション、Pro+ プラン）
-          description: "オプション。Kiro Pro/Pro+/Power 加入者は API Key を入力することで、デプロイ後の手動ログインが不要になります。無料プランは空にして、デプロイ後に device flow で認証してください。"
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord チャンネル ID（オプション）
-          description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord ユーザー ID（オプション）
-          description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
-      readme: |
-        # OpenAB Kiro（日本語）
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  ja-JP:
+    description: |
+      Open Agent Broker — stdio JSON-RPC を通じて Discord と Slack を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。このテンプレートは Kiro CLI をエージェントバックエンドとして使用します。
+      ソース：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot トークン
+        description: https://discord.com/developers/applications から取得したトークン
+      - key: KIRO_API_KEY
+        name: Kiro API Key（オプション、Pro+ プラン）
+        description: "オプション。Kiro Pro/Pro+/Power 加入者は API Key を入力することで、デプロイ後の手動ログインが不要になります。無料プランは空にして、デプロイ後に device flow で認証してください。"
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord チャンネル ID（オプション）
+        description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord ユーザー ID（オプション）
+        description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
+    readme: |
+      # OpenAB Kiro（日本語）
 
-        [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
+      [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
 
-        このテンプレートは Kiro バリアントをデプロイし、ベース `openab` イメージと `kiro-cli` をエージェントバックエンドとして使用します。
+      このテンプレートは Kiro バリアントをデプロイし、ベース `openab` イメージと `kiro-cli` をエージェントバックエンドとして使用します。
 
-        ## 注意事項
+      ## 注意事項
 
-        - **イメージタグ：** このテンプレートは固定バージョン（`0.8.1-beta.5`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
-        - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
-        - **ファイル権限：** コンテナは root で起動し、openab 実行前に agent ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.1-beta.5`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
+      - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
+      - **ファイル権限：** コンテナは root で起動し、openab 実行前に agent ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
 
-        ## セットアップ
+      ## セットアップ
 
-        ### 1. Discord Bot Token の取得
+      ### 1. Discord Bot Token の取得
 
-        1. https://discord.com/developers/applications にアクセスし、**New Application** をクリック
-        2. **Bot** タブ → **Reset Token** をクリック → token をコピー
-        3. 同じページを下にスクロールし、Privileged Gateway Intents の **Message Content Intent** を有効化
-        4. **OAuth2 → URL Generator** → scope `bot` にチェック → 権限にチェック：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
-        5. 生成された URL をコピーし、ブラウザで開いて Bot をサーバーに招待
+      1. https://discord.com/developers/applications にアクセスし、**New Application** をクリック
+      2. **Bot** タブ → **Reset Token** をクリック → token をコピー
+      3. 同じページを下にスクロールし、Privileged Gateway Intents の **Message Content Intent** を有効化
+      4. **OAuth2 → URL Generator** → scope `bot` にチェック → 権限にチェック：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 生成された URL をコピーし、ブラウザで開いて Bot をサーバーに招待
 
-        ### 2. Discord チャンネル ID の取得
+      ### 2. Discord チャンネル ID の取得
 
-        1. Discord を開く → **ユーザー設定**（歯車アイコン）→ **詳細設定** → **開発者モード** を有効化
-        2. Bot に応答させたいチャンネルを右クリック → **チャンネル ID をコピー**
-        3. 複数チャンネルはカンマで区切る：`123456789012345678,234567890123456789`
+      1. Discord を開く → **ユーザー設定**（歯車アイコン）→ **詳細設定** → **開発者モード** を有効化
+      2. Bot に応答させたいチャンネルを右クリック → **チャンネル ID をコピー**
+      3. 複数チャンネルはカンマで区切る：`123456789012345678,234567890123456789`
 
-        ### 3. Kiro API Key の取得（Pro/Pro+/Power プランのみ）
+      ### 3. Kiro API Key の取得（Pro/Pro+/Power プランのみ）
 
-        有料の Kiro サブスクリプションをお持ちの場合、[kiro.dev](https://kiro.dev) → Settings → API Keys で key を作成し、`KIRO_API_KEY` 変数に入力してください。サービスが自動的に認証されるため、デプロイ後の手動操作は不要です。
+      有料の Kiro サブスクリプションをお持ちの場合、[kiro.dev](https://kiro.dev) → Settings → API Keys で key を作成し、`KIRO_API_KEY` 変数に入力してください。サービスが自動的に認証されるため、デプロイ後の手動操作は不要です。
 
-        無料プランのユーザーは `KIRO_API_KEY` を空のままにし、デプロイ後にステップ 5 で認証してください。
+      無料プランのユーザーは `KIRO_API_KEY` を空のままにし、デプロイ後にステップ 5 で認証してください。
 
-        ### 4. デプロイ
+      ### 4. デプロイ
 
-        変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。
+      変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。
 
-        ### 5. Device Flow で Kiro を認証（無料プランのみ）
+      ### 5. Device Flow で Kiro を認証（無料プランのみ）
 
-        ステップ 3 で `KIRO_API_KEY` を入力した場合はこのステップをスキップしてください。
+      ステップ 3 で `KIRO_API_KEY` を入力した場合はこのステップをスキップしてください。
 
-        サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
+      サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
 
-        ```
-        HOME=/home/agent kiro-cli login --use-device-flow
-        ```
+      ```
+      HOME=/home/agent kiro-cli login --use-device-flow
+      ```
 
-        > ⚠️ `agent` ユーザーで実行する必要があります。`root` で実行すると認証ファイルが `/root/` に書き込まれ、永続化されないため再起動時に失われます。
+      > ⚠️ `agent` ユーザーで実行する必要があります。`root` で実行すると認証ファイルが `/root/` に書き込まれ、永続化されないため再起動時に失われます。
 
-        画面に表示される URL とコードをブラウザで開いて認証を完了してください。認証後はサービスを再起動してください。
+      画面に表示される URL とコードをブラウザで開いて認証を完了してください。認証後はサービスを再起動してください。
 
-        ## Slack セットアップ（オプション）
+      ## Slack セットアップ（オプション）
 
-        OpenAB は Socket Mode 経由で Slack をサポートします — 公開 URL は不要です。
+      OpenAB は Socket Mode 経由で Slack をサポートします — 公開 URL は不要です。
 
-        1. https://api.slack.com/apps → **Create New App** → **From scratch**
-        2. **Socket Mode** → 有効化 → scope `connections:write` で App-Level Token を生成 → `xapp-...` token をコピー（`SLACK_APP_TOKEN`）
-        3. **Event Subscriptions** → 有効化 → bot events を追加：`app_mention`、`message.channels`、`message.groups`
-        4. **OAuth & Permissions** → Bot Token Scopes → 追加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
-        5. **Install App** → ワークスペースにインストール → `xoxb-...` token をコピー（`SLACK_BOT_TOKEN`）
-        6. Bot を使用したい各 Slack チャンネルで `/invite @YourAppName` を実行
+      1. https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → 有効化 → scope `connections:write` で App-Level Token を生成 → `xapp-...` token をコピー（`SLACK_APP_TOKEN`）
+      3. **Event Subscriptions** → 有効化 → bot events を追加：`app_mention`、`message.channels`、`message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → 追加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+      5. **Install App** → ワークスペースにインストール → `xoxb-...` token をコピー（`SLACK_BOT_TOKEN`）
+      6. Bot を使用したい各 Slack チャンネルで `/invite @YourAppName` を実行
 
-        デプロイ前に `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` 変数を入力してください。Discord と Slack は同時に使用できます。
+      デプロイ前に `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` 変数を入力してください。Discord と Slack は同時に使用できます。
 
-        ## 使い方
+      ## 使い方
 
-        - 許可された Discord または Slack チャンネルで **Bot を @mention** して会話を開始
-        - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
-        - 各 thread は永続的な Kiro session に対応（デフォルト 24 時間 TTL）
+      - 許可された Discord または Slack チャンネルで **Bot を @mention** して会話を開始
+      - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
+      - 各 thread は永続的な Kiro session に対応（デフォルト 24 時間 TTL）
 
-        ## GitHub 連携（オプション）
+      ## GitHub 連携（オプション）
 
-        エージェントは `gh`（GitHub CLI）を使って PR レビュー、Issue 作成、コメント、マージなどができます。コンテナにはブラウザがないため、device flow で認証します：
+      エージェントは `gh`（GitHub CLI）を使って PR レビュー、Issue 作成、コメント、マージなどができます。コンテナにはブラウザがないため、device flow で認証します：
 
-        1. Discord で Bot に **「GitHub にログイン」** と伝える
-        2. Bot がワンタイムコードと URL（例：`https://github.com/login/device`）を返信
-        3. スマートフォンまたは PC で URL を開き、コードを入力して認証
-        4. Bot がログイン完了を確認 — `gh` がこのセッションで認証済みになります
+      1. Discord で Bot に **「GitHub にログイン」** と伝える
+      2. Bot がワンタイムコードと URL（例：`https://github.com/login/device`）を返信
+      3. スマートフォンまたは PC で URL を開き、コードを入力して認証
+      4. Bot がログイン完了を確認 — `gh` がこのセッションで認証済みになります
 
-        詳細は [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) を参照。
+      詳細は [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) を参照。
 
-        ## カスタマイズ
+      ## カスタマイズ
 
-        | ファイル | 説明 |
-        |---------|------|
-        | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT など） |
+      | ファイル | 説明 |
+      |---------|------|
+      | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT など） |
 
-        `config.toml` は初回起動時に内蔵テンプレートから作成されます。以降の変更はファイルを直接編集してください。環境変数は初期設定時のみ使用されます。デフォルトに戻すにはファイルを削除して再起動：`rm /home/agent/.config/openab/config.toml`
+      `config.toml` は初回起動時に内蔵テンプレートから作成されます。以降の変更はファイルを直接編集してください。環境変数は初期設定時のみ使用されます。デフォルトに戻すにはファイルを削除して再起動：`rm /home/agent/.config/openab/config.toml`
 
-        設定オプションは [OpenAB ドキュメント](https://github.com/openabdev/openab) を参照。
+      設定オプションは [OpenAB ドキュメント](https://github.com/openabdev/openab) を参照。
 
-        ## 無効化
+      ## 無効化
 
-        デプロイ時に `Discord Bot Token` を空にしてください。サービスはクラッシュせずスリープ状態になります。
+      デプロイ時に `Discord Bot Token` を空にしてください。サービスはクラッシュせずスリープ状態になります。
 
-        ## リンク
+      ## リンク
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    es-ES:
-      description: |
-        Open Agent Broker — un arnés ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC. Esta plantilla usa Kiro CLI como backend de agente.
-        Fuente: https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Token del Bot de Discord
-          description: Token obtenido de https://discord.com/developers/applications
-        - key: KIRO_API_KEY
-          name: Kiro API Key (opcional, plan Pro+)
-          description: "Opcional. Los suscriptores de Kiro Pro/Pro+/Power pueden ingresar su API Key para omitir el login manual tras el despliegue. Dejar vacío en el plan gratuito y autenticarse con device flow después."
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: IDs de Canales de Discord (opcional)
-          description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacío para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
-        - key: OPENAB_ALLOWED_USERS
-          name: IDs de Usuarios de Discord (opcional)
-          description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacío para permitir a todos en los canales permitidos."
-      readme: |
-        # OpenAB Kiro (Español)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  es-ES:
+    description: |
+      Open Agent Broker — un arnés ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC. Esta plantilla usa Kiro CLI como backend de agente.
+      Fuente: https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token del Bot de Discord
+        description: Token obtenido de https://discord.com/developers/applications
+      - key: KIRO_API_KEY
+        name: Kiro API Key (opcional, plan Pro+)
+        description: "Opcional. Los suscriptores de Kiro Pro/Pro+/Power pueden ingresar su API Key para omitir el login manual tras el despliegue. Dejar vacío en el plan gratuito y autenticarse con device flow después."
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: IDs de Canales de Discord (opcional)
+        description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacío para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: IDs de Usuarios de Discord (opcional)
+        description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacío para permitir a todos en los canales permitidos."
+    readme: |
+      # OpenAB Kiro (Español)
 
-        [OpenAB](https://github.com/openabdev/openab) es un arnés ligero de código abierto en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a través de stdio JSON-RPC.
+      [OpenAB](https://github.com/openabdev/openab) es un arnés ligero de código abierto en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a través de stdio JSON-RPC.
 
-        Esta plantilla despliega la variante Kiro, usando la imagen base `openab` con `kiro-cli` como backend de agente.
+      Esta plantilla despliega la variante Kiro, usando la imagen base `openab` con `kiro-cli` como backend de agente.
 
-        ## Notas Importantes
+      ## Notas Importantes
 
-        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.1-beta.5`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
-        - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente. Plugins, configuración y credenciales se conservan entre reinicios.
-        - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario agent (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automáticamente al arrancar.
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.1-beta.5`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
+      - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente. Plugins, configuración y credenciales se conservan entre reinicios.
+      - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario agent (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automáticamente al arrancar.
 
-        ## Configuración
+      ## Configuración
 
-        ### 1. Obtener el Discord Bot Token
+      ### 1. Obtener el Discord Bot Token
 
-        1. Ir a https://discord.com/developers/applications y hacer clic en **New Application**
-        2. Ir a la pestaña **Bot** → clic en **Reset Token** → copiar el token
-        3. En la misma página, bajar y habilitar **Message Content Intent** en Privileged Gateway Intents
-        4. Ir a **OAuth2 → URL Generator** → marcar scope `bot` → marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
-        5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
+      1. Ir a https://discord.com/developers/applications y hacer clic en **New Application**
+      2. Ir a la pestaña **Bot** → clic en **Reset Token** → copiar el token
+      3. En la misma página, bajar y habilitar **Message Content Intent** en Privileged Gateway Intents
+      4. Ir a **OAuth2 → URL Generator** → marcar scope `bot` → marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+      5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
 
-        ### 2. Obtener IDs de canales de Discord
+      ### 2. Obtener IDs de canales de Discord
 
-        1. Abrir Discord → **Ajustes de usuario** (icono de engranaje) → **Avanzado** → activar **Modo desarrollador**
-        2. Clic derecho en el canal donde quieres que el Bot responda → **Copiar ID del canal**
-        3. Para múltiples canales, separar con comas: `123456789012345678,234567890123456789`
+      1. Abrir Discord → **Ajustes de usuario** (icono de engranaje) → **Avanzado** → activar **Modo desarrollador**
+      2. Clic derecho en el canal donde quieres que el Bot responda → **Copiar ID del canal**
+      3. Para múltiples canales, separar con comas: `123456789012345678,234567890123456789`
 
-        ### 3. Obtener una Kiro API Key (solo plan Pro/Pro+/Power)
+      ### 3. Obtener una Kiro API Key (solo plan Pro/Pro+/Power)
 
-        Si tienes una suscripción de pago de Kiro, ve a [kiro.dev](https://kiro.dev) → Settings → API Keys, crea una key y pégala en la variable `KIRO_API_KEY`. El servicio se autenticará automáticamente sin pasos post-despliegue.
+      Si tienes una suscripción de pago de Kiro, ve a [kiro.dev](https://kiro.dev) → Settings → API Keys, crea una key y pégala en la variable `KIRO_API_KEY`. El servicio se autenticará automáticamente sin pasos post-despliegue.
 
-        Los usuarios del plan gratuito pueden dejar `KIRO_API_KEY` vacío y autenticarse después del despliegue en el paso 5.
+      Los usuarios del plan gratuito pueden dejar `KIRO_API_KEY` vacío y autenticarse después del despliegue en el paso 5.
 
-        ### 4. Desplegar
+      ### 4. Desplegar
 
-        Completa las variables y haz clic en desplegar. El servicio se conecta a Discord automáticamente.
+      Completa las variables y haz clic en desplegar. El servicio se conecta a Discord automáticamente.
 
-        ### 5. Autenticar Kiro con Device Flow (solo plan gratuito)
+      ### 5. Autenticar Kiro con Device Flow (solo plan gratuito)
 
-        Omite este paso si configuraste `KIRO_API_KEY` en el paso 3.
+      Omite este paso si configuraste `KIRO_API_KEY` en el paso 3.
 
-        Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
+      Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
 
-        ```
-        HOME=/home/agent kiro-cli login --use-device-flow
-        ```
+      ```
+      HOME=/home/agent kiro-cli login --use-device-flow
+      ```
 
-        > ⚠️ Debe ejecutarse como `agent`. Ejecutar como `root` escribe las credenciales en `/root/`, que no es persistente y se perderán al reiniciar.
+      > ⚠️ Debe ejecutarse como `agent`. Ejecutar como `root` escribe las credenciales en `/root/`, que no es persistente y se perderán al reiniciar.
 
-        Sigue la URL y el código en pantalla para completar la autorización en tu navegador. Reinicia el servicio después de completar el login.
+      Sigue la URL y el código en pantalla para completar la autorización en tu navegador. Reinicia el servicio después de completar el login.
 
-        ## Configuración de Slack (Opcional)
+      ## Configuración de Slack (Opcional)
 
-        OpenAB soporta Slack mediante Socket Mode — no se necesita URL pública.
+      OpenAB soporta Slack mediante Socket Mode — no se necesita URL pública.
 
-        1. Ir a https://api.slack.com/apps → **Create New App** → **From scratch**
-        2. **Socket Mode** → Habilitar → generar App-Level Token con scope `connections:write` → copiar el token `xapp-...` (`SLACK_APP_TOKEN`)
-        3. **Event Subscriptions** → Habilitar → añadir bot events: `app_mention`, `message.channels`, `message.groups`
-        4. **OAuth & Permissions** → Bot Token Scopes → añadir: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
-        5. **Install App** → Instalar en el workspace → copiar el token `xoxb-...` (`SLACK_BOT_TOKEN`)
-        6. En cada canal de Slack donde quieras usar el bot, ejecuta `/invite @YourAppName`
+      1. Ir a https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → Habilitar → generar App-Level Token con scope `connections:write` → copiar el token `xapp-...` (`SLACK_APP_TOKEN`)
+      3. **Event Subscriptions** → Habilitar → añadir bot events: `app_mention`, `message.channels`, `message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → añadir: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+      5. **Install App** → Instalar en el workspace → copiar el token `xoxb-...` (`SLACK_BOT_TOKEN`)
+      6. En cada canal de Slack donde quieras usar el bot, ejecuta `/invite @YourAppName`
 
-        Rellena `SLACK_BOT_TOKEN` y `SLACK_APP_TOKEN` antes de desplegar. Discord y Slack pueden funcionar simultáneamente.
+      Rellena `SLACK_BOT_TOKEN` y `SLACK_APP_TOKEN` antes de desplegar. Discord y Slack pueden funcionar simultáneamente.
 
-        ## Uso
+      ## Uso
 
-        - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
-        - OpenAB crea un **thread** para conversaciones de múltiples turnos — no se necesita @mención en los mensajes siguientes
-        - Cada thread corresponde a una sesión persistente de Kiro (TTL de 24h por defecto)
+      - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
+      - OpenAB crea un **thread** para conversaciones de múltiples turnos — no se necesita @mención en los mensajes siguientes
+      - Cada thread corresponde a una sesión persistente de Kiro (TTL de 24h por defecto)
 
-        ## Integración con GitHub (Opcional)
+      ## Integración con GitHub (Opcional)
 
-        El agente puede usar `gh` (GitHub CLI) para revisar PRs, crear issues, comentar, fusionar, etc. Como el contenedor no tiene navegador, la autenticación usa device flow:
+      El agente puede usar `gh` (GitHub CLI) para revisar PRs, crear issues, comentar, fusionar, etc. Como el contenedor no tiene navegador, la autenticación usa device flow:
 
-        1. Dile al bot en Discord: **"log in to GitHub"**
-        2. El bot responderá con un código único y una URL (ej. `https://github.com/login/device`)
-        3. Abre la URL en tu teléfono o computadora, ingresa el código y autoriza
-        4. El bot confirma el inicio de sesión — `gh` está autenticado para esta sesión
+      1. Dile al bot en Discord: **"log in to GitHub"**
+      2. El bot responderá con un código único y una URL (ej. `https://github.com/login/device`)
+      3. Abre la URL en tu teléfono o computadora, ingresa el código y autoriza
+      4. El bot confirma el inicio de sesión — `gh` está autenticado para esta sesión
 
-        Ver [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) para detalles técnicos.
+      Ver [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) para detalles técnicos.
 
-        ## Personalización
+      ## Personalización
 
-        | Archivo | Descripción |
-        |---------|-------------|
-        | `/home/agent/.config/openab/config.toml` | Configuración de OpenAB (sessions, reactions, STT, etc.) |
+      | Archivo | Descripción |
+      |---------|-------------|
+      | `/home/agent/.config/openab/config.toml` | Configuración de OpenAB (sessions, reactions, STT, etc.) |
 
-        `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Después, edite el archivo directamente — las variables de entorno solo se usan para la configuración inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/agent/.config/openab/config.toml`
+      `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Después, edite el archivo directamente — las variables de entorno solo se usan para la configuración inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/agent/.config/openab/config.toml`
 
-        Para opciones de configuración, consulte la [documentación de OpenAB](https://github.com/openabdev/openab).
+      Para opciones de configuración, consulte la [documentación de OpenAB](https://github.com/openabdev/openab).
 
-        ## Desactivar
+      ## Desactivar
 
-        Dejar `Discord Bot Token` vacío al desplegar. El servicio entrará en modo sleep sin fallar.
+      Dejar `Discord Bot Token` vacío al desplegar. El servicio entrará en modo sleep sin fallar.
 
-        ## Enlaces
+      ## Enlaces
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
-    id-ID:
-      description: |
-        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC. Template ini menggunakan Kiro CLI sebagai backend agen.
-        Sumber: https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Token Bot Discord
-          description: Token dari https://discord.com/developers/applications
-        - key: KIRO_API_KEY
-          name: Kiro API Key (opsional, paket Pro+)
-          description: "Opsional. Pelanggan Kiro Pro/Pro+/Power dapat memasukkan API Key agar tidak perlu login manual setelah deploy. Kosongkan untuk paket gratis dan autentikasi dengan device flow setelahnya."
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: ID Channel Discord (opsional)
-          description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
-        - key: OPENAB_ALLOWED_USERS
-          name: ID Pengguna Discord (opsional)
-          description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
-      readme: |
-        # OpenAB Kiro (Bahasa Indonesia)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  id-ID:
+    description: |
+      Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC. Template ini menggunakan Kiro CLI sebagai backend agen.
+      Sumber: https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token Bot Discord
+        description: Token dari https://discord.com/developers/applications
+      - key: KIRO_API_KEY
+        name: Kiro API Key (opsional, paket Pro+)
+        description: "Opsional. Pelanggan Kiro Pro/Pro+/Power dapat memasukkan API Key agar tidak perlu login manual setelah deploy. Kosongkan untuk paket gratis dan autentikasi dengan device flow setelahnya."
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: ID Channel Discord (opsional)
+        description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: ID Pengguna Discord (opsional)
+        description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
+    readme: |
+      # OpenAB Kiro (Bahasa Indonesia)
 
-        [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
+      [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
 
-        Template ini men-deploy varian Kiro menggunakan image dasar `openab` dengan `kiro-cli` sebagai backend agen.
+      Template ini men-deploy varian Kiro menggunakan image dasar `openab` dengan `kiro-cli` sebagai backend agen.
 
-        ## Catatan Penting
+      ## Catatan Penting
 
-        - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.1-beta.5`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
-        - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
-        - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna agent (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan — izin diperbaiki secara otomatis saat boot.
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.1-beta.5`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
+      - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
+      - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna agent (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan — izin diperbaiki secara otomatis saat boot.
 
-        ## Pengaturan
+      ## Pengaturan
 
-        ### 1. Dapatkan Discord Bot Token
+      ### 1. Dapatkan Discord Bot Token
 
-        1. Buka https://discord.com/developers/applications dan klik **New Application**
-        2. Buka tab **Bot** → klik **Reset Token** → salin token
-        3. Di halaman yang sama, scroll ke bawah dan aktifkan **Message Content Intent** di Privileged Gateway Intents
-        4. Buka **OAuth2 → URL Generator** → centang scope `bot` → centang izin: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
-        5. Salin URL yang dihasilkan dan buka di browser untuk mengundang Bot ke server Anda
+      1. Buka https://discord.com/developers/applications dan klik **New Application**
+      2. Buka tab **Bot** → klik **Reset Token** → salin token
+      3. Di halaman yang sama, scroll ke bawah dan aktifkan **Message Content Intent** di Privileged Gateway Intents
+      4. Buka **OAuth2 → URL Generator** → centang scope `bot` → centang izin: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+      5. Salin URL yang dihasilkan dan buka di browser untuk mengundang Bot ke server Anda
 
-        ### 2. Dapatkan ID Channel Discord
+      ### 2. Dapatkan ID Channel Discord
 
-        1. Buka Discord → **Pengaturan Pengguna** (ikon roda gigi) → **Lanjutan** → aktifkan **Mode Pengembang**
-        2. Klik kanan channel tempat Anda ingin Bot merespons → **Salin ID Channel**
-        3. Untuk beberapa channel, pisahkan dengan koma: `123456789012345678,234567890123456789`
+      1. Buka Discord → **Pengaturan Pengguna** (ikon roda gigi) → **Lanjutan** → aktifkan **Mode Pengembang**
+      2. Klik kanan channel tempat Anda ingin Bot merespons → **Salin ID Channel**
+      3. Untuk beberapa channel, pisahkan dengan koma: `123456789012345678,234567890123456789`
 
-        ### 3. Dapatkan Kiro API Key (hanya paket Pro/Pro+/Power)
+      ### 3. Dapatkan Kiro API Key (hanya paket Pro/Pro+/Power)
 
-        Jika Anda memiliki langganan Kiro berbayar, buka [kiro.dev](https://kiro.dev) → Settings → API Keys, buat key dan masukkan ke variabel `KIRO_API_KEY`. Layanan akan otentikasi secara otomatis tanpa langkah manual setelah deploy.
+      Jika Anda memiliki langganan Kiro berbayar, buka [kiro.dev](https://kiro.dev) → Settings → API Keys, buat key dan masukkan ke variabel `KIRO_API_KEY`. Layanan akan otentikasi secara otomatis tanpa langkah manual setelah deploy.
 
-        Pengguna paket gratis dapat mengosongkan `KIRO_API_KEY` dan autentikasi setelah deploy di langkah 5.
+      Pengguna paket gratis dapat mengosongkan `KIRO_API_KEY` dan autentikasi setelah deploy di langkah 5.
 
-        ### 4. Deploy
+      ### 4. Deploy
 
-        Isi variabel dan klik deploy. Layanan akan terhubung ke Discord secara otomatis.
+      Isi variabel dan klik deploy. Layanan akan terhubung ke Discord secara otomatis.
 
-        ### 5. Autentikasi Kiro via Device Flow (hanya paket gratis)
+      ### 5. Autentikasi Kiro via Device Flow (hanya paket gratis)
 
-        Lewati langkah ini jika Anda mengisi `KIRO_API_KEY` di langkah 3.
+      Lewati langkah ini jika Anda mengisi `KIRO_API_KEY` di langkah 3.
 
-        Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
+      Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
 
-        ```
-        HOME=/home/agent kiro-cli login --use-device-flow
-        ```
+      ```
+      HOME=/home/agent kiro-cli login --use-device-flow
+      ```
 
-        > ⚠️ Harus dijalankan sebagai `agent`. Menjalankan sebagai `root` akan menulis kredensial ke `/root/` yang tidak dipersistenkan; akan hilang saat restart.
+      > ⚠️ Harus dijalankan sebagai `agent`. Menjalankan sebagai `root` akan menulis kredensial ke `/root/` yang tidak dipersistenkan; akan hilang saat restart.
 
-        Ikuti URL dan kode di layar untuk menyelesaikan otorisasi device flow di browser Anda. Restart layanan setelah login selesai.
+      Ikuti URL dan kode di layar untuk menyelesaikan otorisasi device flow di browser Anda. Restart layanan setelah login selesai.
 
-        ## Pengaturan Slack (Opsional)
+      ## Pengaturan Slack (Opsional)
 
-        OpenAB mendukung Slack melalui Socket Mode — tidak perlu URL publik.
+      OpenAB mendukung Slack melalui Socket Mode — tidak perlu URL publik.
 
-        1. Buka https://api.slack.com/apps → **Create New App** → **From scratch**
-        2. **Socket Mode** → Aktifkan → buat App-Level Token dengan scope `connections:write` → salin token `xapp-...` (`SLACK_APP_TOKEN`)
-        3. **Event Subscriptions** → Aktifkan → tambahkan bot events: `app_mention`, `message.channels`, `message.groups`
-        4. **OAuth & Permissions** → Bot Token Scopes → tambahkan: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
-        5. **Install App** → Install ke workspace → salin token `xoxb-...` (`SLACK_BOT_TOKEN`)
-        6. Di setiap channel Slack yang ingin menggunakan bot, jalankan `/invite @YourAppName`
+      1. Buka https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → Aktifkan → buat App-Level Token dengan scope `connections:write` → salin token `xapp-...` (`SLACK_APP_TOKEN`)
+      3. **Event Subscriptions** → Aktifkan → tambahkan bot events: `app_mention`, `message.channels`, `message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → tambahkan: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+      5. **Install App** → Install ke workspace → salin token `xoxb-...` (`SLACK_BOT_TOKEN`)
+      6. Di setiap channel Slack yang ingin menggunakan bot, jalankan `/invite @YourAppName`
 
-        Isi `SLACK_BOT_TOKEN` dan `SLACK_APP_TOKEN` sebelum deploy. Discord dan Slack dapat berjalan bersamaan.
+      Isi `SLACK_BOT_TOKEN` dan `SLACK_APP_TOKEN` sebelum deploy. Discord dan Slack dapat berjalan bersamaan.
 
-        ## Penggunaan
+      ## Penggunaan
 
-        - **@mention bot** di channel Discord atau Slack yang diizinkan untuk memulai percakapan
-        - OpenAB membuat **thread** untuk percakapan multi-giliran — tidak perlu @mention untuk pesan selanjutnya
-        - Setiap thread dipetakan ke sesi Kiro yang persisten (TTL 24 jam secara default)
+      - **@mention bot** di channel Discord atau Slack yang diizinkan untuk memulai percakapan
+      - OpenAB membuat **thread** untuk percakapan multi-giliran — tidak perlu @mention untuk pesan selanjutnya
+      - Setiap thread dipetakan ke sesi Kiro yang persisten (TTL 24 jam secara default)
 
-        ## Integrasi GitHub (Opsional)
+      ## Integrasi GitHub (Opsional)
 
-        Agent dapat menggunakan `gh` (GitHub CLI) untuk review PR, membuat issue, komentar, merge, dll. Karena container tidak memiliki browser, autentikasi menggunakan device flow:
+      Agent dapat menggunakan `gh` (GitHub CLI) untuk review PR, membuat issue, komentar, merge, dll. Karena container tidak memiliki browser, autentikasi menggunakan device flow:
 
-        1. Minta bot di Discord: **"log in to GitHub"**
-        2. Bot akan membalas dengan kode satu kali dan URL (mis. `https://github.com/login/device`)
-        3. Buka URL di ponsel atau komputer, masukkan kode dan otorisasi
-        4. Bot mengonfirmasi login — `gh` sudah terautentikasi untuk sesi ini
+      1. Minta bot di Discord: **"log in to GitHub"**
+      2. Bot akan membalas dengan kode satu kali dan URL (mis. `https://github.com/login/device`)
+      3. Buka URL di ponsel atau komputer, masukkan kode dan otorisasi
+      4. Bot mengonfirmasi login — `gh` sudah terautentikasi untuk sesi ini
 
-        Lihat [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) untuk detail teknis.
+      Lihat [gh-auth-device-flow.md](https://github.com/openabdev/openab/blob/main/docs/gh-auth-device-flow.md) untuk detail teknis.
 
-        ## Kustomisasi
+      ## Kustomisasi
 
-        | File | Deskripsi |
-        |------|-----------|
-        | `/home/agent/.config/openab/config.toml` | Konfigurasi OpenAB (sessions, reactions, STT, dll.) |
+      | File | Deskripsi |
+      |------|-----------|
+      | `/home/agent/.config/openab/config.toml` | Konfigurasi OpenAB (sessions, reactions, STT, dll.) |
 
-        `config.toml` dibuat dari template bawaan saat boot pertama. Setelah itu, edit file secara langsung — variabel lingkungan hanya digunakan untuk pengaturan awal. Untuk mengembalikan ke default, hapus dan restart: `rm /home/agent/.config/openab/config.toml`
+      `config.toml` dibuat dari template bawaan saat boot pertama. Setelah itu, edit file secara langsung — variabel lingkungan hanya digunakan untuk pengaturan awal. Untuk mengembalikan ke default, hapus dan restart: `rm /home/agent/.config/openab/config.toml`
 
-        Untuk opsi konfigurasi, lihat [dokumentasi OpenAB](https://github.com/openabdev/openab).
+      Untuk opsi konfigurasi, lihat [dokumentasi OpenAB](https://github.com/openabdev/openab).
 
-        ## Menonaktifkan
+      ## Menonaktifkan
 
-        Kosongkan `Discord Bot Token` saat deploy. Layanan akan tidur tanpa crash.
+      Kosongkan `Discord Bot Token` saat deploy. Layanan akan tidur tanpa crash.
 
-        ## Tautan
+      ## Tautan
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)

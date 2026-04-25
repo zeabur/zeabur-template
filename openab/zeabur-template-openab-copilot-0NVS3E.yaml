@@ -236,310 +236,310 @@ spec:
             default: ""
           SLACK_APP_TOKEN:
             default: ""
-  locales:
-    zh-TW:
-      description: |
-        Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro、Copilot）。
-        來源：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot Token
-          description: 從 https://discord.com/developers/applications 取得的 Token
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord 頻道 ID（選填）
-          description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord 用戶 ID（選填）
-          description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
-      readme: |
-        # OpenAB Copilot（中文）
+localization:
+  zh-TW:
+    description: |
+      Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro、Copilot）。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot Token
+        description: 從 https://discord.com/developers/applications 取得的 Token
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 頻道 ID（選填）
+        description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用戶 ID（選填）
+        description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
+    readme: |
+      # OpenAB Copilot（中文）
 
-        [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+      [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-        此模板部署 Copilot 變體（`openab-copilot`），以 [GitHub Copilot CLI](https://github.com/github/copilot-cli) 作為 agent 後端。
+      此模板部署 Copilot 變體（`openab-copilot`），以 [GitHub Copilot CLI](https://github.com/github/copilot-cli) 作為 agent 後端。
 
-        ## 注意事項
+      ## 注意事項
 
-        - **需付費訂閱：** GitHub Copilot CLI 需要**付費** Copilot 方案（Pro、Pro+、Business 或 Enterprise），免費版不支援 CLI/ACP。
-        - **Public preview：** Copilot CLI 的 ACP 支援自 2026 年 1 月起進入 [public preview](https://github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview/)，行為可能變動。
-        - **部署後才認證：** 與 Claude/Codex 不同，Copilot 沒有 API key 環境變數。首次部署後需進入容器執行 `gh auth login`（見下方步驟）。
-        - **映像標籤：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot)。
-        - **持久化儲存：** `/home/node` 掛載為持久化磁碟，plugins、設定、config、GitHub OAuth 認證（`~/.config/gh/`）都會保留。
-        - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。
+      - **需付費訂閱：** GitHub Copilot CLI 需要**付費** Copilot 方案（Pro、Pro+、Business 或 Enterprise），免費版不支援 CLI/ACP。
+      - **Public preview：** Copilot CLI 的 ACP 支援自 2026 年 1 月起進入 [public preview](https://github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview/)，行為可能變動。
+      - **部署後才認證：** 與 Claude/Codex 不同，Copilot 沒有 API key 環境變數。首次部署後需進入容器執行 `gh auth login`（見下方步驟）。
+      - **映像標籤：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot)。
+      - **持久化儲存：** `/home/node` 掛載為持久化磁碟，plugins、設定、config、GitHub OAuth 認證（`~/.config/gh/`）都會保留。
+      - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。
 
-        ## 設定步驟
+      ## 設定步驟
 
-        ### 1. 取得 Discord Bot Token
+      ### 1. 取得 Discord Bot Token
 
-        1. 前往 https://discord.com/developers/applications，點擊 **New Application**
-        2. 進入 **Bot** → 點擊 **Reset Token** → 複製 token
-        3. 往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
-        4. **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
-        5. 複製產生的 URL 並在瀏覽器開啟邀請 Bot
+      1. 前往 https://discord.com/developers/applications，點擊 **New Application**
+      2. 進入 **Bot** → 點擊 **Reset Token** → 複製 token
+      3. 往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
+      4. **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 複製產生的 URL 並在瀏覽器開啟邀請 Bot
 
-        ### 2. 部署
+      ### 2. 部署
 
-        填入 Discord Bot Token（以及選填的頻道 ID）後點擊部署。尚未認證 Copilot 前，容器會進入 sleep 狀態。
+      填入 Discord Bot Token（以及選填的頻道 ID）後點擊部署。尚未認證 Copilot 前，容器會進入 sleep 狀態。
 
-        ### 3. 認證 GitHub Copilot（device flow）
+      ### 3. 認證 GitHub Copilot（device flow）
 
-        服務啟動後，前往 Zeabur Dashboard → 服務 → **Exec** 執行：
+      服務啟動後，前往 Zeabur Dashboard → 服務 → **Exec** 執行：
 
-        ```bash
-        runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
-        ```
+      ```bash
+      runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
+      ```
 
-        依照 device code URL 在瀏覽器完成授權。Token 會儲存在 `/home/node/.config/gh/`，重啟後仍保留。
+      依照 device code URL 在瀏覽器完成授權。Token 會儲存在 `/home/node/.config/gh/`，重啟後仍保留。
 
-        驗證：
+      驗證：
 
-        ```bash
-        runuser -u node -- gh auth status
-        ```
+      ```bash
+      runuser -u node -- gh auth status
+      ```
 
-        完成後重啟服務。
+      完成後重啟服務。
 
-        ### 4. 取得 Discord 頻道 ID
+      ### 4. 取得 Discord 頻道 ID
 
-        1. Discord → **使用者設定** → **進階** → 啟用 **開發者模式**
-        2. 對頻道按右鍵 → **複製頻道 ID**
-        3. 多個頻道用逗號分隔
+      1. Discord → **使用者設定** → **進階** → 啟用 **開發者模式**
+      2. 對頻道按右鍵 → **複製頻道 ID**
+      3. 多個頻道用逗號分隔
 
-        ## 使用方式
+      ## 使用方式
 
-        - 在允許的頻道中 **@mention Bot** 即可開始對話
-        - OpenAB 會建立 **thread** 進行多輪對話，後續訊息不需 @mention
-        - 每個 thread 對應一個持久的 Copilot session（預設 24 小時 TTL）
-        - Copilot CLI 預設使用 Claude Sonnet 4.6；ACP 模式下無法切換模型
+      - 在允許的頻道中 **@mention Bot** 即可開始對話
+      - OpenAB 會建立 **thread** 進行多輪對話，後續訊息不需 @mention
+      - 每個 thread 對應一個持久的 Copilot session（預設 24 小時 TTL）
+      - Copilot CLI 預設使用 Claude Sonnet 4.6；ACP 模式下無法切換模型
 
-        ## 自訂設定
+      ## 自訂設定
 
-        | 檔案 | 說明 |
-        |------|------|
-        | `/home/node/.config/openab/config.toml` | OpenAB 設定 |
-        | `/home/node/.config/gh/` | GitHub OAuth 認證資料 |
+      | 檔案 | 說明 |
+      |------|------|
+      | `/home/node/.config/openab/config.toml` | OpenAB 設定 |
+      | `/home/node/.config/gh/` | GitHub OAuth 認證資料 |
 
-        `config.toml` 首次啟動時由內建範本建立，之後直接編輯檔案即可。要恢復預設值：`rm /home/node/.config/openab/config.toml`
+      `config.toml` 首次啟動時由內建範本建立，之後直接編輯檔案即可。要恢復預設值：`rm /home/node/.config/openab/config.toml`
 
-        ## 停用
+      ## 停用
 
-        將 `Discord Bot Token` 留空，服務會進入 sleep 不會崩潰。
+      將 `Discord Bot Token` 留空，服務會進入 sleep 不會崩潰。
 
-        ## 連結
+      ## 連結
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
-        - [Copilot agent 指南](https://github.com/openabdev/openab/blob/main/docs/copilot.md)
-    zh-CN:
-      description: |
-        Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro、Copilot）。
-        来源：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot Token
-          description: 从 https://discord.com/developers/applications 获取的 Token
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord 频道 ID（选填）
-          description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord 用户 ID（选填）
-          description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。"
-      readme: |
-        # OpenAB Copilot（简体中文）
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
+      - [Copilot agent 指南](https://github.com/openabdev/openab/blob/main/docs/copilot.md)
+  zh-CN:
+    description: |
+      Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro、Copilot）。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot Token
+        description: 从 https://discord.com/developers/applications 获取的 Token
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 频道 ID（选填）
+        description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用户 ID（选填）
+        description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。"
+    readme: |
+      # OpenAB Copilot（简体中文）
 
-        [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+      [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-        此模板部署 Copilot 变体（`openab-copilot`），以 [GitHub Copilot CLI](https://github.com/github/copilot-cli) 作为 agent 后端。
+      此模板部署 Copilot 变体（`openab-copilot`），以 [GitHub Copilot CLI](https://github.com/github/copilot-cli) 作为 agent 后端。
 
-        ## 注意事项
+      ## 注意事项
 
-        - **需付费订阅：** GitHub Copilot CLI 需要**付费** Copilot 方案（Pro、Pro+、Business 或 Enterprise），免费版不支持 CLI/ACP。
-        - **Public preview：** Copilot CLI 的 ACP 支持自 2026 年 1 月起进入 public preview，行为可能变动。
-        - **部署后才认证：** 与 Claude/Codex 不同，Copilot 没有 API key 环境变量。首次部署后需进入容器运行 `gh auth login`（见下方）。
-        - **镜像标签：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
-        - **持久化存储：** `/home/node` 挂载为持久化磁盘，包括 GitHub OAuth 凭证 `~/.config/gh/`。
-        - **文件权限：** 容器以 root 启动后切换为 node 用户运行 openab。
+      - **需付费订阅：** GitHub Copilot CLI 需要**付费** Copilot 方案（Pro、Pro+、Business 或 Enterprise），免费版不支持 CLI/ACP。
+      - **Public preview：** Copilot CLI 的 ACP 支持自 2026 年 1 月起进入 public preview，行为可能变动。
+      - **部署后才认证：** 与 Claude/Codex 不同，Copilot 没有 API key 环境变量。首次部署后需进入容器运行 `gh auth login`（见下方）。
+      - **镜像标签：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
+      - **持久化存储：** `/home/node` 挂载为持久化磁盘，包括 GitHub OAuth 凭证 `~/.config/gh/`。
+      - **文件权限：** 容器以 root 启动后切换为 node 用户运行 openab。
 
-        ## 设置步骤
-
-        ### 1. 获取 Discord Bot Token
+      ## 设置步骤
+
+      ### 1. 获取 Discord Bot Token
 
-        参考上游文档建立 Bot 并启用 Message Content Intent，邀请 Bot 加入服务器。
+      参考上游文档建立 Bot 并启用 Message Content Intent，邀请 Bot 加入服务器。
 
-        ### 2. 部署
+      ### 2. 部署
 
-        填入 Discord Bot Token（及选填频道 ID）后点击部署。尚未认证 Copilot 前，容器会进入 sleep 状态。
+      填入 Discord Bot Token（及选填频道 ID）后点击部署。尚未认证 Copilot 前，容器会进入 sleep 状态。
 
-        ### 3. 认证 GitHub Copilot（device flow）
+      ### 3. 认证 GitHub Copilot（device flow）
 
-        服务启动后，前往 Zeabur Dashboard → 服务 → **Exec** 执行：
+      服务启动后，前往 Zeabur Dashboard → 服务 → **Exec** 执行：
 
-        ```bash
-        runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
-        ```
+      ```bash
+      runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
+      ```
 
-        按照 device code URL 在浏览器授权。Token 存储在 `/home/node/.config/gh/`。完成后重启服务。
+      按照 device code URL 在浏览器授权。Token 存储在 `/home/node/.config/gh/`。完成后重启服务。
 
-        ### 4. 获取 Discord 频道 ID
+      ### 4. 获取 Discord 频道 ID
 
-        Discord → **用户设置** → **高级** → 启用 **开发者模式** → 右键频道 → **复制频道 ID**。
+      Discord → **用户设置** → **高级** → 启用 **开发者模式** → 右键频道 → **复制频道 ID**。
 
-        ## 使用方式
+      ## 使用方式
 
-        - 在允许的频道中 **@mention Bot** 即可开始对话
-        - OpenAB 会创建 thread，后续消息不需再 @mention
-        - Copilot CLI 默认使用 Claude Sonnet 4.6；ACP 模式下无法切换模型
+      - 在允许的频道中 **@mention Bot** 即可开始对话
+      - OpenAB 会创建 thread，后续消息不需再 @mention
+      - Copilot CLI 默认使用 Claude Sonnet 4.6；ACP 模式下无法切换模型
 
-        ## 链接
+      ## 链接
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
-    ja-JP:
-      description: |
-        Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro、Copilot）にブリッジする軽量な Rust ハーネス。
-        ソース：https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Discord Bot トークン
-          description: https://discord.com/developers/applications から取得したトークン
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: Discord チャンネル ID（オプション）
-          description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。"
-        - key: OPENAB_ALLOWED_USERS
-          name: Discord ユーザー ID（オプション）
-          description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。"
-      readme: |
-        # OpenAB Copilot（日本語）
-
-        [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
-
-        このテンプレートは Copilot バリアント（`openab-copilot`）をデプロイし、[GitHub Copilot CLI](https://github.com/github/copilot-cli) をエージェントバックエンドとして使用します。
-
-        ## 注意事項
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
+  ja-JP:
+    description: |
+      Open Agent Broker — stdio JSON-RPC を通じて Discord を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro、Copilot）にブリッジする軽量な Rust ハーネス。
+      ソース：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot トークン
+        description: https://discord.com/developers/applications から取得したトークン
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord チャンネル ID（オプション）
+        description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord ユーザー ID（オプション）
+        description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。"
+    readme: |
+      # OpenAB Copilot（日本語）
+
+      [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
+
+      このテンプレートは Copilot バリアント（`openab-copilot`）をデプロイし、[GitHub Copilot CLI](https://github.com/github/copilot-cli) をエージェントバックエンドとして使用します。
+
+      ## 注意事項
 
-        - **有料サブスクリプション必須：** Copilot CLI には有料 Copilot プラン（Pro、Pro+、Business、Enterprise）が必要です。Free プランでは CLI/ACP が使用できません。
-        - **Public preview：** Copilot CLI の ACP サポートは 2026 年 1 月から public preview で、動作が変わる可能性があります。
-        - **デプロイ後に認証：** Claude/Codex と異なり、API キー環境変数はありません。初回デプロイ後にコンテナ内で `gh auth login` を実行してください。
-        - **イメージタグ：** このテンプレートは固定バージョン（`0.8.1-beta.5`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
-        - **永続ストレージ：** `/home/node` が永続ボリュームで、GitHub OAuth 認証情報（`~/.config/gh/`）も保持されます。
-
-        ## セットアップ
+      - **有料サブスクリプション必須：** Copilot CLI には有料 Copilot プラン（Pro、Pro+、Business、Enterprise）が必要です。Free プランでは CLI/ACP が使用できません。
+      - **Public preview：** Copilot CLI の ACP サポートは 2026 年 1 月から public preview で、動作が変わる可能性があります。
+      - **デプロイ後に認証：** Claude/Codex と異なり、API キー環境変数はありません。初回デプロイ後にコンテナ内で `gh auth login` を実行してください。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.1-beta.5`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
+      - **永続ストレージ：** `/home/node` が永続ボリュームで、GitHub OAuth 認証情報（`~/.config/gh/`）も保持されます。
+
+      ## セットアップ
 
-        1. Discord Bot Token を取得して Bot を招待
-        2. 本テンプレートをデプロイ（認証前は sleep 状態）
-        3. Zeabur Dashboard → サービス → **Exec** で以下を実行：
+      1. Discord Bot Token を取得して Bot を招待
+      2. 本テンプレートをデプロイ（認証前は sleep 状態）
+      3. Zeabur Dashboard → サービス → **Exec** で以下を実行：
 
-           ```bash
-           runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
-           ```
+         ```bash
+         runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
+         ```
 
-        4. 表示される URL で認証し、サービスを再起動
+      4. 表示される URL で認証し、サービスを再起動
 
-        ## 使い方
+      ## 使い方
 
-        - 許可されたチャンネルで **Bot を @mention** して会話を開始
-        - OpenAB は自動的に thread を作成してマルチターン会話
-        - Copilot CLI はデフォルトで Claude Sonnet 4.6 を使用（ACP モードではモデル切替不可）
+      - 許可されたチャンネルで **Bot を @mention** して会話を開始
+      - OpenAB は自動的に thread を作成してマルチターン会話
+      - Copilot CLI はデフォルトで Claude Sonnet 4.6 を使用（ACP モードではモデル切替不可）
 
-        ## リンク
+      ## リンク
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
-    es-ES:
-      description: |
-        Open Agent Broker — un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro, Copilot) a través de stdio JSON-RPC.
-        Fuente: https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Token del Bot de Discord
-          description: Token obtenido de https://discord.com/developers/applications
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: IDs de Canales de Discord (opcional)
-          description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas."
-        - key: OPENAB_ALLOWED_USERS
-          name: IDs de Usuarios de Discord (opcional)
-          description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot."
-      readme: |
-        # OpenAB Copilot (Español)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
+  es-ES:
+    description: |
+      Open Agent Broker — un arnés ligero en Rust que conecta Discord con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro, Copilot) a través de stdio JSON-RPC.
+      Fuente: https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token del Bot de Discord
+        description: Token obtenido de https://discord.com/developers/applications
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: IDs de Canales de Discord (opcional)
+        description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas."
+      - key: OPENAB_ALLOWED_USERS
+        name: IDs de Usuarios de Discord (opcional)
+        description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot."
+    readme: |
+      # OpenAB Copilot (Español)
 
-        Esta plantilla despliega la variante Copilot (`openab-copilot`) de [OpenAB](https://github.com/openabdev/openab), usando [GitHub Copilot CLI](https://github.com/github/copilot-cli) como backend de agente.
+      Esta plantilla despliega la variante Copilot (`openab-copilot`) de [OpenAB](https://github.com/openabdev/openab), usando [GitHub Copilot CLI](https://github.com/github/copilot-cli) como backend de agente.
 
-        ## Notas Importantes
+      ## Notas Importantes
 
-        - **Suscripción de pago requerida:** Copilot CLI requiere un plan de pago (Pro, Pro+, Business o Enterprise). El plan Free no incluye acceso CLI/ACP.
-        - **Public preview:** El soporte ACP de Copilot CLI está en public preview desde enero de 2026.
-        - **Autenticación después del despliegue:** A diferencia de Claude/Codex, no hay variable de API key. Debe ejecutar `gh auth login` dentro del contenedor tras el primer despliegue.
-        - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.1-beta.5`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración.
-        - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente e incluye las credenciales OAuth de GitHub.
+      - **Suscripción de pago requerida:** Copilot CLI requiere un plan de pago (Pro, Pro+, Business o Enterprise). El plan Free no incluye acceso CLI/ACP.
+      - **Public preview:** El soporte ACP de Copilot CLI está en public preview desde enero de 2026.
+      - **Autenticación después del despliegue:** A diferencia de Claude/Codex, no hay variable de API key. Debe ejecutar `gh auth login` dentro del contenedor tras el primer despliegue.
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.1-beta.5`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración.
+      - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente e incluye las credenciales OAuth de GitHub.
 
-        ## Configuración
+      ## Configuración
 
-        1. Obtener Discord Bot Token e invitar el bot
-        2. Desplegar la plantilla (el servicio dormirá hasta que Copilot esté autenticado)
-        3. En Zeabur Dashboard → Servicio → **Exec**, ejecutar:
+      1. Obtener Discord Bot Token e invitar el bot
+      2. Desplegar la plantilla (el servicio dormirá hasta que Copilot esté autenticado)
+      3. En Zeabur Dashboard → Servicio → **Exec**, ejecutar:
 
-           ```bash
-           runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
-           ```
+         ```bash
+         runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
+         ```
 
-        4. Completar la autorización en el navegador y reiniciar el servicio
+      4. Completar la autorización en el navegador y reiniciar el servicio
 
-        ## Uso
+      ## Uso
 
-        - **@mencionar al bot** en un canal permitido para iniciar una conversación
-        - OpenAB crea un thread para conversaciones multi-turno
-        - Copilot CLI usa Claude Sonnet 4.6 por defecto (no se puede cambiar en ACP)
+      - **@mencionar al bot** en un canal permitido para iniciar una conversación
+      - OpenAB crea un thread para conversaciones multi-turno
+      - Copilot CLI usa Claude Sonnet 4.6 por defecto (no se puede cambiar en ACP)
 
-        ## Enlaces
+      ## Enlaces
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
-    id-ID:
-      description: |
-        Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro, Copilot) melalui stdio JSON-RPC.
-        Sumber: https://github.com/openabdev/openab
-      variables:
-        - key: DISCORD_BOT_TOKEN
-          name: Token Bot Discord
-          description: Token dari https://discord.com/developers/applications
-        - key: OPENAB_ALLOWED_CHANNELS
-          name: ID Channel Discord (opsional)
-          description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma."
-        - key: OPENAB_ALLOWED_USERS
-          name: ID Pengguna Discord (opsional)
-          description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot."
-      readme: |
-        # OpenAB Copilot (Bahasa Indonesia)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
+  id-ID:
+    description: |
+      Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro, Copilot) melalui stdio JSON-RPC.
+      Sumber: https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token Bot Discord
+        description: Token dari https://discord.com/developers/applications
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: ID Channel Discord (opsional)
+        description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma."
+      - key: OPENAB_ALLOWED_USERS
+        name: ID Pengguna Discord (opsional)
+        description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot."
+    readme: |
+      # OpenAB Copilot (Bahasa Indonesia)
 
-        Template ini men-deploy varian Copilot (`openab-copilot`) dari [OpenAB](https://github.com/openabdev/openab), menggunakan [GitHub Copilot CLI](https://github.com/github/copilot-cli) sebagai backend agen.
+      Template ini men-deploy varian Copilot (`openab-copilot`) dari [OpenAB](https://github.com/openabdev/openab), menggunakan [GitHub Copilot CLI](https://github.com/github/copilot-cli) sebagai backend agen.
 
-        ## Catatan Penting
+      ## Catatan Penting
 
-        - **Butuh langganan berbayar:** Copilot CLI membutuhkan paket Copilot berbayar (Pro, Pro+, Business, atau Enterprise). Paket Free tidak mendukung CLI/ACP.
-        - **Public preview:** Dukungan ACP Copilot CLI dalam public preview sejak Januari 2026.
-        - **Autentikasi setelah deploy:** Tidak seperti Claude/Codex, tidak ada env var API key. Anda perlu menjalankan `gh auth login` di dalam container setelah deploy pertama.
-        - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.1-beta.5`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan.
-        - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten, termasuk kredensial OAuth GitHub.
+      - **Butuh langganan berbayar:** Copilot CLI membutuhkan paket Copilot berbayar (Pro, Pro+, Business, atau Enterprise). Paket Free tidak mendukung CLI/ACP.
+      - **Public preview:** Dukungan ACP Copilot CLI dalam public preview sejak Januari 2026.
+      - **Autentikasi setelah deploy:** Tidak seperti Claude/Codex, tidak ada env var API key. Anda perlu menjalankan `gh auth login` di dalam container setelah deploy pertama.
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.1-beta.5`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan.
+      - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten, termasuk kredensial OAuth GitHub.
 
-        ## Pengaturan
+      ## Pengaturan
 
-        1. Dapatkan Discord Bot Token dan undang bot
-        2. Deploy template (layanan akan sleep sampai Copilot terotentikasi)
-        3. Di Zeabur Dashboard → Layanan → **Exec**, jalankan:
+      1. Dapatkan Discord Bot Token dan undang bot
+      2. Deploy template (layanan akan sleep sampai Copilot terotentikasi)
+      3. Di Zeabur Dashboard → Layanan → **Exec**, jalankan:
 
-           ```bash
-           runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
-           ```
+         ```bash
+         runuser -u node -- gh auth login --hostname github.com --git-protocol https -p https -w
+         ```
 
-        4. Ikuti URL untuk otorisasi di browser, lalu restart layanan
+      4. Ikuti URL untuk otorisasi di browser, lalu restart layanan
 
-        ## Penggunaan
+      ## Penggunaan
 
-        - **@mention bot** di channel yang diizinkan untuk memulai percakapan
-        - OpenAB membuat thread untuk percakapan multi-turn
-        - Copilot CLI default menggunakan Claude Sonnet 4.6 (tidak dapat diganti di ACP)
+      - **@mention bot** di channel yang diizinkan untuk memulai percakapan
+      - OpenAB membuat thread untuk percakapan multi-turn
+      - Copilot CLI default menggunakan Claude Sonnet 4.6 (tidak dapat diganti di ACP)
 
-        ## Tautan
+      ## Tautan
 
-        - [OpenAB GitHub](https://github.com/openabdev/openab)
-        - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [GitHub Copilot CLI](https://github.com/github/copilot-cli)
