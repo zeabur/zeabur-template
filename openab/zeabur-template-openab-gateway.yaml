@@ -5,7 +5,7 @@ metadata:
   name: OpenAB Gateway
 spec:
   description: |
-    Standalone webhook gateway for OpenAB — bridges Telegram and LINE to any running OAB instance via WebSocket. Deploy alongside an existing OpenAB service to enable Telegram and LINE support.
+    Standalone webhook gateway for OpenAB — bridges Telegram and/or LINE to any running OAB instance via WebSocket. Deploy alongside an existing OpenAB service to enable Telegram and/or LINE support. At least one platform must be configured.
     Source: https://github.com/openabdev/openab
   icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
   coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
@@ -17,8 +17,8 @@ spec:
   variables:
     - key: TELEGRAM_BOT_TOKEN
       type: STRING
-      name: Telegram Bot Token
-      description: "Bot token from @BotFather (https://t.me/BotFather). Required to enable Telegram."
+      name: Telegram Bot Token (optional)
+      description: "Optional. Bot token from @BotFather (https://t.me/BotFather). Leave empty to disable Telegram. At least one of Telegram or LINE must be configured."
     - key: LINE_CHANNEL_SECRET
       type: STRING
       name: LINE Channel Secret (optional)
@@ -48,8 +48,9 @@ spec:
     ## Prerequisites
 
     - A running OpenAB service (any variant) in the same Zeabur project
-    - A Telegram bot token from [@BotFather](https://t.me/BotFather) (required)
-    - Optionally: a LINE Official Account with Messaging API enabled
+    - **At least one** of the following:
+      - A Telegram bot token from [@BotFather](https://t.me/BotFather)
+      - A LINE Official Account with Messaging API enabled (LINE Channel Secret + Access Token)
 
     ## Setup
 
@@ -62,7 +63,7 @@ spec:
 
     ### 2. Deploy
 
-    Fill in the Telegram Bot Token and click deploy. A public HTTPS domain is auto-assigned.
+    Fill in the tokens for the platform(s) you want to enable and click deploy. A public HTTPS domain is auto-assigned. You can enable Telegram only, LINE only, or both.
 
     ### 3. Register the Telegram Webhook
 
@@ -175,12 +176,12 @@ spec:
   locales:
     zh-TW:
       description: |
-        OpenAB 獨立 Webhook Gateway — 透過 WebSocket 將 Telegram 和 LINE 橋接到任何正在運行的 OAB 實例。部署於現有 OpenAB 服務旁，即可啟用 Telegram 和 LINE 支援。
+        OpenAB 獨立 Webhook Gateway — 透過 WebSocket 將 Telegram 和／或 LINE 橋接到任何正在運行的 OAB 實例。部署於現有 OpenAB 服務旁，即可啟用 Telegram 和／或 LINE 支援。至少須設定一個平台。
         來源：https://github.com/openabdev/openab
       variables:
         - key: TELEGRAM_BOT_TOKEN
-          name: Telegram Bot Token
-          description: "來自 @BotFather 的 Bot Token（https://t.me/BotFather）。啟用 Telegram 必填。"
+          name: Telegram Bot Token（選填）
+          description: "選填。來自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空則停用 Telegram。Telegram 和 LINE 至少須填寫其中一個。"
         - key: LINE_CHANNEL_SECRET
           name: LINE Channel Secret（選填）
           description: "選填。來自 LINE Developers Console 的 Channel Secret。留空則停用 LINE。"
@@ -207,8 +208,9 @@ spec:
         ## 前置條件
 
         - 同一個 Zeabur 專案中已有正在運行的 OpenAB 服務
-        - 來自 [@BotFather](https://t.me/BotFather) 的 Telegram Bot Token（必填）
-        - 選填：已啟用 Messaging API 的 LINE 官方帳號
+        - **至少需要以下其中一個：**
+          - 來自 [@BotFather](https://t.me/BotFather) 的 Telegram Bot Token
+          - 已啟用 Messaging API 的 LINE 官方帳號（LINE Channel Secret + Access Token）
 
         ## 設定步驟
 
@@ -221,7 +223,7 @@ spec:
 
         ### 2. 部署
 
-        填入 Telegram Bot Token 後點擊部署。系統會自動分配公開 HTTPS 網域。
+        填入想啟用平台的 Token 後點擊部署。系統會自動分配公開 HTTPS 網域。可以只啟用 Telegram、只啟用 LINE，或兩者同時啟用。
 
         ### 3. 註冊 Telegram Webhook
 
@@ -302,12 +304,12 @@ spec:
         - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
     zh-CN:
       description: |
-        OpenAB 独立 Webhook Gateway — 通过 WebSocket 将 Telegram 和 LINE 桥接到任何正在运行的 OAB 实例。部署于现有 OpenAB 服务旁，即可启用 Telegram 和 LINE 支持。
+        OpenAB 独立 Webhook Gateway — 通过 WebSocket 将 Telegram 和/或 LINE 桥接到任何正在运行的 OAB 实例。部署于现有 OpenAB 服务旁，即可启用 Telegram 和/或 LINE 支持。至少须配置一个平台。
         来源：https://github.com/openabdev/openab
       variables:
         - key: TELEGRAM_BOT_TOKEN
-          name: Telegram Bot Token
-          description: "来自 @BotFather 的 Bot Token（https://t.me/BotFather）。启用 Telegram 必填。"
+          name: Telegram Bot Token（选填）
+          description: "选填。来自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空则禁用 Telegram。Telegram 和 LINE 至少须填写其中一个。"
         - key: LINE_CHANNEL_SECRET
           name: LINE Channel Secret（选填）
           description: "选填。来自 LINE Developers Console 的 Channel Secret。留空则禁用 LINE。"
@@ -364,12 +366,12 @@ spec:
         - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
     ja-JP:
       description: |
-        OpenAB スタンドアロン Webhook Gateway — WebSocket を通じて Telegram と LINE を既存の OAB インスタンスに接続します。既存の OpenAB サービスの隣にデプロイするだけで Telegram・LINE サポートを追加できます。
+        OpenAB スタンドアロン Webhook Gateway — WebSocket を通じて Telegram または LINE（あるいは両方）を既存の OAB インスタンスに接続します。少なくとも一方のプラットフォームを設定する必要があります。
         ソース：https://github.com/openabdev/openab
       variables:
         - key: TELEGRAM_BOT_TOKEN
-          name: Telegram Bot トークン
-          description: "@BotFather から取得した Bot トークン（https://t.me/BotFather）。Telegram を有効にするには必須。"
+          name: Telegram Bot トークン（オプション）
+          description: "オプション。@BotFather から取得した Bot トークン（https://t.me/BotFather）。空の場合、Telegram は無効。Telegram か LINE のどちらか一方は必ず設定してください。"
         - key: LINE_CHANNEL_SECRET
           name: LINE Channel Secret（オプション）
           description: "オプション。LINE Developers Console の Channel Secret。空の場合、LINE は無効。"
@@ -417,12 +419,12 @@ spec:
         - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
     es-ES:
       description: |
-        Gateway Webhook independiente para OpenAB — conecta Telegram y LINE a cualquier instancia de OAB en ejecución mediante WebSocket. Despliegue junto a un servicio OpenAB existente para añadir soporte de Telegram y LINE.
+        Gateway Webhook independiente para OpenAB — conecta Telegram y/o LINE a cualquier instancia de OAB en ejecución mediante WebSocket. Se debe configurar al menos una plataforma.
         Fuente: https://github.com/openabdev/openab
       variables:
         - key: TELEGRAM_BOT_TOKEN
-          name: Token de Bot de Telegram
-          description: "Token del bot obtenido de @BotFather (https://t.me/BotFather). Requerido para habilitar Telegram."
+          name: Token de Bot de Telegram (opcional)
+          description: "Opcional. Token del bot obtenido de @BotFather (https://t.me/BotFather). Dejar vacío para deshabilitar Telegram. Al menos uno de Telegram o LINE debe configurarse."
         - key: LINE_CHANNEL_SECRET
           name: LINE Channel Secret (opcional)
           description: "Opcional. Channel Secret de LINE Developers Console. Dejar vacío para deshabilitar LINE."
@@ -470,12 +472,12 @@ spec:
         - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
     id-ID:
       description: |
-        Gateway Webhook mandiri untuk OpenAB — menghubungkan Telegram dan LINE ke instansi OAB mana pun melalui WebSocket. Deploy bersama layanan OpenAB yang sudah ada untuk menambah dukungan Telegram dan LINE.
+        Gateway Webhook mandiri untuk OpenAB — menghubungkan Telegram dan/atau LINE ke instansi OAB mana pun melalui WebSocket. Setidaknya satu platform harus dikonfigurasi.
         Sumber: https://github.com/openabdev/openab
       variables:
         - key: TELEGRAM_BOT_TOKEN
-          name: Token Bot Telegram
-          description: "Token bot dari @BotFather (https://t.me/BotFather). Wajib untuk mengaktifkan Telegram."
+          name: Token Bot Telegram (opsional)
+          description: "Opsional. Token bot dari @BotFather (https://t.me/BotFather). Kosongkan untuk menonaktifkan Telegram. Setidaknya satu antara Telegram atau LINE harus dikonfigurasi."
         - key: LINE_CHANNEL_SECRET
           name: LINE Channel Secret (opsional)
           description: "Opsional. Channel Secret dari LINE Developers Console. Kosongkan untuk menonaktifkan LINE."
