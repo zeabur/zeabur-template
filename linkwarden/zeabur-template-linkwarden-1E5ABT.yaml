@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Linkwarden
+spec:
+    description: Collaborative bookmark manager to collect, organize and archive webpages.
+    coverImage: https://github.com/linkwarden/linkwarden/raw/main/assets/dashboard.png
+    icon: https://github.com/linkwarden/linkwarden/raw/main/assets/logo.png
+    tags:
+        - Tool
+        - Website
+    readme: "## Description\nLinkwarden is a self-hosted, open-source collaborative bookmark manager to collect, organize and archive webpages.\n\nThe objective is to organize useful webpages and articles you find across the web in one place, and since useful webpages can go away (see the inevitability of Link Rot), Linkwarden also saves a copy of each webpage as a Screenshot and PDF, ensuring accessibility even if the original content is no longer available.\n\n![demo](https://github.com/linkwarden/linkwarden/raw/main/assets/dashboard.png)\n\n## Features\n- \U0001F4F8 Auto capture a screenshot, PDF, and readable view of each webpage.\n- \U0001F3DB️ Send your webpage to Wayback Machine (archive.org) for a snapshot. (Optional)\n- \U0001F4C2 Organize links by collection, sub-collection, name, description and multiple tags.\n- \U0001F465 Collaborate on gathering links in a collection.\n- \U0001F39B️ Customize the permissions of each member.\n- \U0001F310 Share your collected links and preserved formats with the world.\n- \U0001F4CC Pin your favorite links to dashboard.\n- \U0001F50D Full text search, filter and sort for easy retrieval.\n- \U0001F4F1 Responsive design and supports most modern browsers.\n- \U0001F313 Dark/Light mode support.\n- \U0001F9E9 Browser extension, managed by the community. Star it here!\n- ⬇️ Import and export your bookmarks.\n- \U0001F510 SSO integration. (Enterprise and Self-hosted users only)\n- \U0001F4E6 Installable Progressive Web App (PWA).\n- \U0001F34E iOS Shortcut to save links to Linkwarden.\n- \U0001F511 API keys.\n- ✅ Bulk actions.\n- ✨ And so many more features!"
+    services:
+        - name: PostgreSQL
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/postgresql.svg
+          template: PREBUILT
+          spec:
+            id: postgresql
+            source:
+                image: postgres:16
+                command:
+                    - docker-entrypoint.sh
+                    - -c
+                    - config_file=/etc/postgresql/postgresql.conf
+            ports:
+                - id: database
+                  port: 5432
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/postgresql/data
+            instructions:
+                - title: Connection String
+                  content: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}
+                - title: PostgreSQL Connect Command
+                  content: psql "postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}"
+                - title: PostgreSQL username
+                  content: ${POSTGRES_USERNAME}
+                - title: PostgresSQL password
+                  content: ${POSTGRES_PASSWORD}
+                - title: PostgresSQL database
+                  content: ${POSTGRES_DATABASE}
+                - title: PostgreSQL host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: PostgreSQL port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                PGDATA:
+                    default: /var/lib/postgresql/data/pgdata
+                POSTGRES_CONNECTION_STRING:
+                    default: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+                    expose: true
+                POSTGRES_DATABASE:
+                    default: ${POSTGRES_DB}
+                    expose: true
+                POSTGRES_DB:
+                    default: zeabur
+                POSTGRES_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                POSTGRES_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                POSTGRES_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                POSTGRES_URI:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                    expose: true
+                POSTGRES_USER:
+                    default: root
+                POSTGRES_USERNAME:
+                    default: ${POSTGRES_USER}
+                    expose: true
+            configs:
+                - path: /etc/postgresql/postgresql.conf
+                  template: |
+                    # https://github.com/postgres/postgres/blob/master/src/backend/utils/misc/postgresql.conf.sample
+                    listen_addresses = '*'
+                    max_connections = 100
+                    shared_buffers = 128MB
+                    dynamic_shared_memory_type = posix
+                    max_wal_size = 1GB
+                    min_wal_size = 80MB
+                    log_timezone = 'Etc/UTC'
+                    datestyle = 'iso, mdy'
+                    timezone = 'Etc/UTC'
+                    lc_messages = 'en_US.utf8'
+                    lc_monetary = 'en_US.utf8'
+                    lc_numeric = 'en_US.utf8'
+                    lc_time = 'en_US.utf8'
+                    default_text_search_config = 'pg_catalog.english'
+                  permission: null
+                  envsubst: null
+        - name: Linkwarden
+          icon: https://github.com/linkwarden/linkwarden/raw/main/assets/logo.png
+          template: PREBUILT
+          spec:
+            id: linkwarden
+            source:
+                image: ghcr.io/linkwarden/linkwarden:v2.9.3
+            ports:
+                - id: web
+                  port: 3000
+                  type: HTTP
+            env:
+                DATABASE_URL:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                NEXTAUTH_SECRET:
+                    default: ${PASSWORD}
+                NEXTAUTH_URL:
+                    default: ${ZEABUR_WEB_URL}
+                POSTGRES_PASSWORD:
+                    default: ${POSTGRES_PASSWORD}

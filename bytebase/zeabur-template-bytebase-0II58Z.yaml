@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Bytebase
+spec:
+    description: Bytebase is a Database CI/CD solution for the Developers and DBAs.
+    icon: https://avatars.githubusercontent.com/u/74386897?s=48&v=4
+    readme: "# Bytebase\nBytebase is a Database CI/CD solution for the Developers and DBAs. It's the only database CI/CD project included by the CNCF Landscape and Platform Engineering. "
+    services:
+        - name: Bytebase
+          icon: https://avatars.githubusercontent.com/u/74386897
+          template: PREBUILT
+          spec:
+            id: bytebase
+            source:
+                image: bytebase/bytebase:3.17.1
+            ports:
+                - id: web
+                  port: 8080
+                  type: HTTP
+                - id: grpc
+                  port: 8081
+                  type: HTTP
+            volumes:
+                - id: data
+                  dir: /var/opt/bytebase

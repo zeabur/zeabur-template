@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Memos
+spec:
+    description: A privacy-first, lightweight note-taking service
+    coverImage: https://www.usememos.com/demo.png
+    icon: https://cdn.zeabur.com/memos.webp
+    readme: "# Memos\n\nA privacy-first, lightweight note-taking service. Easily capture and share your great thoughts. <https://www.usememos.com>.\n\n## Features\n\n- \U0001F3E0 **Privacy First**: Take control of your data. All runtime data is securely stored in your local database.\n- ✍️ **Create at Speed**: Save content as plain text for quick access, with Markdown support for fast formatting and easy sharing.\n- \U0001F932 **Lightweight but Powerful**: Built with Go, React.js, and a compact architecture, our service delivers powerful performance in a lightweight package.\n- \U0001F9E9 **Customizable**: Easily customize your server name, icon, description, system style, and execution scripts to make it uniquely yours.\n- \U0001F9A6 **Open Source**: Memos embraces the future of open source, with all code available on GitHub for transparency and collaboration.\n- \U0001F4B8 **Free to Use**: Enjoy all features completely free, with no charges ever for any content."
+    services:
+        - name: Memos
+          icon: https://cdn.zeabur.com/memos.webp
+          template: PREBUILT
+          spec:
+            id: memos
+            source:
+                image: neosmemo/memos:stable
+            ports:
+                - id: web
+                  port: 5230
+                  type: HTTP
+            volumes:
+                - id: data
+                  dir: /var/opt/memos
+localization:
+    zh-CN:
+        description: 注重隐私的轻量级笔记服务
+        readme: "# Memos\n\n注重隐私的轻量级笔记服务。轻松记录并分享你的绝妙想法。<https://www.usememos.com>\n\n## 特色功能\n\n- \U0001F3E0 **隐私优先**：掌控你的数据。所有运行时的数据都安全地存储在你的本地数据库中。\n- ✍️ **快速创建**：以纯文本存储内容方便快速访问，支持 Markdown 让排版和分享更容易。\n- \U0001F932 **轻量但强大**：使用 Go、React.js 和精简架构打造，我们的服务麻雀虽小，五脏俱全。\n- \U0001F9E9 **可自定义**：轻松自定义你的服务器名称、图标、描述、系统风格和运行脚本，打造专属于你的服务。\n- \U0001F9A6 **开源**：Memos 拥抱开源的未来，所有代码都在 GitHub 上公开，确保透明度并鼓励协作。\n- \U0001F4B8 **免费使用**：完全免费享用所有功能，任何内容永远不收费。\n"
+    zh-TW:
+        description: 注重隱私的輕量級筆記服務
+        readme: "# Memos\n\n注重隱私的輕量級筆記服務。輕鬆記錄並分享你的絕妙想法。<https://www.usememos.com>\n\n## 特色功能\n\n- \U0001F3E0 **隱私優先**：掌控你的資料。所有執行時的資料都安全地儲存在你的本地資料庫中。\n- ✍️ **快速建立**：以純文字儲存內容方便快速存取，支援 Markdown 讓排版和分享更容易。\n- \U0001F932 **輕量但強大**：使用 Go、React.js 和精簡架構打造，我們的服務麻雀雖小，五臟俱全。\n- \U0001F9E9 **可自訂化**：輕鬆自訂你的伺服器名稱、圖示、描述、系統風格和執行腳本，打造專屬於你的服務。\n- \U0001F9A6 **開源**：Memos 擁抱開源的未來，所有程式碼都在 GitHub 上公開，確保透明度並鼓勵協作。\n- \U0001F4B8 **免費使用**：完全免費享用所有功能，任何內容永遠不收費。\n"

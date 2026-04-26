@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Cockroachdb
+spec:
+    description: cockroachdb
+    icon: https://coralogix.com/wp-content/uploads/2024/02/CockroachDB-1000X1000.png
+    tags:
+        - Database
+    readme: cockroachdb
+    services:
+        - name: cockroachdb
+          icon: https://coralogix.com/wp-content/uploads/2024/02/CockroachDB-1000X1000.png
+          template: PREBUILT
+          spec:
+            id: cockroachdb
+            source:
+                image: cockroachdb/cockroach:v24.1.28
+                command:
+                    - ./cockroach
+                    - start-single-node
+                    - --insecure
+            ports:
+                - id: native
+                  port: 26257
+                  type: TCP
+                - id: http
+                  port: 8080
+                  type: HTTP
+            volumes:
+                - id: data
+                  dir: /cockroach/cockroach-data
