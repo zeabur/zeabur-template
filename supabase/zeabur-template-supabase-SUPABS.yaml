@@ -1,0 +1,1329 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Supabase
+spec:
+    description: An open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+    coverImage: https://miro.medium.com/v2/resize:fit:1200/1*KllQKJSGK5QruqT8kIElEA.png
+    icon: https://icons.zeabur.com/supabase.png
+    variables:
+        - key: DASHBOARD_USERNAME
+          type: STRING
+          name: Dashboard Username
+          description: What is the username you want for your Supabase Dashboard?
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Domain
+          description: What is the domain you want for your Supabase?
+    tags:
+        - CMS
+        - Database
+        - Tool
+        - API
+    readme: "# Deploying Supabase\n\n**Supabase** is a popular open-source alternative to Firebase. It provides a suite of tools including a Postgres database, authentication, APIs, and file storage, making it a robust backend solution.\n\nZeabur simplifies the deployment of this complex stack. With Zeabur, you can launch a fully functional Supabase instance (including Kong Gateway, Authentication, and PostgreSQL) in one click without manual configuration.\n\n### What you will learn\n\nIn this tutorial, we will guide you through:\n\n1. Deploying a Supabase service stack from the Zeabur Marketplace.\n2. Accessing the Supabase Dashboard via the Kong Gateway.\n3. retrieving your API keys and connecting your application.\n\n### ⚠️ Important Limitations:\n\n***No Logs in UI:*** The \"Logs\" feature in Supabase Studio will not work (due to missing Vector service). You must check logs via the Zeabur dashboard for each service.\n***No MCP:*** The AI Model Context Protocol server is not included in this template.\n\n---\n\n## Phase 1: Deploying the Service\n\n### Step 1: Create the Supabase Service\n\nZeabur offers a \"one-click deployment\" via its template marketplace.\n\n**Option 1: Create Supabase instance from Project page**\n\n1. Log in to your [**Zeabur Dashboard**](https://zeabur.com/).\n2. Click the **\"Add Service\"** button.\n3. Select **\"Template\"** (Marketplace).\n4. Search for `Supabase`.\n5. Select the **Supabase** template. Your services (including PostgreSQL, minio, and Kong) will start deploying immediately.\n\n### Step 2: Access the Supabase Dashboard (Kong Gateway)\n\nUnlike a standalone database, Supabase on Zeabur uses a Kong Gateway to manage access. You need to retrieve credentials to log in to the UI.\n\n1. Navigate to the **Kong** service panel within your project.\n2. You will find the **Supabase Username** and **Supabase Password** displayed here.\n3. Go to the **Domains** section on the side of the Kong service panel and click the provided URL.\n4. Use the credentials from step 2 to log in to the Supabase Dashboard.\n\n[kong.png](https://cdn.zeabur.com/supabase%20migration/kong1.png)\n\n---\n\n## Phase 2: Securing Your Instance (CRITICAL)\n\n**⚠️ WARNING:** The template deploys with default API keys for demo purposes. You **MUST** generate new keys before production use, or anyone with knowledge of the default keys can access your database.\n\n### Step 1: Generate New Keys\n\n1. Visit the [Supabase JWT Generator](https://supabase.com/docs/guides/self-hosting/docker#generate-api-keys).\n2. Create a custom `JWT_SECRET` and use the tool to generate:\n    - An `anon` key.\n    - A `service_role` key.\n\n### Step 2: Update Kong Environment Variables\n\n1. Return to the **Kong** service in Zeabur.\n2. Go to the **Variables** tab.\n3. Update the following values with your new keys:\n    - `JWT_SECRET`: Your custom secret.\n    - `ANON_KEY`: Your new `anon` key.\n    - `SERVICE_ROLE_KEY`: Your new `service_role` key.\n\n### Step 3: Restart Services\n\nTo apply these security changes, you must restart the stack:\n\n1. Go to your **Project Settings** → **General**.\n2. Scroll to **Batch Actions**.\n3. Click **Restart All**.\n\n---\n\n## Phase 3: Configuration (Auth & Email)\n\nBy default, Supabase cannot send emails (magic links, password resets). You need to configure an SMTP provider. We recommend **Resend**, but any SMTP provider works.\n\n### Step 1: Configure SMTP (Email)\n\n1. Navigate to the **Auth** service in your Zeabur project.\n2. Go to the **Variables** tab and add the following:\n    - `GOTRUE_SMTP_HOST`: `smtp.resend.com` (or your provider)\n    - `GOTRUE_SMTP_PORT`: `587`\n    - `GOTRUE_SMTP_USER`: `resend` (or your username)\n    - `GOTRUE_SMTP_PASS`: `re_123...` (Your API Key)\n    - `GOTRUE_SMTP_ADMIN_EMAIL`: `noreply@yourdomain.com`\n    - `GOTRUE_SITE_URL`: `https://your-project-domain.zeabur.app` (The link where users are redirected)\n3. **Restart the Auth service** to apply changes.\n\n### Step 2: Configure OAuth (Google/Apple) - Optional\n\nTo enable Google Login, add these variables to the **Auth** service:\n\n- `GOTRUE_EXTERNAL_GOOGLE_ENABLED`: `true`\n- `GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID`: `your-google-client-id`\n- `GOTRUE_EXTERNAL_GOOGLE_SECRET`: `your-google-secret`\n- `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI`: `https://your-project.zeabur.app/auth/v1/callback`\n\n*Note: Ensure you update `your-project.zeabur.app` to your actual domain.*\n\n### Step 3: Test Email Functionality (Manual)\n\nOnce the service restarts, verify the configuration by manually triggering a signup via terminal:\n\n```bash\ncurl -X POST \"https://your-project.zeabur.app/auth/v1/signup\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"apikey: YOUR_ANON_KEY\" \\\n  -d '{\n    \"email\": \"test@example.com\",\n    \"password\": \"yourpassword\"\n  }'\n```\n\n**Expected Results:**\n\n- You receive a `200 OK` JSON response.\n- A verification email arrives in the inbox of `test@example.com` (check spam).\n\n### Troubleshooting Email\n\n- **Redirect URI Mismatch:** Ensure `GOTRUE_SITE_URL` matches your actual deployed domain exactly.\n- **SPF/DKIM:** If using a custom domain, ensure your DNS records match your SMTP provider's requirements to prevent rejection.\n- **Delivery:** Initial emails often go to spam; \"warm up\" your domain or mark as \"not spam\".\n\n---\n\n## Phase 4: Connecting with Supabase\n\n### Prerequisite: Get Your API Keys\n\n**Crucial:** Do not copy keys from the Supabase Studio dashboard, as it may display old default keys.\n\n1. Go to the **Kong** Service in Zeabur → **Variables**.\n2. Copy your ANON_KEY and your domain URL.\n\n### Option 1: Connect your Frontend/App\n\n*Best for: Connecting your Lovable project or standard web application.*\n\nTo enable communication between your frontend application and your Supabase backend, you need to configure environment variables in your codebase.\n\n1. Create or open your `.env` file in your project root.\n2. Add the credentials found in the Prerequisite step:\n    \n    ```\n    VITE_SUPABASE_URL=[your-project-url]\n    VITE_SUPABASE_ANON_KEY=[your-anon-key]\n    \n    ```\n\n### Option 2: Synchronize Database Schema (CLI)\n\n*Best for: Developers pushing local database changes to the production instance.*\n\nYou can push your local database schema to Supabase using the connection string.\n\n1. **Get Connection String:** Go to the **PostgreSQL** service panel (part of your Supabase stack) in your Zeabur dashboard.\n2. **Copy:** Copy the PostgreSQL connection string.\n    \n    [PostgreSQL Connection String](https://cdn.zeabur.com/supabase%20migration/Postgresql%20Connection%20String1.png)\n    \n3. **Run Command:** Execute the following command in your terminal (ensure you have the Supabase CLI installed):\n    \n    ```bash\n    supabase db push --db-url \"[your-supabase-postgresql-connection-string]\" --debug\n    \n    ```\n\n---\n\n## Phase 4.5: Connecting Your App (Inter-Service)\n\nWhen you deploy your application to Zeabur alongside Supabase, you must inject the credentials into the deployment environment.\n\n### The Manual Way\n\n1. Go to your **App Service** settings in Zeabur.\n2. Click the **Configurable** button (or go to the **Variables** tab).\n3. Add the following variables:\n    - `VITE_SUPABASE_URL`: Paste your Project URL.\n    - `VITE_SUPABASE_ANON_KEY`: Paste your `anon` public key.\n\n> Hint: Please make sure the credentials file such as .env is listed in your .gitignore file to prevent leaking secrets.\n\n---\n\n## Phase 5: Advanced Configuration (Optional)\n\nAdd these variables to the specific services to enable advanced features.\n\n### 1. Advanced Auth Hooks (Auth Service)\n\nAdd these to the **Auth** service variables to trigger Postgres functions on specific events:\n\n- **Custom Access Token Hook:**\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED=true`\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI=pg-functions://postgres/public/custom_access_token_hook`\n- **MFA Verification Hook:**\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/mfa_verification_attempt`\n- **Password Verification Hook:**\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/password_verification_attempt`\n\n### 2. Studio AI Assistant (Studio Service)\n\nEnable the AI SQL assistant in the dashboard by adding this to the **Studio** service variables:\n\n- `OPENAI_API_KEY=your-openai-api-key`\n\n### 3. Security Tweaks (Auth Service)\n\n- `GOTRUE_EXTERNAL_SKIP_NONCE_CHECK=true` (Useful for mobile Google Sign In)\n- `GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED=true` (Enforce email verification for email address changes)\n"
+    services:
+        - name: imgproxy
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: imgproxy
+            source:
+                image: darthsim/imgproxy:v3.8.0
+            ports:
+                - id: web
+                  port: 5001
+                  type: HTTP
+            volumes:
+                - id: vol-0
+                  dir: /var/lib/storage
+            env:
+                IMGPROXY_BIND:
+                    default: :5001
+                IMGPROXY_ENABLE_WEBP_DETECTION:
+                    default: "true"
+                IMGPROXY_LOCAL_FILESYSTEM_ROOT:
+                    default: /
+                IMGPROXY_USE_ETAG:
+                    default: "true"
+        - name: postgresql
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: postgresql
+            source:
+                image: supabase/postgres:15.8.1.085
+            ports:
+                - id: database
+                  port: 5432
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/postgresql
+            instructions:
+                - title: Connection String
+                  content: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${DATABASE_NAME}
+                - title: PostgreSQL Connect Command
+                  content: psql "postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${DATABASE_NAME}"
+                - title: PostgreSQL username
+                  content: ${DATABASE_USER}
+                - title: PostgresSQL password
+                  content: ${DATABASE_PASSWORD}
+                - title: PostgresSQL database
+                  content: ${DATABASE_NAME}
+                - title: PostgreSQL host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: PostgreSQL port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                DATABASE_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                DATABASE_NAME:
+                    default: postgres
+                    expose: true
+                DATABASE_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                DATABASE_PORT:
+                    default: "5432"
+                    expose: true
+                DATABASE_USER:
+                    default: supabase_admin
+                    expose: true
+                PGDATABASE:
+                    default: ${DATABASE_NAME}
+                PGPASSWORD:
+                    default: ${DATABASE_PASSWORD}
+                PGPORT:
+                    default: ${DATABASE_PORT}
+                POSTGRES_HOST:
+                    default: /var/run/postgresql
+                POSTGRES_PASSWORD:
+                    default: ${DATABASE_PASSWORD}
+            configs:
+                - path: /docker-entrypoint-initdb.d/migrations/99-realtime.sql
+                  template: |
+                    \set pguser `echo "$DATABASE_USER"`
+                    create schema if not exists _realtime;
+                    alter schema _realtime owner to :pguser;
+                  permission: null
+                  envsubst: true
+                - path: /docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql
+                  template: |
+                    BEGIN;
+                    -- Create pg_net extension
+                    CREATE EXTENSION IF NOT EXISTS pg_net SCHEMA extensions;
+                    -- Create supabase_functions schema
+                    CREATE SCHEMA supabase_functions AUTHORIZATION supabase_admin;
+                    GRANT USAGE ON SCHEMA supabase_functions TO postgres, anon, authenticated, service_role;
+                    ALTER DEFAULT PRIVILEGES IN SCHEMA supabase_functions GRANT ALL ON TABLES TO postgres, anon, authenticated, service_role;
+                    ALTER DEFAULT PRIVILEGES IN SCHEMA supabase_functions GRANT ALL ON FUNCTIONS TO postgres, anon, authenticated, service_role;
+                    ALTER DEFAULT PRIVILEGES IN SCHEMA supabase_functions GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+                    -- supabase_functions.migrations definition
+                    CREATE TABLE supabase_functions.migrations (
+                      version text PRIMARY KEY,
+                      inserted_at timestamptz NOT NULL DEFAULT NOW()
+                    );
+                    -- Initial supabase_functions migration
+                    INSERT INTO supabase_functions.migrations (version) VALUES ('initial');
+                    -- supabase_functions.hooks definition
+                    CREATE TABLE supabase_functions.hooks (
+                      id bigserial PRIMARY KEY,
+                      hook_table_id integer NOT NULL,
+                      hook_name text NOT NULL,
+                      created_at timestamptz NOT NULL DEFAULT NOW(),
+                      request_id bigint
+                    );
+                    CREATE INDEX supabase_functions_hooks_request_id_idx ON supabase_functions.hooks USING btree (request_id);
+                    CREATE INDEX supabase_functions_hooks_h_table_id_h_name_idx ON supabase_functions.hooks USING btree (hook_table_id, hook_name);
+                    COMMENT ON TABLE supabase_functions.hooks IS 'Supabase Functions Hooks: Audit trail for triggered hooks.';
+                    CREATE FUNCTION supabase_functions.http_request()
+                      RETURNS trigger
+                      LANGUAGE plpgsql
+                      AS $function$
+                      DECLARE
+                        request_id bigint;
+                        payload jsonb;
+                        url text := TG_ARGV[0]::text;
+                        method text := TG_ARGV[1]::text;
+                        headers jsonb DEFAULT '{}'::jsonb;
+                        params jsonb DEFAULT '{}'::jsonb;
+                        timeout_ms integer DEFAULT 1000;
+                      BEGIN
+                        IF url IS NULL OR url = 'null' THEN
+                          RAISE EXCEPTION 'url argument is missing';
+                        END IF;
+
+                        IF method IS NULL OR method = 'null' THEN
+                          RAISE EXCEPTION 'method argument is missing';
+                        END IF;
+
+                        IF TG_ARGV[2] IS NULL OR TG_ARGV[2] = 'null' THEN
+                          headers = '{"Content-Type": "application/json"}'::jsonb;
+                        ELSE
+                          headers = TG_ARGV[2]::jsonb;
+                        END IF;
+
+                        IF TG_ARGV[3] IS NULL OR TG_ARGV[3] = 'null' THEN
+                          params = '{}'::jsonb;
+                        ELSE
+                          params = TG_ARGV[3]::jsonb;
+                        END IF;
+
+                        IF TG_ARGV[4] IS NULL OR TG_ARGV[4] = 'null' THEN
+                          timeout_ms = 1000;
+                        ELSE
+                          timeout_ms = TG_ARGV[4]::integer;
+                        END IF;
+
+                        CASE
+                          WHEN method = 'GET' THEN
+                            SELECT http_get INTO request_id FROM net.http_get(
+                              url,
+                              params,
+                              headers,
+                              timeout_ms
+                            );
+                          WHEN method = 'POST' THEN
+                            payload = jsonb_build_object(
+                              'old_record', OLD,
+                              'record', NEW,
+                              'type', TG_OP,
+                              'table', TG_TABLE_NAME,
+                              'schema', TG_TABLE_SCHEMA
+                            );
+
+                            SELECT http_post INTO request_id FROM net.http_post(
+                              url,
+                              payload,
+                              params,
+                              headers,
+                              timeout_ms
+                            );
+                          ELSE
+                            RAISE EXCEPTION 'method argument % is invalid', method;
+                        END CASE;
+
+                        INSERT INTO supabase_functions.hooks
+                          (hook_table_id, hook_name, request_id)
+                        VALUES
+                          (TG_RELID, TG_NAME, request_id);
+
+                        RETURN NEW;
+                      END
+                    $function$;
+                    -- Supabase super admin
+                    DO
+                    $$
+                    BEGIN
+                      IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_roles
+                        WHERE rolname = 'supabase_functions_admin'
+                      )
+                      THEN
+                        CREATE USER supabase_functions_admin NOINHERIT CREATEROLE LOGIN NOREPLICATION;
+                      END IF;
+                    END
+                    $$;
+                    GRANT ALL PRIVILEGES ON SCHEMA supabase_functions TO supabase_functions_admin;
+                    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA supabase_functions TO supabase_functions_admin;
+                    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA supabase_functions TO supabase_functions_admin;
+                    ALTER USER supabase_functions_admin SET search_path = "supabase_functions";
+                    ALTER table "supabase_functions".migrations OWNER TO supabase_functions_admin;
+                    ALTER table "supabase_functions".hooks OWNER TO supabase_functions_admin;
+                    ALTER function "supabase_functions".http_request() OWNER TO supabase_functions_admin;
+                    GRANT supabase_functions_admin TO postgres;
+                    -- Remove unused supabase_pg_net_admin role
+                    DO
+                    $$
+                    BEGIN
+                      IF EXISTS (
+                        SELECT 1
+                        FROM pg_roles
+                        WHERE rolname = 'supabase_pg_net_admin'
+                      )
+                      THEN
+                        REASSIGN OWNED BY supabase_pg_net_admin TO supabase_admin;
+                        DROP OWNED BY supabase_pg_net_admin;
+                        DROP ROLE supabase_pg_net_admin;
+                      END IF;
+                    END
+                    $$;
+                    -- pg_net grants when extension is already enabled
+                    DO
+                    $$
+                    BEGIN
+                      IF EXISTS (
+                        SELECT 1
+                        FROM pg_extension
+                        WHERE extname = 'pg_net'
+                      )
+                      THEN
+                        GRANT USAGE ON SCHEMA net TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+                        ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
+                        ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
+                        ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
+                        ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
+                        REVOKE ALL ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
+                        REVOKE ALL ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
+                        GRANT EXECUTE ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+                        GRANT EXECUTE ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+                      END IF;
+                    END
+                    $$;
+                    -- Event trigger for pg_net
+                    CREATE OR REPLACE FUNCTION extensions.grant_pg_net_access()
+                    RETURNS event_trigger
+                    LANGUAGE plpgsql
+                    AS $$
+                    BEGIN
+                      IF EXISTS (
+                        SELECT 1
+                        FROM pg_event_trigger_ddl_commands() AS ev
+                        JOIN pg_extension AS ext
+                        ON ev.objid = ext.oid
+                        WHERE ext.extname = 'pg_net'
+                      )
+                      THEN
+                        GRANT USAGE ON SCHEMA net TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+                        ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
+                        ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
+                        ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
+                        ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
+                        REVOKE ALL ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
+                        REVOKE ALL ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
+                        GRANT EXECUTE ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+                        GRANT EXECUTE ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+                      END IF;
+                    END;
+                    $$;
+                    COMMENT ON FUNCTION extensions.grant_pg_net_access IS 'Grants access to pg_net';
+                    DO
+                    $$
+                    BEGIN
+                      IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_event_trigger
+                        WHERE evtname = 'issue_pg_net_access'
+                      ) THEN
+                        CREATE EVENT TRIGGER issue_pg_net_access ON ddl_command_end WHEN TAG IN ('CREATE EXTENSION')
+                        EXECUTE PROCEDURE extensions.grant_pg_net_access();
+                      END IF;
+                    END
+                    $$;
+                    INSERT INTO supabase_functions.migrations (version) VALUES ('20210809183423_update_grants');
+                    ALTER function supabase_functions.http_request() SECURITY DEFINER;
+                    ALTER function supabase_functions.http_request() SET search_path = supabase_functions;
+                    REVOKE ALL ON FUNCTION supabase_functions.http_request() FROM PUBLIC;
+                    GRANT EXECUTE ON FUNCTION supabase_functions.http_request() TO postgres, anon, authenticated, service_role;
+                    COMMIT;
+                  permission: null
+                  envsubst: null
+                - path: /docker-entrypoint-initdb.d/init-scripts/99-roles.sql
+                  template: |
+                    -- NOTE: change to your own passwords for production environments
+                    \set pgpass `echo "$DATABASE_PASSWORD"`
+                    ALTER USER authenticator WITH PASSWORD :'pgpass';
+                    ALTER USER pgbouncer WITH PASSWORD :'pgpass';
+                    ALTER USER supabase_auth_admin WITH PASSWORD :'pgpass';
+                    ALTER USER supabase_functions_admin WITH PASSWORD :'pgpass';
+                    ALTER USER supabase_storage_admin WITH PASSWORD :'pgpass';
+                  permission: null
+                  envsubst: true
+                - path: /docker-entrypoint-initdb.d/init-scripts/99-jwt.sql
+                  template: |
+                    \set jwt_secret `echo "$JWT_SECRET"`
+                    \set jwt_exp `echo "$JWT_EXP"`
+
+                    ALTER DATABASE postgres SET "app.settings.jwt_secret" TO :'jwt_secret';
+                    ALTER DATABASE postgres SET "app.settings.jwt_exp" TO :'jwt_exp';
+                  permission: null
+                  envsubst: true
+                - path: /docker-entrypoint-initdb.d/migrations/97-_supabase.sql
+                  template: |
+                    \set pguser `echo "$DATABASE_USER"`
+                    CREATE DATABASE _supabase WITH OWNER :pguser;
+                  permission: null
+                  envsubst: true
+                - path: /docker-entrypoint-initdb.d/migrations/99-logs.sql
+                  template: |
+                    \set pguser `echo "$DATABASE_USER"`
+                    \c _supabase
+                    create schema if not exists _analytics;
+                    alter schema _analytics owner to :pguser;
+                    \c postgres
+                  permission: null
+                  envsubst: true
+                - path: /docker-entrypoint-initdb.d/migrations/99-pooler.sql
+                  template: |
+                    \set pguser `echo "$DATABASE_USER"`
+                    \c _supabase
+                    create schema if not exists _supavisor;
+                    alter schema _supavisor owner to :pguser;
+                    \c postgres
+                  permission: null
+                  envsubst: true
+            healthCheck:
+                type: TCP
+                port: database
+        - name: meta
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: meta
+            source:
+                image: supabase/postgres-meta:v0.93.1
+            ports:
+                - id: web
+                  port: 8080
+                  type: HTTP
+            env:
+                CRYPTO_KEY:
+                    default: ${PG_META_CRYPTO_KEY}
+                PG_META_DB_HOST:
+                    default: postgresql
+                PG_META_DB_NAME:
+                    default: ${DATABASE_NAME}
+                PG_META_DB_PASSWORD:
+                    default: ${DATABASE_PASSWORD}
+                PG_META_DB_PORT:
+                    default: ${DATABASE_PORT}
+                PG_META_DB_USER:
+                    default: ${DATABASE_USER}
+                PG_META_HOST:
+                    default: 0.0.0.0
+                PG_META_PORT:
+                    default: "8080"
+        - name: auth
+          icon: https://icons.zeabur.com/supabase.png
+          dependencies:
+            - postgresql
+          template: PREBUILT
+          spec:
+            id: auth
+            source:
+                image: supabase/gotrue:v2.180.0
+            ports:
+                - id: web
+                  port: 9999
+                  type: HTTP
+            env:
+                API_EXTERNAL_URL:
+                    default: https://${SUPABASE_PUBLIC_DOMAIN}
+                GOTRUE_API_HOST:
+                    default: 0.0.0.0
+                GOTRUE_API_PORT:
+                    default: "9999"
+                GOTRUE_DB_DATABASE_URL:
+                    default: postgres://supabase_auth_admin:${DATABASE_PASSWORD}@postgresql:${DATABASE_PORT}/${DATABASE_NAME}
+                GOTRUE_DB_DRIVER:
+                    default: postgres
+                GOTRUE_DISABLE_SIGNUP:
+                    default: "false"
+                GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED:
+                    default: "false"
+                GOTRUE_EXTERNAL_EMAIL_ENABLED:
+                    default: "true"
+                GOTRUE_EXTERNAL_PHONE_ENABLED:
+                    default: "true"
+                GOTRUE_JWT_ADMIN_ROLES:
+                    default: service_role
+                GOTRUE_JWT_AUD:
+                    default: authenticated
+                GOTRUE_JWT_DEFAULT_GROUP_NAME:
+                    default: authenticated
+                GOTRUE_JWT_EXP:
+                    default: ${JWT_EXPIRY}
+                GOTRUE_JWT_SECRET:
+                    default: ${JWT_SECRET}
+                GOTRUE_MAILER_AUTOCONFIRM:
+                    default: "false"
+                GOTRUE_MAILER_URLPATHS_CONFIRMATION:
+                    default: /auth/v1/verify
+                GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE:
+                    default: /auth/v1/verify
+                GOTRUE_MAILER_URLPATHS_INVITE:
+                    default: /auth/v1/verify
+                GOTRUE_MAILER_URLPATHS_RECOVERY:
+                    default: /auth/v1/verify
+                GOTRUE_SITE_URL:
+                    default: http://auth:9999
+                GOTRUE_SMS_AUTOCONFIRM:
+                    default: "true"
+                GOTRUE_SMTP_ADMIN_EMAIL:
+                    default: admin@example.com
+                GOTRUE_SMTP_HOST:
+                    default: supabase-mail
+                GOTRUE_SMTP_PASS:
+                    default: fake_mail_password
+                GOTRUE_SMTP_PORT:
+                    default: "2500"
+                GOTRUE_SMTP_SENDER_NAME:
+                    default: fake_sender
+                GOTRUE_SMTP_USER:
+                    default: fake_mail_user
+                GOTRUE_URI_ALLOW_LIST:
+                    default: ""
+        - name: rest
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: rest
+            source:
+                image: postgrest/postgrest:v13.0.7
+            ports:
+                - id: web
+                  port: 3000
+                  type: HTTP
+            env:
+                PGRST_APP_SETTINGS_JWT_EXP:
+                    default: ${JWT_EXPIRY}
+                PGRST_APP_SETTINGS_JWT_SECRET:
+                    default: ${JWT_SECRET}
+                PGRST_DB_ANON_ROLE:
+                    default: anon
+                PGRST_DB_SCHEMAS:
+                    default: public,storage,graphql_public
+                PGRST_DB_URI:
+                    default: postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@${POSTGRESQL_HOST}:${DATABASE_PORT}/${DATABASE_NAME}
+                PGRST_DB_USE_LEGACY_GUCS:
+                    default: "false"
+                PGRST_JWT_SECRET:
+                    default: ${JWT_SECRET}
+        - name: studio
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: studio
+            source:
+                image: supabase/studio:2025.10.27-sha-85b84e0
+            ports:
+                - id: web
+                  port: 3000
+                  type: HTTP
+            env:
+                AUTH_JWT_SECRET:
+                    default: ${JWT_SECRET}
+                DEFAULT_ORGANIZATION_NAME:
+                    default: Default Organization
+                DEFAULT_PROJECT_NAME:
+                    default: Default Project
+                HOSTNAME:
+                    default: 0.0.0.0
+                NEXT_PUBLIC_API_URL:
+                    default: http://kong:8000/api
+                NEXT_PUBLIC_ENABLE_LOGS:
+                    default: "false"
+                NEXT_PUBLIC_IS_PLATFORM:
+                    default: "false"
+                NEXT_PUBLIC_SITE_URL:
+                    default: http://${SUPABASE_PUBLIC_DOMAIN}
+                OPENAI_API_KEY:
+                    default: ${OPENAI_API_KEY}
+                PG_META_CRYPTO_KEY:
+                    default: your-encryption-key-32-chars-min
+                    expose: true
+                POSTGRES_DB:
+                    default: ${DATABASE_NAME}
+                POSTGRES_HOST:
+                    default: postgresql
+                POSTGRES_PASSWORD:
+                    default: ${DATABASE_PASSWORD}
+                STUDIO_PG_META_URL:
+                    default: http://meta:8080
+                SUPABASE_ANON_KEY:
+                    default: ${ANON_KEY}
+                SUPABASE_PUBLIC_URL:
+                    default: https://${SUPABASE_PUBLIC_DOMAIN}
+                SUPABASE_SERVICE_KEY:
+                    default: ${SERVICE_ROLE_KEY}
+                SUPABASE_URL:
+                    default: http://kong:8000
+        - name: minio
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/minio.svg
+          template: PREBUILT
+          spec:
+            id: minio
+            source:
+                image: quay.io/minio/minio:latest
+                command:
+                    - /bin/sh
+                args:
+                    - -c
+                    - |
+                      minio server /data --console-address :9090 &
+                      MINIO_PID=$!
+                      while ! curl -s http://localhost:9000/minio/health/live; do
+                        echo 'Waiting for MinIO to start...'
+                        sleep 1
+                      done
+                      sleep 5
+                      mc alias set myminio http://localhost:9000 $MINIO_USERNAME $MINIO_PASSWORD
+                      echo "Creating bucket '$MINIO_DEFAULT_BUCKET'"
+                      mc mb myminio/$MINIO_DEFAULT_BUCKET
+                      wait $MINIO_PID
+            ports:
+                - id: web
+                  port: 9000
+                  type: HTTP
+                - id: console
+                  port: 9090
+                  type: HTTP
+            volumes:
+                - id: data
+                  dir: /data
+            instructions:
+                - title: Go to MinIO Console
+                  content: ${MINIO_CONSOLE_URL}
+                - title: MinIO Username
+                  content: ${MINIO_USERNAME}
+                - title: MinIO Password
+                  content: ${MINIO_PASSWORD}
+            env:
+                MINIO_BROWSER_REDIRECT:
+                    default: "false"
+                MINIO_CONSOLE_URL:
+                    default: ${ZEABUR_CONSOLE_URL}
+                    expose: true
+                MINIO_DEFAULT_BUCKET:
+                    default: stub
+                    expose: true
+                MINIO_PASSWORD:
+                    default: ${MINIO_ROOT_PASSWORD}
+                    expose: true
+                MINIO_ROOT_PASSWORD:
+                    default: ${PASSWORD}
+                MINIO_ROOT_USER:
+                    default: minio
+                MINIO_USERNAME:
+                    default: ${MINIO_ROOT_USER}
+                    expose: true
+        - name: storage
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: storage
+            source:
+                image: supabase/storage-api:v1.28.2
+            ports:
+                - id: web
+                  port: 5000
+                  type: HTTP
+            volumes:
+                - id: vol-0
+                  dir: /var/lib/storage
+            env:
+                AWS_ACCESS_KEY_ID:
+                    default: ${MINIO_USERNAME}
+                AWS_DEFAULT_REGION:
+                    default: stub
+                AWS_SECRET_ACCESS_KEY:
+                    default: ${MINIO_PASSWORD}
+                DATABASE_URL:
+                    default: postgres://${PG_STORAGE_ADMIN_USERNAME}:${PG_STORAGE_ADMIN_PASSWORD}@postgresql:${DATABASE_PORT}/${DATABASE_NAME}
+                ENABLE_IMAGE_TRANSFORMATION:
+                    default: "true"
+                FILE_SIZE_LIMIT:
+                    default: "52428800"
+                FILE_STORAGE_BACKEND_PATH:
+                    default: /var/lib/storage
+                GLOBAL_S3_BUCKET:
+                    default: ${MINIO_DEFAULT_BUCKET}
+                GLOBAL_S3_ENDPOINT:
+                    default: http://minio:9000
+                GLOBAL_S3_FORCE_PATH_STYLE:
+                    default: "true"
+                GLOBAL_S3_PROTOCOL:
+                    default: http
+                IMGPROXY_URL:
+                    default: http://imgproxy:5001
+                PG_STORAGE_ADMIN_PASSWORD:
+                    default: ${DATABASE_PASSWORD}
+                PG_STORAGE_ADMIN_USERNAME:
+                    default: supabase_storage_admin
+                PGRST_JWT_SECRET:
+                    default: ${JWT_SECRET}
+                POSTGREST_URL:
+                    default: http://rest:3000
+                REGION:
+                    default: stub
+                STORAGE_BACKEND:
+                    default: s3
+                TENANT_ID:
+                    default: stub
+        - name: kong
+          icon: https://icons.zeabur.com/kong.svg
+          template: PREBUILT
+          spec:
+            id: kong
+            source:
+                image: kong:2.8.1
+            ports:
+                - id: web
+                  port: 8000
+                  type: HTTP
+            instructions:
+                - title: Supabase Username
+                  content: ${DASHBOARD_USERNAME}
+                - title: Supabase Password
+                  content: ${DASHBOARD_PASSWORD}
+            env:
+                ANON_KEY:
+                    default: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE
+                    expose: true
+                DASHBOARD_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                DASHBOARD_USERNAME:
+                    default: ${DASHBOARD_USERNAME}
+                    expose: true
+                JWT_EXPIRY:
+                    default: "3600"
+                    expose: true
+                JWT_SECRET:
+                    default: your-super-secret-jwt-token-with-at-least-32-characters-long
+                    expose: true
+                KONG_DATABASE:
+                    default: "off"
+                KONG_DECLARATIVE_CONFIG:
+                    default: /home/kong/kong.yml
+                KONG_DNS_ORDER:
+                    default: LAST,A,CNAME
+                KONG_NGINX_PROXY_PROXY_BUFFER_SIZE:
+                    default: 160k
+                KONG_NGINX_PROXY_PROXY_BUFFERS:
+                    default: 64 160k
+                KONG_NGINX_WORKER_PROCESSES:
+                    default: "1"
+                KONG_PLUGINS:
+                    default: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction
+                SERVICE_ROLE_KEY:
+                    default: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.DaYlNEoUrrEn2Ig7tqibS-PHK5vgusbcbo7X36XVt4Q
+                    expose: true
+                SUPABASE_ANON_KEY:
+                    default: ${ANON_KEY}
+                SUPABASE_PUBLIC_DOMAIN:
+                    default: ${ZEABUR_WEB_DOMAIN}
+                    expose: true
+                SUPABASE_SERVICE_KEY:
+                    default: ${SERVICE_ROLE_KEY}
+            configs:
+                - path: /home/kong/kong.yml
+                  template: |
+                    _format_version: '2.1'
+                    _transform: true
+
+                    ###
+                    ### Consumers / Users
+                    ###
+                    consumers:
+                      - username: DASHBOARD
+                      - username: anon
+                        keyauth_credentials:
+                          - key: ${ANON_KEY}
+                      - username: service_role
+                        keyauth_credentials:
+                          - key: ${SERVICE_ROLE_KEY}
+
+                    ###
+                    ### Access Control List
+                    ###
+                    acls:
+                      - consumer: anon
+                        group: anon
+                      - consumer: service_role
+                        group: admin
+
+                    ###
+                    ### Dashboard credentials
+                    ###
+                    basicauth_credentials:
+                      - consumer: DASHBOARD
+                        username: $DASHBOARD_USERNAME
+                        password: $DASHBOARD_PASSWORD
+
+                    ###
+                    ### API Routes
+                    ###
+                    services:
+                      ## Open Auth routes
+                      - name: auth-v1-open
+                        url: http://auth:9999/verify
+                        routes:
+                          - name: auth-v1-open
+                            strip_path: true
+                            paths:
+                              - /auth/v1/verify
+                        plugins:
+                          - name: cors
+                      - name: auth-v1-open-callback
+                        url: http://auth:9999/callback
+                        routes:
+                          - name: auth-v1-open-callback
+                            strip_path: true
+                            paths:
+                              - /auth/v1/callback
+                        plugins:
+                          - name: cors
+                      - name: auth-v1-open-authorize
+                        url: http://auth:9999/authorize
+                        routes:
+                          - name: auth-v1-open-authorize
+                            strip_path: true
+                            paths:
+                              - /auth/v1/authorize
+                        plugins:
+                          - name: cors
+
+                      ## Secure Auth routes
+                      - name: auth-v1
+                        _comment: 'GoTrue: /auth/v1/* -> http://auth:9999/*'
+                        url: http://auth:9999/
+                        routes:
+                          - name: auth-v1-all
+                            strip_path: true
+                            paths:
+                              - /auth/v1/
+                        plugins:
+                          - name: cors
+                          - name: key-auth
+                            config:
+                              hide_credentials: false
+                          - name: acl
+                            config:
+                              hide_groups_header: true
+                              allow:
+                                - admin
+                                - anon
+
+                      ## Secure REST routes
+                      - name: rest-v1
+                        _comment: 'PostgREST: /rest/v1/* -> http://rest:3000/*'
+                        url: http://rest:3000/
+                        routes:
+                          - name: rest-v1-all
+                            strip_path: true
+                            paths:
+                              - /rest/v1/
+                        plugins:
+                          - name: cors
+                          - name: key-auth
+                            config:
+                              hide_credentials: true
+                          - name: acl
+                            config:
+                              hide_groups_header: true
+                              allow:
+                                - admin
+                                - anon
+
+                      ## Secure GraphQL routes
+                      - name: graphql-v1
+                        _comment: 'PostgREST: /graphql/v1/* -> http://rest:3000/rpc/graphql'
+                        url: http://rest:3000/rpc/graphql
+                        routes:
+                          - name: graphql-v1-all
+                            strip_path: true
+                            paths:
+                              - /graphql/v1
+                        plugins:
+                          - name: cors
+                          - name: key-auth
+                            config:
+                              hide_credentials: true
+                          - name: request-transformer
+                            config:
+                              add:
+                                headers:
+                                  - Content-Profile:graphql_public
+                          - name: acl
+                            config:
+                              hide_groups_header: true
+                              allow:
+                                - admin
+                                - anon
+
+                      ## Secure Realtime routes
+                      - name: realtime-v1-ws
+                        _comment: 'Realtime: /realtime/v1/* -> ws://realtime-dev:4000/socket/*'
+                        url: http://realtime-dev:4000/socket
+                        protocol: ws
+                        routes:
+                          - name: realtime-v1-ws
+                            strip_path: true
+                            paths:
+                              - /realtime/v1/
+                        plugins:
+                          - name: cors
+                          - name: key-auth
+                            config:
+                              hide_credentials: false
+                          - name: acl
+                            config:
+                              hide_groups_header: true
+                              allow:
+                                - admin
+                                - anon
+                      - name: realtime-v1-rest
+                        _comment: 'Realtime: /realtime/v1/* -> ws://realtime-dev:4000/socket/*'
+                        url: http://realtime-dev:4000/api
+                        protocol: http
+                        routes:
+                          - name: realtime-v1-rest
+                            strip_path: true
+                            paths:
+                              - /realtime/v1/api
+                        plugins:
+                          - name: cors
+                          - name: key-auth
+                            config:
+                              hide_credentials: false
+                          - name: acl
+                            config:
+                              hide_groups_header: true
+                              allow:
+                                - admin
+                                - anon
+                      ## Storage routes: the storage server manages its own auth
+                      - name: storage-v1
+                        _comment: 'Storage: /storage/v1/* -> http://storage:5000/*'
+                        url: http://storage:5000/
+                        routes:
+                          - name: storage-v1-all
+                            strip_path: true
+                            paths:
+                              - /storage/v1/
+                        plugins:
+                          - name: cors
+
+                      ## Edge Functions routes
+                      - name: functions-v1
+                        _comment: 'Edge Functions: /functions/v1/* -> http://functions:9000/*'
+                        url: http://functions:9000/
+                        routes:
+                          - name: functions-v1-all
+                            strip_path: true
+                            paths:
+                              - /functions/v1/
+                        plugins:
+                          - name: cors
+
+                      ## Secure Database routes
+                      - name: meta
+                        _comment: 'pg-meta: /pg/* -> http://pg-meta:8080/*'
+                        url: http://meta:8080/
+                        routes:
+                          - name: meta-all
+                            strip_path: true
+                            paths:
+                              - /pg/
+                        plugins:
+                          - name: key-auth
+                            config:
+                              hide_credentials: false
+                          - name: acl
+                            config:
+                              hide_groups_header: true
+                              allow:
+                                - admin
+                      ## Block access to /api/mcp
+                      - name: mcp-blocker
+                        _comment: 'Block direct access to /api/mcp'
+                        url: http://studio:3000/api/mcp
+                        routes:
+                          - name: mcp-blocker-route
+                            strip_path: true
+                            paths:
+                              - /api/mcp
+                        plugins:
+                          - name: request-termination
+                            config:
+                              status_code: 403
+                              message: "Access is forbidden."
+
+                      ## MCP endpoint - local access
+                      - name: mcp
+                        _comment: 'MCP: /mcp -> http://studio:3000/api/mcp (local access)'
+                        url: http://studio:3000/api/mcp
+                        routes:
+                          - name: mcp
+                            strip_path: true
+                            paths:
+                              - /mcp
+                        plugins:
+                          # Block access to /mcp by default
+                          - name: request-termination
+                            config:
+                              status_code: 403
+                              message: "Access is forbidden."
+                          # Enable local access (danger zone!)
+                          # 1. Comment out the 'request-termination' section above
+                          # 2. Uncomment the entire section below, including 'deny'
+                          # 3. Add your local IPs to the 'allow' list
+                          #- name: cors
+                          #- name: ip-restriction
+                          #  config:
+                          #    allow:
+                          #      - 127.0.0.1
+                          #      - ::1
+                          #    deny: []
+
+                      ## Protected Dashboard - catch all remaining routes
+                      - name: dashboard
+                        _comment: 'Studio: /* -> http://studio:3000/*'
+                        url: http://studio:3000/
+                        routes:
+                          - name: dashboard-all
+                            strip_path: true
+                            paths:
+                              - /
+                        plugins:
+                          - name: cors
+                          - name: basic-auth
+                            config:
+                              hide_credentials: true
+                  permission: null
+                  envsubst: true
+          domainKey: PUBLIC_DOMAIN
+        - name: realtime-dev
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: realtime-dev
+            source:
+                image: supabase/realtime:v2.57.2
+            ports:
+                - id: web
+                  port: 4000
+                  type: HTTP
+            env:
+                API_JWT_SECRET:
+                    default: ${JWT_SECRET}
+                APP_NAME:
+                    default: realtime-dev
+                DB_AFTER_CONNECT_QUERY:
+                    default: SET search_path TO _realtime
+                DB_ENC_KEY:
+                    default: supabaserealtime
+                DB_HOST:
+                    default: postgresql
+                DB_NAME:
+                    default: ${DATABASE_NAME}
+                DB_PASSWORD:
+                    default: ${DATABASE_PASSWORD}
+                DB_PORT:
+                    default: ${DATABASE_PORT}
+                DB_USER:
+                    default: ${DATABASE_USER}
+                DNS_NODES:
+                    default: ''''''
+                ERL_AFLAGS:
+                    default: -proto_dist inet_tcp
+                PORT:
+                    default: "4000"
+                RLIMIT_NOFILE:
+                    default: "10000"
+                RUN_JANITOR:
+                    default: "true"
+                SEED_SELF_HOST:
+                    default: "true"
+        - name: supavisor
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: supavisor
+            source:
+                image: supabase/supavisor:2.7.3
+            ports:
+                - id: web
+                  port: 4000
+                  type: HTTP
+                - id: port1
+                  port: 6543
+                  type: TCP
+                - id: port2
+                  port: 5432
+                  type: TCP
+            env:
+                API_JWT_SECRET:
+                    default: ${JWT_SECRET}
+                CLUSTER_POSTGRES:
+                    default: "true"
+                DATABASE_URL:
+                    default: ecto://supabase_admin:${DATABASE_PASSWORD}@postgresql:${DATABASE_PORT}/_supabase
+                DB_POOL_SIZE:
+                    default: "20"
+                ERL_AFLAGS:
+                    default: -proto_dist inet_tcp
+                METRICS_JWT_SECRET:
+                    default: ${JWT_SECRET}
+                POOLER_DEFAULT_POOL_SIZE:
+                    default: "20"
+                POOLER_MAX_CLIENT_CONN:
+                    default: "100"
+                POOLER_POOL_MODE:
+                    default: transaction
+                POOLER_TENANT_ID:
+                    default: your-tenant-id
+                PORT:
+                    default: "4000"
+                POSTGRES_DB:
+                    default: ${DATABASE_NAME}
+                POSTGRES_PASSWORD:
+                    default: ${DATABASE_PASSWORD}
+                POSTGRES_PORT:
+                    default: ${DATABASE_PORT}
+                REGION:
+                    default: local
+                SECRET_KEY_BASE:
+                    default: ${PASSWORD}
+                    expose: true
+                VAULT_ENC_KEY:
+                    default: your-encryption-key-32-chars-min
+            configs:
+                - path: /etc/pooler/pooler.exs
+                  template: |
+                    {:ok, _} = Application.ensure_all_started(:supavisor)
+
+                    {:ok, version} =
+                      case Supavisor.Repo.query!("select version()") do
+                        %{rows: [[ver]]} -> Supavisor.Helpers.parse_pg_version(ver)
+                        _ -> nil
+                      end
+
+                    params = %{
+                      "external_id" => System.get_env("POOLER_TENANT_ID"),
+                      "db_host" => postgresql,
+                      "db_port" => System.get_env("DATABASE_PORT"),
+                      "db_database" => System.get_env("DATABASE_NAME"),
+                      "require_user" => false,
+                      "auth_query" => "SELECT * FROM pgbouncer.get_auth($1)",
+                      "default_max_clients" => System.get_env("POOLER_MAX_CLIENT_CONN"),
+                      "default_pool_size" => System.get_env("POOLER_DEFAULT_POOL_SIZE"),
+                      "default_parameter_status" => %{"server_version" => version},
+                      "users" => [%{
+                        "db_user" => "pgbouncer",
+                        "db_password" => System.get_env("DATABASE_PASSWORD"),
+                        "mode_type" => System.get_env("POOLER_POOL_MODE"),
+                        "pool_size" => System.get_env("POOLER_DEFAULT_POOL_SIZE"),
+                        "is_manager" => true
+                      }]
+                    }
+
+                    if !Supavisor.Tenants.get_tenant_by_external_id(params["external_id"]) do
+                      {:ok, _} = Supavisor.Tenants.create_tenant(params)
+                    end
+                  permission: null
+                  envsubst: true
+        - name: functions
+          icon: https://icons.zeabur.com/supabase.png
+          template: PREBUILT
+          spec:
+            id: functions
+            source:
+                image: supabase/edge-runtime:v1.69.15
+                command:
+                    - edge-runtime
+                    - start
+                    - --main-service
+                    - /home/deno/functions/main
+            ports:
+                - id: web
+                  port: 9000
+                  type: HTTP
+            volumes:
+                - id: vol-0
+                  dir: /home/deno/functions
+            env:
+                SUPABASE_ANON_KEY:
+                    default: ${ANON_KEY}
+                SUPABASE_DB_URL:
+                    default: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgresql:${DATABASE_PORT}/${DATABASE_NAME}
+                SUPABASE_SERVICE_ROLE_KEY:
+                    default: ${SERVICE_ROLE_KEY}
+                SUPABASE_URL:
+                    default: http://kong:8000
+                VERIFY_JWT:
+                    default: "false"
+            configs:
+                - path: /home/deno/functions/hello/index.ts
+                  template: |
+                    // Follow this setup guide to integrate the Deno language server with your editor:
+                    // https://deno.land/manual/getting_started/setup_your_environment
+                    // This enables autocomplete, go to definition, etc.
+
+                    import { serve } from "https://deno.land/std@0.177.1/http/server.ts"
+
+                    serve(async () => {
+                      return new Response(
+                        `"Hello from Edge Functions!"`,
+                        { headers: { "Content-Type": "application/json" } },
+                      )
+                    })
+
+                    // To invoke:
+                    // curl 'http://localhost:<KONG_HTTP_PORT>/functions/v1/hello' \
+                    //   --header 'Authorization: Bearer <anon/service_role API key>'
+                  permission: null
+                  envsubst: false
+                - path: /home/deno/functions/main/index.ts
+                  template: |
+                    import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
+                    import * as jose from 'https://deno.land/x/jose@v4.14.4/index.ts'
+
+                    console.log('main function started')
+
+                    const JWT_SECRET = Deno.env.get('JWT_SECRET')
+                    const VERIFY_JWT = Deno.env.get('VERIFY_JWT') === 'true'
+
+                    function getAuthToken(req: Request) {
+                      const authHeader = req.headers.get('authorization')
+                      if (!authHeader) {
+                        throw new Error('Missing authorization header')
+                      }
+                      const [bearer, token] = authHeader.split(' ')
+                      if (bearer !== 'Bearer') {
+                        throw new Error(`Auth header is not 'Bearer {token}'`)
+                      }
+                      return token
+                    }
+
+                    async function verifyJWT(jwt: string): Promise<boolean> {
+                      const encoder = new TextEncoder()
+                      const secretKey = encoder.encode(JWT_SECRET)
+                      try {
+                        await jose.jwtVerify(jwt, secretKey)
+                      } catch (err) {
+                        console.error(err)
+                        return false
+                      }
+                      return true
+                    }
+
+                    serve(async (req: Request) => {
+                      if (req.method !== 'OPTIONS' && VERIFY_JWT) {
+                        try {
+                          const token = getAuthToken(req)
+                          const isValidJWT = await verifyJWT(token)
+
+                          if (!isValidJWT) {
+                            return new Response(JSON.stringify({ msg: 'Invalid JWT' }), {
+                              status: 401,
+                              headers: { 'Content-Type': 'application/json' },
+                            })
+                          }
+                        } catch (e) {
+                          console.error(e)
+                          return new Response(JSON.stringify({ msg: e.toString() }), {
+                            status: 401,
+                            headers: { 'Content-Type': 'application/json' },
+                          })
+                        }
+                      }
+
+                      const url = new URL(req.url)
+                      const { pathname } = url
+                      const path_parts = pathname.split('/')
+                      const service_name = path_parts[1]
+
+                      if (!service_name || service_name === '') {
+                        const error = { msg: 'missing function name in request' }
+                        return new Response(JSON.stringify(error), {
+                          status: 400,
+                          headers: { 'Content-Type': 'application/json' },
+                        })
+                      }
+
+                      const servicePath = `/home/deno/functions/${service_name}`
+                      console.error(`serving the request with ${servicePath}`)
+
+                      const memoryLimitMb = 150
+                      const workerTimeoutMs = 1 * 60 * 1000
+                      const noModuleCache = false
+                      const importMapPath = null
+                      const envVarsObj = Deno.env.toObject()
+                      const envVars = Object.keys(envVarsObj).map((k) => [k, envVarsObj[k]])
+
+                      try {
+                        const worker = await EdgeRuntime.userWorkers.create({
+                          servicePath,
+                          memoryLimitMb,
+                          workerTimeoutMs,
+                          noModuleCache,
+                          importMapPath,
+                          envVars,
+                        })
+                        return await worker.fetch(req)
+                      } catch (e) {
+                        const error = { msg: e.toString() }
+                        return new Response(JSON.stringify(error), {
+                          status: 500,
+                          headers: { 'Content-Type': 'application/json' },
+                        })
+                      }
+                    })
+                  permission: null
+                  envsubst: false
+localization:
+    es-ES:
+        description: Una alternativa de código abierto a Firebase. Estamos construyendo las características de Firebase utilizando herramientas de código abierto de nivel empresarial.
+        variables:
+            - key: DASHBOARD_USERNAME
+              type: STRING
+              name: Nombre de usuario del panel
+              description: ¿Qué nombre de usuario deseas para tu panel de Supabase?
+            - key: PUBLIC_DOMAIN
+              type: DOMAIN
+              name: Dominio
+              description: ¿Qué dominio deseas para tu Supabase?
+        readme: "# Desplegando Supabase\n\n**Supabase** es una alternativa popular y de código abierto a Firebase. Proporciona un conjunto de herramientas que incluye una base de datos Postgres, autenticación, APIs y almacenamiento de archivos, lo que lo convierte en una solución de backend robusta.\n\nZeabur simplifica el despliegue de este stack complejo. Con Zeabur, puedes lanzar una instancia de Supabase totalmente funcional (incluyendo Kong Gateway, Authentication y PostgreSQL) con un solo clic y sin configuración manual.\n\n### Lo que aprenderás\n\nEn este tutorial, te guiaremos a través de:\n\n1. Desplegar un stack de servicios de Supabase desde el Marketplace de Zeabur.\n2. Acceder al Dashboard de Supabase a través del Kong Gateway.\n3. Obtener tus claves de API y conectar tu aplicación.\n\n### ⚠️ Limitaciones importantes:\n\n***Sin logs en la UI:*** La función \"Logs\" en Supabase Studio no funcionará (debido a la ausencia del servicio Vector). Debes revisar los logs desde el panel de Zeabur para cada servicio.\n***Sin MCP:*** El servidor de AI Model Context Protocol no está incluido en esta plantilla.\n\n---\n\n## Fase 1: Desplegando el servicio\n\n### Paso 1: Crear el servicio de Supabase\n\nZeabur ofrece un \"despliegue con un clic\" a través de su marketplace de plantillas.\n\n**Opción 1: Crear una instancia de Supabase desde la página del Proyecto**\n\n1. Inicia sesión en tu [**Zeabur Dashboard**](https://zeabur.com/).\n2. Haz clic en el botón **\"Add Service\"**.\n3. Selecciona **\"Template\"** (Marketplace).\n4. Busca `Supabase`.\n5. Selecciona la plantilla **Supabase**. Tus servicios (incluyendo PostgreSQL, minio y Kong) comenzarán a desplegarse de inmediato.\n\n### Paso 2: Acceder al Dashboard de Supabase (Kong Gateway)\n\nA diferencia de una base de datos independiente, Supabase en Zeabur usa un Kong Gateway para gestionar el acceso. Necesitas obtener credenciales para iniciar sesión en la UI.\n\n1. Ve al panel del servicio **Kong** dentro de tu proyecto.\n2. Ahí encontrarás el **Supabase Username** y el **Supabase Password**.\n3. Ve a la sección **Domains** en el lateral del panel de Kong y haz clic en la URL proporcionada.\n4. Usa las credenciales del paso 2 para iniciar sesión en el Dashboard de Supabase.\n\n[kong.png](https://cdn.zeabur.com/supabase%20migration/kong1.png)\n\n---\n\n## Fase 2: Asegurar tu instancia (CRÍTICO)\n\n**⚠️ ADVERTENCIA:** La plantilla se despliega con claves API por defecto para fines de demostración. **DEBES** generar nuevas claves antes de usarlo en producción, o cualquiera que conozca las claves por defecto podrá acceder a tu base de datos.\n\n### Paso 1: Generar nuevas claves\n\n1. Visita el [Supabase JWT Generator](https://supabase.com/docs/guides/self-hosting/docker#generate-api-keys).\n2. Crea un `JWT_SECRET` personalizado y usa la herramienta para generar:\n    - Una clave `anon`.\n    - Una clave `service_role`.\n\n### Paso 2: Actualizar variables de entorno de Kong\n\n1. Regresa al servicio **Kong** en Zeabur.\n2. Ve a la pestaña **Variables**.\n3. Actualiza los siguientes valores con tus nuevas claves:\n    - `JWT_SECRET`: Tu secreto personalizado.\n    - `ANON_KEY`: Tu nueva clave `anon`.\n    - `SERVICE_ROLE_KEY`: Tu nueva clave `service_role`.\n\n### Paso 3: Reiniciar servicios\n\nPara aplicar estos cambios de seguridad, debes reiniciar el stack:\n\n1. Ve a **Project Settings** → **General**.\n2. Desplázate hasta **Batch Actions**.\n3. Haz clic en **Restart All**.\n\n---\n\n## Fase 3: Configuración (Auth y correo)\n\nPor defecto, Supabase no puede enviar correos (magic links, restablecimiento de contraseña). Necesitas configurar un proveedor SMTP. Recomendamos **Resend**, pero cualquier proveedor SMTP funciona.\n\n### Paso 1: Configurar SMTP (correo)\n\n1. Ve al servicio **Auth** en tu proyecto de Zeabur.\n2. Ve a la pestaña **Variables** y agrega lo siguiente:\n    - `GOTRUE_SMTP_HOST`: `smtp.resend.com` (o tu proveedor)\n    - `GOTRUE_SMTP_PORT`: `587`\n    - `GOTRUE_SMTP_USER`: `resend` (o tu usuario)\n    - `GOTRUE_SMTP_PASS`: `re_123...` (tu API Key)\n    - `GOTRUE_SMTP_ADMIN_EMAIL`: `noreply@yourdomain.com`\n    - `GOTRUE_SITE_URL`: `https://your-project-domain.zeabur.app` (el enlace al que se redirige a los usuarios)\n3. **Reinicia el servicio Auth** para aplicar los cambios.\n\n### Paso 2: Configurar OAuth (Google/Apple) - Opcional\n\nPara habilitar Google Login, agrega estas variables al servicio **Auth**:\n\n- `GOTRUE_EXTERNAL_GOOGLE_ENABLED`: `true`\n- `GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID`: `your-google-client-id`\n- `GOTRUE_EXTERNAL_GOOGLE_SECRET`: `your-google-secret`\n- `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI`: `https://your-project.zeabur.app/auth/v1/callback`\n\n*Nota: Asegúrate de reemplazar `your-project.zeabur.app` por tu dominio real.*\n\n### Paso 3: Probar el correo (manual)\n\nUna vez que el servicio se reinicie, verifica la configuración disparando un signup manualmente desde tu terminal:\n\n```bash\ncurl -X POST \"https://your-project.zeabur.app/auth/v1/signup\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"apikey: YOUR_ANON_KEY\" \\\n  -d '{\n    \"email\": \"test@example.com\",\n    \"password\": \"yourpassword\"\n  }'\n```\n\n**Resultados esperados:**\n\n- Recibes una respuesta JSON `200 OK`.\n- Llega un correo de verificación a `test@example.com` (revisa spam).\n\n### Solución de problemas de correo\n\n- **Redirect URI Mismatch:** Asegúrate de que `GOTRUE_SITE_URL` coincida exactamente con tu dominio desplegado.\n- **SPF/DKIM:** Si usas un dominio personalizado, asegúrate de que tus registros DNS cumplan los requisitos de tu proveedor SMTP para evitar rechazos.\n- **Entrega:** Los primeros correos suelen ir a spam; \"calienta\" tu dominio o márcalo como \"no es spam\".\n\n---\n\n## Fase 4: Conectar con Supabase\n\n### Requisito previo: Obtener tus claves API\n\n**Crucial:** No copies las claves desde el dashboard de Supabase Studio, ya que puede mostrar claves por defecto antiguas.\n\n1. Ve al servicio **Kong** en Zeabur → **Variables**.\n2. Copia tu ANON_KEY y la URL de tu dominio.\n\n### Opción 1: Conectar tu frontend/app\n\n*Mejor para: Conectar tu proyecto de Lovable o una aplicación web estándar.*\n\nPara habilitar la comunicación entre tu aplicación frontend y tu backend de Supabase, debes configurar variables de entorno en tu base de código.\n\n1. Crea o abre tu archivo `.env` en la raíz del proyecto.\n2. Agrega las credenciales encontradas en el paso de Requisito previo:\n    \n    ```\n    VITE_SUPABASE_URL=[your-project-url]\n    VITE_SUPABASE_ANON_KEY=[your-anon-key]\n    \n    ```\n\n### Opción 2: Sincronizar el esquema de base de datos (CLI)\n\n*Mejor para: Desarrolladores que empujan cambios locales de base de datos a la instancia de producción.*\n\nPuedes empujar tu esquema local a Supabase usando la cadena de conexión.\n\n1. **Obtener la cadena de conexión:** Ve al panel del servicio **PostgreSQL** (parte del stack de Supabase) en tu dashboard de Zeabur.\n2. **Copiar:** Copia la cadena de conexión de PostgreSQL.\n    \n    [PostgreSQL Connection String](https://cdn.zeabur.com/supabase%20migration/Postgresql%20Connection%20String1.png)\n    \n3. **Ejecutar:** Ejecuta el siguiente comando en tu terminal (asegúrate de tener instalado Supabase CLI):\n    \n    ```bash\n    supabase db push --db-url \"[your-supabase-postgresql-connection-string]\" --debug\n    \n    ```\n\n---\n\n## Fase 4.5: Conectar tu app (entre servicios)\n\nCuando despliegues tu aplicación en Zeabur junto con Supabase, debes inyectar las credenciales en el entorno de despliegue.\n\n### La forma manual\n\n1. Ve a la configuración de tu **App Service** en Zeabur.\n2. Haz clic en el botón **Configurable** (o ve a la pestaña **Variables**).\n3. Agrega las siguientes variables:\n    - `VITE_SUPABASE_URL`: Pega la URL de tu proyecto.\n    - `VITE_SUPABASE_ANON_KEY`: Pega tu clave pública `anon`.\n\n> Pista: Asegúrate de que archivos de credenciales como `.env` estén listados en tu `.gitignore` para evitar filtraciones de secretos.\n\n---\n\n## Fase 5: Configuración avanzada (Opcional)\n\nAgrega estas variables a los servicios específicos para habilitar funciones avanzadas.\n\n### 1. Hooks avanzados de Auth (servicio Auth)\n\nAgrega estos valores a las variables del servicio **Auth** para disparar funciones Postgres en eventos específicos:\n\n- **Custom Access Token Hook:**\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED=true`\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI=pg-functions://postgres/public/custom_access_token_hook`\n- **MFA Verification Hook:**\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/mfa_verification_attempt`\n- **Password Verification Hook:**\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/password_verification_attempt`\n\n### 2. Asistente de IA en Studio (servicio Studio)\n\nHabilita el asistente de SQL con IA en el dashboard agregando esto a las variables del servicio **Studio**:\n\n- `OPENAI_API_KEY=your-openai-api-key`\n\n### 3. Ajustes de seguridad (servicio Auth)\n\n- `GOTRUE_EXTERNAL_SKIP_NONCE_CHECK=true` (Útil para Google Sign In en mobile)\n- `GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED=true` (Forzar verificación de correo en cambios de email)\n"
+    id-ID:
+        description: Alternatif open source untuk Firebase. Kami membangun fitur-fitur Firebase menggunakan alat open source tingkat enterprise.
+        variables:
+            - key: DASHBOARD_USERNAME
+              type: STRING
+              name: Nama Pengguna Dashboard
+              description: Nama pengguna apa yang Anda inginkan untuk Dashboard Supabase Anda?
+            - key: PUBLIC_DOMAIN
+              type: DOMAIN
+              name: Domain
+              description: Domain apa yang Anda inginkan untuk Supabase Anda?
+        readme: "# Mendeploy Supabase\n\n**Supabase** adalah alternatif open-source populer untuk Firebase. Supabase menyediakan rangkaian alat seperti database Postgres, autentikasi, API, dan penyimpanan file—menjadikannya solusi backend yang kuat.\n\nZeabur menyederhanakan deployment stack yang kompleks ini. Dengan Zeabur, Anda dapat meluncurkan instance Supabase yang berfungsi penuh (termasuk Kong Gateway, Authentication, dan PostgreSQL) hanya dengan satu klik tanpa konfigurasi manual.\n\n### Apa yang akan Anda pelajari\n\nDalam tutorial ini, kami akan memandu Anda untuk:\n\n1. Mendeploy stack layanan Supabase dari Zeabur Marketplace.\n2. Mengakses Dashboard Supabase melalui Kong Gateway.\n3. Mengambil API key Anda dan menghubungkan aplikasi Anda.\n\n### ⚠️ Batasan penting:\n\n***Tidak ada Logs di UI:*** Fitur \"Logs\" di Supabase Studio tidak akan berfungsi (karena service Vector tidak ada). Anda harus mengecek log melalui dashboard Zeabur untuk tiap service.\n***Tidak ada MCP:*** Server AI Model Context Protocol tidak disertakan dalam template ini.\n\n---\n\n## Fase 1: Mendeploy Service\n\n### Langkah 1: Membuat Service Supabase\n\nZeabur menyediakan \"one-click deployment\" melalui marketplace template.\n\n**Opsi 1: Membuat instance Supabase dari halaman Project**\n\n1. Masuk ke [**Zeabur Dashboard**](https://zeabur.com/).\n2. Klik tombol **\"Add Service\"**.\n3. Pilih **\"Template\"** (Marketplace).\n4. Cari `Supabase`.\n5. Pilih template **Supabase**. Service Anda (termasuk PostgreSQL, minio, dan Kong) akan mulai ter-deploy segera.\n\n### Langkah 2: Mengakses Dashboard Supabase (Kong Gateway)\n\nBerbeda dengan database standalone, Supabase di Zeabur menggunakan Kong Gateway untuk mengelola akses. Anda perlu mengambil kredensial untuk login ke UI.\n\n1. Buka panel service **Kong** di dalam project Anda.\n2. Di sana Anda akan menemukan **Supabase Username** dan **Supabase Password**.\n3. Buka bagian **Domains** di sisi panel service Kong dan klik URL yang disediakan.\n4. Gunakan kredensial dari langkah 2 untuk login ke Dashboard Supabase.\n\n[kong.png](https://cdn.zeabur.com/supabase%20migration/kong1.png)\n\n---\n\n## Fase 2: Mengamankan Instance Anda (KRITIS)\n\n**⚠️ PERINGATAN:** Template ini ter-deploy dengan API key default untuk keperluan demo. Anda **HARUS** membuat key baru sebelum digunakan untuk produksi, atau siapa pun yang mengetahui key default dapat mengakses database Anda.\n\n### Langkah 1: Generate key baru\n\n1. Kunjungi [Supabase JWT Generator](https://supabase.com/docs/guides/self-hosting/docker#generate-api-keys).\n2. Buat `JWT_SECRET` kustom dan gunakan tool tersebut untuk menghasilkan:\n    - Key `anon`.\n    - Key `service_role`.\n\n### Langkah 2: Update environment variable di Kong\n\n1. Kembali ke service **Kong** di Zeabur.\n2. Buka tab **Variables**.\n3. Update nilai berikut dengan key baru Anda:\n    - `JWT_SECRET`: Secret kustom Anda.\n    - `ANON_KEY`: Key `anon` baru Anda.\n    - `SERVICE_ROLE_KEY`: Key `service_role` baru Anda.\n\n### Langkah 3: Restart service\n\nUntuk menerapkan perubahan keamanan ini, Anda harus me-restart stack:\n\n1. Buka **Project Settings** → **General**.\n2. Scroll ke **Batch Actions**.\n3. Klik **Restart All**.\n\n---\n\n## Fase 3: Konfigurasi (Auth & Email)\n\nSecara default, Supabase tidak dapat mengirim email (magic link, reset password). Anda perlu mengonfigurasi provider SMTP. Kami merekomendasikan **Resend**, namun provider SMTP mana pun bisa.\n\n### Langkah 1: Konfigurasi SMTP (Email)\n\n1. Buka service **Auth** di project Zeabur Anda.\n2. Buka tab **Variables** lalu tambahkan:\n    - `GOTRUE_SMTP_HOST`: `smtp.resend.com` (atau provider Anda)\n    - `GOTRUE_SMTP_PORT`: `587`\n    - `GOTRUE_SMTP_USER`: `resend` (atau username Anda)\n    - `GOTRUE_SMTP_PASS`: `re_123...` (API Key Anda)\n    - `GOTRUE_SMTP_ADMIN_EMAIL`: `noreply@yourdomain.com`\n    - `GOTRUE_SITE_URL`: `https://your-project-domain.zeabur.app` (tautan redirect untuk pengguna)\n3. **Restart service Auth** untuk menerapkan perubahan.\n\n### Langkah 2: Konfigurasi OAuth (Google/Apple) - Opsional\n\nUntuk mengaktifkan Google Login, tambahkan variable berikut ke service **Auth**:\n\n- `GOTRUE_EXTERNAL_GOOGLE_ENABLED`: `true`\n- `GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID`: `your-google-client-id`\n- `GOTRUE_EXTERNAL_GOOGLE_SECRET`: `your-google-secret`\n- `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI`: `https://your-project.zeabur.app/auth/v1/callback`\n\n*Catatan: Pastikan Anda mengganti `your-project.zeabur.app` dengan domain Anda yang sebenarnya.*\n\n### Langkah 3: Test email (manual)\n\nSetelah service restart, verifikasi konfigurasi dengan memicu signup secara manual via terminal:\n\n```bash\ncurl -X POST \"https://your-project.zeabur.app/auth/v1/signup\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"apikey: YOUR_ANON_KEY\" \\\n  -d '{\n    \"email\": \"test@example.com\",\n    \"password\": \"yourpassword\"\n  }'\n```\n\n**Hasil yang diharapkan:**\n\n- Anda menerima respons JSON `200 OK`.\n- Email verifikasi masuk ke inbox `test@example.com` (cek spam).\n\n### Troubleshooting email\n\n- **Redirect URI Mismatch:** Pastikan `GOTRUE_SITE_URL` sama persis dengan domain yang Anda deploy.\n- **SPF/DKIM:** Jika memakai domain kustom, pastikan DNS record sesuai dengan persyaratan provider SMTP agar tidak ditolak.\n- **Delivery:** Email awal sering masuk spam; lakukan \"warm up\" domain atau tandai sebagai \"bukan spam\".\n\n---\n\n## Fase 4: Menghubungkan dengan Supabase\n\n### Prasyarat: Ambil API key Anda\n\n**Penting:** Jangan menyalin key dari dashboard Supabase Studio, karena bisa menampilkan key default lama.\n\n1. Buka service **Kong** di Zeabur → **Variables**.\n2. Salin ANON_KEY dan URL domain Anda.\n\n### Opsi 1: Hubungkan frontend/app Anda\n\n*Cocok untuk: Menghubungkan project Lovable atau aplikasi web standar.*\n\nUntuk mengaktifkan komunikasi antara aplikasi frontend dan backend Supabase Anda, Anda perlu mengatur environment variable di codebase.\n\n1. Buat atau buka file `.env` di root project Anda.\n2. Tambahkan kredensial dari langkah Prasyarat:\n    \n    ```\n    VITE_SUPABASE_URL=[your-project-url]\n    VITE_SUPABASE_ANON_KEY=[your-anon-key]\n    \n    ```\n\n### Opsi 2: Sinkronisasi skema database (CLI)\n\n*Cocok untuk: Developer yang ingin mendorong perubahan database lokal ke instance produksi.*\n\nAnda dapat mendorong skema database lokal ke Supabase menggunakan connection string.\n\n1. **Ambil Connection String:** Buka panel service **PostgreSQL** (bagian dari stack Supabase) di dashboard Zeabur.\n2. **Salin:** Salin connection string PostgreSQL.\n    \n    [PostgreSQL Connection String](https://cdn.zeabur.com/supabase%20migration/Postgresql%20Connection%20String1.png)\n    \n3. **Jalankan perintah:** Jalankan perintah berikut di terminal (pastikan Supabase CLI sudah terpasang):\n    \n    ```bash\n    supabase db push --db-url \"[your-supabase-postgresql-connection-string]\" --debug\n    \n    ```\n\n---\n\n## Fase 4.5: Menghubungkan App Anda (Antar-Service)\n\nSaat Anda mendeploy aplikasi Anda ke Zeabur berdampingan dengan Supabase, Anda harus menyuntikkan kredensial ke environment deployment.\n\n### Cara manual\n\n1. Buka pengaturan **App Service** Anda di Zeabur.\n2. Klik tombol **Configurable** (atau buka tab **Variables**).\n3. Tambahkan variable berikut:\n    - `VITE_SUPABASE_URL`: Tempel URL Project Anda.\n    - `VITE_SUPABASE_ANON_KEY`: Tempel public key `anon` Anda.\n\n> Petunjuk: Pastikan file kredensial seperti `.env` ada di `.gitignore` untuk mencegah kebocoran secret.\n\n---\n\n## Fase 5: Konfigurasi Lanjutan (Opsional)\n\nTambahkan variable berikut ke service tertentu untuk mengaktifkan fitur lanjutan.\n\n### 1. Advanced Auth Hooks (Service Auth)\n\nTambahkan ini ke variable service **Auth** untuk memicu fungsi Postgres pada event tertentu:\n\n- **Custom Access Token Hook:**\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED=true`\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI=pg-functions://postgres/public/custom_access_token_hook`\n- **MFA Verification Hook:**\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/mfa_verification_attempt`\n- **Password Verification Hook:**\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/password_verification_attempt`\n\n### 2. Asisten AI di Studio (Service Studio)\n\nAktifkan asisten SQL AI di dashboard dengan menambahkan ini ke variable service **Studio**:\n\n- `OPENAI_API_KEY=your-openai-api-key`\n\n### 3. Penyesuaian keamanan (Service Auth)\n\n- `GOTRUE_EXTERNAL_SKIP_NONCE_CHECK=true` (Berguna untuk Google Sign In di mobile)\n- `GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED=true` (Wajibkan verifikasi email saat mengganti alamat email)"
+    ja-JP:
+        description: オープンソースの Firebase 代替。エンタープライズグレードのオープンソースツールを使用して Firebase の機能を構築しています。
+        variables:
+            - key: DASHBOARD_USERNAME
+              type: STRING
+              name: ダッシュボードユーザー名
+              description: Supabase ダッシュボードに使用するユーザー名は何ですか？
+            - key: PUBLIC_DOMAIN
+              type: DOMAIN
+              name: ドメイン
+              description: Supabase に使用するドメインは何ですか？
+        readme: "# Supabase のデプロイ\n\n**Supabase** は Firebase の人気なオープンソース代替です。Postgres データベース、認証、API、ファイルストレージなどのツール一式を提供し、堅牢なバックエンド基盤になります。\n\nZeabur はこの複雑なスタックのデプロイを簡素化します。Zeabur なら、Kong Gateway、Authentication、PostgreSQL を含むフル機能の Supabase インスタンスを、手動設定なしでワンクリックで立ち上げられます。\n\n### このチュートリアルで学べること\n\nこのチュートリアルでは、次の内容を案内します：\n\n1. Zeabur Marketplace から Supabase のサービススタックをデプロイする\n2. Kong Gateway 経由で Supabase Dashboard にアクセスする\n3. API キーを取得し、アプリケーションを接続する\n\n### ⚠️ 重要な制限事項:\n\n***UI の Logs は利用不可:*** Supabase Studio の \"Logs\" 機能は動作しません（Vector サービスがないため）。各サービスのログは Zeabur ダッシュボードから確認してください。\n***MCP は非搭載:*** AI Model Context Protocol サーバーはこのテンプレートに含まれていません。\n\n---\n\n## フェーズ 1: サービスのデプロイ\n\n### ステップ 1: Supabase サービスを作成する\n\nZeabur はテンプレートマーケットプレイスからの「ワンクリックデプロイ」を提供します。\n\n**オプション 1: Project ページから Supabase インスタンスを作成する**\n\n1. [**Zeabur Dashboard**](https://zeabur.com/) にログインします。\n2. **\"Add Service\"** ボタンをクリックします。\n3. **\"Template\"**（Marketplace）を選択します。\n4. `Supabase` を検索します。\n5. **Supabase** テンプレートを選択します。PostgreSQL、minio、Kong などのサービスが直ちにデプロイされます。\n\n### ステップ 2: Supabase Dashboard にアクセスする（Kong Gateway）\n\n単体の DB と違い、Zeabur 上の Supabase は Kong Gateway を使ってアクセスを管理します。UI にログインするために認証情報を取得する必要があります。\n\n1. プロジェクト内の **Kong** サービスパネルに移動します。\n2. ここで **Supabase Username** と **Supabase Password** を確認できます。\n3. Kong サービスパネルのサイドにある **Domains** を開き、表示される URL をクリックします。\n4. 手順 2 の認証情報で Supabase Dashboard にログインします。\n\n[kong.png](https://cdn.zeabur.com/supabase%20migration/kong1.png)\n\n---\n\n## フェーズ 2: インスタンスの保護（重要）\n\n**⚠️ 警告:** このテンプレートはデモ用のデフォルト API キーでデプロイされます。本番利用前に必ず新しいキーを生成してください。デフォルトキーが知られていると、誰でもあなたの DB にアクセスできてしまいます。\n\n### ステップ 1: 新しいキーを生成する\n\n1. [Supabase JWT Generator](https://supabase.com/docs/guides/self-hosting/docker#generate-api-keys) にアクセスします。\n2. カスタム `JWT_SECRET` を作成し、ツールで次を生成します：\n    - `anon` キー\n    - `service_role` キー\n\n### ステップ 2: Kong の環境変数を更新する\n\n1. Zeabur の **Kong** サービスに戻ります。\n2. **Variables** タブを開きます。\n3. 次の値を新しいキーに更新します：\n    - `JWT_SECRET`: カスタムの secret\n    - `ANON_KEY`: 新しい `anon` キー\n    - `SERVICE_ROLE_KEY`: 新しい `service_role` キー\n\n### ステップ 3: サービスを再起動する\n\nセキュリティ変更を反映するために、スタック全体を再起動します：\n\n1. **Project Settings** → **General** に移動します。\n2. **Batch Actions** までスクロールします。\n3. **Restart All** をクリックします。\n\n---\n\n## フェーズ 3: 設定（Auth とメール）\n\nデフォルトでは、Supabase はメール（マジックリンク、パスワードリセットなど）を送信できません。SMTP プロバイダの設定が必要です。**Resend** を推奨しますが、任意の SMTP プロバイダが利用できます。\n\n### ステップ 1: SMTP（メール）を設定する\n\n1. Zeabur プロジェクトの **Auth** サービスに移動します。\n2. **Variables** タブを開き、次を追加します：\n    - `GOTRUE_SMTP_HOST`: `smtp.resend.com`（または利用するプロバイダ）\n    - `GOTRUE_SMTP_PORT`: `587`\n    - `GOTRUE_SMTP_USER`: `resend`（またはユーザー名）\n    - `GOTRUE_SMTP_PASS`: `re_123...`（API Key）\n    - `GOTRUE_SMTP_ADMIN_EMAIL`: `noreply@yourdomain.com`\n    - `GOTRUE_SITE_URL`: `https://your-project-domain.zeabur.app`（ユーザーのリダイレクト先）\n3. 変更を反映するため **Auth サービスを再起動** します。\n\n### ステップ 2: OAuth（Google/Apple）を設定する - 任意\n\nGoogle ログインを有効にするには、**Auth** サービスに次を追加します：\n\n- `GOTRUE_EXTERNAL_GOOGLE_ENABLED`: `true`\n- `GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID`: `your-google-client-id`\n- `GOTRUE_EXTERNAL_GOOGLE_SECRET`: `your-google-secret`\n- `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI`: `https://your-project.zeabur.app/auth/v1/callback`\n\n*注意: `your-project.zeabur.app` は実際のドメインに置き換えてください。*\n\n### ステップ 3: メール機能をテストする（手動）\n\nサービス再起動後、ターミナルから signup を手動で叩いて検証します：\n\n```bash\ncurl -X POST \"https://your-project.zeabur.app/auth/v1/signup\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"apikey: YOUR_ANON_KEY\" \\\n  -d '{\n    \"email\": \"test@example.com\",\n    \"password\": \"yourpassword\"\n  }'\n```\n\n**期待される結果:**\n\n- `200 OK` の JSON レスポンスが返る\n- `test@example.com` に確認メールが届く（迷惑メールも確認）\n\n### メールのトラブルシューティング\n\n- **Redirect URI Mismatch:** `GOTRUE_SITE_URL` が実際のデプロイ済みドメインと完全一致しているか確認してください。\n- **SPF/DKIM:** カスタムドメインを使う場合、SMTP プロバイダの要件に合わせて DNS レコードを設定し、拒否を防いでください。\n- **Delivery:** 初期のメールは迷惑メールに入りやすいので、ドメインのウォームアップや「迷惑メールではない」設定をしてください。\n\n---\n\n## フェーズ 4: Supabase に接続する\n\n### 前提: API キーを取得する\n\n**重要:** Supabase Studio のダッシュボードからキーをコピーしないでください。古いデフォルトキーが表示される場合があります。\n\n1. Zeabur の **Kong** サービス → **Variables** を開きます。\n2. ANON_KEY とドメイン URL をコピーします。\n\n### オプション 1: フロントエンド / アプリを接続する\n\n*用途: Lovable プロジェクトや通常の Web アプリ接続向け。*\n\nフロントエンドから Supabase バックエンドへ接続できるよう、コードベースに環境変数を設定します。\n\n1. プロジェクトルートの `.env` を作成または開きます。\n2. 前提手順で取得した値を追加します：\n    \n    ```\n    VITE_SUPABASE_URL=[your-project-url]\n    VITE_SUPABASE_ANON_KEY=[your-anon-key]\n    \n    ```\n\n### オプション 2: DB スキーマを同期する（CLI）\n\n*用途: ローカルの DB 変更を本番インスタンスへ反映したい開発者向け。*\n\n接続文字列を使ってローカルの DB スキーマを Supabase に push できます。\n\n1. **接続文字列を取得:** Zeabur ダッシュボードで Supabase スタック内の **PostgreSQL** サービスパネルを開きます。\n2. **コピー:** PostgreSQL の接続文字列をコピーします。\n    \n    [PostgreSQL Connection String](https://cdn.zeabur.com/supabase%20migration/Postgresql%20Connection%20String1.png)\n    \n3. **実行:** ターミナルで次を実行します（Supabase CLI が必要です）：\n    \n    ```bash\n    supabase db push --db-url \"[your-supabase-postgresql-connection-string]\" --debug\n    \n    ```\n\n---\n\n## フェーズ 4.5: アプリを接続する（サービス間）\n\nSupabase と同じ Zeabur 上にアプリをデプロイする場合、デプロイ環境に認証情報を注入する必要があります。\n\n### 手動で設定する方法\n\n1. Zeabur の **App Service** 設定を開きます。\n2. **Configurable** ボタンをクリック（または **Variables** タブを開く）します。\n3. 次の変数を追加します：\n    - `VITE_SUPABASE_URL`: Project URL を貼り付ける\n    - `VITE_SUPABASE_ANON_KEY`: `anon` 公開キーを貼り付ける\n\n> ヒント: `.env` のような認証情報ファイルは `.gitignore` に含めて、秘密情報の漏洩を防いでください。\n\n---\n\n## フェーズ 5: 高度な設定（任意）\n\n高度な機能を有効にするには、各サービスに次の変数を追加します。\n\n### 1. 高度な Auth Hooks（Auth サービス）\n\n特定イベントで Postgres 関数をトリガーするために、**Auth** サービスに次を追加します：\n\n- **Custom Access Token Hook:**\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED=true`\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI=pg-functions://postgres/public/custom_access_token_hook`\n- **MFA Verification Hook:**\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/mfa_verification_attempt`\n- **Password Verification Hook:**\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/password_verification_attempt`\n\n### 2. Studio AI アシスタント（Studio サービス）\n\nダッシュボードの AI SQL アシスタントを有効にするには、**Studio** サービスに次を追加します：\n\n- `OPENAI_API_KEY=your-openai-api-key`\n\n### 3. セキュリティ調整（Auth サービス）\n\n- `GOTRUE_EXTERNAL_SKIP_NONCE_CHECK=true`（モバイルの Google Sign In に有用）\n- `GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED=true`（メールアドレス変更時に検証を強制）\n"
+    zh-CN:
+        description: 开源的 Firebase 替代方案。我们使用企业级开源工具来构建 Firebase 的功能。
+        variables:
+            - key: DASHBOARD_USERNAME
+              type: STRING
+              name: 仪表板用户名
+              description: 你想为 Supabase 仪表板设置什么用户名？
+            - key: PUBLIC_DOMAIN
+              type: DOMAIN
+              name: 域名
+              description: 你想为 Supabase 使用什么域名？
+        readme: "# 部署 Supabase\n\n**Supabase** 是一个非常流行的开源 Firebase 替代方案。它提供 Postgres 数据库、身份认证、API 以及文件存储等一整套工具，是一个强大的后端解决方案。\n\nZeabur 简化了这一复杂栈的部署。通过 Zeabur，你可以一键启动一个完整可用的 Supabase 实例（包含 Kong Gateway、Authentication、PostgreSQL），无需手动配置。\n\n### 你将学到什么\n\n在本教程中，我们将引导你完成：\n\n1. 从 Zeabur Marketplace 部署 Supabase 服务栈。\n2. 通过 Kong Gateway 访问 Supabase Dashboard。\n3. 获取你的 API keys 并连接你的应用。\n\n### ⚠️ 重要限制：\n\n***UI 无 Logs：*** Supabase Studio 的 “Logs” 功能无法使用（因为缺少 Vector 服务）。你需要在 Zeabur 控制台中查看每个服务的日志。\n***无 MCP：*** 本模板不包含 AI Model Context Protocol 服务器。\n\n---\n\n## 阶段 1：部署服务\n\n### 步骤 1：创建 Supabase 服务\n\nZeabur 通过模板市场提供“一键部署”。\n\n**选项 1：在项目页面创建 Supabase 实例**\n\n1. 登录你的 [**Zeabur Dashboard**](https://zeabur.com/)。\n2. 点击 **\"Add Service\"** 按钮。\n3. 选择 **\"Template\"**（Marketplace）。\n4. 搜索 `Supabase`。\n5. 选择 **Supabase** 模板。你的服务（包括 PostgreSQL、minio、Kong）将立即开始部署。\n\n### 步骤 2：访问 Supabase Dashboard（Kong Gateway）\n\n与单独的数据库不同，Zeabur 上的 Supabase 使用 Kong Gateway 来管理访问。你需要获取凭据才能登录 UI。\n\n1. 进入项目内的 **Kong** 服务面板。\n2. 你会在这里看到 **Supabase Username** 与 **Supabase Password**。\n3. 在 Kong 服务面板侧边栏找到 **Domains**，点击提供的 URL。\n4. 使用步骤 2 的凭据登录 Supabase Dashboard。\n\n[kong.png](https://cdn.zeabur.com/supabase%20migration/kong1.png)\n\n---\n\n## 阶段 2：加固你的实例（关键）\n\n**⚠️ 警告：** 模板使用默认 API key 仅用于演示。正式环境中你**必须**生成新的 key，否则任何知道默认 key 的人都可以访问你的数据库。\n\n### 步骤 1：生成新的 keys\n\n1. 访问 [Supabase JWT Generator](https://supabase.com/docs/guides/self-hosting/docker#generate-api-keys)。\n2. 创建自定义 `JWT_SECRET` 并使用工具生成：\n    - `anon` key\n    - `service_role` key\n\n### 步骤 2：更新 Kong 环境变量\n\n1. 返回 Zeabur 中的 **Kong** 服务。\n2. 打开 **Variables** 标签页。\n3. 用新 keys 更新以下值：\n    - `JWT_SECRET`: 你的自定义 secret\n    - `ANON_KEY`: 你的新 `anon` key\n    - `SERVICE_ROLE_KEY`: 你的新 `service_role` key\n\n### 步骤 3：重启服务\n\n要应用这些安全变更，你必须重启整个栈：\n\n1. 进入 **Project Settings** → **General**。\n2. 滚动到 **Batch Actions**。\n3. 点击 **Restart All**。\n\n---\n\n## 阶段 3：配置（Auth 与邮件）\n\n默认情况下，Supabase 不能发送邮件（magic link、重置密码等）。你需要配置 SMTP 提供商。我们推荐 **Resend**，但任何 SMTP 都可以。\n\n### 步骤 1：配置 SMTP（邮件）\n\n1. 进入你 Zeabur 项目中的 **Auth** 服务。\n2. 打开 **Variables** 标签页并添加：\n    - `GOTRUE_SMTP_HOST`: `smtp.resend.com`（或你的提供商）\n    - `GOTRUE_SMTP_PORT`: `587`\n    - `GOTRUE_SMTP_USER`: `resend`（或你的用户名）\n    - `GOTRUE_SMTP_PASS`: `re_123...`（你的 API Key）\n    - `GOTRUE_SMTP_ADMIN_EMAIL`: `noreply@yourdomain.com`\n    - `GOTRUE_SITE_URL`: `https://your-project-domain.zeabur.app`（用户跳转的链接）\n3. **重启 Auth 服务**以应用更改。\n\n### 步骤 2：配置 OAuth（Google/Apple）- 可选\n\n若要启用 Google 登录，在 **Auth** 服务中添加：\n\n- `GOTRUE_EXTERNAL_GOOGLE_ENABLED`: `true`\n- `GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID`: `your-google-client-id`\n- `GOTRUE_EXTERNAL_GOOGLE_SECRET`: `your-google-secret`\n- `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI`: `https://your-project.zeabur.app/auth/v1/callback`\n\n*注意：请将 `your-project.zeabur.app` 替换为你的实际域名。*\n\n### 步骤 3：手动测试邮件功能\n\n服务重启后，可以通过终端手动触发注册来验证配置：\n\n```bash\ncurl -X POST \"https://your-project.zeabur.app/auth/v1/signup\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"apikey: YOUR_ANON_KEY\" \\\n  -d '{\n    \"email\": \"test@example.com\",\n    \"password\": \"yourpassword\"\n  }'\n```\n\n**预期结果：**\n\n- 收到 `200 OK` 的 JSON 响应\n- `test@example.com` 收到验证邮件（请检查垃圾箱）\n\n### 邮件排障\n\n- **Redirect URI 不匹配：** 确保 `GOTRUE_SITE_URL` 与实际部署域名完全一致。\n- **SPF/DKIM：** 使用自定义域名时，请确保 DNS 记录符合 SMTP 提供商要求，避免被拒收。\n- **投递：** 初期邮件常进垃圾箱；可对域名做“预热”，或将邮件标记为“非垃圾”。\n\n---\n\n## 阶段 4：连接 Supabase\n\n### 前置：获取你的 API keys\n\n**关键：** 不要从 Supabase Studio 控制台复制 keys，因为它可能显示旧的默认 keys。\n\n1. 进入 Zeabur 的 **Kong** 服务 → **Variables**。\n2. 复制你的 ANON_KEY 和域名 URL。\n\n### 选项 1：连接你的前端/应用\n\n*适用：连接 Lovable 项目或常规 Web 应用。*\n\n为了让你的前端应用与 Supabase 后端通信，你需要在代码中配置环境变量。\n\n1. 在项目根目录创建或打开 `.env` 文件。\n2. 添加前置步骤中的凭据：\n    \n    ```\n    VITE_SUPABASE_URL=[your-project-url]\n    VITE_SUPABASE_ANON_KEY=[your-anon-key]\n    \n    ```\n\n### 选项 2：同步数据库 Schema（CLI）\n\n*适用：开发者将本地数据库变更推送到生产实例。*\n\n你可以使用连接串将本地数据库 schema 推送到 Supabase。\n\n1. **获取连接串：** 在 Zeabur 控制台中打开 Supabase 栈中的 **PostgreSQL** 服务面板。\n2. **复制：** 复制 PostgreSQL 连接串。\n    \n    [PostgreSQL Connection String](https://cdn.zeabur.com/supabase%20migration/Postgresql%20Connection%20String1.png)\n    \n3. **执行：** 在终端运行以下命令（确保已安装 Supabase CLI）：\n    \n    ```bash\n    supabase db push --db-url \"[your-supabase-postgresql-connection-string]\" --debug\n    \n    ```\n\n---\n\n## 阶段 4.5：连接你的应用（服务间）\n\n当你将应用与 Supabase 一起部署在 Zeabur 时，需要把凭据注入到部署环境变量中。\n\n### 手动方式\n\n1. 进入 Zeabur 中你的 **App Service** 设置。\n2. 点击 **Configurable**（或进入 **Variables** 标签页）。\n3. 添加以下变量：\n    - `VITE_SUPABASE_URL`: 粘贴你的项目 URL\n    - `VITE_SUPABASE_ANON_KEY`: 粘贴你的 `anon` 公钥\n\n> 提示：请确保 `.env` 等凭据文件已加入 `.gitignore`，避免泄露密钥。\n\n---\n\n## 阶段 5：高级配置（可选）\n\n将以下变量添加到对应服务，以启用高级功能。\n\n### 1. 高级 Auth Hooks（Auth 服务）\n\n在 **Auth** 服务变量中添加以下内容，以在特定事件触发 Postgres 函数：\n\n- **Custom Access Token Hook:**\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED=true`\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI=pg-functions://postgres/public/custom_access_token_hook`\n- **MFA Verification Hook:**\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/mfa_verification_attempt`\n- **Password Verification Hook:**\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/password_verification_attempt`\n\n### 2. Studio AI 助手（Studio 服务）\n\n在 **Studio** 服务变量中添加以下内容，以启用 AI SQL 助手：\n\n- `OPENAI_API_KEY=your-openai-api-key`\n\n### 3. 安全增强（Auth 服务）\n\n- `GOTRUE_EXTERNAL_SKIP_NONCE_CHECK=true`（适用于移动端 Google Sign In）\n- `GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED=true`（邮箱变更时强制验证）\n"
+    zh-TW:
+        description: 開源的 Firebase 替代方案。我們使用企業級開源工具來建構 Firebase 的功能。
+        variables:
+            - key: DASHBOARD_USERNAME
+              type: STRING
+              name: 儀表板使用者名稱
+              description: 你想為 Supabase 儀表板設定什麼使用者名稱？
+            - key: PUBLIC_DOMAIN
+              type: DOMAIN
+              name: 網域
+              description: 你想為 Supabase 使用什麼網域？
+        readme: "# 部署 Supabase\n\n**Supabase** 是一個很受歡迎的開源 Firebase 替代方案。它提供 Postgres 資料庫、身分驗證、API 與檔案儲存等一整套工具，是一個強大的後端解決方案。\n\nZeabur 簡化了這個複雜技術棧的部署。透過 Zeabur，你可以一鍵啟動完整可用的 Supabase 實例（包含 Kong Gateway、Authentication、PostgreSQL），無需手動設定。\n\n### 你將學到什麼\n\n在本教學中，我們會帶你完成：\n\n1. 從 Zeabur Marketplace 部署 Supabase 服務栈。\n2. 透過 Kong Gateway 存取 Supabase Dashboard。\n3. 取得你的 API keys 並連接你的應用。\n\n### ⚠️ 重要限制：\n\n***UI 無 Logs：*** Supabase Studio 的「Logs」功能無法使用（因缺少 Vector 服務）。你必須在 Zeabur 控制台查看各服務的日誌。\n***無 MCP：*** 本模板不包含 AI Model Context Protocol 伺服器。\n\n---\n\n## 階段 1：部署服務\n\n### 步驟 1：建立 Supabase 服務\n\nZeabur 透過模板市集提供「一鍵部署」。\n\n**選項 1：從專案頁面建立 Supabase 實例**\n\n1. 登入你的 [**Zeabur Dashboard**](https://zeabur.com/)。\n2. 點擊 **\"Add Service\"** 按鈕。\n3. 選擇 **\"Template\"**（Marketplace）。\n4. 搜尋 `Supabase`。\n5. 選擇 **Supabase** 模板。你的服務（包含 PostgreSQL、minio、Kong）會立即開始部署。\n\n### 步驟 2：存取 Supabase Dashboard（Kong Gateway）\n\n與單獨的資料庫不同，Zeabur 上的 Supabase 透過 Kong Gateway 管理存取。你需要先取得憑證才能登入 UI。\n\n1. 進入專案內的 **Kong** 服務面板。\n2. 你會在此看到 **Supabase Username** 與 **Supabase Password**。\n3. 在 Kong 服務面板側邊的 **Domains** 中，點擊提供的 URL。\n4. 使用步驟 2 的憑證登入 Supabase Dashboard。\n\n[kong.png](https://cdn.zeabur.com/supabase%20migration/kong1.png)\n\n---\n\n## 階段 2：加固你的實例（關鍵）\n\n**⚠️ 警告：** 此模板使用預設 API key 僅供示範。正式環境中你**必須**生成新的 key，否則任何知道預設 key 的人都能存取你的資料庫。\n\n### 步驟 1：生成新的 keys\n\n1. 造訪 [Supabase JWT Generator](https://supabase.com/docs/guides/self-hosting/docker#generate-api-keys)。\n2. 建立自訂 `JWT_SECRET`，並使用工具生成：\n    - `anon` key\n    - `service_role` key\n\n### 步驟 2：更新 Kong 環境變數\n\n1. 回到 Zeabur 的 **Kong** 服務。\n2. 打開 **Variables** 分頁。\n3. 以新 keys 更新以下值：\n    - `JWT_SECRET`: 你的自訂 secret\n    - `ANON_KEY`: 你的新 `anon` key\n    - `SERVICE_ROLE_KEY`: 你的新 `service_role` key\n\n### 步驟 3：重啟服務\n\n要套用這些安全變更，你必須重啟整個栈：\n\n1. 進入 **Project Settings** → **General**。\n2. 捲動到 **Batch Actions**。\n3. 點擊 **Restart All**。\n\n---\n\n## 階段 3：設定（Auth 與 Email）\n\n預設情況下，Supabase 不能寄送 Email（magic link、密碼重設等）。你需要設定 SMTP 供應商。我們推薦 **Resend**，但任何 SMTP 都可使用。\n\n### 步驟 1：設定 SMTP（Email）\n\n1. 進入你 Zeabur 專案中的 **Auth** 服務。\n2. 打開 **Variables** 分頁並新增：\n    - `GOTRUE_SMTP_HOST`: `smtp.resend.com`（或你的供應商）\n    - `GOTRUE_SMTP_PORT`: `587`\n    - `GOTRUE_SMTP_USER`: `resend`（或你的使用者名稱）\n    - `GOTRUE_SMTP_PASS`: `re_123...`（你的 API Key）\n    - `GOTRUE_SMTP_ADMIN_EMAIL`: `noreply@yourdomain.com`\n    - `GOTRUE_SITE_URL`: `https://your-project-domain.zeabur.app`（使用者跳轉連結）\n3. **重啟 Auth 服務**以套用變更。\n\n### 步驟 2：設定 OAuth（Google/Apple）- 選用\n\n若要啟用 Google 登入，請在 **Auth** 服務中新增：\n\n- `GOTRUE_EXTERNAL_GOOGLE_ENABLED`: `true`\n- `GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID`: `your-google-client-id`\n- `GOTRUE_EXTERNAL_GOOGLE_SECRET`: `your-google-secret`\n- `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI`: `https://your-project.zeabur.app/auth/v1/callback`\n\n*注意：請將 `your-project.zeabur.app` 更新為你的實際網域。*\n\n### 步驟 3：手動測試 Email 功能\n\n服務重啟後，可以透過終端機手動觸發註冊來驗證設定：\n\n```bash\ncurl -X POST \"https://your-project.zeabur.app/auth/v1/signup\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"apikey: YOUR_ANON_KEY\" \\\n  -d '{\n    \"email\": \"test@example.com\",\n    \"password\": \"yourpassword\"\n  }'\n```\n\n**預期結果：**\n\n- 收到 `200 OK` 的 JSON 回應\n- `test@example.com` 收到驗證信（請檢查垃圾郵件）\n\n### Email 疑難排解\n\n- **Redirect URI 不符：** 請確認 `GOTRUE_SITE_URL` 與實際部署網域完全一致。\n- **SPF/DKIM：** 使用自訂網域時，請確保 DNS 記錄符合 SMTP 供應商要求，避免被拒收。\n- **投遞：** 初期信件常進垃圾郵件；可對網域進行「預熱」，或將信件標記為「非垃圾」。\n\n---\n\n## 階段 4：連接 Supabase\n\n### 前置：取得你的 API keys\n\n**關鍵：** 不要從 Supabase Studio 儀表板複製 keys，因為它可能顯示舊的預設 keys。\n\n1. 前往 Zeabur 的 **Kong** 服務 → **Variables**。\n2. 複製你的 ANON_KEY 與網域 URL。\n\n### 選項 1：連接你的前端/應用\n\n*適用：連接 Lovable 專案或一般 Web 應用。*\n\n為了讓前端能與 Supabase 後端溝通，你需要在程式碼中設定環境變數。\n\n1. 在專案根目錄建立或打開 `.env` 檔案。\n2. 新增前置步驟取得的憑證：\n    \n    ```\n    VITE_SUPABASE_URL=[your-project-url]\n    VITE_SUPABASE_ANON_KEY=[your-anon-key]\n    \n    ```\n\n### 選項 2：同步資料庫 Schema（CLI）\n\n*適用：開發者將本機資料庫變更推送到生產實例。*\n\n你可以使用連線字串將本機 schema 推送到 Supabase。\n\n1. **取得連線字串：** 在 Zeabur 控制台中打開 Supabase 服務栈中的 **PostgreSQL** 服務面板。\n2. **複製：** 複製 PostgreSQL 連線字串。\n    \n    [PostgreSQL Connection String](https://cdn.zeabur.com/supabase%20migration/Postgresql%20Connection%20String1.png)\n    \n3. **執行：** 在終端機執行以下命令（請先安裝 Supabase CLI）：\n    \n    ```bash\n    supabase db push --db-url \"[your-supabase-postgresql-connection-string]\" --debug\n    \n    ```\n\n---\n\n## 階段 4.5：連接你的應用（服務間）\n\n當你在 Zeabur 與 Supabase 一起部署你的應用時，需要把憑證注入到部署環境變數中。\n\n### 手動方式\n\n1. 前往 Zeabur 的 **App Service** 設定。\n2. 點擊 **Configurable**（或進入 **Variables** 分頁）。\n3. 新增以下變數：\n    - `VITE_SUPABASE_URL`: 貼上你的 Project URL\n    - `VITE_SUPABASE_ANON_KEY`: 貼上你的 `anon` 公鑰\n\n> 提示：請確保 `.env` 等憑證檔已加入 `.gitignore`，避免洩露密鑰。\n\n---\n\n## 階段 5：進階設定（選用）\n\n將以下變數加入對應服務，以啟用進階功能。\n\n### 1. 進階 Auth Hooks（Auth 服務）\n\n在 **Auth** 服務變數中加入以下內容，以在特定事件觸發 Postgres 函數：\n\n- **Custom Access Token Hook:**\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED=true`\n    - `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI=pg-functions://postgres/public/custom_access_token_hook`\n- **MFA Verification Hook:**\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/mfa_verification_attempt`\n- **Password Verification Hook:**\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED=true`\n    - `GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI=pg-functions://postgres/public/password_verification_attempt`\n\n### 2. Studio AI 助手（Studio 服務）\n\n在 **Studio** 服務變數中新增以下內容，以啟用 AI SQL 助手：\n\n- `OPENAI_API_KEY=your-openai-api-key`\n\n### 3. 安全調整（Auth 服務）\n\n- `GOTRUE_EXTERNAL_SKIP_NONCE_CHECK=true`（適用於行動裝置 Google Sign In）\n- `GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED=true`（變更 Email 時強制驗證）"

@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: One-API
+spec:
+    description: Access all LLMs through the standard OpenAI API format, out of the box
+    icon: https://i.imgur.com/3pRJ59s.png
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Domain
+          description: Domain of your One API service.
+    tags:
+        - Starter
+        - Tool
+        - Website
+    readme: |
+        # One API
+        Access all LLMs through the standard OpenAI API format, out of the box
+    services:
+        - name: MySQL
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/mysql.svg
+          template: PREBUILT
+          spec:
+            id: mysql
+            source:
+                image: mysql:8.0.33
+            ports:
+                - id: database
+                  port: 3306
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/mysql
+            instructions:
+                - title: Command to connect to your MySQL
+                  content: mysqlsh --sql --host=${PORT_FORWARDED_HOSTNAME} --port=${DATABASE_PORT_FORWARDED_PORT} --user=${MYSQL_USERNAME} --password=${MYSQL_PASSWORD} --schema=${MYSQL_DATABASE}
+                - title: MySQL username
+                  content: ${MYSQL_USERNAME}
+                - title: MySQL password
+                  content: ${MYSQL_PASSWORD}
+                - title: MySQL database
+                  content: ${MYSQL_DATABASE}
+                - title: MySQL host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: MySQL port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                MYSQL_DATABASE:
+                    default: zeabur
+                    expose: true
+                MYSQL_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                MYSQL_PASSWORD:
+                    default: ${MYSQL_ROOT_PASSWORD}
+                    expose: true
+                MYSQL_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                MYSQL_ROOT_PASSWORD:
+                    default: ${PASSWORD}
+                MYSQL_USERNAME:
+                    default: root
+                    expose: true
+            configs:
+                - path: /etc/my.cnf
+                  template: |
+                    [mysqld]
+                    default-authentication-plugin=mysql_native_password
+                    skip-host-cache
+                    skip-name-resolve
+                    datadir=/var/lib/mysql
+                    socket=/var/run/mysqld/mysqld.sock
+                    secure-file-priv=/var/lib/mysql-files
+                    user=mysql
+                    max_allowed_packet=10M
+
+                    pid-file=/var/run/mysqld/mysqld.pid
+                    [client]
+                    socket=/var/run/mysqld/mysqld.sock
+
+                    !includedir /etc/mysql/conf.d/
+                  permission: null
+                  envsubst: null
+            healthCheck:
+                type: TCP
+                port: database
+        - name: One API
+          icon: https://i.imgur.com/3pRJ59s.png
+          dependencies:
+            - MySQL
+          template: PREBUILT
+          spec:
+            id: one-api
+            source:
+                image: justsong/one-api
+            ports:
+                - id: web
+                  port: 3000
+                  type: HTTP
+            env:
+                SQL_DSN:
+                    default: ${MYSQL_USERNAME}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DATABASE}
+          domainKey: PUBLIC_DOMAIN
+localization:
+    ja-JP:
+        description: 通过标准的 OpenAI API 格式访问所有 LLMs，开箱即用
+        readme: "# One API \n\n通过标准的 OpenAI API 格式访问所有 LLMs，开箱即用\n"
+    zh-CN:
+        description: 通过标准的 OpenAI API 格式访问所有 LLMs，开箱即用
+        readme: "# One API \n\n通过标准的 OpenAI API 格式访问所有 LLMs，开箱即用\n"
+    zh-TW:
+        description: 通过标准的 OpenAI API 格式访问所有 LLMs，开箱即用
+        readme: "# One API \n\n通过标准的 OpenAI API 格式访问所有 LLMs，开箱即用\n"

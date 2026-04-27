@@ -1,0 +1,214 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: 出海建站合集
+spec:
+    description: 出海建站必备工具合集，一键集成落地页 + 流量分析 + 网站监控
+    tags:
+        - Website
+        - Starter
+    readme: |-
+        # 出海建站必备工具合集
+
+        一键集成落地页 + 流量分析 + 网站监控。
+
+        - 使用 AstroShip 作为落地页，SEO 优化，简约美观
+        - 使用 Plausible 做网站分析，功能强大，数据完全自主可控
+        - 使用 Uptime Kuma 监控网站，及时报警处理错误
+    services:
+        - name: AstroShip
+          dependencies:
+            - postgresql
+          template: GIT
+          spec:
+            id: astroship
+            source:
+                source: GITHUB
+                repo: 743814205
+                branch: main
+        - name: postgresql
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/postgresql.svg
+          template: PREBUILT
+          spec:
+            id: postgresql
+            source:
+                image: postgres:16-alpine
+                command:
+                    - docker-entrypoint.sh
+                    - -c
+                    - config_file=/etc/postgresql/postgresql.conf
+            ports:
+                - id: database
+                  port: 5432
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/postgresql/data
+            instructions:
+                - title: Connection String
+                  content: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}
+                - title: PostgreSQL Connect Command
+                  content: psql "postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}"
+                - title: PostgreSQL username
+                  content: ${POSTGRES_USERNAME}
+                - title: PostgresSQL password
+                  content: ${POSTGRES_PASSWORD}
+                - title: PostgresSQL database
+                  content: ${POSTGRES_DATABASE}
+                - title: PostgreSQL host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: PostgreSQL port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                PGDATA:
+                    default: /var/lib/postgresql/data/pgdata
+                POSTGRES_CONNECTION_STRING:
+                    default: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+                    expose: true
+                POSTGRES_DATABASE:
+                    default: ${POSTGRES_DB}
+                    expose: true
+                POSTGRES_DB:
+                    default: zeabur
+                POSTGRES_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                POSTGRES_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                POSTGRES_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                POSTGRES_URI:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                    expose: true
+                POSTGRES_USER:
+                    default: root
+                POSTGRES_USERNAME:
+                    default: ${POSTGRES_USER}
+                    expose: true
+            configs:
+                - path: /etc/postgresql/postgresql.conf
+                  template: |
+                    # https://github.com/postgres/postgres/blob/master/src/backend/utils/misc/postgresql.conf.sample
+                    listen_addresses = '*'
+                    max_connections = 100
+                    shared_buffers = 128MB
+                    dynamic_shared_memory_type = posix
+                    max_wal_size = 1GB
+                    min_wal_size = 80MB
+                    log_timezone = 'Etc/UTC'
+                    datestyle = 'iso, mdy'
+                    timezone = 'Etc/UTC'
+                    lc_messages = 'en_US.utf8'
+                    lc_monetary = 'en_US.utf8'
+                    lc_numeric = 'en_US.utf8'
+                    lc_time = 'en_US.utf8'
+                    default_text_search_config = 'pg_catalog.english'
+                  permission: null
+                  envsubst: null
+            healthCheck:
+                type: TCP
+                port: database
+        - name: clickhouse
+          icon: https://avatars.githubusercontent.com/u/54801242
+          template: PREBUILT
+          spec:
+            id: clickhouse
+            source:
+                image: clickhouse/clickhouse-server:24.3.3.102-alpine
+            ports:
+                - id: web
+                  port: 8123
+                  type: HTTP
+            volumes:
+                - id: data
+                  dir: /var/lib/clickhouse
+            instructions:
+                - title: Clickhouse HTTP interface URL
+                  content: ${ZEABUR_WEB_URL}
+                - title: Clickhouse username
+                  content: ${CLICKHOUSE_USER}
+                - title: Clickhouse password
+                  content: ${CLICKHOUSE_PASSWORD}
+                - title: Clickhouse database
+                  content: ${CLICKHOUSE_DB}
+            env:
+                CLICKHOUSE_DB:
+                    default: zeabur
+                    expose: true
+                CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:
+                    default: "1"
+                CLICKHOUSE_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                CLICKHOUSE_USER:
+                    default: zeabur
+                    expose: true
+                PORT:
+                    default: "8123"
+            configs:
+                - path: /etc/clickhouse-server/config.d/docker_related_config.xml
+                  template: |-
+                    <clickhouse>
+                         <!-- Listen wildcard address to allow accepting connections from other containers and host network. -->
+                        <listen_host>::</listen_host>
+                        <listen_host>0.0.0.0</listen_host>
+                        <listen_try>1</listen_try>
+
+                        <logger>
+                            <level>information</level>
+                            <console>1</console>
+                        </logger>
+                    </clickhouse>
+                  permission: null
+                  envsubst: null
+            healthCheck:
+                type: TCP
+                port: web
+        - name: plausible
+          icon: https://asset.brandfetch.io/id2ceYC7ck/idkMMiHKhK.png
+          dependencies:
+            - postgresql
+          template: PREBUILT
+          spec:
+            id: plausible
+            source:
+                image: ghcr.io/plausible/community-edition:v2.1.1
+                command:
+                    - sh
+                args:
+                    - -c
+                    - sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run
+            ports:
+                - id: web
+                  port: 8000
+                  type: HTTP
+            env:
+                BASE_URL:
+                    default: ${ZEABUR_WEB_URL}
+                CLICKHOUSE_DATABASE_URL:
+                    default: http://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@clickhouse.zeabur.internal:8123/${CLICKHOUSE_DB}
+                DATABASE_URL:
+                    default: postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+                SECRET_KEY_BASE:
+                    default: ${PASSWORD}${PASSWORD}${PASSWORD}${PASSWORD}
+                TOTP_VAULT_KEY:
+                    default: dsxvbn3jxDd16az2QpsX5B8O+llxjQ2SJE2i5Bzx38I=
+        - name: Uptime-Kuma
+          icon: https://github.com/louislam/uptime-kuma/raw/master/public/icon.svg
+          dependencies:
+            - postgresql
+          template: PREBUILT
+          spec:
+            id: uptime-kuma
+            source:
+                image: louislam/uptime-kuma:1
+            ports:
+                - id: web
+                  port: 3001
+                  type: HTTP
+            volumes:
+                - id: data
+                  dir: /app/data

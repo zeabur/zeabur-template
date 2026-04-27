@@ -1,0 +1,201 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: TensorZero Gateway
+spec:
+    description: TensorZero Gateway - AI inference optimization platform with model routing and observability
+    icon: https://www.tensorzero.com/favicon.svg
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Public Domain
+          description: Your public domain for the gateway
+        - key: OPENAI_API_KEY
+          type: STRING
+          name: OpenAI API Key
+          description: Your OpenAI API key for accessing GPT models (required for default configuration)
+        - key: ANTHROPIC_API_KEY
+          type: STRING
+          name: Anthropic API Key
+          description: Your Anthropic API key for accessing Claude models (optional)
+        - key: DEEPSEEK_API_KEY
+          type: STRING
+          name: DeepSeek API Key
+          description: Your DeepSeek API key (optional)
+        - key: GOOGLE_AI_STUDIO_API_KEY
+          type: STRING
+          name: Google AI Studio API Key
+          description: Your Google AI Studio API key (optional)
+        - key: MISTRAL_API_KEY
+          type: STRING
+          name: Mistral API Key
+          description: Your Mistral API key (optional)
+        - key: TOGETHER_API_KEY
+          type: STRING
+          name: Together API Key
+          description: Your Together API key (optional)
+        - key: VLLM_API_KEY
+          type: STRING
+          name: vLLM API Key
+          description: Your vLLM API key (optional)
+        - key: XAI_API_KEY
+          type: STRING
+          name: xAI API Key
+          description: Your xAI API key (optional)
+    tags:
+        - AI
+        - Gateway
+        - Machine Learning
+        - API
+    readme: |
+        # TensorZero Gateway
+
+        TensorZero Gateway is an AI inference optimization platform that provides model routing, observability, and experimentation capabilities for AI applications.
+
+        ## Features
+
+        - **Model Routing**: Intelligently route requests to different AI models
+        - **Observability**: Built-in metrics and monitoring with ClickHouse integration
+        - **Experimentation**: A/B testing and variant management for AI models
+        - **Multi-Provider Support**: Works with OpenAI, Anthropic, AWS Bedrock, and many other providers
+
+        ## Configuration
+
+        The gateway uses a TOML configuration file that defines:
+        - Model configurations and routing rules
+        - Function definitions for different AI tasks
+        - Metrics collection and optimization settings
+
+        ## Required Setup
+
+        1. **API Keys**: Configure API keys for the AI providers you want to use
+        2. **Configuration Files**: The service includes a sample configuration with GPT-4o-mini setup. Configure it in [Config Editor](https://zeabur.com/docs/en-US/data-management/config-edit).
+
+        ## Health Check
+
+        The service includes a built-in health check endpoint at `/status` that monitors the gateway's operational status.
+
+        ## Documentation
+
+        For more information, visit the [TensorZero documentation](https://www.tensorzero.com/docs/gateway/deployment/#configuration-1).
+    services:
+        - name: clickhouse
+          icon: https://avatars.githubusercontent.com/u/54801242
+          template: PREBUILT
+          spec:
+            id: clickhouse
+            source:
+                image: clickhouse/clickhouse-server:24-alpine
+            ports:
+                - id: http
+                  port: 8123
+                  type: HTTP
+                - id: native
+                  port: 9000
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/clickhouse
+            instructions:
+                - title: Clickhouse HTTP interface URL
+                  content: ${ZEABUR_WEB_URL}
+                - title: Clickhouse username
+                  content: ${CLICKHOUSE_USER}
+                - title: Clickhouse password
+                  content: ${CLICKHOUSE_PASSWORD}
+                - title: Clickhouse database
+                  content: ${CLICKHOUSE_DB}
+            env:
+                CLICKHOUSE_DB:
+                    default: zeabur
+                    expose: true
+                CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:
+                    default: "1"
+                CLICKHOUSE_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                CLICKHOUSE_USER:
+                    default: zeabur
+                    expose: true
+                PORT:
+                    default: "8123"
+                TENSORZERO_CLICKHOUSE_URL:
+                    default: http://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@clickhouse.zeabur.internal:8123/${CLICKHOUSE_DB}
+                    expose: true
+            configs:
+                - path: /etc/clickhouse-server/config.d/docker_related_config.xml
+                  template: |-
+                    <clickhouse>
+                          <!-- Listen wildcard address to allow accepting connections from other containers and host network. -->
+                        <listen_host>::</listen_host>
+                        <listen_host>0.0.0.0</listen_host>
+                        <listen_try>1</listen_try>
+
+                        <logger>
+                            <level>information</level>
+                            <console>1</console>
+                        </logger>
+                    </clickhouse>
+                  permission: null
+                  envsubst: null
+            healthCheck:
+                type: TCP
+                port: http
+        - name: TensorZero Gateway
+          icon: https://www.tensorzero.com/favicon.svg
+          dependencies:
+            - clickhouse
+          template: PREBUILT_V2
+          spec:
+            id: tensorzero-gateway
+            source:
+                image: tensorzero/gateway
+                args:
+                    - --config-file
+                    - /app/config/tensorzero.toml
+            ports:
+                - id: web
+                  port: 3000
+                  type: HTTP
+            configs:
+                - path: /app/config/tensorzero.toml
+                  template: |
+                    # ┌────────────────────────────────────────────────────────────────────────────┐
+                    # │                                   MODELS                                   │
+                    # └────────────────────────────────────────────────────────────────────────────┘
+
+                    [models."gpt-4o-mini-2024-07-18"]
+                    routing = ["openai"]
+
+                    [models."gpt-4o-mini-2024-07-18".providers.openai]
+                    type = "openai"
+                    model_name = "gpt-4o-mini-2024-07-18"
+
+                    # ┌────────────────────────────────────────────────────────────────────────────┐
+                    # │                                 FUNCTIONS                                  │
+                    # └────────────────────────────────────────────────────────────────────────────┘
+
+                    [functions.simple_llm_call]
+                    type = "chat"
+
+                    [functions.simple_llm_call.variants.baseline]
+                    type = "chat_completion"
+                    model = "gpt-4o-mini-2024-07-18"
+
+                    # ┌────────────────────────────────────────────────────────────────────────────┐
+                    # │                                  METRICS                                   │
+                    # └────────────────────────────────────────────────────────────────────────────┘
+
+                    [metrics.task_success]
+                    type = "boolean"
+                    optimize = "max"
+                    level = "episode"
+                  permission: 436
+                  envsubst: true
+            healthCheck:
+                type: HTTP
+                port: web
+                http:
+                    path: /status
+          domainKey: PUBLIC_DOMAIN

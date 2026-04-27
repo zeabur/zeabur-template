@@ -1,0 +1,509 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Langfuse v3
+spec:
+    description: Open Source LLM Engineering Platform v3 with Full Observability Stack
+    coverImage: https://camo.githubusercontent.com/f6434387d7509f4cf5baee49a4535438b3d54954a0f2230117260ca88c56f947/68747470733a2f2f6c616e67667573652e636f6d2f696d616765732f646f63732f6769746875622d726561646d652f6769746875622d666561747572652d6f766572766965772e706e67
+    icon: https://avatars.githubusercontent.com/u/134601687
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Domain
+          description: What is the domain you want for your Langfuse?
+    tags:
+        - Tool
+    readme: |-
+        # Langfuse v3
+
+        Langfuse is an open source observability & analytics solution for LLM-based applications. It is mostly geared towards production usage but some users also use it for local development of their LLM applications.
+
+        Langfuse is focused on applications built on top of LLMs. Many new abstractions and common best practices evolved recently, e.g. agents, chained prompts, embedding-based retrieval, LLM access to REPLs & APIs. These make applications more powerful but also unpredictable for developers as they cannot fully anticipate how changes impact the quality, cost and overall latency of their application. Thus Langfuse helps to monitor and debug these applications.
+
+        This template deploys Langfuse v3 with full observability stack including:
+        - PostgreSQL database for core data
+        - ClickHouse for analytics and observability data
+        - MinIO for S3-compatible object storage
+        - Redis for queue management and caching
+        - Separate worker and web services for better performance
+
+        In case of errors, try restarting the application container or join the Discord to get help: https://langfuse.com/discord
+    services:
+        - name: postgresql
+          icon: https://cdn.zeabur.com/marketplace/postgresql.svg
+          template: PREBUILT
+          spec:
+            id: postgresql
+            source:
+                image: postgres:15
+            ports:
+                - id: database
+                  port: 5432
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/postgresql/data
+            instructions:
+                - title: Connection String
+                  content: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DB}
+                - title: PostgreSQL Connect Command
+                  content: psql "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DB}"
+                - title: PostgreSQL username
+                  content: ${POSTGRES_USER}
+                - title: PostgresSQL password
+                  content: ${POSTGRES_PASSWORD}
+                - title: PostgresSQL database
+                  content: ${POSTGRES_DB}
+                - title: PostgreSQL host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: PostgreSQL port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                POSTGRES_CONNECTION_STRING:
+                    default: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+                    expose: true
+                POSTGRES_DB:
+                    default: langfuse
+                    expose: true
+                POSTGRES_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                POSTGRES_PASSWORD:
+                    default: postgres
+                    expose: true
+                POSTGRES_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                POSTGRES_USER:
+                    default: zeabur
+                    expose: true
+            healthCheck:
+                type: TCP
+                port: database
+        - name: clickhouse
+          icon: https://avatars.githubusercontent.com/u/54801242
+          template: PREBUILT
+          spec:
+            id: clickhouse
+            source:
+                image: clickhouse/clickhouse-server:24-alpine
+            ports:
+                - id: http
+                  port: 8123
+                  type: HTTP
+                - id: native
+                  port: 9000
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/clickhouse
+            instructions:
+                - title: ClickHouse HTTP URL
+                  content: http://${PORT_FORWARDED_HOSTNAME}:${HTTP_PORT_FORWARDED_PORT}
+                - title: ClickHouse Native URL
+                  content: clickhouse://${PORT_FORWARDED_HOSTNAME}:${NATIVE_PORT_FORWARDED_PORT}
+                - title: ClickHouse Database
+                  content: ${CLICKHOUSE_DB}
+                - title: ClickHouse Username
+                  content: ${CLICKHOUSE_USER}
+                - title: ClickHouse Password
+                  content: ${CLICKHOUSE_PASSWORD}
+                - title: ClickHouse host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: ClickHouse HTTP port
+                  content: ${HTTP_PORT_FORWARDED_PORT}
+                - title: ClickHouse Native port
+                  content: ${NATIVE_PORT_FORWARDED_PORT}
+            env:
+                CH_CLICKHOUSE_HOST:
+                    default: ${CLICKHOUSE_HOST}
+                    expose: true
+                CH_CLICKHOUSE_HTTP_PORT:
+                    default: ${CLICKHOUSE_HTTP_PORT}
+                    expose: true
+                CH_CLICKHOUSE_NATIVE_PORT:
+                    default: ${CLICKHOUSE_NATIVE_PORT}
+                    expose: true
+                CH_CLICKHOUSE_PASSWORD:
+                    default: ${CLICKHOUSE_PASSWORD}
+                    expose: true
+                CH_CLICKHOUSE_USER:
+                    default: ${CLICKHOUSE_USER}
+                    expose: true
+                CLICKHOUSE_DB:
+                    default: analytics
+                    expose: true
+                CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:
+                    default: "1"
+                CLICKHOUSE_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                CLICKHOUSE_HTTP_PORT:
+                    default: ${HTTP_PORT}
+                    expose: true
+                CLICKHOUSE_NATIVE_PORT:
+                    default: ${NATIVE_PORT}
+                    expose: true
+                CLICKHOUSE_PASSWORD:
+                    default: clickhouse
+                    expose: true
+                CLICKHOUSE_USER:
+                    default: default
+                    expose: true
+            configs:
+                - path: /etc/clickhouse-server/config.d/docker_related_config.xml
+                  template: |-
+                    <clickhouse>
+                         <!-- Listen wildcard address to allow accepting connections from other containers and host network. -->
+                        <listen_host>::</listen_host>
+                        <listen_host>0.0.0.0</listen_host>
+                        <listen_try>1</listen_try>
+
+                        <logger>
+                            <level>information</level>
+                            <console>1</console>
+                        </logger>
+                    </clickhouse>
+                  permission: null
+                  envsubst: null
+                - path: /etc/clickhouse-server/users.d/experimental_settings.xml
+                  template: |-
+                    <clickhouse>
+                        <profiles>
+                            <default>
+                                <allow_experimental_json_type>1</allow_experimental_json_type>
+                            </default>
+                        </profiles>
+                    </clickhouse>
+                  permission: null
+                  envsubst: null
+            healthCheck:
+                type: TCP
+                port: http
+        - name: minio
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/minio.svg
+          dependencies:
+            - postgresql
+          template: PREBUILT
+          spec:
+            id: minio
+            source:
+                image: quay.io/minio/minio:latest
+                command:
+                    - /bin/sh
+                args:
+                    - -c
+                    - |
+                      minio server /data --console-address :9090 &
+                      MINIO_PID=$!
+                      while ! curl -s http://localhost:9000/minio/health/live; do
+                        echo 'Waiting for MinIO to start...'
+                        sleep 1
+                      done
+                      sleep 5
+                      mc alias set myminio http://localhost:9000 $MINIO_USERNAME $MINIO_PASSWORD
+                      echo "Creating bucket '$MINIO_DEFAULT_BUCKET'"
+                      mc mb myminio/$MINIO_DEFAULT_BUCKET
+                      wait $MINIO_PID
+            ports:
+                - id: web
+                  port: 9000
+                  type: HTTP
+                - id: console
+                  port: 9090
+                  type: HTTP
+            volumes:
+                - id: data
+                  dir: /data
+            instructions:
+                - title: Go to MinIO Console
+                  content: ${MINIO_CONSOLE_URL}
+                - title: Default Username (S3 Access Key ID)
+                  content: ${MINIO_USERNAME}
+                - title: Default Password (S3 Secret Access Key)
+                  content: ${MINIO_PASSWORD}
+                - title: Default Bucket
+                  content: ${MINIO_DEFAULT_BUCKET}
+            env:
+                MINIO_BROWSER_REDIRECT:
+                    default: "false"
+                MINIO_CONSOLE_PORT:
+                    default: ${CONSOLE_PORT}
+                    expose: true
+                MINIO_CONSOLE_URL:
+                    default: ${ZEABUR_CONSOLE_URL}
+                    expose: true
+                MINIO_DEFAULT_BUCKET:
+                    default: langfuse
+                MINIO_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                MINIO_PASSWORD:
+                    default: ${MINIO_ROOT_PASSWORD}
+                    expose: true
+                MINIO_ROOT_PASSWORD:
+                    default: ${PASSWORD}
+                MINIO_ROOT_USER:
+                    default: minio
+                MINIO_S3_PORT:
+                    default: ${WEB_PORT}
+                    expose: true
+                MINIO_USERNAME:
+                    default: ${MINIO_ROOT_USER}
+                    expose: true
+            healthCheck:
+                type: TCP
+                port: web
+        - name: redis
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/redis.svg
+          template: PREBUILT
+          spec:
+            id: redis
+            source:
+                image: redis/redis-stack-server:latest
+            ports:
+                - id: database
+                  port: 6379
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /data
+            instructions:
+                - title: Command to connect to your Redis
+                  content: redis-cli -h ${PORT_FORWARDED_HOSTNAME} -p ${DATABASE_PORT_FORWARDED_PORT} -a ${REDIS_PASSWORD}
+                - title: Redis Connection String
+                  content: redis://:${REDIS_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}
+                - title: Redis password
+                  content: ${REDIS_PASSWORD}
+                - title: Redis host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: Redis port
+                  content: ${DATABASE_PORT_FORWARDED_PORT}
+            env:
+                REDIS_ARGS:
+                    default: --requirepass ${REDIS_PASSWORD}
+                REDIS_CONNECTION_STRING:
+                    default: redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}
+                    expose: true
+                REDIS_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                REDIS_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                REDIS_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                REDIS_URI:
+                    default: ${REDIS_CONNECTION_STRING}
+                    expose: true
+            healthCheck:
+                type: TCP
+                port: database
+        - name: langfuse-worker
+          icon: https://avatars.githubusercontent.com/u/134601687
+          dependencies:
+            - postgresql
+          template: PREBUILT
+          spec:
+            id: langfuse-worker
+            source:
+                image: langfuse/langfuse-worker:3
+            ports:
+                - id: health
+                  port: 3030
+                  type: HTTP
+            env:
+                CLICKHOUSE_CLUSTER_ENABLED:
+                    default: "false"
+                CLICKHOUSE_MIGRATION_URL:
+                    default: clickhouse://${CH_CLICKHOUSE_HOST}:${CH_CLICKHOUSE_NATIVE_PORT}
+                CLICKHOUSE_PASSWORD:
+                    default: ${CH_CLICKHOUSE_PASSWORD}
+                CLICKHOUSE_URL:
+                    default: http://${CH_CLICKHOUSE_HOST}:${CH_CLICKHOUSE_HTTP_PORT}
+                CLICKHOUSE_USER:
+                    default: ${CH_CLICKHOUSE_USER}
+                DATABASE_URL:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                ENCRYPTION_KEY:
+                    default: 4f057429c91a7431dce7218b1ec3e4535f1edd6039ecd4df9c143be9c1e689c4
+                LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES:
+                    default: "true"
+                LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID:
+                    default: ${MINIO_USERNAME}
+                LANGFUSE_S3_BATCH_EXPORT_BUCKET:
+                    default: langfuse
+                LANGFUSE_S3_BATCH_EXPORT_ENABLED:
+                    default: "false"
+                LANGFUSE_S3_BATCH_EXPORT_ENDPOINT:
+                    default: http://${MINIO_HOST}:${MINIO_S3_PORT}
+                LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT:
+                    default: http://${MINIO_HOST}:${MINIO_S3_PORT}
+                LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE:
+                    default: "true"
+                LANGFUSE_S3_BATCH_EXPORT_PREFIX:
+                    default: exports/
+                LANGFUSE_S3_BATCH_EXPORT_REGION:
+                    default: auto
+                LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY:
+                    default: ${MINIO_PASSWORD}
+                LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID:
+                    default: ${MINIO_USERNAME}
+                LANGFUSE_S3_EVENT_UPLOAD_BUCKET:
+                    default: langfuse
+                LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT:
+                    default: http://${MINIO_HOST}:${MINIO_S3_PORT}
+                LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE:
+                    default: "true"
+                LANGFUSE_S3_EVENT_UPLOAD_PREFIX:
+                    default: events/
+                LANGFUSE_S3_EVENT_UPLOAD_REGION:
+                    default: auto
+                LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY:
+                    default: ${MINIO_PASSWORD}
+                LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID:
+                    default: ${MINIO_USERNAME}
+                LANGFUSE_S3_MEDIA_UPLOAD_BUCKET:
+                    default: langfuse
+                LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT:
+                    default: http://${MINIO_HOST}:${MINIO_S3_PORT}
+                LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE:
+                    default: "true"
+                LANGFUSE_S3_MEDIA_UPLOAD_PREFIX:
+                    default: media/
+                LANGFUSE_S3_MEDIA_UPLOAD_REGION:
+                    default: auto
+                LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY:
+                    default: ${MINIO_PASSWORD}
+                LANGFUSE_USE_AZURE_BLOB:
+                    default: "false"
+                REDIS_AUTH:
+                    default: ${REDIS_PASSWORD}
+                REDIS_HOST:
+                    default: ${REDIS_HOST}
+                REDIS_PORT:
+                    default: "6379"
+                REDIS_TLS_ENABLED:
+                    default: "false"
+                SALT:
+                    default: zeabur
+                TELEMETRY_ENABLED:
+                    default: "true"
+        - name: langfuse-web
+          icon: https://avatars.githubusercontent.com/u/134601687
+          dependencies:
+            - postgresql
+          template: PREBUILT
+          spec:
+            id: langfuse-web
+            source:
+                image: langfuse/langfuse:3
+            ports:
+                - id: web
+                  port: 3000
+                  type: HTTP
+            env:
+                CLICKHOUSE_CLUSTER_ENABLED:
+                    default: "false"
+                CLICKHOUSE_MIGRATION_URL:
+                    default: clickhouse://${CH_CLICKHOUSE_HOST}:${CH_CLICKHOUSE_NATIVE_PORT}
+                CLICKHOUSE_PASSWORD:
+                    default: ${CH_CLICKHOUSE_PASSWORD}
+                CLICKHOUSE_URL:
+                    default: http://${CH_CLICKHOUSE_HOST}:${CH_CLICKHOUSE_HTTP_PORT}
+                CLICKHOUSE_USER:
+                    default: ${CH_CLICKHOUSE_USER}
+                DATABASE_URL:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                ENCRYPTION_KEY:
+                    default: 4f057429c91a7431dce7218b1ec3e4535f1edd6039ecd4df9c143be9c1e689c4
+                LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES:
+                    default: "true"
+                LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID:
+                    default: ${MINIO_USERNAME}
+                LANGFUSE_S3_BATCH_EXPORT_BUCKET:
+                    default: langfuse
+                LANGFUSE_S3_BATCH_EXPORT_ENABLED:
+                    default: "false"
+                LANGFUSE_S3_BATCH_EXPORT_ENDPOINT:
+                    default: http://${MINIO_HOST}:${MINIO_S3_PORT}
+                LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT:
+                    default: http://${MINIO_HOST}:${MINIO_S3_PORT}
+                LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE:
+                    default: "true"
+                LANGFUSE_S3_BATCH_EXPORT_PREFIX:
+                    default: exports/
+                LANGFUSE_S3_BATCH_EXPORT_REGION:
+                    default: auto
+                LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY:
+                    default: ${MINIO_PASSWORD}
+                LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID:
+                    default: ${MINIO_USERNAME}
+                LANGFUSE_S3_EVENT_UPLOAD_BUCKET:
+                    default: langfuse
+                LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT:
+                    default: http://${MINIO_HOST}:${MINIO_S3_PORT}
+                LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE:
+                    default: "true"
+                LANGFUSE_S3_EVENT_UPLOAD_PREFIX:
+                    default: events/
+                LANGFUSE_S3_EVENT_UPLOAD_REGION:
+                    default: auto
+                LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY:
+                    default: ${MINIO_PASSWORD}
+                LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID:
+                    default: ${MINIO_USERNAME}
+                LANGFUSE_S3_MEDIA_UPLOAD_BUCKET:
+                    default: langfuse
+                LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT:
+                    default: http://${MINIO_HOST}:${MINIO_S3_PORT}
+                LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE:
+                    default: "true"
+                LANGFUSE_S3_MEDIA_UPLOAD_PREFIX:
+                    default: media/
+                LANGFUSE_S3_MEDIA_UPLOAD_REGION:
+                    default: auto
+                LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY:
+                    default: ${MINIO_PASSWORD}
+                LANGFUSE_USE_AZURE_BLOB:
+                    default: "false"
+                NEXTAUTH_SECRET:
+                    default: ${PASSWORD}
+                NEXTAUTH_URL:
+                    default: ${ZEABUR_WEB_URL}
+                REDIS_AUTH:
+                    default: ${REDIS_PASSWORD}
+                REDIS_HOST:
+                    default: ${REDIS_HOST}
+                REDIS_PORT:
+                    default: "6379"
+                REDIS_TLS_ENABLED:
+                    default: "false"
+                SALT:
+                    default: zeabur
+                TELEMETRY_ENABLED:
+                    default: "true"
+          domainKey: PUBLIC_DOMAIN
+localization:
+    zh-CN:
+        description: 开源 LLM 工程平台 v3，提供完整的可观察性堆栈
+        readme: |-
+            # Langfuse v3
+
+            Langfuse 是一个开源的 LLM 应用可观察性和分析解决方案。它主要面向生产环境使用，但一些用户也将其用于本地开发 LLM 应用。
+
+            Langfuse 专注于基于 LLM 的应用程序。许多新的抽象和最佳实践最近发展起来，例如智能体、链式提示、基于嵌入的检索、LLM 访问 REPL 和 API。这些使应用程序更强大，但也为开发人员带来了不可预测性，因为他们无法完全预测更改如何影响应用程序的质量、成本和整体延迟。因此，Langfuse 帮助监控和调试这些应用程序。
+
+            此模板部署 Langfuse v3 完整的可观察性堆栈，包括：
+            - PostgreSQL 数据库用于核心数据
+            - ClickHouse 用于分析和可观察性数据
+            - MinIO 用于 S3 兼容的对象存储
+            - Redis 用于队列管理和缓存
+            - 独立的 worker 和 web 服务以提高性能
+
+            如果遇到错误，请尝试重启应用程序容器或加入 Discord 寻求帮助：https://langfuse.com/discord
+    zh-TW:
+        description: 開源 LLM 工程平台 v3，提供完整的可觀察性堆疊
+        readme: "# Langfuse v3\n\nLangfuse 是一個開源的 LLM 應用可觀察性和分析解決方案。它主要面向生產環境使用，但一些用戶也將其用於本地開發 LLM 應用。\n\nLangfuse 專注於基於 LLM 的應用程式。許多新的抽象和最佳實踐最近發展起來，例如智能體、鏈式提示、基於嵌入的檢索、LLM 存取 REPL 和 API。這些使應用程式更強大，但也為開發人員帶來了不可預測性，因為他們無法完全預測更改如何影響應用程式的品質、成本和整體延遲。因此，Langfuse 幫助監控和調試這些應用程式。\n\n此模板部署 Langfuse v3 完整的可觀察性堆疊，包括：\n- PostgreSQL 資料庫用於核心資料\n- ClickHouse 用於分析和可觀察性資料\n- MinIO 用於 S3 相容的物件儲存\n- Redis 用於佇列管理和快取\n- 獨立的 worker 和 web 服務以提高效能\n\n如果遇到錯誤，請嘗試重新啟動應用程式容器或加入 Discord 尋求幫助：https://langfuse.com/discord "
