@@ -34,6 +34,10 @@ spec:
       type: STRING
       name: Discord User IDs (optional)
       description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone in the allowed channels."
+    - key: OPENAB_TRUSTED_BOT_IDS
+      type: STRING
+      name: Trusted Bot IDs (optional)
+      description: "Optional. Comma-separated Discord bot IDs trusted to send messages to this bot. Leave empty to trust all bots (default). Only applies when Allow Bot Messages is set."
     - key: OPENAB_ALLOW_BOT_MESSAGES
       type: STRING
       name: Allow Bot Messages (optional)
@@ -63,7 +67,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template uses a pinned version (`0.8.1-beta.5`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
+    - **Image tag:** This template uses a pinned version (`0.8.1`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
     - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
     - **Config ownership:** The container runs directly as `agent` user (uid 1000). If you encounter permission issues on the persistent volume, restart the service.
 
@@ -150,7 +154,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab:0.8.1-beta.5
+          image: ghcr.io/openabdev/openab:0.8.1
           command:
             - /bin/sh
             - -c
@@ -196,6 +200,11 @@ spec:
                       id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
                     printf 'allowed_users = [%s]\n' "$(echo "$users" | sed 's/,$//')" >> "$CONFIG_FILE"
                   fi
+                  if [ -n "$OPENAB_TRUSTED_BOT_IDS" ]; then
+                    IFS=','; bots=""; for id in $OPENAB_TRUSTED_BOT_IDS; do
+                      id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && bots="${bots}\"${id}\","; done; unset IFS
+                    printf 'trusted_bot_ids = [%s]\n' "$(echo "$bots" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
                 fi
 
                 # Add [slack] section if tokens provided
@@ -235,6 +244,8 @@ spec:
             default: ""
           OPENAB_ALLOW_BOT_MESSAGES:
             default: ""
+          OPENAB_TRUSTED_BOT_IDS:
+            default: ""
           OPENAB_MAX_SESSIONS:
             default: ""
 localization:
@@ -264,7 +275,7 @@ localization:
 
       ## 注意事項
 
-      - **映像標籤：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
+      - **映像標籤：** 此模板使用固定版本（`0.8.1`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
       - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
       - **檔案權限：** 容器以 root 啟動後切換為 agent 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
 
@@ -371,7 +382,7 @@ localization:
 
       ## 注意事项
 
-      - **镜像标签：** 此模板使用固定版本（`0.8.1-beta.5`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
+      - **镜像标签：** 此模板使用固定版本（`0.8.1`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
       - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
       - **文件权限：** 容器以 root 启动后切换为 agent 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
 
@@ -478,7 +489,7 @@ localization:
 
       ## 注意事項
 
-      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.1-beta.5`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.1`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
       - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
       - **ファイル権限：** コンテナは root で起動し、openab 実行前に agent ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
 
@@ -585,7 +596,7 @@ localization:
 
       ## Notas Importantes
 
-      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.1-beta.5`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.1`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
       - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente. Plugins, configuración y credenciales se conservan entre reinicios.
       - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario agent (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automáticamente al arrancar.
 
@@ -692,7 +703,7 @@ localization:
 
       ## Catatan Penting
 
-      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.1-beta.5`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.1`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
       - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
       - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna agent (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan — izin diperbaiki secara otomatis saat boot.
 
