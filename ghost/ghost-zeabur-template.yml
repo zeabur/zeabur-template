@@ -108,9 +108,9 @@ spec:
                   dir: /var/lib/mysql
             instructions:
                 - title: Command to connect to your MySQL
-                  content: mysqlsh --sql --host=${CONTAINER_HOSTNAME} --port=${MYSQL_PORT} --user=${MYSQL_USER} --password=${MYSQL_PASSWORD} --schema=${MYSQL_DATABASE}
+                  content: mysqlsh --sql --host=${CONTAINER_HOSTNAME} --port=${MYSQL_PORT} --user=${MYSQL_USERNAME} --password=${MYSQL_PASSWORD} --schema=${MYSQL_DATABASE}
                 - title: MySQL username
-                  content: ${MYSQL_USER}
+                  content: ${MYSQL_USERNAME}
                 - title: MySQL password
                   content: ${MYSQL_PASSWORD}
                 - title: MySQL database
@@ -130,12 +130,12 @@ spec:
                     default: ${MYSQL_ROOT_PASSWORD}
                     expose: true
                 MYSQL_PORT:
-                    default: "3306"
+                    default: ${DATABASE_PORT}
                     expose: true
                 MYSQL_ROOT_PASSWORD:
                     default: ${PASSWORD}
-                MYSQL_USER:
-                    default: mysql
+                MYSQL_USERNAME:
+                    default: root
                     expose: true
             configs:
                 - path: /etc/my.cnf
@@ -184,7 +184,7 @@ spec:
                 database__connection__port:
                     default: ${MYSQL_PORT}
                 database__connection__user:
-                    default: ${MYSQL_USER}
+                    default: ${MYSQL_USERNAME}
                 url:
                     default: https://${ZEABUR_WEB_DOMAIN}
                 mail__transport:
