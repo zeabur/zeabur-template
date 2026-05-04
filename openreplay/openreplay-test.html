@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenReplay 測試頁面</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; color: #333; }
+    h1 { color: #1a56db; }
+    button { padding: 10px 20px; margin: 8px 4px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: #1a56db; color: white; }
+    .btn-danger { background: #e3342f; color: white; }
+    .btn-success { background: #38a169; color: white; }
+    input[type="text"] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; width: 100%; margin: 8px 0; box-sizing: border-box; }
+    #log { background: #f7f7f7; border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-top: 20px; min-height: 80px; font-size: 13px; }
+    .status { padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-size: 13px; }
+    .info { background: #ebf5fb; color: #1a5276; }
+  </style>
+</head>
+<body>
+  <h1>OpenReplay 測試頁面</h1>
+  <p class="status info">這個頁面會將你的操作錄製起來，完成後去 OpenReplay Dashboard → Sessions 查看。</p>
+
+  <h3>互動測試區</h3>
+  <input type="text" id="nameInput" placeholder="輸入一些文字..." />
+
+  <div>
+    <button class="btn-primary" onclick="logAction('點擊了主要按鈕')">主要按鈕</button>
+    <button class="btn-danger" onclick="logAction('點擊了危險按鈕')">危險按鈕</button>
+    <button class="btn-success" onclick="logAction('點擊了成功按鈕')">成功按鈕</button>
+  </div>
+
+  <div>
+    <button onclick="logAction('送出表單: ' + document.getElementById('nameInput').value)">送出</button>
+    <button onclick="document.getElementById('nameInput').value = ''">清除</button>
+  </div>
+
+  <div id="log"><strong>操作記錄：</strong><br></div>
+
+  <!-- OpenReplay Tracking Code for my first project -->
+  <script>
+    var initOpts = {
+      projectKey: "Mi0HXs9Hj218uzEtPbA9",
+      ingestPoint: "https://openreplay-verify.zeabur.app/ingest",
+      defaultInputMode: 2,
+      obscureTextNumbers: false,
+      obscureTextEmails: true,
+    };
+    var startOpts = { userID: "" };
+    (function(A,s,a,y,e,r){
+      r=window.OpenReplay=[e,r,y,[s-1, e]];
+      s=document.createElement('script');s.src=A;s.async=!a;
+      document.getElementsByTagName('head')[0].appendChild(s);
+      r.start=function(v){r.push([0])};
+      r.stop=function(v){r.push([1])};
+      r.setUserID=function(id){r.push([2,id])};
+      r.setUserAnonymousID=function(id){r.push([3,id])};
+      r.setMetadata=function(k,v){r.push([4,k,v])};
+      r.event=function(k,p,i){r.push([5,k,p,i])};
+      r.issue=function(k,p){r.push([6,k,p])};
+      r.isActive=function(){return false};
+      r.getSessionToken=function(){};
+    })("//static.openreplay.com/17.0.0/openreplay.js",1,0,initOpts,startOpts);
+  </script>
+
+  <script>
+    function logAction(msg) {
+      const log = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      log.innerHTML += time + ' — ' + msg + '<br>';
+    }
+  </script>
+</body>
+</html>

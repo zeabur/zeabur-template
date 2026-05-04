@@ -1,0 +1,1510 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenReplay
+spec:
+  description: |
+    Open-source session replay platform. Debug your web app with session recordings, network logs, console errors, and more — self-hosted and privacy-friendly.
+  icon: https://avatars.githubusercontent.com/u/66554311?s=200&v=4
+  tags:
+    - Analytics
+    - Session Replay
+    - Developer Tools
+    - Open Source
+  variables:
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: OpenReplay Domain
+      description: The public domain for your OpenReplay instance (e.g. replay.example.com)
+  readme: |
+    # OpenReplay
+
+    [OpenReplay](https://openreplay.com) is an open-source session replay suite. It lets you replay everything your users experience — DOM snapshots, network requests, console logs, JS errors — and integrates with your existing stack.
+
+    ## Architecture
+
+    This template deploys the full OpenReplay stack:
+
+    | Layer | Services |
+    |-------|----------|
+    | Database | PostgreSQL, ClickHouse |
+    | Cache | Redis (Valkey) |
+    | Object storage | MinIO (S3-compatible) |
+    | Message bus | Kafka (KRaft mode) |
+    | Application | 17 microservices |
+    | Proxy | Nginx |
+
+    ## Resource Requirements
+
+    **Minimum: 8 GB RAM, 4 vCPU.** Each service runs in its own container. Consider a dedicated server plan.
+
+    ## After Deployment
+
+    1. Visit your configured domain
+    2. Register your admin account
+    3. Copy the tracking snippet from Settings → Projects into your app
+
+    ## License
+
+    [Elastic License 2.0 (ELv2)](https://github.com/openreplay/openreplay/blob/main/LICENSE) · [GitHub](https://github.com/openreplay/openreplay) · [openreplay.com](https://openreplay.com)
+
+  services:
+
+    # ── INFRASTRUCTURE ────────────────────────────────────────────────────────
+
+    - name: kafka
+      icon: https://cdn.zeabur.com/kafka.png
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: bitnami/kafka:latest
+        ports:
+          - id: client
+            port: 9092
+            type: TCP
+        volumes:
+          - id: data
+            dir: /bitnami/kafka/data
+        healthCheck:
+          type: TCP
+          port: client
+        env:
+          KAFKA_CFG_NODE_ID:
+            default: "0"
+            readonly: true
+          KAFKA_CFG_PROCESS_ROLES:
+            default: "broker,controller"
+            readonly: true
+          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS:
+            default: "0@kafka.zeabur.internal:9093"
+            readonly: true
+          KAFKA_CFG_LISTENERS:
+            default: "PLAINTEXT://:9092,CONTROLLER://:9093"
+            readonly: true
+          KAFKA_CFG_ADVERTISED_LISTENERS:
+            default: "PLAINTEXT://kafka.zeabur.internal:9092"
+            readonly: true
+          KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP:
+            default: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+            readonly: true
+          KAFKA_CFG_CONTROLLER_LISTENER_NAMES:
+            default: "CONTROLLER"
+            readonly: true
+          KAFKA_CFG_INTER_BROKER_LISTENER_NAME:
+            default: "PLAINTEXT"
+            readonly: true
+          KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE:
+            default: "true"
+            readonly: true
+          KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR:
+            default: "1"
+            readonly: true
+        instructions:
+          - title: Internal connection (within Zeabur project)
+            content: kafka.zeabur.internal:9092
+
+    - name: postgresql
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/postgresql.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: postgres:17
+          # Install curl as root before the entrypoint drops to postgres user,
+          # so init scripts can use curl to download the OpenReplay schema.
+          command:
+            - /bin/bash
+            - -c
+            - "apt-get update -qq && apt-get install -y -qq curl && exec /usr/local/bin/docker-entrypoint.sh postgres"
+        ports:
+          - id: db
+            port: 5432
+            type: TCP
+        portForwarding:
+          enabled: true
+        volumes:
+          - id: data
+            dir: /var/lib/postgresql/data
+        healthCheck:
+          type: TCP
+          port: db
+        configs:
+          - path: /docker-entrypoint-initdb.d/openreplay-schema.sh
+            permission: 493
+            envsubst: false
+            template: |
+              #!/bin/bash
+              set -e
+              echo "[OpenReplay] Downloading PostgreSQL schema..."
+              curl -sf "https://raw.githubusercontent.com/openreplay/openreplay/main/scripts/schema/db/init_dbs/postgresql/init_schema.sql" -o /tmp/or_schema.sql
+              echo "[OpenReplay] Applying PostgreSQL schema..."
+              psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f /tmp/or_schema.sql
+              echo "[OpenReplay] Schema applied."
+        env:
+          POSTGRES_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          POSTGRES_USER:
+            default: postgres
+            expose: true
+            readonly: true
+          POSTGRES_DB:
+            default: postgres
+            expose: true
+            readonly: true
+          POSTGRES_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+          # Shared secrets — all app services depend on postgresql so they inherit these
+          S3_KEY:
+            default: openreplay
+            expose: true
+          S3_SECRET:
+            default: ${PASSWORD}
+            expose: true
+          JWT_SECRET:
+            default: ${PASSWORD}
+            expose: true
+          JWT_SPOT_SECRET:
+            default: ${PASSWORD}
+            expose: true
+          JWT_REFRESH_SECRET:
+            default: ${PASSWORD}
+            expose: true
+          JWT_SPOT_REFRESH_SECRET:
+            default: ${PASSWORD}
+            expose: true
+          ASSIST_JWT_SECRET:
+            default: ${PASSWORD}
+            expose: true
+          ASSIST_KEY:
+            default: ${PASSWORD}
+            expose: true
+          TOKEN_SECRET:
+            default: ${PASSWORD}
+            expose: true
+        instructions:
+          - title: Connection String
+            content: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DB_PORT_FORWARDED_PORT}/${POSTGRES_DB}
+          - title: PostgreSQL Connect Command
+            content: psql "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DB_PORT_FORWARDED_PORT}/${POSTGRES_DB}"
+          - title: PostgreSQL username
+            content: ${POSTGRES_USER}
+          - title: PostgreSQL password
+            content: ${POSTGRES_PASSWORD}
+          - title: PostgreSQL database
+            content: ${POSTGRES_DB}
+          - title: PostgreSQL host
+            content: ${PORT_FORWARDED_HOSTNAME}
+          - title: PostgreSQL port
+            content: ${DB_PORT_FORWARDED_PORT}
+
+    - name: clickhouse
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/clickhouse.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: clickhouse/clickhouse-server:25.11-alpine
+        ports:
+          - id: tcp
+            port: 9000
+            type: TCP
+          - id: http
+            port: 8123
+            type: TCP
+        portForwarding:
+          enabled: true
+        volumes:
+          - id: data
+            dir: /var/lib/clickhouse
+        configs:
+          - path: /docker-entrypoint-initdb.d/openreplay-schema.sh
+            permission: 493
+            envsubst: false
+            template: |
+              #!/bin/sh
+              set -e
+              echo "[OpenReplay] Downloading ClickHouse schema..."
+              wget -qO /tmp/ch_schema.sql "https://raw.githubusercontent.com/openreplay/openreplay/main/scripts/schema/db/init_dbs/clickhouse/create/init_schema.sql"
+              echo "[OpenReplay] Applying ClickHouse schema..."
+              clickhouse-client --multiquery < /tmp/ch_schema.sql || true
+              echo "[OpenReplay] ClickHouse schema applied."
+        env:
+          CLICKHOUSE_USER:
+            default: default
+          CLICKHOUSE_PASSWORD:
+            default: ""
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:
+            default: "1"
+          CH_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        instructions:
+          - title: ClickHouse HTTP interface URL
+            content: http://${PORT_FORWARDED_HOSTNAME}:${HTTP_PORT_FORWARDED_PORT}
+          - title: ClickHouse username
+            content: ${CLICKHOUSE_USER}
+          - title: ClickHouse password
+            content: ${CLICKHOUSE_PASSWORD}
+          - title: ClickHouse host
+            content: ${PORT_FORWARDED_HOSTNAME}
+          - title: ClickHouse TCP port
+            content: ${TCP_PORT_FORWARDED_PORT}
+
+    - name: redis
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/redis.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openreplay/valkey:8
+        ports:
+          - id: db
+            port: 6379
+            type: TCP
+        portForwarding:
+          enabled: true
+        volumes:
+          - id: data
+            dir: /data
+        env:
+          ALLOW_EMPTY_PASSWORD:
+            default: "yes"
+          REDIS_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        instructions:
+          - title: Command to connect to your Redis
+            content: redis-cli -h ${PORT_FORWARDED_HOSTNAME} -p ${DB_PORT_FORWARDED_PORT}
+          - title: Redis Connection String
+            content: redis://${PORT_FORWARDED_HOSTNAME}:${DB_PORT_FORWARDED_PORT}
+          - title: Redis host
+            content: ${PORT_FORWARDED_HOSTNAME}
+          - title: Redis port
+            content: ${DB_PORT_FORWARDED_PORT}
+
+    - name: minio
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openreplay/minio:2025
+        ports:
+          - id: api
+            port: 9000
+            type: TCP
+        portForwarding:
+          enabled: true
+        volumes:
+          - id: data
+            dir: /bitnami/minio/data
+        env:
+          MINIO_ROOT_USER:
+            default: ${S3_KEY}
+          MINIO_ROOT_PASSWORD:
+            default: ${S3_SECRET}
+          MINIO_DEFAULT_BUCKETS:
+            default: "mobs,sessions-assets,sourcemaps,uxtesting-records,records,spots,ios-images"
+          MINIO_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        instructions:
+          - title: MinIO S3 API Endpoint
+            content: http://${PORT_FORWARDED_HOSTNAME}:${API_PORT_FORWARDED_PORT}
+          - title: S3 Access Key ID
+            content: ${MINIO_ROOT_USER}
+          - title: S3 Secret Access Key
+            content: ${MINIO_ROOT_PASSWORD}
+          - title: Default Buckets
+            content: ${MINIO_DEFAULT_BUCKETS}
+        dependencies:
+          - postgresql
+
+    # ── NGINX-ROUTED APPLICATION SERVICES ────────────────────────────────────
+
+    - name: http-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/http:v1.23.0
+        ports:
+          - id: web
+            port: 8080
+            type: TCP
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          BUCKET_NAME:
+            default: uxtesting-records
+          CACHE_ASSETS:
+            default: "true"
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          AWS_REGION:
+            default: us-east-1
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          pg_password:
+            default: ${POSTGRES_PASSWORD}
+          POSTGRES_STRING:
+            default: "postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          JWT_SECRET:
+            default: ${JWT_SECRET}
+          JWT_SPOT_SECRET:
+            default: ${JWT_SPOT_SECRET}
+          TOKEN_SECRET:
+            default: ${TOKEN_SECRET}
+          HTTP_OPENREPLAY_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        dependencies:
+          - postgresql
+          - redis
+          - minio
+          - kafka
+
+    - name: api-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/api:v1.23.0
+        ports:
+          - id: web
+            port: 8080
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          AWS_REGION:
+            default: us-east-1
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          pg_password:
+            default: ${POSTGRES_PASSWORD}
+          POSTGRES_STRING:
+            default: "postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          JWT_SECRET:
+            default: ${JWT_SECRET}
+          JWT_SPOT_SECRET:
+            default: ${JWT_SPOT_SECRET}
+          JWT_REFRESH_SECRET:
+            default: ${JWT_REFRESH_SECRET}
+          JWT_SPOT_REFRESH_SECRET:
+            default: ${JWT_SPOT_REFRESH_SECRET}
+          ASSIST_JWT_SECRET:
+            default: ${ASSIST_JWT_SECRET}
+          ASSIST_KEY:
+            default: ${ASSIST_KEY}
+          TOKEN_SECRET:
+            default: ${TOKEN_SECRET}
+          ch_host:
+            default: ${CH_HOST}
+          ch_port:
+            default: "9000"
+          ch_port_http:
+            default: "8123"
+          ch_username:
+            default: default
+          ch_password:
+            default: ""
+          CLICKHOUSE_STRING:
+            default: "tcp://${CH_HOST}:9000"
+          CLICKHOUSE_HTTP_STRING:
+            default: "http://${CH_HOST}:8123"
+          ASSIST_URL:
+            default: "http://${ASSIST_HOST}:9001/assist/%s"
+          SITE_URL:
+            default: ${ZEABUR_WEB_URL}
+          API_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        dependencies:
+          - postgresql
+          - redis
+          - minio
+          - clickhouse
+          - assist-openreplay
+          - kafka
+
+    - name: sourcemapreader-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/sourcemapreader:v1.23.0
+        ports:
+          - id: web
+            port: 9000
+            type: TCP
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          SMR_HOST:
+            default: "0.0.0.0"
+          S3_HOST:
+            default: "http://${MINIO_HOST}:9000"
+          S3_KEY:
+            default: ${S3_KEY}
+          S3_SECRET:
+            default: ${S3_SECRET}
+          AWS_REGION:
+            default: us-east-1
+          LICENSE_KEY:
+            default: ""
+          ASSETS_ORIGIN:
+            default: "https://${PUBLIC_DOMAIN}/sessions-assets"
+          SOURCEMAPREADER_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        dependencies:
+          - minio
+          - postgresql
+
+    - name: assist-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/assist:v1.23.0
+        ports:
+          - id: web
+            port: 9001
+            type: TCP
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          ASSIST_JWT_SECRET:
+            default: ${ASSIST_JWT_SECRET}
+          ASSIST_KEY:
+            default: ${ASSIST_KEY}
+          AWS_DEFAULT_REGION:
+            default: us-east-1
+          REDIS_URL:
+            default: ${REDIS_HOST}
+          CLEAR_SOCKET_TIME:
+            default: "720"
+          debug:
+            default: "0"
+          redis:
+            default: "false"
+          ASSIST_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        dependencies:
+          - postgresql
+          - redis
+
+    - name: chalice-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/chalice:v1.23.0
+          command:
+            - /bin/sh
+            - /opt/zeabur-ns-wrapper.sh
+        ports:
+          - id: web
+            port: 8000
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        configs:
+          - path: /opt/zeabur-ns-wrapper.sh
+            permission: 493
+            envsubst: false
+            template: |
+              #!/bin/sh
+              # Resolve the k8s namespace from Zeabur's DNS so health.py can reach
+              # backend services via their FQDN (e.g. alerts-openreplay.<ns>.zeabur.internal).
+              # assist-openreplay has a declared port (9001) so it always has a ClusterIP DNS entry.
+              FQDN=$(nslookup assist-openreplay 2>/dev/null | awk '/^Name:/{print $2; exit}')
+              if [ -n "$FQDN" ]; then
+                export POD_NAMESPACE=$(echo "$FQDN" | cut -d. -f2)
+                export CLUSTER_URL=$(echo "$FQDN" | cut -d. -f3-)
+              fi
+              exec /sbin/tini -- ./entrypoint.sh
+        env:
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          ch_username:
+            default: default
+          ch_password:
+            default: ""
+          ch_host:
+            default: ${CH_HOST}
+          ch_port:
+            default: "9000"
+          ch_port_http:
+            default: "8123"
+          sourcemaps_reader:
+            default: "http://${SOURCEMAPREADER_HOST}:9000/{}/sourcemaps"
+          ASSIST_URL:
+            default: "http://${ASSIST_HOST}:9001/assist/%s"
+          JWT_REFRESH_SECRET:
+            default: ${JWT_REFRESH_SECRET}
+          JWT_SPOT_REFRESH_SECRET:
+            default: ${JWT_SPOT_REFRESH_SECRET}
+          ASSIST_JWT_SECRET:
+            default: ${ASSIST_JWT_SECRET}
+          JWT_SECRET:
+            default: ${JWT_SECRET}
+          ASSIST_KEY:
+            default: ${ASSIST_KEY}
+          JWT_SPOT_SECRET:
+            default: ${JWT_SPOT_SECRET}
+          LICENSE_KEY:
+            default: ""
+          pg_host:
+            default: ${POSTGRES_HOST}
+          pg_port:
+            default: "5432"
+          pg_dbname:
+            default: postgres
+          pg_user:
+            default: postgres
+          pg_password:
+            default: ${POSTGRES_PASSWORD}
+          SITE_URL:
+            default: ${OR_SITE_URL}
+          S3_HOST:
+            default: "http://${MINIO_HOST}:9000"
+          S3_KEY:
+            default: ${S3_KEY}
+          S3_SECRET:
+            default: ${S3_SECRET}
+          AWS_DEFAULT_REGION:
+            default: us-east-1
+          sessions_region:
+            default: us-east-1
+          sessions_bucket:
+            default: mobs
+          js_cache_bucket:
+            default: sessions-assets
+          sourcemaps_bucket:
+            default: sourcemaps
+          ASSIST_RECORDS_BUCKET:
+            default: records
+          IOS_VIDEO_BUCKET:
+            default: mobs
+          EMAIL_HOST:
+            default: ""
+          EMAIL_PORT:
+            default: "587"
+          EMAIL_USER:
+            default: ""
+          EMAIL_PASSWORD:
+            default: ""
+          EMAIL_USE_TLS:
+            default: "true"
+          EMAIL_USE_SSL:
+            default: "false"
+          EMAIL_FROM:
+            default: "OpenReplay<do-not-reply@openreplay.com>"
+          LOGLEVEL:
+            default: INFO
+          PYTHONUNBUFFERED:
+            default: "0"
+          JWT_EXPIRATION:
+            default: "86400"
+          SCIM_ACCESS_SECRET_KEY:
+            default: ${PASSWORD}
+          SCIM_REFRESH_SECRET_KEY:
+            default: ${PASSWORD}
+          SCIM_ACCESS_TOKEN_EXPIRE_SECONDS:
+            default: "86400"
+          root_path:
+            default: /api
+          CHALICE_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        dependencies:
+          - postgresql
+          - redis
+          - clickhouse
+          - sourcemapreader-openreplay
+          - assist-openreplay
+          - nginx
+          - kafka
+
+    - name: integrations-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/integrations:v1.23.0
+        ports:
+          - id: web
+            port: 8080
+            type: TCP
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          AWS_REGION:
+            default: us-east-1
+          BUCKET_NAME:
+            default: mobs
+          JWT_SECRET:
+            default: ${JWT_SECRET}
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          pg_password:
+            default: ${POSTGRES_PASSWORD}
+          POSTGRES_STRING:
+            default: "postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          TOKEN_SECRET:
+            default: ${TOKEN_SECRET}
+          INTEGRATIONS_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        dependencies:
+          - postgresql
+          - redis
+          - minio
+          - kafka
+
+    - name: spot-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/spot:v1.23.0
+        ports:
+          - id: web
+            port: 8080
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          CACHE_ASSETS:
+            default: "true"
+          FS_CLEAN_HRS:
+            default: "24"
+          TOKEN_SECRET:
+            default: ${TOKEN_SECRET}
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          BUCKET_NAME:
+            default: spots
+          AWS_REGION:
+            default: us-east-1
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          JWT_SECRET:
+            default: ${JWT_SECRET}
+          JWT_SPOT_SECRET:
+            default: ${JWT_SPOT_SECRET}
+          pg_password:
+            default: ${POSTGRES_PASSWORD}
+          POSTGRES_STRING:
+            default: "postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          SPOT_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+        dependencies:
+          - postgresql
+          - redis
+          - minio
+          - kafka
+
+    - name: frontend-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/frontend:v1.23.0
+        ports:
+          - id: web
+            port: 8080
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          TRACKER_HOST:
+            default: "https://${PUBLIC_DOMAIN}/script"
+          HTTP_PORT:
+            default: "80"
+          FRONTEND_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+
+    # ── BACKGROUND WORKERS ────────────────────────────────────────────────────
+
+    - name: alerts-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/alerts:v1.23.0
+        ports:
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          pg_host:
+            default: ${POSTGRES_HOST}
+          pg_port:
+            default: "5432"
+          pg_dbname:
+            default: postgres
+          pg_user:
+            default: postgres
+          pg_password:
+            default: ${POSTGRES_PASSWORD}
+          POSTGRES_STRING:
+            default: "postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+          ch_host:
+            default: ${CH_HOST}
+          ch_port:
+            default: "9000"
+          ch_port_http:
+            default: "8123"
+          ch_username:
+            default: default
+          ch_password:
+            default: ""
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          AWS_REGION:
+            default: us-east-1
+          LICENSE_KEY:
+            default: ""
+          EMAIL_HOST:
+            default: ""
+          EMAIL_PORT:
+            default: "587"
+          EMAIL_USER:
+            default: ""
+          EMAIL_PASSWORD:
+            default: ""
+          EMAIL_USE_TLS:
+            default: "true"
+          EMAIL_USE_SSL:
+            default: "false"
+          EMAIL_FROM:
+            default: "OpenReplay<do-not-reply@openreplay.com>"
+          LOGLEVEL:
+            default: INFO
+          PYTHONUNBUFFERED:
+            default: "0"
+        dependencies:
+          - postgresql
+          - clickhouse
+          - minio
+
+    - name: images-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/images:v1.23.0
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          AWS_REGION:
+            default: us-east-1
+          BUCKET_NAME:
+            default: mobs
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          FS_CLEAN_HRS:
+            default: "24"
+        dependencies:
+          - redis
+          - minio
+          - postgresql
+          - kafka
+
+    - name: sink-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/sink:v1.23.0
+        ports:
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          ASSETS_ORIGIN:
+            default: "https://${PUBLIC_DOMAIN}/sessions-assets"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+        dependencies:
+          - redis
+          - postgresql
+          - kafka
+
+    - name: storage-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/storage:v1.23.0
+        ports:
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          AWS_REGION:
+            default: us-east-1
+          BUCKET_NAME:
+            default: mobs
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          FS_CLEAN_HRS:
+            default: "24"
+        dependencies:
+          - postgresql
+          - redis
+          - minio
+          - kafka
+
+    - name: assets-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/assets:v1.23.0
+        ports:
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          BUCKET_NAME:
+            default: sessions-assets
+          LICENSE_KEY:
+            default: ""
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          AWS_REGION:
+            default: us-east-1
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          ASSETS_ORIGIN:
+            default: "https://${PUBLIC_DOMAIN}/sessions-assets"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+        dependencies:
+          - redis
+          - minio
+          - postgresql
+          - kafka
+
+    - name: canvases-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/canvases:v1.23.0
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          AWS_ACCESS_KEY_ID:
+            default: ${S3_KEY}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${S3_SECRET}
+          AWS_ENDPOINT:
+            default: "http://${MINIO_HOST}:9000"
+          AWS_REGION:
+            default: us-east-1
+          BUCKET_NAME:
+            default: mobs
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          FS_CLEAN_HRS:
+            default: "24"
+        dependencies:
+          - postgresql
+          - redis
+          - minio
+          - kafka
+
+    - name: db-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/db:v1.23.0
+        ports:
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          ch_host:
+            default: ${CH_HOST}
+          ch_port:
+            default: "9000"
+          ch_port_http:
+            default: "8123"
+          ch_username:
+            default: default
+          ch_password:
+            default: ""
+          CLICKHOUSE_STRING:
+            default: "tcp://${CH_HOST}:9000"
+          CLICKHOUSE_HTTP_STRING:
+            default: "http://${CH_HOST}:8123"
+          POSTGRES_STRING:
+            default: "postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+          pg_password:
+            default: ${POSTGRES_PASSWORD}
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+        dependencies:
+          - postgresql
+          - clickhouse
+          - redis
+          - kafka
+
+    - name: ender-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/ender:v1.23.0
+        ports:
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          pg_password:
+            default: ${POSTGRES_PASSWORD}
+          POSTGRES_STRING:
+            default: "postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/postgres?sslmode=disable"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+        dependencies:
+          - postgresql
+          - redis
+          - kafka
+
+    - name: heuristics-openreplay
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: public.ecr.aws/p1t3u8a3/heuristics:v1.23.0
+        ports:
+          - id: metrics
+            port: 8888
+            type: TCP
+        volumes:
+          - id: efs
+            dir: /mnt/efs
+        env:
+          LICENSE_KEY:
+            default: ""
+          KAFKA_SERVERS:
+            default: "kafka.zeabur.internal:9092"
+          KAFKA_USE_SSL:
+            default: "false"
+          REDIS_STRING:
+            default: "redis://${REDIS_HOST}:6379"
+        dependencies:
+          - redis
+          - postgresql
+          - kafka
+
+    # ── NGINX REVERSE PROXY ───────────────────────────────────────────────────
+
+    - name: nginx
+      template: PREBUILT_V2
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: nginx:1.27-alpine
+        ports:
+          - id: web
+            port: 80
+            type: HTTP
+        healthCheck:
+          type: TCP
+          port: web
+        env:
+          # Restrict envsubst to only these vars so nginx's own $variables are untouched.
+          # The actual values are auto-injected from the dependent services' exposed variables.
+          NGINX_ENVSUBST_TEMPLATE_VARS:
+            default: "MINIO_HOST HTTP_OPENREPLAY_HOST INTEGRATIONS_HOST API_HOST CHALICE_HOST SPOT_HOST ASSIST_HOST FRONTEND_HOST"
+          # Expose OR_SITE_URL (= ZEABUR_WEB_URL) so chalice can reference the public URL.
+          # ZEABUR_WEB_URL is only available on services with domainKey; exposing it here
+          # (under a different key to avoid self-reference resolution) makes it available to chalice.
+          OR_SITE_URL:
+            default: ${ZEABUR_WEB_URL}
+            expose: true
+            readonly: true
+        configs:
+          - path: /etc/nginx/templates/default.conf.template
+            envsubst: false
+            template: |
+              map $arg_peerId $sessionid {
+                default "";
+                "~.*-(\d+)(?:-.*|$)" $1;
+              }
+              map $http_x_forwarded_for $real_ip {
+                  ~^(\d+\.\d+\.\d+\.\d+) $1;
+                  default $remote_addr;
+              }
+              map $http_upgrade $connection_upgrade {
+                default upgrade;
+                '' close;
+              }
+              map $http_x_forwarded_proto $origin_proto {
+                default $http_x_forwarded_proto;
+                '' $scheme;
+              }
+              server {
+                  listen 80;
+                  client_body_buffer_size 512k;
+                  client_max_body_size 10m;
+                  proxy_buffer_size 64k;
+                  proxy_buffers 32 64k;
+                  proxy_busy_buffers_size 128k;
+                  proxy_max_temp_file_size 2048m;
+                  proxy_buffering on;
+                  proxy_connect_timeout 120s;
+                  proxy_read_timeout 300s;
+                  proxy_send_timeout 300s;
+                  real_ip_header X-Forwarded-For;
+                  set_real_ip_from 0.0.0.0/0;
+                  real_ip_recursive on;
+                  add_header X-XSS-Protection "1; mode=block" always;
+                  add_header X-Content-Type-Options "nosniff" always;
+                  add_header Referrer-Policy "same-origin" always;
+                  server_tokens off;
+
+                  location ~ ^/(mobs|sessions-assets|frontend|static|sourcemaps|ios-images|uxtesting-records|records|spots)/ {
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header Host $http_host;
+                    proxy_connect_timeout 300;
+                    proxy_http_version 1.1;
+                    proxy_set_header Connection "";
+                    chunked_transfer_encoding off;
+                    proxy_pass http://${MINIO_HOST}:9000;
+                  }
+
+                  location /minio/ {
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "Upgrade";
+                    proxy_set_header Host $host;
+                    proxy_pass http://${MINIO_HOST}:9000;
+                  }
+
+                  location /ingest/ {
+                    rewrite ^/ingest/(.*) /$1 break;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "Upgrade";
+                    proxy_set_header X-Forwarded-For $real_ip;
+                    proxy_set_header X-Forwarded-Host $host;
+                    proxy_set_header X-Real-IP $real_ip;
+                    proxy_set_header Host $host;
+                    proxy_pass http://${HTTP_OPENREPLAY_HOST}:8080;
+                    proxy_read_timeout 300s;
+                    proxy_connect_timeout 120s;
+                    proxy_send_timeout 300s;
+                    add_header 'Access-Control-Allow-Origin' '*' always;
+                    add_header 'Access-Control-Allow-Methods' 'POST' always;
+                    add_header 'Access-Control-Allow-Headers' 'Content-Type,Authorization,Content-Encoding' always;
+                    add_header 'Access-Control-Expose-Headers' 'Content-Length' always;
+                  }
+
+                  location /integrations/ {
+                    rewrite ^/integrations/(.*) /$1 break;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "Upgrade";
+                    proxy_set_header X-Forwarded-For $real_ip;
+                    proxy_set_header X-Forwarded-Host $host;
+                    proxy_set_header X-Real-IP $real_ip;
+                    proxy_set_header Host $host;
+                    proxy_pass http://${INTEGRATIONS_HOST}:8080;
+                    proxy_read_timeout 300s;
+                    proxy_connect_timeout 120s;
+                    proxy_send_timeout 300s;
+                    add_header 'Access-Control-Allow-Origin' '*' always;
+                    add_header 'Access-Control-Allow-Methods' 'POST,PATCH,OPTIONS,DELETE' always;
+                    add_header 'Access-Control-Allow-Headers' 'Content-Type,Authorization,Content-Encoding,X-Openreplay-Batch' always;
+                    add_header 'Access-Control-Expose-Headers' 'Content-Length' always;
+                  }
+
+                  location /v2/api/ {
+                    rewrite ^/v2/api/(.*) /$1 break;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "Upgrade";
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Forwarded-Proto $origin_proto;
+                    proxy_set_header X-Forwarded-For $real_ip;
+                    proxy_set_header X-Real-IP $real_ip;
+                    proxy_pass http://${API_HOST}:8080;
+                    proxy_read_timeout 300s;
+                    proxy_connect_timeout 120s;
+                    proxy_send_timeout 300s;
+                    add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+                    add_header 'Access-Control-Allow-Methods' 'POST, GET, PATCH, DELETE, OPTIONS, PUT' always;
+                    add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, Content-Encoding, X-Openreplay-Batch' always;
+                    add_header 'Access-Control-Expose-Headers' 'Content-Length' always;
+                    add_header 'Access-Control-Max-Age' '3600' always;
+                    add_header 'Access-Control-Allow-Credentials' 'true' always;
+                    if ($request_method = 'OPTIONS') {
+                      add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+                      add_header 'Access-Control-Allow-Methods' 'POST, GET, PATCH, DELETE, OPTIONS, PUT' always;
+                      add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, Content-Encoding, X-Openreplay-Batch' always;
+                      add_header 'Access-Control-Max-Age' '3600' always;
+                      add_header 'Content-Length' '0';
+                      add_header 'Content-Type' 'text/plain';
+                      return 204;
+                    }
+                  }
+
+                  location /api/ {
+                    rewrite ^/api/(.*) /$1 break;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "Upgrade";
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Forwarded-Proto $origin_proto;
+                    proxy_set_header X-Forwarded-For $real_ip;
+                    proxy_pass http://${CHALICE_HOST}:8000;
+                    add_header Cache-Control "no-store,no-cache" always;
+                    add_header Pragma "no-cache" always;
+                  }
+
+                  location /spot/ {
+                    rewrite ^/spot/(.*) /$1 break;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "Upgrade";
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Forwarded-Proto $origin_proto;
+                    proxy_set_header X-Forwarded-For $real_ip;
+                    proxy_set_header X-Real-IP $real_ip;
+                    proxy_pass http://${SPOT_HOST}:8080;
+                    proxy_read_timeout 300s;
+                    proxy_connect_timeout 120s;
+                    proxy_send_timeout 300s;
+                    add_header 'Access-Control-Allow-Origin' '*' always;
+                    add_header 'Access-Control-Allow-Methods' 'POST, PATCH, DELETE, OPTIONS' always;
+                    add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, Content-Encoding, X-Openreplay-Batch' always;
+                    add_header 'Access-Control-Expose-Headers' 'Content-Length' always;
+                    if ($request_method = 'OPTIONS') {
+                      add_header 'Access-Control-Allow-Origin' '*' always;
+                      add_header 'Access-Control-Allow-Methods' 'POST, PATCH, DELETE, OPTIONS' always;
+                      add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, Content-Encoding, X-Openreplay-Batch' always;
+                      add_header 'Access-Control-Max-Age' '3600';
+                      add_header 'Content-Type' 'text/plain charset=UTF-8';
+                      add_header 'Content-Length' 0;
+                      return 204;
+                    }
+                  }
+
+                  location /assist/ {
+                    rewrite ^/assist/(.*) /$1 break;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection $connection_upgrade;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $real_ip;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $origin_proto;
+                    proxy_read_timeout 3600s;
+                    proxy_send_timeout 3600s;
+                    proxy_connect_timeout 75s;
+                    proxy_buffering off;
+                    proxy_pass http://${ASSIST_HOST}:9001;
+                  }
+
+                  location /ws-assist/ {
+                    rewrite ^/ws-assist/(.*) /$1 break;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection $connection_upgrade;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $real_ip;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $origin_proto;
+                    proxy_read_timeout 3600s;
+                    proxy_send_timeout 3600s;
+                    proxy_connect_timeout 120s;
+                    proxy_buffering off;
+                    add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+                    add_header 'Access-Control-Allow-Methods' 'GET, OPTIONS' always;
+                    add_header 'Access-Control-Allow-Headers' 'sessionid, Content-Type, Authorization' always;
+                    add_header 'Access-Control-Max-Age' '1728000' always;
+                    add_header 'X-Debug-Session-ID' $sessionid always;
+                    proxy_pass http://${ASSIST_HOST}:9001;
+                  }
+
+                  location /script/ {
+                    rewrite ^/script/(.*)/openreplay(.*).js$ /$1/openreplay$2.js break;
+                    proxy_http_version 1.1;
+                    proxy_ssl_protocols TLSv1.2 TLSv1.3;
+                    proxy_ssl_server_name on;
+                    proxy_set_header Host static.openreplay.com;
+                    proxy_pass https://static.openreplay.com;
+                    proxy_read_timeout 300s;
+                    proxy_connect_timeout 120s;
+                    proxy_send_timeout 300s;
+                    proxy_buffering on;
+                    client_max_body_size 8m;
+                  }
+
+                  location / {
+                    index /index.html;
+                    rewrite ^((?!.(js|css|png|svg|jpg|woff|woff2)).)*$ /index.html break;
+                    proxy_set_header Host $http_host;
+                    proxy_set_header X-Forwarded-For $real_ip;
+                    proxy_set_header X-Forwarded-Proto $origin_proto;
+                    proxy_pass http://${FRONTEND_HOST}:8080;
+                    proxy_intercept_errors on;
+                    error_page 404 =200 /index.html;
+                  }
+              }
+        dependencies:
+          - http-openreplay
+          - api-openreplay
+          - integrations-openreplay
+          - spot-openreplay
+          - assist-openreplay
+          - frontend-openreplay
+          - minio
+
+localization:
+  zh-TW:
+    description: |
+      開源 Session Replay 平台。透過 Session 錄影、網路記錄、Console 錯誤等方式協助你除錯網頁應用程式，自架且隱私友好。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: OpenReplay 網域
+        description: 你的 OpenReplay 實例的公開網域（例如 replay.example.com）
+    readme: |
+      # OpenReplay
+
+      [OpenReplay](https://openreplay.com) 是開源的 Session Replay 工具組。可重播使用者的完整操作過程，包含 DOM 快照、網路請求、Console 記錄、JS 錯誤等。
+
+      ## 架構
+
+      本模板部署完整的 OpenReplay 技術棧：PostgreSQL、ClickHouse、Redis、MinIO、17 個微服務、Nginx 反向代理。
+
+      ## 資源需求
+
+      **最低需求：8 GB RAM、4 vCPU。** 建議使用專用伺服器方案。
+
+      ## 部署後設定
+
+      1. 前往你設定的網域
+      2. 註冊管理員帳號
+      3. 從「設定 → 專案」複製追蹤程式碼並加入你的應用程式
+
+      ## 已知限制
+
+      OpenReplay 在 Kubernetes 中使用共享 EFS Volume。在 Zeabur 上每個服務有獨立的 Volume，Session 錄影的原始資料處理管線（`http-openreplay` → `ender-openreplay`）可能無法正常運作。UI、API 和儀表板功能可正常使用。
+
+      ## 授權
+
+      [Elastic License 2.0 (ELv2)](https://github.com/openreplay/openreplay/blob/main/LICENSE)
+  zh-CN:
+    description: |
+      开源 Session Replay 平台。通过 Session 录像、网络日志、Console 错误等协助调试 Web 应用，自托管且隐私友好。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: OpenReplay 域名
+        description: 你的 OpenReplay 实例的公开域名（如 replay.example.com）
+    readme: |
+      # OpenReplay
+
+      [OpenReplay](https://openreplay.com) 是开源的 Session Replay 工具套件，可重播用户完整操作过程，包含 DOM 快照、网络请求、Console 日志、JS 错误等。
+
+      ## 架构
+
+      本模板部署完整的 OpenReplay 技术栈：PostgreSQL、ClickHouse、Redis、MinIO、17 个微服务、Nginx 反向代理。
+
+      ## 资源需求
+
+      **最低需求：8 GB RAM、4 vCPU。** 建议使用专用服务器方案。
+
+      ## 部署后配置
+
+      1. 访问你配置的域名
+      2. 注册管理员账号
+      3. 从「设置 → 项目」复制追踪代码并添加到你的应用
+
+      ## 已知限制
+
+      OpenReplay 在 Kubernetes 中使用共享 EFS Volume。在 Zeabur 上每个服务有独立 Volume，Session 录像的原始数据处理流水线可能无法正常工作。UI、API 和仪表板功能可正常使用。
+
+      ## 授权
+
+      [Elastic License 2.0 (ELv2)](https://github.com/openreplay/openreplay/blob/main/LICENSE)
+  ja-JP:
+    description: |
+      オープンソースのセッションリプレイプラットフォーム。セッション録画、ネットワークログ、コンソールエラーなどでWebアプリのデバッグを支援します。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: OpenReplayドメイン
+        description: OpenReplayインスタンスの公開ドメイン（例：replay.example.com）
+    readme: |
+      # OpenReplay
+
+      [OpenReplay](https://openreplay.com) はオープンソースのセッションリプレイスイートです。DOM スナップショット、ネットワークリクエスト、コンソールログ、JSエラーなど、ユーザーが体験したすべてを再生できます。
+
+      ## 構成
+
+      このテンプレートは完全な OpenReplay スタックをデプロイします：PostgreSQL、ClickHouse、Redis、MinIO、17 のマイクロサービス、Nginx リバースプロキシ。
+
+      ## リソース要件
+
+      **最低：8 GB RAM、4 vCPU。** 専用サーバープランを推奨します。
+
+      ## デプロイ後の設定
+
+      1. 設定したドメインにアクセス
+      2. 管理者アカウントを登録
+      3. 「設定 → プロジェクト」からトラッキングスニペットをコピーしてアプリに追加
+
+      ## ライセンス
+
+      [Elastic License 2.0 (ELv2)](https://github.com/openreplay/openreplay/blob/main/LICENSE)
