@@ -1,0 +1,518 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Firecrawl
+spec:
+    description: Open-source web crawler and scraper API for AI applications, knowledge bases, and data pipelines.
+    icon: https://cdn-console.zeabur.com/f/xrty/firecrawl_logo-removebg-preview.png
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Domain
+          description: Domain for the Firecrawl API endpoint.
+    tags:
+        - Crawler
+        - AI
+        - Web
+    readme: |-
+        # Firecrawl
+
+        🚀 [Firecrawl](https://github.com/firecrawl/firecrawl) is an open-source web crawler and scraper API for AI applications, knowledge bases, and data pipelines.
+
+        This template deploys the full self-hosted Firecrawl stack:
+
+        - **api** — main Firecrawl process. Runs `harness.js --start-docker`, which manages the API server plus worker, extract-worker, and several NUQ queue worker subprocesses inside the same container.
+        - **playwright** — browser automation microservice for JS-rendered pages.
+        - **redis** — cache and rate-limit store.
+        - **rabbitmq** — broker for the NUQ task queue.
+        - **postgres** — Postgres 17 + pg_cron, pre-loaded with the NUQ queue schema.
+
+        ## Resource recommendation
+
+        Firecrawl is resource-intensive. The upstream `docker-compose.yaml` recommends **at least 4 vCPU / 8 GB RAM** for the `api` service and **2 vCPU / 4 GB RAM** for `playwright`. We recommend deploying this template on a Pro plan or a dedicated server.
+
+        ## Configuration
+
+        Only the public domain is required at deploy time. To enable LLM-powered features (`llm-extract`, `summary` output formats, `/v2/extract`, `/v2/agent`), set `OPENAI_API_KEY` on the **api** service env after deployment.
+
+        `BULL_AUTH_KEY` (which protects the internal Bull queue dashboard) is auto-generated; you can find it on the api service env tab.
+
+        Authentication is **disabled** by default (`USE_DB_AUTHENTICATION=false`). The API endpoint is public — protect your domain with Cloudflare, an auth proxy, or a network ACL if exposed to the internet.
+
+        ## Quick test
+
+        After deployment finishes, hit the scrape endpoint:
+
+        ```bash
+        curl -X POST https://<your-domain>/v1/scrape \
+          -H 'Content-Type: application/json' \
+          -d '{"url": "https://docs.firecrawl.dev"}'
+        ```
+
+        ## Queue dashboard
+
+        Firecrawl has no end-user UI — it is an API-only service. For operators, a built-in [Bull Dashboard](https://github.com/felixmosh/bull-board) is mounted at:
+
+        ```
+        https://<your-domain>/admin/<BULL_AUTH_KEY>/queues
+        ```
+
+        Use it to monitor queue throughput, inspect active / completed / failed jobs, and replay errors. Find your `BULL_AUTH_KEY` on the **api** service env tab.
+
+        ## Reference
+
+        - GitHub: https://github.com/firecrawl/firecrawl
+        - Docs: https://docs.firecrawl.dev/
+        - License: AGPL-3.0
+    services:
+        - name: postgres
+          icon: https://cdn.zeabur.com/marketplace/postgresql.svg
+          template: PREBUILT
+          spec:
+            id: postgres
+            source:
+                image: ghcr.io/firecrawl/nuq-postgres@sha256:f9388bd25ae2e1f1d034518236f993ce236173c1d8800ce24092ea6643a95a33
+            ports:
+                - id: database
+                  port: 5432
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/postgresql/data
+            env:
+                POSTGRES_DB:
+                    default: postgres
+                    expose: true
+                    readonly: true
+                POSTGRES_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                    readonly: true
+                POSTGRES_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                POSTGRES_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                    readonly: true
+                POSTGRES_USER:
+                    default: postgres
+                    expose: true
+                    readonly: true
+            healthCheck:
+                type: TCP
+                port: database
+        - name: redis
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/redis.svg
+          template: PREBUILT
+          spec:
+            id: redis
+            source:
+                image: redis:7-alpine
+                command:
+                    - redis-server
+                    - --bind
+                    - 0.0.0.0
+            ports:
+                - id: database
+                  port: 6379
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /data
+            env:
+                REDIS_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                    readonly: true
+                REDIS_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                    readonly: true
+                REDIS_URL:
+                    default: redis://${REDIS_HOST}:${REDIS_PORT}
+                    expose: true
+                    readonly: true
+            healthCheck:
+                type: TCP
+                port: database
+        - name: rabbitmq
+          icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/rabbitmq.svg
+          template: PREBUILT
+          spec:
+            id: rabbitmq
+            source:
+                image: rabbitmq:3-management
+            ports:
+                - id: amqp
+                  port: 5672
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/rabbitmq
+            env:
+                RABBITMQ_DEFAULT_USER:
+                    default: firecrawl
+                    expose: true
+                RABBITMQ_DEFAULT_PASS:
+                    default: ${PASSWORD}
+                    expose: true
+                RABBITMQ_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                    readonly: true
+                RABBITMQ_PORT:
+                    default: ${AMQP_PORT}
+                    expose: true
+                    readonly: true
+                NUQ_RABBITMQ_URL:
+                    default: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
+                    expose: true
+                    readonly: true
+            healthCheck:
+                type: TCP
+                port: amqp
+        - name: playwright
+          icon: https://raw.githubusercontent.com/github/explore/60cd2530141f67f07a947fa2d310c482e287e387/topics/playwright/playwright.png
+          template: PREBUILT
+          spec:
+            id: playwright
+            source:
+                image: ghcr.io/firecrawl/playwright-service@sha256:9e0737bc09df28275aab29726b1c0824a7725113945434e843385d487b7f7ec6
+            ports:
+                - id: web
+                  port: 3000
+                  type: TCP
+            env:
+                PORT:
+                    default: "3000"
+                MAX_CONCURRENT_PAGES:
+                    default: "10"
+                BLOCK_MEDIA:
+                    default: "false"
+                PLAYWRIGHT_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                    readonly: true
+                PLAYWRIGHT_PORT:
+                    default: ${WEB_PORT}
+                    expose: true
+                    readonly: true
+                PLAYWRIGHT_MICROSERVICE_URL:
+                    default: http://${PLAYWRIGHT_HOST}:${PLAYWRIGHT_PORT}/scrape
+                    expose: true
+                    readonly: true
+            healthCheck:
+                type: TCP
+                port: web
+        - name: api
+          icon: https://cdn-console.zeabur.com/f/xrty/firecrawl_logo-removebg-preview.png
+          dependencies:
+            - postgres
+            - redis
+            - rabbitmq
+            - playwright
+          template: PREBUILT
+          spec:
+            id: api
+            source:
+                image: ghcr.io/firecrawl/firecrawl@sha256:3ad8dfb4a4826a187a90a6154c1e9ec253f7dad55756172e094e66df32d75586
+            ports:
+                - id: web
+                  port: 3002
+                  type: HTTP
+            env:
+                HOST:
+                    default: 0.0.0.0
+                PORT:
+                    default: ${WEB_PORT}
+                INTERNAL_PORT:
+                    default: ${WEB_PORT}
+                ENV:
+                    default: local
+                LOGGING_LEVEL:
+                    default: info
+                HARNESS_STARTUP_TIMEOUT_MS:
+                    default: "120000"
+                NUM_WORKERS_PER_QUEUE:
+                    default: "8"
+                CRAWL_CONCURRENT_REQUESTS:
+                    default: "10"
+                MAX_CONCURRENT_JOBS:
+                    default: "5"
+                BROWSER_POOL_SIZE:
+                    default: "5"
+                USE_DB_AUTHENTICATION:
+                    default: "false"
+                REDIS_RATE_LIMIT_URL:
+                    default: ${REDIS_URL}
+                BULL_AUTH_KEY:
+                    default: ${PASSWORD}
+                OPENAI_API_KEY:
+                    default: ""
+            healthCheck:
+                type: TCP
+                port: web
+          domainKey: PUBLIC_DOMAIN
+localization:
+    zh-TW:
+        description: 開源網頁爬蟲與擷取 API，專為 AI 應用、知識庫和資料管線設計。
+        readme: |-
+            # Firecrawl
+
+            🚀 [Firecrawl](https://github.com/firecrawl/firecrawl) 是一個開源的網頁爬蟲與擷取 API，專為 AI 應用、知識庫和資料管線設計。
+
+            此模板部署完整的自架 Firecrawl 堆疊：
+
+            - **api** — Firecrawl 主程式。執行 `harness.js --start-docker`，在同一個容器內管理 API 伺服器、worker、extract-worker，以及多個 NUQ queue worker 子行程。
+            - **playwright** — 處理 JavaScript 渲染頁面的瀏覽器自動化微服務。
+            - **redis** — 快取與速率限制儲存。
+            - **rabbitmq** — NUQ 任務佇列的 broker。
+            - **postgres** — Postgres 17 + pg_cron，預載 NUQ queue schema。
+
+            ## 資源建議
+
+            Firecrawl 是資源密集型服務。upstream 的 `docker-compose.yaml` 建議 `api` 服務至少配置 **4 vCPU / 8 GB RAM**，`playwright` 至少 **2 vCPU / 4 GB RAM**。建議部署在 Pro 方案或 dedicated server 上。
+
+            ## 設定
+
+            部署時只需要填網域。如要啟用 LLM 功能（`llm-extract`、`summary` 輸出格式、`/v2/extract`、`/v2/agent`），部署完成後到 **api** 服務的 env tab 設定 `OPENAI_API_KEY`。
+
+            `BULL_AUTH_KEY`（保護內建 Bull queue dashboard）會自動生成，可在 api 服務 env tab 查看。
+
+            預設 **不啟用** API 認證（`USE_DB_AUTHENTICATION=false`）。API 端點是公開的——若部署於公開網路，請使用 Cloudflare、auth proxy 或網路 ACL 保護你的網域。
+
+            ## 快速測試
+
+            部署完成後，呼叫 scrape 端點：
+
+            ```bash
+            curl -X POST https://<your-domain>/v1/scrape \
+              -H 'Content-Type: application/json' \
+              -d '{"url": "https://docs.firecrawl.dev"}'
+            ```
+
+            ## Queue 管理面板
+
+            Firecrawl 沒有給終端用戶的 UI，它是 API-only 服務。維運用的內建 [Bull Dashboard](https://github.com/felixmosh/bull-board) 掛在：
+
+            ```
+            https://<your-domain>/admin/<BULL_AUTH_KEY>/queues
+            ```
+
+            可監控 queue 吞吐量、檢視 active / completed / failed jobs、重跑失敗任務。`BULL_AUTH_KEY` 可在 **api** 服務的 env tab 查到。
+
+            ## 參考資料
+
+            - GitHub: https://github.com/firecrawl/firecrawl
+            - 官方文件: https://docs.firecrawl.dev/
+            - License: AGPL-3.0
+    zh-CN:
+        description: 开源网页爬虫与抓取 API，专为 AI 应用、知识库和数据管道设计。
+        readme: |-
+            # Firecrawl
+
+            🚀 [Firecrawl](https://github.com/firecrawl/firecrawl) 是一个开源的网页爬虫与抓取 API，专为 AI 应用、知识库和数据管道设计。
+
+            此模板部署完整的自托管 Firecrawl 堆栈：
+
+            - **api** — Firecrawl 主程序。执行 `harness.js --start-docker`，在同一容器内管理 API 服务器、worker、extract-worker，以及多个 NUQ queue worker 子进程。
+            - **playwright** — 处理 JavaScript 渲染页面的浏览器自动化微服务。
+            - **redis** — 缓存与速率限制存储。
+            - **rabbitmq** — NUQ 任务队列的 broker。
+            - **postgres** — Postgres 17 + pg_cron，预载 NUQ queue schema。
+
+            ## 资源建议
+
+            Firecrawl 是资源密集型服务。upstream 的 `docker-compose.yaml` 建议 `api` 服务至少配置 **4 vCPU / 8 GB RAM**，`playwright` 至少 **2 vCPU / 4 GB RAM**。建议部署在 Pro 套餐或 dedicated server 上。
+
+            ## 配置
+
+            部署时仅需填写域名。如要启用 LLM 功能（`llm-extract`、`summary` 输出格式、`/v2/extract`、`/v2/agent`），部署完成后到 **api** 服务的 env tab 设置 `OPENAI_API_KEY`。
+
+            `BULL_AUTH_KEY`（保护内置 Bull queue dashboard）会自动生成，可在 api 服务 env tab 查看。
+
+            默认 **不启用** API 认证（`USE_DB_AUTHENTICATION=false`）。API 端点是公开的——若部署于公网，请使用 Cloudflare、auth proxy 或网络 ACL 保护您的域名。
+
+            ## 快速测试
+
+            部署完成后，调用 scrape 端点：
+
+            ```bash
+            curl -X POST https://<your-domain>/v1/scrape \
+              -H 'Content-Type: application/json' \
+              -d '{"url": "https://docs.firecrawl.dev"}'
+            ```
+
+            ## Queue 管理面板
+
+            Firecrawl 没有给终端用户的 UI，它是 API-only 服务。运维用的内置 [Bull Dashboard](https://github.com/felixmosh/bull-board) 挂载于：
+
+            ```
+            https://<your-domain>/admin/<BULL_AUTH_KEY>/queues
+            ```
+
+            可监控 queue 吞吐量、查看 active / completed / failed jobs、重跑失败任务。`BULL_AUTH_KEY` 可在 **api** 服务的 env tab 查到。
+
+            ## 参考资料
+
+            - GitHub: https://github.com/firecrawl/firecrawl
+            - 官方文档: https://docs.firecrawl.dev/
+            - License: AGPL-3.0
+    ja-JP:
+        description: AI アプリケーション、ナレッジベース、データパイプライン向けのオープンソース Web クローラー / スクレイピング API。
+        readme: |-
+            # Firecrawl
+
+            🚀 [Firecrawl](https://github.com/firecrawl/firecrawl) は AI アプリケーション、ナレッジベース、データパイプライン向けのオープンソース Web クローラー / スクレイピング API です。
+
+            このテンプレートはセルフホスト版 Firecrawl のフルスタックをデプロイします:
+
+            - **api** — Firecrawl のメインプロセス。`harness.js --start-docker` を実行し、同一コンテナ内で API サーバー、worker、extract-worker、複数の NUQ キュー worker サブプロセスを管理します。
+            - **playwright** — JavaScript レンダリングページ向けのブラウザ自動化マイクロサービス。
+            - **redis** — キャッシュとレート制限用のストア。
+            - **rabbitmq** — NUQ タスクキューのブローカー。
+            - **postgres** — Postgres 17 + pg_cron、NUQ キュースキーマをプリロード済み。
+
+            ## リソース推奨値
+
+            Firecrawl はリソース集約型のサービスです。upstream の `docker-compose.yaml` は `api` に最低 **4 vCPU / 8 GB RAM**、`playwright` に最低 **2 vCPU / 4 GB RAM** を推奨しています。Pro プランまたは専用サーバーへのデプロイを推奨します。
+
+            ## 設定
+
+            デプロイ時に必要なのはドメイン名のみです。LLM 機能（`llm-extract`、`summary` 出力フォーマット、`/v2/extract`、`/v2/agent`）を有効化するには、デプロイ完了後に **api** サービスの env タブで `OPENAI_API_KEY` を設定してください。
+
+            `BULL_AUTH_KEY`（内蔵 Bull queue dashboard を保護する認証キー）は自動生成されます。api サービスの env タブから確認できます。
+
+            API 認証はデフォルトで **無効** です（`USE_DB_AUTHENTICATION=false`）。API エンドポイントは公開状態のため、インターネットに公開する場合は Cloudflare、認証プロキシ、ネットワーク ACL などでドメインを保護してください。
+
+            ## クイックテスト
+
+            デプロイ完了後、scrape エンドポイントを呼び出します:
+
+            ```bash
+            curl -X POST https://<your-domain>/v1/scrape \
+              -H 'Content-Type: application/json' \
+              -d '{"url": "https://docs.firecrawl.dev"}'
+            ```
+
+            ## キュー管理ダッシュボード
+
+            Firecrawl にはエンドユーザー向け UI はなく、API のみのサービスです。運用者向けに [Bull Dashboard](https://github.com/felixmosh/bull-board) が組み込まれており、以下の URL でアクセスできます:
+
+            ```
+            https://<your-domain>/admin/<BULL_AUTH_KEY>/queues
+            ```
+
+            キューのスループット監視、active / completed / failed ジョブの確認、失敗ジョブのリトライが可能です。`BULL_AUTH_KEY` は **api** サービスの env タブから確認できます。
+
+            ## 参考資料
+
+            - GitHub: https://github.com/firecrawl/firecrawl
+            - 公式ドキュメント: https://docs.firecrawl.dev/
+            - ライセンス: AGPL-3.0
+    es-ES:
+        description: API de rastreo y extracción web de código abierto para aplicaciones de IA, bases de conocimiento y pipelines de datos.
+        readme: |-
+            # Firecrawl
+
+            🚀 [Firecrawl](https://github.com/firecrawl/firecrawl) es una API de rastreo y extracción web de código abierto para aplicaciones de IA, bases de conocimiento y pipelines de datos.
+
+            Esta plantilla despliega la pila completa de Firecrawl autoalojada:
+
+            - **api** — proceso principal de Firecrawl. Ejecuta `harness.js --start-docker`, que gestiona el servidor API, worker, extract-worker y varios subprocesos worker de la cola NUQ dentro del mismo contenedor.
+            - **playwright** — microservicio de automatización del navegador para páginas con JavaScript.
+            - **redis** — almacén para caché y limitación de velocidad.
+            - **rabbitmq** — broker para la cola de tareas NUQ.
+            - **postgres** — Postgres 17 + pg_cron, con el esquema de cola NUQ precargado.
+
+            ## Recursos recomendados
+
+            Firecrawl consume muchos recursos. El `docker-compose.yaml` upstream recomienda al menos **4 vCPU / 8 GB RAM** para el servicio `api` y **2 vCPU / 4 GB RAM** para `playwright`. Recomendamos desplegar en un plan Pro o un servidor dedicado.
+
+            ## Configuración
+
+            En el despliegue solo se necesita el dominio. Para habilitar funciones LLM (formatos `llm-extract`, `summary`, `/v2/extract`, `/v2/agent`), establece `OPENAI_API_KEY` en la pestaña env del servicio **api** tras el despliegue.
+
+            `BULL_AUTH_KEY` (que protege el panel interno Bull queue) se genera automáticamente; puedes verlo en la pestaña env del servicio api.
+
+            La autenticación está **deshabilitada** por defecto (`USE_DB_AUTHENTICATION=false`). El endpoint de la API es público — protege tu dominio con Cloudflare, un auth proxy o una ACL de red si está expuesto a Internet.
+
+            ## Prueba rápida
+
+            Tras el despliegue, llama al endpoint scrape:
+
+            ```bash
+            curl -X POST https://<your-domain>/v1/scrape \
+              -H 'Content-Type: application/json' \
+              -d '{"url": "https://docs.firecrawl.dev"}'
+            ```
+
+            ## Panel de cola
+
+            Firecrawl no tiene UI para usuarios finales — es un servicio solo de API. Para operadores, hay un [Bull Dashboard](https://github.com/felixmosh/bull-board) incorporado en:
+
+            ```
+            https://<your-domain>/admin/<BULL_AUTH_KEY>/queues
+            ```
+
+            Úsalo para monitorear el rendimiento de la cola, inspeccionar trabajos active / completed / failed y reintentar errores. Encuentra tu `BULL_AUTH_KEY` en la pestaña env del servicio **api**.
+
+            ## Referencias
+
+            - GitHub: https://github.com/firecrawl/firecrawl
+            - Documentación oficial: https://docs.firecrawl.dev/
+            - Licencia: AGPL-3.0
+    id-ID:
+        description: API web crawler dan scraper open-source untuk aplikasi AI, basis pengetahuan, dan pipeline data.
+        readme: |-
+            # Firecrawl
+
+            🚀 [Firecrawl](https://github.com/firecrawl/firecrawl) adalah API web crawler dan scraper open-source untuk aplikasi AI, basis pengetahuan, dan pipeline data.
+
+            Template ini men-deploy seluruh stack Firecrawl self-hosted:
+
+            - **api** — proses utama Firecrawl. Menjalankan `harness.js --start-docker`, yang mengelola server API, worker, extract-worker, dan beberapa subproses worker antrian NUQ di dalam container yang sama.
+            - **playwright** — microservice otomasi browser untuk halaman ber-JavaScript.
+            - **redis** — penyimpanan cache dan rate-limit.
+            - **rabbitmq** — broker untuk antrian tugas NUQ.
+            - **postgres** — Postgres 17 + pg_cron, sudah di-load dengan skema antrian NUQ.
+
+            ## Rekomendasi sumber daya
+
+            Firecrawl membutuhkan banyak sumber daya. `docker-compose.yaml` upstream merekomendasikan minimal **4 vCPU / 8 GB RAM** untuk service `api` dan **2 vCPU / 4 GB RAM** untuk `playwright`. Disarankan deploy di paket Pro atau dedicated server.
+
+            ## Konfigurasi
+
+            Saat deploy hanya domain yang wajib diisi. Untuk mengaktifkan fitur LLM (format `llm-extract`, `summary`, `/v2/extract`, `/v2/agent`), set `OPENAI_API_KEY` di tab env service **api** setelah deploy selesai.
+
+            `BULL_AUTH_KEY` (untuk melindungi Bull queue dashboard internal) dibuat otomatis; bisa dilihat di tab env service api.
+
+            Autentikasi API **dinonaktifkan** secara default (`USE_DB_AUTHENTICATION=false`). Endpoint API bersifat publik — lindungi domain Anda dengan Cloudflare, auth proxy, atau ACL jaringan jika dipublikasikan ke internet.
+
+            ## Tes cepat
+
+            Setelah deploy selesai, panggil endpoint scrape:
+
+            ```bash
+            curl -X POST https://<your-domain>/v1/scrape \
+              -H 'Content-Type: application/json' \
+              -d '{"url": "https://docs.firecrawl.dev"}'
+            ```
+
+            ## Dashboard antrian
+
+            Firecrawl tidak punya UI untuk pengguna akhir — ini adalah service API saja. Untuk operator, tersedia [Bull Dashboard](https://github.com/felixmosh/bull-board) bawaan di:
+
+            ```
+            https://<your-domain>/admin/<BULL_AUTH_KEY>/queues
+            ```
+
+            Gunakan untuk memantau throughput antrian, melihat job active / completed / failed, dan menjalankan ulang error. `BULL_AUTH_KEY` bisa ditemukan di tab env service **api**.
+
+            ## Referensi
+
+            - GitHub: https://github.com/firecrawl/firecrawl
+            - Dokumentasi resmi: https://docs.firecrawl.dev/
+            - Lisensi: AGPL-3.0
