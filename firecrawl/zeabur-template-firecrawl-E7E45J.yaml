@@ -100,22 +100,18 @@ spec:
                 POSTGRES_DB:
                     default: postgres
                     expose: true
-                    readonly: true
                 POSTGRES_HOST:
                     default: ${CONTAINER_HOSTNAME}
                     expose: true
-                    readonly: true
                 POSTGRES_PASSWORD:
                     default: ${PASSWORD}
                     expose: true
                 POSTGRES_PORT:
                     default: ${DATABASE_PORT}
                     expose: true
-                    readonly: true
                 POSTGRES_USER:
                     default: postgres
                     expose: true
-                    readonly: true
             healthCheck:
                 type: TCP
                 port: database
@@ -141,15 +137,12 @@ spec:
                 REDIS_HOST:
                     default: ${CONTAINER_HOSTNAME}
                     expose: true
-                    readonly: true
                 REDIS_PORT:
                     default: ${DATABASE_PORT}
                     expose: true
-                    readonly: true
                 REDIS_URL:
                     default: redis://${REDIS_HOST}:${REDIS_PORT}
                     expose: true
-                    readonly: true
             healthCheck:
                 type: TCP
                 port: database
@@ -177,15 +170,12 @@ spec:
                 RABBITMQ_HOST:
                     default: ${CONTAINER_HOSTNAME}
                     expose: true
-                    readonly: true
                 RABBITMQ_PORT:
                     default: ${AMQP_PORT}
                     expose: true
-                    readonly: true
                 NUQ_RABBITMQ_URL:
                     default: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
                     expose: true
-                    readonly: true
             healthCheck:
                 type: TCP
                 port: amqp
@@ -210,15 +200,12 @@ spec:
                 PLAYWRIGHT_HOST:
                     default: ${CONTAINER_HOSTNAME}
                     expose: true
-                    readonly: true
                 PLAYWRIGHT_PORT:
                     default: ${WEB_PORT}
                     expose: true
-                    readonly: true
                 PLAYWRIGHT_MICROSERVICE_URL:
                     default: http://${PLAYWRIGHT_HOST}:${PLAYWRIGHT_PORT}/scrape
                     expose: true
-                    readonly: true
             healthCheck:
                 type: TCP
                 port: web
