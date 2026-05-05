@@ -60,6 +60,10 @@ spec:
 
         Use it to monitor queue throughput, inspect active / completed / failed jobs, and replay errors. Find your `BULL_AUTH_KEY` on the **api** service env tab.
 
+        ## Versioning
+
+        Firecrawl upstream does not publish semver tags — only `:latest`, which is rebuilt every time `main` advances. To give you reproducible deploys, this template pins each image by digest (`@sha256:...`). The current pin corresponds to the build of **2026-05-04**. Updates ship as new template revisions.
+
         ## Reference
 
         - GitHub: https://github.com/firecrawl/firecrawl
@@ -303,6 +307,10 @@ localization:
 
             可監控 queue 吞吐量、檢視 active / completed / failed jobs、重跑失敗任務。`BULL_AUTH_KEY` 可在 **api** 服務的 env tab 查到。
 
+            ## 版本資訊
+
+            Firecrawl upstream 沒有發行 semver 標籤——只有 `:latest`，每次 main 分支推進就會重建。為了讓你的部署可重現，這個模板把每個 image 用 digest（`@sha256:...`）釘住，目前釘的是 **2026-05-04** 那個 build。後續更新會以新版模板的形式釋出。
+
             ## 參考資料
 
             - GitHub: https://github.com/firecrawl/firecrawl
@@ -354,6 +362,10 @@ localization:
             ```
 
             可监控 queue 吞吐量、查看 active / completed / failed jobs、重跑失败任务。`BULL_AUTH_KEY` 可在 **api** 服务的 env tab 查到。
+
+            ## 版本信息
+
+            Firecrawl upstream 没有发布 semver 标签——只有 `:latest`，每次 main 分支推进就会重建。为了让您的部署可复现，本模板将每个 image 通过 digest（`@sha256:...`）固定，当前对应 **2026-05-04** 的 build。后续更新会以新版模板的形式发布。
 
             ## 参考资料
 
@@ -407,6 +419,10 @@ localization:
 
             キューのスループット監視、active / completed / failed ジョブの確認、失敗ジョブのリトライが可能です。`BULL_AUTH_KEY` は **api** サービスの env タブから確認できます。
 
+            ## バージョン情報
+
+            Firecrawl upstream は semver タグを公開していません — `:latest` のみで、main ブランチが進むたびに再ビルドされます。再現性のあるデプロイのために、このテンプレートでは各 image を digest（`@sha256:...`）で固定しており、現在は **2026-05-04** のビルドに対応します。アップデートは新しいテンプレートリビジョンとして公開されます。
+
             ## 参考資料
 
             - GitHub: https://github.com/firecrawl/firecrawl
@@ -459,6 +475,10 @@ localization:
 
             Úsalo para monitorear el rendimiento de la cola, inspeccionar trabajos active / completed / failed y reintentar errores. Encuentra tu `BULL_AUTH_KEY` en la pestaña env del servicio **api**.
 
+            ## Versionado
+
+            Firecrawl upstream no publica etiquetas semver — solo `:latest`, que se reconstruye cada vez que avanza la rama `main`. Para que tu despliegue sea reproducible, esta plantilla fija cada imagen por digest (`@sha256:...`). El pin actual corresponde a la build del **2026-05-04**. Las actualizaciones se publican como nuevas revisiones de la plantilla.
+
             ## Referencias
 
             - GitHub: https://github.com/firecrawl/firecrawl
@@ -510,6 +530,10 @@ localization:
             ```
 
             Gunakan untuk memantau throughput antrian, melihat job active / completed / failed, dan menjalankan ulang error. `BULL_AUTH_KEY` bisa ditemukan di tab env service **api**.
+
+            ## Versi
+
+            Firecrawl upstream tidak menerbitkan tag semver — hanya `:latest`, yang di-build ulang setiap kali branch `main` maju. Agar deploy Anda reprodusibel, template ini mengunci setiap image dengan digest (`@sha256:...`). Pin saat ini sesuai dengan build pada **2026-05-04**. Update dirilis sebagai revisi template baru.
 
             ## Referensi
 
