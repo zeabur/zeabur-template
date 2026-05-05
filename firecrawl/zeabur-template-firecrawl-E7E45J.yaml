@@ -240,12 +240,12 @@ spec:
                   type: HTTP
             instructions:
                 - title: Firecrawl API URL
-                  content: ${ZEABUR_WEB_URL}
+                  content: https://${ZEABUR_WEB_DOMAIN}
                 - title: Bull Queue Dashboard
-                  content: ${ZEABUR_WEB_URL}/admin/${BULL_AUTH_KEY}/queues
+                  content: https://${ZEABUR_WEB_DOMAIN}/admin/${BULL_AUTH_KEY}/queues
                 - title: Quick scrape (curl)
                   content: |-
-                    curl -X POST ${ZEABUR_WEB_URL}/v1/scrape \
+                    curl -X POST https://${ZEABUR_WEB_DOMAIN}/v1/scrape \
                       -H 'Content-Type: application/json' \
                       -d '{"url":"https://docs.firecrawl.dev"}'
             env:
