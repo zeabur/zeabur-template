@@ -644,9 +644,7 @@ spec:
                 {
                   "gateway": { ${GATEWAY_JSON} },
                   "agents": { "defaults": { "model": { "primary": "zeabur-ai/glm-4.7-flash", "fallbacks": ["zeabur-ai/grok-4-fast-non-reasoning", "zeabur-ai/minimax-m2.5", "zeabur-ai/kimi-k2.5", "zeabur-ai/qwen-3-235b", "zeabur-ai/gpt-5-mini"] } } },
-                  "models": {
-                    "providers": { "\$include": "./providers/zeabur-ai-hub.json5" }
-                  }
+                  "models": { "providers": {} }
                 }
                 EOF
                   else
@@ -659,55 +657,46 @@ spec:
                   chmod 600 "$CONFIG_FILE"
                 else
                   echo "Config exists, checking for updates..."
-                  # Add Zeabur AI Hub provider via $include if API key is set but provider not configured
-                  if [ "$HAS_AI_HUB_KEY" = true ]; then
-                    node -e "
-                      const fs = require('fs');
-                      const JSON5 = require('json5');
-                      const configPath = '$CONFIG_FILE';
+                fi
 
-                      try {
-                        const config = JSON5.parse(fs.readFileSync(configPath, 'utf8'));
-
-                        // Check if zeabur-ai provider already exists (either directly or via \$include)
-                        const hasZeaburAi = config.models?.providers?.['zeabur-ai'] ||
-                          (config.models?.providers?.['\$include'] &&
-                           String(config.models.providers['\$include']).includes('zeabur-ai'));
-
-                        if (!hasZeaburAi) {
-                          console.log('Adding Zeabur AI Hub provider via \$include...');
-
-                          // Initialize models.providers if needed
-                          if (!config.models) config.models = {};
-                          if (!config.models.providers) config.models.providers = {};
-
-                          // Add \$include reference
-                          config.models.providers['\$include'] = './providers/zeabur-ai-hub.json5';
-
-                          // Only set default model if user hasn't configured any model
-                          if (!config.agents?.defaults?.model?.primary) {
-                            if (!config.agents) config.agents = {};
-                            if (!config.agents.defaults) config.agents.defaults = {};
-                            config.agents.defaults.model = { primary: 'zeabur-ai/glm-4.7-flash', fallbacks: ['zeabur-ai/grok-4-fast-non-reasoning', 'zeabur-ai/minimax-m2.5', 'zeabur-ai/kimi-k2.5', 'zeabur-ai/qwen-3-235b', 'zeabur-ai/gpt-5-mini'] };
-                            console.log('Default model set to zeabur-ai/glm-4.7-flash with fallbacks.');
-                          } else {
-                            console.log('Keeping existing default model: ' + config.agents.defaults.model.primary);
-                          }
-
-                          fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-                          console.log('Zeabur AI Hub provider added.');
-                        } else {
-                          console.log('Zeabur AI Hub provider already configured.');
-                        }
-                      } catch (err) {
-                        console.error('Warning: Failed to update config for Zeabur AI Hub:', err.message);
-                        console.error('You may need to configure the provider manually via Control UI.');
-                      }
-                    "
-                  fi
-
-                  # Sync Control UI config with ENABLE_CONTROL_UI env var
+                # Inline AI Hub provider config from /opt every start, drop any $include reference.
+                # OpenClaw 2026.5.x rejects writes that flatten $include-owned config, which broke
+                # `openclaw models set` / `fallbacks add/remove`. Inlining keeps writes possible
+                # and self-heals existing deployments that already have $include.
+                if [ "$HAS_AI_HUB_KEY" = true ] && [ -f /opt/openclaw/providers/zeabur-ai-hub.json5 ]; then
                   node -e "
+                    const fs = require('fs');
+                    const JSON5 = require('json5');
+                    const configPath = '$CONFIG_FILE';
+                    const providersPath = '/opt/openclaw/providers/zeabur-ai-hub.json5';
+
+                    try {
+                      const config = JSON5.parse(fs.readFileSync(configPath, 'utf8'));
+                      const providers = JSON5.parse(fs.readFileSync(providersPath, 'utf8'));
+
+                      if (!config.models) config.models = {};
+                      const existing = config.models.providers || {};
+                      delete existing['\$include'];
+                      config.models.providers = Object.assign({}, existing, providers);
+
+                      if (!config.agents?.defaults?.model?.primary) {
+                        if (!config.agents) config.agents = {};
+                        if (!config.agents.defaults) config.agents.defaults = {};
+                        config.agents.defaults.model = { primary: 'zeabur-ai/glm-4.7-flash', fallbacks: ['zeabur-ai/grok-4-fast-non-reasoning', 'zeabur-ai/minimax-m2.5', 'zeabur-ai/kimi-k2.5', 'zeabur-ai/qwen-3-235b', 'zeabur-ai/gpt-5-mini'] };
+                        console.log('Default model set to zeabur-ai/glm-4.7-flash with fallbacks.');
+                      }
+
+                      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+                      console.log('Zeabur AI Hub provider inlined (' + Object.keys(providers).length + ' provider(s), ' + (providers['zeabur-ai']?.models?.length || 0) + ' models).');
+                    } catch (err) {
+                      console.error('Warning: Failed to inline Zeabur AI Hub provider:', err.message);
+                      console.error('You may need to configure the provider manually via Control UI.');
+                    }
+                  "
+                fi
+
+                # Sync Control UI config with ENABLE_CONTROL_UI env var
+                node -e "
                     const fs = require('fs');
                     const JSON5 = require('json5');
                     const configPath = '$CONFIG_FILE';
@@ -754,8 +743,7 @@ spec:
                     }
                   "
 
-                  chmod 600 "$CONFIG_FILE" 2>/dev/null || true
-                fi
+                chmod 600 "$CONFIG_FILE" 2>/dev/null || true
 
                 # Copy Zeabur image gen skill if API key is set
                 MANAGED_SKILLS_DIR="$CONFIG_DIR/skills"
