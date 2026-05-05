@@ -41,7 +41,7 @@ spec:
       # OpenClaw 🦞
       OpenClaw 🦞 (formerly Clawdbot, Moltbot) is a personal AI assistant that runs locally and connects to multiple messaging platforms via a WebSocket-based Gateway architecture.
 
-      ⚠️ This template uses `ghcr.io/openclaw/openclaw:2026.5.3`. OpenClaw 🦞 is in rapid development, so there may be undiscovered bugs. Changing versions may also cause stability issues.
+      ⚠️ This template uses `ghcr.io/openclaw/openclaw:2026.5.4`. OpenClaw 🦞 is in rapid development, so there may be undiscovered bugs. Changing versions may also cause stability issues.
 
       ⚠️ If you encounter any issues, feel free to check the [GitHub issues](https://github.com/openclaw/openclaw/issues) for solutions or to report new ones. For Zeabur platform-related issues, please contact Zeabur support.
 
@@ -422,7 +422,7 @@ spec:
 
       ## Changelog
       **2026/5/5**
-      - Upgrade image to `2026.5.3` — file-transfer plugin, Gateway startup performance optimizations, unified streaming progress drafts, `/steer` command, Discord DM/status improvements, WhatsApp Channel/Newsletter support, MS Teams streaming progress, Google Chat webhook fix, LanceDB memory fix, sandbox sharding, and 100+ fixes across channels/plugins/providers
+      - Upgrade image to `2026.5.4` — file-transfer plugin, Gateway startup performance optimizations, unified streaming progress drafts, `/steer` command, Discord DM/status improvements, WhatsApp Channel/Newsletter support, MS Teams streaming progress, Google Chat webhook fix, LanceDB memory fix, sandbox sharding, and 100+ fixes across channels/plugins/providers
 
       **2026/4/17**
       - Upgrade image to `2026.4.15` — default Anthropic model moved to Claude Opus 4.7, Gemini text-to-speech support, Model Auth status card in Control UI, LanceDB cloud storage for memory, GitHub Copilot embedding provider, experimental local-model lean defaults, and 50+ security/provider/channel fixes
@@ -548,7 +548,7 @@ spec:
         domainKey: PUBLIC_DOMAIN
         spec:
           source:
-            image: ghcr.io/openclaw/openclaw:2026.5.3
+            image: ghcr.io/openclaw/openclaw:2026.5.4
             command:
               - /bin/sh
               - -c
@@ -1442,7 +1442,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞（原 Clawdbot、Moltbot）是一個個人 AI 助手，可在本地運行並透過 WebSocket Gateway 架構連接多個訊息平台。
 
-      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.5.3`。OpenClaw 🦞 正在快速開發中，可能存在尚未發現的 bug。更改版本後也無法確保穩定性。
+      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.5.4`。OpenClaw 🦞 正在快速開發中，可能存在尚未發現的 bug。更改版本後也無法確保穩定性。
 
       ⚠️ 如果遇到任何問題，歡迎到 [GitHub issues](https://github.com/openclaw/openclaw/issues) 尋找解決方案或回報新問題。Zeabur 平台相關問題請聯繫 Zeabur 支援。
 
@@ -1825,7 +1825,7 @@ localization:
 
       ## 更新日誌
       **2026/5/5**
-      - 升級映像檔至 `2026.5.3` — file-transfer plugin、Gateway 啟動效能優化、統一串流進度草稿、`/steer` 指令、Discord DM/狀態改善、WhatsApp Channel/Newsletter 支援、MS Teams 串流進度、Google Chat webhook 修復、LanceDB 記憶體修復、sandbox 分片，以及 100+ 頻道/plugin/provider 修復
+      - 升級映像檔至 `2026.5.4` — file-transfer plugin、Gateway 啟動效能優化、統一串流進度草稿、`/steer` 指令、Discord DM/狀態改善、WhatsApp Channel/Newsletter 支援、MS Teams 串流進度、Google Chat webhook 修復、LanceDB 記憶體修復、sandbox 分片，以及 100+ 頻道/plugin/provider 修復
 
       **2026/4/17**
       - 升級映像檔至 `2026.4.15` — 預設 Anthropic 模型改為 Claude Opus 4.7、Gemini 文字轉語音支援、Control UI 新增 Model Auth 狀態卡片、LanceDB 雲端儲存支援、GitHub Copilot embedding provider、實驗性本地模型精簡預設，以及 50+ 安全/provider/頻道修復
@@ -1961,7 +1961,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞（原 Clawdbot、Moltbot）是一个个人 AI 助手，可在本地运行并通过 WebSocket Gateway 架构连接多个消息平台。
 
-      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.5.3`。OpenClaw 🦞 正在快速开发中，可能存在尚未发现的 bug。更改版本后也无法确保稳定性。
+      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.5.4`。OpenClaw 🦞 正在快速开发中，可能存在尚未发现的 bug。更改版本后也无法确保稳定性。
 
       ⚠️ 如果遇到任何问题，欢迎到 [GitHub issues](https://github.com/openclaw/openclaw/issues) 寻找解决方案或回报新问题。Zeabur 平台相关问题请联系 Zeabur 支持。
 
@@ -2344,7 +2344,7 @@ localization:
 
       ## 更新日志
       **2026/5/5**
-      - 升级镜像至 `2026.5.3` — file-transfer plugin、Gateway 启动性能优化、统一流式进度草稿、`/steer` 命令、Discord DM/状态改善、WhatsApp Channel/Newsletter 支持、MS Teams 流式进度、Google Chat webhook 修复、LanceDB 内存修复、sandbox 分片，以及 100+ 频道/plugin/provider 修复
+      - 升级镜像至 `2026.5.4` — file-transfer plugin、Gateway 启动性能优化、统一流式进度草稿、`/steer` 命令、Discord DM/状态改善、WhatsApp Channel/Newsletter 支持、MS Teams 流式进度、Google Chat webhook 修复、LanceDB 内存修复、sandbox 分片，以及 100+ 频道/plugin/provider 修复
 
       **2026/4/17**
       - 升级镜像至 `2026.4.15` — 默认 Anthropic 模型改为 Claude Opus 4.7、Gemini 文字转语音支持、Control UI 新增 Model Auth 状态卡片、LanceDB 云端存储支持、GitHub Copilot embedding provider、实验性本地模型精简默认，以及 50+ 安全/provider/频道修复
@@ -2480,7 +2480,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞（旧 Clawdbot、Moltbot）は、ローカルで実行され、WebSocket ベースの Gateway アーキテクチャを介して複数のメッセージングプラットフォームに接続する個人用 AI アシスタントです。
 
-      ⚠️ 本テンプレートは `ghcr.io/openclaw/openclaw:2026.5.3` を使用しています。OpenClaw 🦞 は急速に開発中のため、未発見のバグがある可能性があります。バージョンを変更した場合も安定性を保証できません。
+      ⚠️ 本テンプレートは `ghcr.io/openclaw/openclaw:2026.5.4` を使用しています。OpenClaw 🦞 は急速に開発中のため、未発見のバグがある可能性があります。バージョンを変更した場合も安定性を保証できません。
 
       ⚠️ 問題が発生した場合は、[GitHub issues](https://github.com/openclaw/openclaw/issues) で解決策を探したり、新しい問題を報告したりしてください。Zeabur プラットフォーム関連の問題については、Zeabur サポートにお問い合わせください。
 
@@ -2863,7 +2863,7 @@ localization:
 
       ## 変更履歴
       **2026/5/5**
-      - イメージを `2026.5.3` にアップグレード — file-transfer プラグイン、Gateway 起動パフォーマンス最適化、統一ストリーミング進捗ドラフト、`/steer` コマンド、Discord DM/ステータス改善、WhatsApp Channel/Newsletter サポート、MS Teams ストリーミング進捗、Google Chat webhook 修正、LanceDB メモリ修正、sandbox シャーディング、100 以上のチャンネル/プラグイン/プロバイダー修正
+      - イメージを `2026.5.4` にアップグレード — file-transfer プラグイン、Gateway 起動パフォーマンス最適化、統一ストリーミング進捗ドラフト、`/steer` コマンド、Discord DM/ステータス改善、WhatsApp Channel/Newsletter サポート、MS Teams ストリーミング進捗、Google Chat webhook 修正、LanceDB メモリ修正、sandbox シャーディング、100 以上のチャンネル/プラグイン/プロバイダー修正
 
       **2026/4/17**
       - イメージを `2026.4.15` にアップグレード — デフォルトの Anthropic モデルが Claude Opus 4.7 に、Gemini テキスト読み上げ対応、Control UI に Model Auth ステータスカード追加、LanceDB クラウドストレージ対応、GitHub Copilot embedding プロバイダー、実験的ローカルモデル軽量デフォルト、50 以上のセキュリティ/プロバイダー/チャンネル修正
@@ -2999,7 +2999,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞 (anteriormente Clawdbot, Moltbot) es un asistente personal de IA que se ejecuta localmente y se conecta a múltiples plataformas de mensajería a través de una arquitectura Gateway basada en WebSocket.
 
-      ⚠️ Esta plantilla usa `ghcr.io/openclaw/openclaw:2026.5.3`. OpenClaw 🦞 está en desarrollo rápido, por lo que puede haber errores no descubiertos. Cambiar de versión tampoco garantiza estabilidad.
+      ⚠️ Esta plantilla usa `ghcr.io/openclaw/openclaw:2026.5.4`. OpenClaw 🦞 está en desarrollo rápido, por lo que puede haber errores no descubiertos. Cambiar de versión tampoco garantiza estabilidad.
 
       ⚠️ Si encuentra algún problema, no dude en consultar los [GitHub issues](https://github.com/openclaw/openclaw/issues) para buscar soluciones o reportar nuevos problemas. Para problemas relacionados con la plataforma Zeabur, contacte al soporte de Zeabur.
 
@@ -3382,7 +3382,7 @@ localization:
 
       ## Registro de Cambios
       **2026/5/5**
-      - Actualizar imagen a `2026.5.3` — plugin de transferencia de archivos, optimización de rendimiento de arranque del Gateway, borradores de progreso de streaming unificados, comando `/steer`, mejoras en DM/estado de Discord, soporte de WhatsApp Channel/Newsletter, progreso de streaming en MS Teams, corrección de webhook de Google Chat, corrección de memoria LanceDB, fragmentación de sandbox, y más de 100 correcciones de canales/plugins/proveedores
+      - Actualizar imagen a `2026.5.4` — plugin de transferencia de archivos, optimización de rendimiento de arranque del Gateway, borradores de progreso de streaming unificados, comando `/steer`, mejoras en DM/estado de Discord, soporte de WhatsApp Channel/Newsletter, progreso de streaming en MS Teams, corrección de webhook de Google Chat, corrección de memoria LanceDB, fragmentación de sandbox, y más de 100 correcciones de canales/plugins/proveedores
 
       **2026/4/17**
       - Actualizar imagen a `2026.4.15` — modelo predeterminado de Anthropic cambiado a Claude Opus 4.7, soporte de texto a voz de Gemini, nueva tarjeta de estado Model Auth en Control UI, soporte de almacenamiento en la nube LanceDB, proveedor de embeddings de GitHub Copilot, valores por defecto experimentales para modelos locales ligeros, y más de 50 correcciones de seguridad/proveedores/canales
@@ -3518,7 +3518,7 @@ localization:
       # OpenClaw 🦞
       OpenClaw 🦞 (sebelumnya Clawdbot, Moltbot) adalah asisten AI pribadi yang berjalan secara lokal dan terhubung ke berbagai platform perpesanan melalui arsitektur Gateway berbasis WebSocket.
 
-      ⚠️ Template ini menggunakan `ghcr.io/openclaw/openclaw:2026.5.3`. OpenClaw 🦞 sedang dalam pengembangan cepat, jadi mungkin ada bug yang belum ditemukan. Mengubah versi juga tidak menjamin stabilitas.
+      ⚠️ Template ini menggunakan `ghcr.io/openclaw/openclaw:2026.5.4`. OpenClaw 🦞 sedang dalam pengembangan cepat, jadi mungkin ada bug yang belum ditemukan. Mengubah versi juga tidak menjamin stabilitas.
 
       ⚠️ Jika Anda mengalami masalah, silakan kunjungi [GitHub issues](https://github.com/openclaw/openclaw/issues) untuk mencari solusi atau melaporkan masalah baru. Untuk masalah terkait platform Zeabur, silakan hubungi dukungan Zeabur.
 
@@ -3901,7 +3901,7 @@ localization:
 
       ## Catatan Perubahan
       **2026/5/5**
-      - Upgrade image ke `2026.5.3` — plugin file-transfer, optimasi performa startup Gateway, draft progres streaming terpadu, perintah `/steer`, peningkatan Discord DM/status, dukungan WhatsApp Channel/Newsletter, progres streaming MS Teams, perbaikan webhook Google Chat, perbaikan memori LanceDB, sharding sandbox, dan 100+ perbaikan channel/plugin/provider
+      - Upgrade image ke `2026.5.4` — plugin file-transfer, optimasi performa startup Gateway, draft progres streaming terpadu, perintah `/steer`, peningkatan Discord DM/status, dukungan WhatsApp Channel/Newsletter, progres streaming MS Teams, perbaikan webhook Google Chat, perbaikan memori LanceDB, sharding sandbox, dan 100+ perbaikan channel/plugin/provider
 
       **2026/4/17**
       - Upgrade image ke `2026.4.15` — model default Anthropic diubah ke Claude Opus 4.7, dukungan text-to-speech Gemini, kartu status Model Auth baru di Control UI, dukungan penyimpanan cloud LanceDB, provider embedding GitHub Copilot, default eksperimental untuk model lokal ringan, dan 50+ perbaikan keamanan/provider/channel
