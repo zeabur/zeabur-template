@@ -238,6 +238,16 @@ spec:
                 - id: web
                   port: 3002
                   type: HTTP
+            instructions:
+                - title: Firecrawl API URL
+                  content: ${ZEABUR_WEB_URL}
+                - title: Bull Queue Dashboard
+                  content: ${ZEABUR_WEB_URL}/admin/${BULL_AUTH_KEY}/queues
+                - title: Quick scrape (curl)
+                  content: |-
+                    curl -X POST ${ZEABUR_WEB_URL}/v1/scrape \
+                      -H 'Content-Type: application/json' \
+                      -d '{"url":"https://docs.firecrawl.dev"}'
             env:
                 HOST:
                     default: 0.0.0.0
