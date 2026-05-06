@@ -686,6 +686,11 @@ spec:
                         console.log('Default model set to zeabur-ai/glm-4.7-flash with fallbacks.');
                       }
 
+                      const zeaburAi = config.models.providers['zeabur-ai'];
+                      if (zeaburAi && zeaburAi.apiKey && zeaburAi.apiKey.includes('\${')) {
+                        zeaburAi.apiKey = process.env.ZEABUR_AI_HUB_API_KEY || '';
+                      }
+
                       fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
                       console.log('Zeabur AI Hub provider inlined (' + Object.keys(providers).length + ' provider(s), ' + (providers['zeabur-ai']?.models?.length || 0) + ' models).');
                     } catch (err) {
