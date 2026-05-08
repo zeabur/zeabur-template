@@ -5,7 +5,7 @@ metadata:
   name: OpenAB Gateway
 spec:
   description: |
-    Standalone webhook gateway for OpenAB — bridges Telegram and/or LINE to any running OAB instance via WebSocket. Deploy alongside an existing OpenAB service to enable Telegram and/or LINE support. At least one platform must be configured.
+    Standalone webhook gateway for OpenAB — bridges Telegram, LINE, Feishu/Lark, Google Chat, and MS Teams to any running OAB instance via WebSocket. Deploy alongside an existing OpenAB service to enable messaging platform support. At least one platform must be configured.
     Source: https://github.com/openabdev/openab
   icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
   coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
@@ -14,11 +14,14 @@ spec:
     - Developer Tools
     - Telegram
     - LINE
+    - Feishu
+    - Google Chat
+    - Teams
   variables:
     - key: TELEGRAM_BOT_TOKEN
       type: STRING
       name: Telegram Bot Token (optional)
-      description: "Optional. Bot token from @BotFather (https://t.me/BotFather). Leave empty to disable Telegram. At least one of Telegram or LINE must be configured."
+      description: "Optional. Bot token from @BotFather (https://t.me/BotFather). Leave empty to disable Telegram. At least one platform must be configured."
     - key: LINE_CHANNEL_SECRET
       type: STRING
       name: LINE Channel Secret (optional)
@@ -27,30 +30,72 @@ spec:
       type: STRING
       name: LINE Channel Access Token (optional)
       description: "Optional. Channel access token from LINE Developers Console. Required when LINE Channel Secret is set."
+    - key: FEISHU_APP_ID
+      type: STRING
+      name: Feishu/Lark App ID (optional)
+      description: "Optional. App ID from Feishu (open.feishu.cn) or Lark (open.larksuite.com) Open Platform. Leave empty to disable Feishu/Lark."
+    - key: FEISHU_APP_SECRET
+      type: STRING
+      name: Feishu/Lark App Secret (optional)
+      description: "Optional. App Secret from Feishu/Lark Open Platform. Required when Feishu App ID is set."
+    - key: FEISHU_DOMAIN
+      type: STRING
+      name: Feishu/Lark Domain (optional)
+      description: "Optional. 'feishu' for China (leave empty for default) or 'lark' for international Lark."
+    - key: GOOGLE_CHAT_ENABLED
+      type: STRING
+      name: Enable Google Chat (optional)
+      description: "Optional. Set to 'true' to enable Google Chat. Requires a Google Workspace account and Service Account JSON key."
+    - key: GOOGLE_CHAT_SA_KEY_JSON
+      type: STRING
+      name: Google Chat Service Account JSON (optional)
+      description: "Optional. Service Account JSON key (single line). Required when Google Chat is enabled."
+    - key: GOOGLE_CHAT_AUDIENCE
+      type: STRING
+      name: Google Chat Webhook Audience (optional)
+      description: "Optional but recommended. Full webhook URL (e.g. https://your-domain/webhook/googlechat) used to verify incoming JWTs."
+    - key: TEAMS_APP_ID
+      type: STRING
+      name: MS Teams App ID (optional)
+      description: "Optional. Bot Framework App ID. Leave empty to disable Teams."
+    - key: TEAMS_APP_SECRET
+      type: STRING
+      name: MS Teams App Secret (optional)
+      description: "Optional. Bot Framework App Secret. Required when Teams App ID is set."
     - key: PUBLIC_DOMAIN
       type: DOMAIN
       name: Gateway Domain
-      description: "Public HTTPS domain for receiving webhooks from Telegram and LINE."
+      description: "Public HTTPS domain for receiving webhooks (Telegram, LINE, Google Chat, Teams, Feishu webhook mode)."
   readme: |
     # OpenAB Gateway
 
-    [OpenAB Gateway](https://github.com/openabdev/openab) is a standalone webhook bridge that connects Telegram and LINE to any running [OpenAB](https://github.com/openabdev/openab) instance via WebSocket.
+    [OpenAB Gateway](https://github.com/openabdev/openab) is a standalone webhook bridge that connects messaging platforms to any running [OpenAB](https://github.com/openabdev/openab) instance via WebSocket.
 
     ```
-    Telegram ──POST──▶ ┌──────────────────┐
-    LINE     ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
-                       │     :8080        │   (OAB connects out)
-                       └──────────────────┘
+    Telegram     ──POST──▶ ┌──────────────────┐
+    LINE         ──POST──▶ │                  │
+    Feishu/Lark  ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
+    Google Chat  ──POST──▶ │     :8080        │   (OAB connects out)
+    MS Teams     ──POST──▶ │                  │
+                           └──────────────────┘
     ```
 
-    Deploy this template alongside an existing OpenAB service (Claude, Cursor, Codex, etc.) to add Telegram and LINE support without redeploying OAB.
+    Deploy this template alongside an existing OpenAB service (Claude, Cursor, Codex, etc.) to add messaging support without redeploying OAB. Configure one or more of the supported platforms — leave the rest blank to disable them.
+
+    ## Supported Platforms
+
+    | Platform | Setup section | Required variables |
+    |---|---|---|
+    | Telegram | [#telegram](#telegram-setup) | `TELEGRAM_BOT_TOKEN` |
+    | LINE | [#line](#line-setup-optional) | `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN` |
+    | Feishu / Lark | [#feishu](#feishu--lark-setup-optional) | `FEISHU_APP_ID`, `FEISHU_APP_SECRET` |
+    | Google Chat | [#google-chat](#google-chat-setup-optional) | `GOOGLE_CHAT_ENABLED=true`, `GOOGLE_CHAT_SA_KEY_JSON` |
+    | MS Teams | [#teams](#ms-teams-setup-optional) | `TEAMS_APP_ID`, `TEAMS_APP_SECRET` |
 
     ## Prerequisites
 
     - A running OpenAB service (any variant) in the same Zeabur project
-    - **At least one** of the following:
-      - A Telegram bot token from [@BotFather](https://t.me/BotFather)
-      - A LINE Official Account with Messaging API enabled (LINE Channel Secret + Access Token)
+    - **At least one** of the supported platforms above configured
 
     ## Setup
 
@@ -127,12 +172,61 @@ spec:
 
     Restart the OpenAB service after saving.
 
+    ## Feishu / Lark Setup (Optional)
+
+    1. Create an app at [open.feishu.cn](https://open.feishu.cn) (China) or [open.larksuite.com](https://open.larksuite.com) (international).
+    2. Enable the **Bot** capability.
+    3. **Event Subscriptions** → choose **Long Connection** (WebSocket) mode → add the `im.message.receive_v1` event.
+    4. **Permissions & Scopes** → grant: `im:message`, `im:message:send_as_bot`, `contact:user.base:readonly`.
+    5. From **Credentials & Basic Info**, copy **App ID** → `FEISHU_APP_ID`, **App Secret** → `FEISHU_APP_SECRET`.
+    6. Set `FEISHU_DOMAIN` to `lark` if using Lark international, otherwise leave at `feishu`.
+
+    Default connection mode is WebSocket — the gateway connects outbound to Feishu, no inbound webhook URL needed.
+
+    Then configure OAB to use the gateway with `platform = "feishu"`:
+
+    ```toml
+    [gateway]
+    url = "ws://openab-gateway:8080/ws"
+    platform = "feishu"
+    ```
+
+    Full guide: [docs/feishu.md](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+
+    ## Google Chat Setup (Optional)
+
+    > Requires a Google Workspace account (Business/Enterprise tier). Consumer `@gmail.com` accounts cannot create Google Chat apps.
+
+    1. In [Google Cloud Console](https://console.cloud.google.com), enable the **Google Chat API** in your project.
+    2. **APIs & Services → Google Chat API → Configuration**:
+       - **Connection settings** → **App URL** → enter `https://YOUR_DOMAIN/webhook/googlechat`
+       - **Authentication Audience** → leave as **HTTP Endpoint URL**
+    3. Create a Service Account (no special roles needed) and download a JSON key.
+    4. Set the env vars:
+       - `GOOGLE_CHAT_ENABLED=true`
+       - `GOOGLE_CHAT_SA_KEY_JSON` → paste the full Service Account JSON (single line)
+       - `GOOGLE_CHAT_AUDIENCE` → `https://YOUR_DOMAIN/webhook/googlechat` (recommended for JWT verification)
+
+    Configure OAB with `platform = "googlechat"`. Full guide: [docs/google-chat.md](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+
+    ## MS Teams Setup (Optional)
+
+    1. Register a Bot Framework app at [dev.botframework.com](https://dev.botframework.com) or via Azure Bot Service.
+    2. Set the **Messaging endpoint** to `https://YOUR_DOMAIN/webhook/teams`.
+    3. From the bot's app registration, copy **App ID** → `TEAMS_APP_ID`, generate a client secret → `TEAMS_APP_SECRET`.
+    4. Add the bot to your Teams tenant and install it in a channel or chat.
+
+    Configure OAB with `platform = "teams"`. Full guide: [docs/msteams-selfhosted.md](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+
     ## Webhook Endpoints
 
     | Path | Platform |
     |------|----------|
     | `POST /webhook/telegram` | Telegram |
     | `POST /webhook/line` | LINE |
+    | `POST /webhook/feishu` | Feishu/Lark (webhook mode only; default uses WebSocket) |
+    | `POST /webhook/googlechat` | Google Chat |
+    | `POST /webhook/teams` | MS Teams |
     | `GET /ws` | OAB WebSocket (internal) |
     | `GET /health` | Health check |
 
@@ -141,6 +235,9 @@ spec:
     - [OpenAB GitHub](https://github.com/openabdev/openab)
     - [Telegram Setup Guide](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
     - [LINE Setup Guide](https://github.com/openabdev/openab/blob/main/docs/line.md)
+    - [Feishu/Lark Setup Guide](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+    - [Google Chat Setup Guide](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+    - [MS Teams Setup Guide](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
     - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   services:
     - name: openab-gateway
@@ -149,7 +246,7 @@ spec:
       domainKey: PUBLIC_DOMAIN
       spec:
         source:
-          image: ghcr.io/openabdev/openab-gateway:0.3.0
+          image: ghcr.io/openabdev/openab-gateway:0.4.0
         ports:
           - id: web
             port: 8080
@@ -173,44 +270,94 @@ spec:
             default: ${LINE_CHANNEL_ACCESS_TOKEN}
           TELEGRAM_SECRET_TOKEN:
             default: ${PASSWORD}
+          FEISHU_APP_ID:
+            default: ${FEISHU_APP_ID}
+          FEISHU_APP_SECRET:
+            default: ${FEISHU_APP_SECRET}
+          FEISHU_DOMAIN:
+            default: ${FEISHU_DOMAIN}
+          GOOGLE_CHAT_ENABLED:
+            default: ${GOOGLE_CHAT_ENABLED}
+          GOOGLE_CHAT_SA_KEY_JSON:
+            default: ${GOOGLE_CHAT_SA_KEY_JSON}
+          GOOGLE_CHAT_AUDIENCE:
+            default: ${GOOGLE_CHAT_AUDIENCE}
+          TEAMS_APP_ID:
+            default: ${TEAMS_APP_ID}
+          TEAMS_APP_SECRET:
+            default: ${TEAMS_APP_SECRET}
 localization:
   zh-TW:
     description: |
-      OpenAB 獨立 Webhook Gateway — 透過 WebSocket 將 Telegram 和／或 LINE 橋接到任何正在運行的 OAB 實例。部署於現有 OpenAB 服務旁，即可啟用 Telegram 和／或 LINE 支援。至少須設定一個平台。
+      OpenAB 獨立 Webhook Gateway — 透過 WebSocket 將 Telegram、LINE、Feishu/Lark、Google Chat、MS Teams 橋接到任何正在運行的 OAB 實例。部署於現有 OpenAB 服務旁即可啟用對應通訊平台。至少須設定一個平台。
       來源：https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
         name: Telegram Bot Token（選填）
-        description: "選填。來自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空則停用 Telegram。Telegram 和 LINE 至少須填寫其中一個。"
+        description: "選填。來自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空則停用 Telegram。所有平台至少須填寫其中一個。"
       - key: LINE_CHANNEL_SECRET
         name: LINE Channel Secret（選填）
         description: "選填。來自 LINE Developers Console 的 Channel Secret。留空則停用 LINE。"
       - key: LINE_CHANNEL_ACCESS_TOKEN
         name: LINE Channel Access Token（選填）
         description: "選填。來自 LINE Developers Console 的 Channel Access Token。填寫 LINE Channel Secret 時必填。"
+      - key: FEISHU_APP_ID
+        name: Feishu/Lark App ID（選填）
+        description: "選填。來自飛書（open.feishu.cn）或 Lark（open.larksuite.com）開放平台的 App ID。留空則停用 Feishu/Lark。"
+      - key: FEISHU_APP_SECRET
+        name: Feishu/Lark App Secret（選填）
+        description: "選填。飛書/Lark 開放平台的 App Secret。填寫 Feishu App ID 時必填。"
+      - key: FEISHU_DOMAIN
+        name: Feishu/Lark Domain（選填）
+        description: "選填。`feishu` 為中國版（預設）；國際版 Lark 請填 `lark`。"
+      - key: GOOGLE_CHAT_ENABLED
+        name: 啟用 Google Chat（選填）
+        description: "選填。設為 `true` 啟用 Google Chat。需要 Google Workspace 帳號與 Service Account JSON Key。"
+      - key: GOOGLE_CHAT_SA_KEY_JSON
+        name: Google Chat Service Account JSON（選填）
+        description: "選填。Service Account JSON Key（單行）。啟用 Google Chat 時必填。"
+      - key: GOOGLE_CHAT_AUDIENCE
+        name: Google Chat Webhook Audience（選填）
+        description: "選填但建議。完整的 webhook URL（例：https://YOUR_DOMAIN/webhook/googlechat），用於驗證收到的 JWT。"
+      - key: TEAMS_APP_ID
+        name: MS Teams App ID（選填）
+        description: "選填。Bot Framework App ID。留空則停用 Teams。"
+      - key: TEAMS_APP_SECRET
+        name: MS Teams App Secret（選填）
+        description: "選填。Bot Framework App Secret。填寫 Teams App ID 時必填。"
       - key: PUBLIC_DOMAIN
         name: Gateway 網域
-        description: "用於接收 Telegram 和 LINE Webhook 的公開 HTTPS 網域。"
+        description: "用於接收 Webhook 的公開 HTTPS 網域（Telegram、LINE、Google Chat、Teams、Feishu webhook 模式）。"
     readme: |
       # OpenAB Gateway
 
-      [OpenAB Gateway](https://github.com/openabdev/openab) 是一個獨立的 Webhook 橋接服務，透過 WebSocket 將 Telegram 和 LINE 連接到任何正在運行的 [OpenAB](https://github.com/openabdev/openab) 實例。
+      [OpenAB Gateway](https://github.com/openabdev/openab) 是獨立的 Webhook 橋接服務，透過 WebSocket 將通訊平台連接到任何正在運行的 [OpenAB](https://github.com/openabdev/openab) 實例。
 
       ```
-      Telegram ──POST──▶ ┌──────────────────┐
-      LINE     ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
-                         │     :8080        │   （OAB 主動對外連線）
-                         └──────────────────┘
+      Telegram     ──POST──▶ ┌──────────────────┐
+      LINE         ──POST──▶ │                  │
+      Feishu/Lark  ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
+      Google Chat  ──POST──▶ │     :8080        │   （OAB 主動對外連線）
+      MS Teams     ──POST──▶ │                  │
+                             └──────────────────┘
       ```
 
-      將此 template 部署於現有 OpenAB 服務（Claude、Cursor、Codex 等）旁，無需重新部署 OAB 即可新增 Telegram 和 LINE 支援。
+      將此 template 部署於現有 OpenAB 服務（Claude、Cursor、Codex 等）旁，無需重新部署 OAB 即可新增通訊平台支援。可同時啟用一或多個平台，未填寫的留空即可停用。
+
+      ## 支援平台
+
+      | 平台 | 設定章節 | 必填變數 |
+      |---|---|---|
+      | Telegram | [#telegram](#telegram-設定) | `TELEGRAM_BOT_TOKEN` |
+      | LINE | [#line](#line-設定選填) | `LINE_CHANNEL_SECRET`、`LINE_CHANNEL_ACCESS_TOKEN` |
+      | Feishu / Lark | [#feishu](#feishu--lark-設定選填) | `FEISHU_APP_ID`、`FEISHU_APP_SECRET` |
+      | Google Chat | [#google-chat](#google-chat-設定選填) | `GOOGLE_CHAT_ENABLED=true`、`GOOGLE_CHAT_SA_KEY_JSON` |
+      | MS Teams | [#teams](#ms-teams-設定選填) | `TEAMS_APP_ID`、`TEAMS_APP_SECRET` |
 
       ## 前置條件
 
       - 同一個 Zeabur 專案中已有正在運行的 OpenAB 服務
-      - **至少需要以下其中一個：**
-        - 來自 [@BotFather](https://t.me/BotFather) 的 Telegram Bot Token
-        - 已啟用 Messaging API 的 LINE 官方帳號（LINE Channel Secret + Access Token）
+      - **以上支援平台至少設定一個**
 
       ## 設定步驟
 
@@ -287,12 +434,61 @@ localization:
 
       儲存後重啟 OpenAB 服務。
 
+      ## Feishu / Lark 設定（選填）
+
+      1. 在 [open.feishu.cn](https://open.feishu.cn)（中國版）或 [open.larksuite.com](https://open.larksuite.com)（國際版 Lark）建立應用。
+      2. 啟用 **機器人** 能力。
+      3. **事件訂閱** → 選 **長連線（Long Connection / WebSocket）** 模式 → 加入 `im.message.receive_v1` 事件。
+      4. **權限管理** → 授予：`im:message`、`im:message:send_as_bot`、`contact:user.base:readonly`。
+      5. 從 **憑證與基礎資訊** 複製 **App ID** → `FEISHU_APP_ID`、**App Secret** → `FEISHU_APP_SECRET`。
+      6. 使用 Lark 國際版時，將 `FEISHU_DOMAIN` 設為 `lark`；中國版飛書保持 `feishu`。
+
+      預設使用 WebSocket 連線模式，Gateway 會主動對外連線到 Feishu，**不需要** 公開 webhook URL。
+
+      接著設定 OAB 使用 Gateway，並指定 `platform = "feishu"`：
+
+      ```toml
+      [gateway]
+      url = "ws://openab-gateway:8080/ws"
+      platform = "feishu"
+      ```
+
+      完整指南：[docs/feishu.md](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+
+      ## Google Chat 設定（選填）
+
+      > 需要 Google Workspace 付費帳號（Business / Enterprise）。一般 `@gmail.com` 個人帳號無法建立 Google Chat 應用。
+
+      1. 在 [Google Cloud Console](https://console.cloud.google.com) 啟用 **Google Chat API**。
+      2. **APIs & Services → Google Chat API → Configuration**：
+         - **Connection settings** → **App URL** → 填 `https://YOUR_DOMAIN/webhook/googlechat`
+         - **Authentication Audience** → 保持預設 **HTTP Endpoint URL**
+      3. 建立 Service Account（不需要授予角色），下載 JSON Key。
+      4. 填入環境變數：
+         - `GOOGLE_CHAT_ENABLED=true`
+         - `GOOGLE_CHAT_SA_KEY_JSON` → 貼上完整的 Service Account JSON（單行）
+         - `GOOGLE_CHAT_AUDIENCE` → `https://YOUR_DOMAIN/webhook/googlechat`（建議填入以驗證 JWT）
+
+      OAB 端設定 `platform = "googlechat"`。完整指南：[docs/google-chat.md](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+
+      ## MS Teams 設定（選填）
+
+      1. 在 [dev.botframework.com](https://dev.botframework.com) 或透過 Azure Bot Service 註冊 Bot Framework 應用。
+      2. **Messaging endpoint** 設為 `https://YOUR_DOMAIN/webhook/teams`。
+      3. 從 App registration 取得 **App ID** → `TEAMS_APP_ID`，建立 client secret → `TEAMS_APP_SECRET`。
+      4. 將 Bot 加入 Teams 租戶，並安裝到頻道或對話。
+
+      OAB 端設定 `platform = "teams"`。完整指南：[docs/msteams-selfhosted.md](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+
       ## Webhook 端點
 
       | 路徑 | 平台 |
       |------|------|
       | `POST /webhook/telegram` | Telegram |
       | `POST /webhook/line` | LINE |
+      | `POST /webhook/feishu` | Feishu/Lark（僅 webhook 模式；預設使用 WebSocket） |
+      | `POST /webhook/googlechat` | Google Chat |
+      | `POST /webhook/teams` | MS Teams |
       | `GET /ws` | OAB WebSocket（內部使用） |
       | `GET /health` | 健康檢查 |
 
@@ -301,24 +497,51 @@ localization:
       - [OpenAB GitHub](https://github.com/openabdev/openab)
       - [Telegram 設定指南](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
       - [LINE 設定指南](https://github.com/openabdev/openab/blob/main/docs/line.md)
+      - [Feishu/Lark 設定指南](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+      - [Google Chat 設定指南](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+      - [MS Teams 設定指南](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   zh-CN:
     description: |
-      OpenAB 独立 Webhook Gateway — 通过 WebSocket 将 Telegram 和/或 LINE 桥接到任何正在运行的 OAB 实例。部署于现有 OpenAB 服务旁，即可启用 Telegram 和/或 LINE 支持。至少须配置一个平台。
+      OpenAB 独立 Webhook Gateway — 通过 WebSocket 将 Telegram、LINE、飞书/Lark、Google Chat、MS Teams 桥接到任何正在运行的 OAB 实例。部署于现有 OpenAB 服务旁，即可启用对应通讯平台。至少须配置一个平台。
       来源：https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
         name: Telegram Bot Token（选填）
-        description: "选填。来自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空则禁用 Telegram。Telegram 和 LINE 至少须填写其中一个。"
+        description: "选填。来自 @BotFather 的 Bot Token（https://t.me/BotFather）。留空则禁用 Telegram。所有平台至少须填写其中一个。"
       - key: LINE_CHANNEL_SECRET
         name: LINE Channel Secret（选填）
         description: "选填。来自 LINE Developers Console 的 Channel Secret。留空则禁用 LINE。"
       - key: LINE_CHANNEL_ACCESS_TOKEN
         name: LINE Channel Access Token（选填）
         description: "选填。来自 LINE Developers Console 的 Channel Access Token。填写 LINE Channel Secret 时必填。"
+      - key: FEISHU_APP_ID
+        name: 飞书/Lark App ID（选填）
+        description: "选填。来自飞书（open.feishu.cn）或 Lark（open.larksuite.com）开放平台的 App ID。留空则禁用飞书/Lark。"
+      - key: FEISHU_APP_SECRET
+        name: 飞书/Lark App Secret（选填）
+        description: "选填。飞书/Lark 开放平台的 App Secret。填写 Feishu App ID 时必填。"
+      - key: FEISHU_DOMAIN
+        name: 飞书/Lark Domain（选填）
+        description: "选填。`feishu` 为中国版（默认）；国际版 Lark 请填 `lark`。"
+      - key: GOOGLE_CHAT_ENABLED
+        name: 启用 Google Chat（选填）
+        description: "选填。设为 `true` 启用 Google Chat。需要 Google Workspace 账号与 Service Account JSON Key。"
+      - key: GOOGLE_CHAT_SA_KEY_JSON
+        name: Google Chat Service Account JSON（选填）
+        description: "选填。Service Account JSON Key（单行）。启用 Google Chat 时必填。"
+      - key: GOOGLE_CHAT_AUDIENCE
+        name: Google Chat Webhook Audience（选填）
+        description: "选填但建议。完整的 webhook URL（例：https://YOUR_DOMAIN/webhook/googlechat），用于验证收到的 JWT。"
+      - key: TEAMS_APP_ID
+        name: MS Teams App ID（选填）
+        description: "选填。Bot Framework App ID。留空则禁用 Teams。"
+      - key: TEAMS_APP_SECRET
+        name: MS Teams App Secret（选填）
+        description: "选填。Bot Framework App Secret。填写 Teams App ID 时必填。"
       - key: PUBLIC_DOMAIN
         name: Gateway 域名
-        description: "用于接收 Telegram 和 LINE Webhook 的公开 HTTPS 域名。"
+        description: "用于接收 Webhook 的公开 HTTPS 域名（Telegram、LINE、Google Chat、Teams、飞书 webhook 模式）。"
     readme: |
       # OpenAB Gateway
 
@@ -408,27 +631,61 @@ localization:
       | `GET /ws` | OAB WebSocket（内部使用） |
       | `GET /health` | 健康检查 |
 
+      ## 其他平台（飞书 / Google Chat / MS Teams）
+
+      Gateway 也支持飞书/Lark、Google Chat、MS Teams。设置流程请参考：
+
+      - [飞书/Lark 设置指南](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+      - [Google Chat 设置指南](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+      - [MS Teams 设置指南](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+
+      OAB 端在 `config.toml` 中将 `platform` 设为 `feishu`、`googlechat` 或 `teams` 即可。
+
       ## 链接
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   ja-JP:
     description: |
-      OpenAB スタンドアロン Webhook Gateway — WebSocket を通じて Telegram または LINE（あるいは両方）を既存の OAB インスタンスに接続します。少なくとも一方のプラットフォームを設定する必要があります。
+      OpenAB スタンドアロン Webhook Gateway — WebSocket を通じて Telegram、LINE、Feishu/Lark、Google Chat、MS Teams を既存の OAB インスタンスに接続します。少なくとも 1 つのプラットフォームを設定する必要があります。
       ソース：https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
         name: Telegram Bot トークン（オプション）
-        description: "オプション。@BotFather から取得した Bot トークン（https://t.me/BotFather）。空の場合、Telegram は無効。Telegram か LINE のどちらか一方は必ず設定してください。"
+        description: "オプション。@BotFather から取得した Bot トークン（https://t.me/BotFather）。空の場合、Telegram は無効。少なくとも 1 つのプラットフォームを設定してください。"
       - key: LINE_CHANNEL_SECRET
         name: LINE Channel Secret（オプション）
         description: "オプション。LINE Developers Console の Channel Secret。空の場合、LINE は無効。"
       - key: LINE_CHANNEL_ACCESS_TOKEN
         name: LINE Channel Access Token（オプション）
         description: "オプション。LINE Developers Console の Channel Access Token。LINE Channel Secret を設定する場合は必須。"
+      - key: FEISHU_APP_ID
+        name: Feishu/Lark App ID（オプション）
+        description: "オプション。Feishu（open.feishu.cn）または Lark（open.larksuite.com）開放プラットフォームの App ID。空の場合 Feishu/Lark は無効。"
+      - key: FEISHU_APP_SECRET
+        name: Feishu/Lark App Secret（オプション）
+        description: "オプション。Feishu/Lark 開放プラットフォームの App Secret。Feishu App ID を設定する場合は必須。"
+      - key: FEISHU_DOMAIN
+        name: Feishu/Lark Domain（オプション）
+        description: "オプション。中国版は `feishu`（デフォルト）、国際版 Lark は `lark`。"
+      - key: GOOGLE_CHAT_ENABLED
+        name: Google Chat 有効化（オプション）
+        description: "オプション。`true` に設定すると Google Chat を有効化。Google Workspace アカウントと Service Account JSON Key が必要。"
+      - key: GOOGLE_CHAT_SA_KEY_JSON
+        name: Google Chat Service Account JSON（オプション）
+        description: "オプション。Service Account JSON Key（一行）。Google Chat を有効化する場合は必須。"
+      - key: GOOGLE_CHAT_AUDIENCE
+        name: Google Chat Webhook Audience（オプション）
+        description: "オプション（推奨）。Webhook の完全な URL（例：https://YOUR_DOMAIN/webhook/googlechat）。受信した JWT の検証に使用。"
+      - key: TEAMS_APP_ID
+        name: MS Teams App ID（オプション）
+        description: "オプション。Bot Framework App ID。空の場合 Teams は無効。"
+      - key: TEAMS_APP_SECRET
+        name: MS Teams App Secret（オプション）
+        description: "オプション。Bot Framework App Secret。Teams App ID を設定する場合は必須。"
       - key: PUBLIC_DOMAIN
         name: Gateway ドメイン
-        description: "Telegram・LINE の Webhook を受信する公開 HTTPS ドメイン。"
+        description: "Webhook を受信する公開 HTTPS ドメイン（Telegram、LINE、Google Chat、Teams、Feishu webhook モード）。"
     readme: |
       # OpenAB Gateway
 
@@ -508,6 +765,16 @@ localization:
       | `GET /ws` | OAB WebSocket（内部） |
       | `GET /health` | ヘルスチェック |
 
+      ## その他のプラットフォーム（Feishu / Google Chat / MS Teams）
+
+      Gateway は Feishu/Lark、Google Chat、MS Teams にも対応しています。設定手順は各ガイドを参照：
+
+      - [Feishu/Lark 設定ガイド](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+      - [Google Chat 設定ガイド](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+      - [MS Teams 設定ガイド](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+
+      OAB 側では `config.toml` の `platform` を `feishu`、`googlechat`、`teams` のいずれかに設定してください。
+
       ## リンク
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
@@ -516,21 +783,45 @@ localization:
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   es-ES:
     description: |
-      Gateway Webhook independiente para OpenAB — conecta Telegram y/o LINE a cualquier instancia de OAB en ejecución mediante WebSocket. Se debe configurar al menos una plataforma.
+      Gateway Webhook independiente para OpenAB — conecta Telegram, LINE, Feishu/Lark, Google Chat y MS Teams a cualquier instancia de OAB en ejecución mediante WebSocket. Se debe configurar al menos una plataforma.
       Fuente: https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
         name: Token de Bot de Telegram (opcional)
-        description: "Opcional. Token del bot obtenido de @BotFather (https://t.me/BotFather). Dejar vacío para deshabilitar Telegram. Al menos uno de Telegram o LINE debe configurarse."
+        description: "Opcional. Token del bot obtenido de @BotFather (https://t.me/BotFather). Dejar vacío para deshabilitar Telegram. Se debe configurar al menos una plataforma."
       - key: LINE_CHANNEL_SECRET
         name: LINE Channel Secret (opcional)
         description: "Opcional. Channel Secret de LINE Developers Console. Dejar vacío para deshabilitar LINE."
       - key: LINE_CHANNEL_ACCESS_TOKEN
         name: LINE Channel Access Token (opcional)
         description: "Opcional. Channel Access Token de LINE Developers Console. Requerido si se configura LINE Channel Secret."
+      - key: FEISHU_APP_ID
+        name: Feishu/Lark App ID (opcional)
+        description: "Opcional. App ID de Feishu (open.feishu.cn) o Lark (open.larksuite.com). Dejar vacío para deshabilitar Feishu/Lark."
+      - key: FEISHU_APP_SECRET
+        name: Feishu/Lark App Secret (opcional)
+        description: "Opcional. App Secret de la plataforma Feishu/Lark. Requerido si se configura Feishu App ID."
+      - key: FEISHU_DOMAIN
+        name: Feishu/Lark Domain (opcional)
+        description: "Opcional. `feishu` para China (predeterminado) o `lark` para Lark internacional."
+      - key: GOOGLE_CHAT_ENABLED
+        name: Habilitar Google Chat (opcional)
+        description: "Opcional. Establecer en `true` para habilitar Google Chat. Requiere cuenta Google Workspace y clave JSON de Service Account."
+      - key: GOOGLE_CHAT_SA_KEY_JSON
+        name: Google Chat Service Account JSON (opcional)
+        description: "Opcional. Clave JSON de Service Account (una línea). Requerido cuando Google Chat está habilitado."
+      - key: GOOGLE_CHAT_AUDIENCE
+        name: Google Chat Webhook Audience (opcional)
+        description: "Opcional pero recomendado. URL completa del webhook (ej: https://YOUR_DOMAIN/webhook/googlechat) para verificar JWTs entrantes."
+      - key: TEAMS_APP_ID
+        name: MS Teams App ID (opcional)
+        description: "Opcional. Bot Framework App ID. Dejar vacío para deshabilitar Teams."
+      - key: TEAMS_APP_SECRET
+        name: MS Teams App Secret (opcional)
+        description: "Opcional. Bot Framework App Secret. Requerido si se configura Teams App ID."
       - key: PUBLIC_DOMAIN
         name: Dominio del Gateway
-        description: "Dominio HTTPS público para recibir webhooks de Telegram y LINE."
+        description: "Dominio HTTPS público para recibir webhooks (Telegram, LINE, Google Chat, Teams, Feishu modo webhook)."
     readme: |
       # OpenAB Gateway
 
@@ -610,6 +901,16 @@ localization:
       | `GET /ws` | OAB WebSocket (interno) |
       | `GET /health` | Health check |
 
+      ## Otras plataformas (Feishu / Google Chat / MS Teams)
+
+      El Gateway también soporta Feishu/Lark, Google Chat y MS Teams. Consulta las guías:
+
+      - [Guía Feishu/Lark](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+      - [Guía Google Chat](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+      - [Guía MS Teams](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+
+      En el lado de OAB, configura `platform` en `config.toml` como `feishu`, `googlechat` o `teams`.
+
       ## Enlaces
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
@@ -618,21 +919,45 @@ localization:
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   id-ID:
     description: |
-      Gateway Webhook mandiri untuk OpenAB — menghubungkan Telegram dan/atau LINE ke instansi OAB mana pun melalui WebSocket. Setidaknya satu platform harus dikonfigurasi.
+      Gateway Webhook mandiri untuk OpenAB — menghubungkan Telegram, LINE, Feishu/Lark, Google Chat, dan MS Teams ke instansi OAB mana pun melalui WebSocket. Setidaknya satu platform harus dikonfigurasi.
       Sumber: https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
         name: Token Bot Telegram (opsional)
-        description: "Opsional. Token bot dari @BotFather (https://t.me/BotFather). Kosongkan untuk menonaktifkan Telegram. Setidaknya satu antara Telegram atau LINE harus dikonfigurasi."
+        description: "Opsional. Token bot dari @BotFather (https://t.me/BotFather). Kosongkan untuk menonaktifkan Telegram. Setidaknya satu platform harus dikonfigurasi."
       - key: LINE_CHANNEL_SECRET
         name: LINE Channel Secret (opsional)
         description: "Opsional. Channel Secret dari LINE Developers Console. Kosongkan untuk menonaktifkan LINE."
       - key: LINE_CHANNEL_ACCESS_TOKEN
         name: LINE Channel Access Token (opsional)
         description: "Opsional. Channel Access Token dari LINE Developers Console. Wajib jika LINE Channel Secret diisi."
+      - key: FEISHU_APP_ID
+        name: Feishu/Lark App ID (opsional)
+        description: "Opsional. App ID dari Feishu (open.feishu.cn) atau Lark (open.larksuite.com). Kosongkan untuk menonaktifkan Feishu/Lark."
+      - key: FEISHU_APP_SECRET
+        name: Feishu/Lark App Secret (opsional)
+        description: "Opsional. App Secret dari platform Feishu/Lark. Wajib jika Feishu App ID diisi."
+      - key: FEISHU_DOMAIN
+        name: Feishu/Lark Domain (opsional)
+        description: "Opsional. `feishu` untuk versi China (default) atau `lark` untuk Lark internasional."
+      - key: GOOGLE_CHAT_ENABLED
+        name: Aktifkan Google Chat (opsional)
+        description: "Opsional. Atur ke `true` untuk mengaktifkan Google Chat. Membutuhkan akun Google Workspace dan kunci JSON Service Account."
+      - key: GOOGLE_CHAT_SA_KEY_JSON
+        name: Google Chat Service Account JSON (opsional)
+        description: "Opsional. Kunci JSON Service Account (satu baris). Wajib saat Google Chat diaktifkan."
+      - key: GOOGLE_CHAT_AUDIENCE
+        name: Google Chat Webhook Audience (opsional)
+        description: "Opsional namun direkomendasikan. URL webhook lengkap (mis. https://YOUR_DOMAIN/webhook/googlechat) untuk memverifikasi JWT masuk."
+      - key: TEAMS_APP_ID
+        name: MS Teams App ID (opsional)
+        description: "Opsional. Bot Framework App ID. Kosongkan untuk menonaktifkan Teams."
+      - key: TEAMS_APP_SECRET
+        name: MS Teams App Secret (opsional)
+        description: "Opsional. Bot Framework App Secret. Wajib jika Teams App ID diisi."
       - key: PUBLIC_DOMAIN
         name: Domain Gateway
-        description: "Domain HTTPS publik untuk menerima webhook Telegram dan LINE."
+        description: "Domain HTTPS publik untuk menerima webhook (Telegram, LINE, Google Chat, Teams, Feishu mode webhook)."
     readme: |
       # OpenAB Gateway
 
@@ -711,6 +1036,16 @@ localization:
       | `POST /webhook/line` | LINE |
       | `GET /ws` | OAB WebSocket (internal) |
       | `GET /health` | Health check |
+
+      ## Platform lain (Feishu / Google Chat / MS Teams)
+
+      Gateway juga mendukung Feishu/Lark, Google Chat, dan MS Teams. Lihat panduan masing-masing:
+
+      - [Panduan Feishu/Lark](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+      - [Panduan Google Chat](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+      - [Panduan MS Teams](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+
+      Di sisi OAB, atur `platform` di `config.toml` menjadi `feishu`, `googlechat`, atau `teams`.
 
       ## Tautan
 
