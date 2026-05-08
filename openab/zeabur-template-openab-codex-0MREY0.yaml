@@ -92,13 +92,12 @@ spec:
     **Option B: ChatGPT Subscription** (Plus/Pro/Business — usage included in plan)
     1. Leave `OpenAI API Key` empty when deploying
     2. After the service starts, go to Zeabur Dashboard → Service → **Exec**
-    3. The Exec terminal opens as root. Run with the correct HOME so credentials are saved to the right path:
+    3. Run the login as the `node` user so credentials are owned correctly from the start:
        ```
-       HOME=/home/node codex login --device-auth
+       runuser -u node -- codex login --device-auth
        ```
     4. Open the URL shown in the terminal, authorize with your ChatGPT account
-    5. Restart the service from the dashboard
-    6. Credentials are saved to `/home/node/.codex/auth.json` on the persistent volume and auto-refreshed — this step is only needed once
+    5. Credentials are saved to `/home/node/.codex/auth.json` on the persistent volume and auto-refreshed — new conversations will pick up the new auth, no restart needed (only restart if you want to invalidate existing in-memory sessions)
 
     ### 3. Get Discord Channel IDs
 
@@ -319,13 +318,12 @@ localization:
       **方式 B：ChatGPT 訂閱**（Plus/Pro/Business — 使用量包含在方案內）
       1. 部署時將 `OpenAI API Key` 留空
       2. 服務啟動後，前往 Zeabur Dashboard → 服務 → **Exec**
-      3. Exec 終端機以 root 開啟，指定正確的 HOME 路徑讓認證資料存到正確位置：
+      3. 以 `node` 身份執行登入，認證檔從一開始就有正確擁有者：
          ```
-         HOME=/home/node codex login --device-auth
+         runuser -u node -- codex login --device-auth
          ```
       4. 開啟終端機顯示的 URL，用 ChatGPT 帳號授權
-      5. 從 Dashboard 重啟服務
-      6. 認證資料儲存於持久化磁碟 `/home/node/.codex/auth.json`，會自動更新，此步驟只需做一次
+      5. 認證資料儲存於持久化磁碟 `/home/node/.codex/auth.json`，會自動更新 — 新對話會直接套用新認證，**不必重啟服務**（若要清掉現有 session 才需重啟）。此步驟只需做一次
 
       ### 3. 取得 Discord 頻道 ID
 
@@ -440,13 +438,12 @@ localization:
       **方式 B：ChatGPT 订阅**（Plus/Pro/Business — 使用量包含在套餐内）
       1. 部署时将 `OpenAI API Key` 留空
       2. 服务启动后，前往 Zeabur Dashboard → 服务 → **Exec**
-      3. Exec 终端以 root 打开，指定正确的 HOME 路径让认证信息存储到正确位置：
+      3. 以 `node` 身份运行登录，认证文件从一开始就归 node 所有：
          ```
-         HOME=/home/node codex login --device-auth
+         runuser -u node -- codex login --device-auth
          ```
       4. 打开终端显示的 URL，用 ChatGPT 账号授权
-      5. 从 Dashboard 重启服务
-      6. 认证信息存储于持久化存储 `/home/node/.codex/auth.json`，会自动刷新，此步骤只需操作一次
+      5. 认证信息存储于持久化磁盘 `/home/node/.codex/auth.json`，会自动刷新 — 新对话会立即采用新认证，**不必重启服务**（如果要清掉现有 session 才需要重启）。此步骤只需操作一次
 
       ### 3. 获取 Discord 频道 ID
 
@@ -561,13 +558,12 @@ localization:
       **方法 B：ChatGPT サブスクリプション**（Plus/Pro/Business — 使用量はプランに含まれます）
       1. デプロイ時に `OpenAI API Key` を空のまま
       2. サービス起動後、Zeabur Dashboard → サービス → **Exec**
-      3. Exec ターミナルは root で開きます。認証情報を正しい場所に保存するため HOME を指定して実行：
+      3. `node` ユーザーとしてログインを実行し、認証ファイルが最初から正しい所有者になるようにします：
          ```
-         HOME=/home/node codex login --device-auth
+         runuser -u node -- codex login --device-auth
          ```
       4. ターミナルに表示された URL を開き、ChatGPT アカウントで認証
-      5. Dashboard からサービスを再起動
-      6. 認証情報は永続ボリューム `/home/node/.codex/auth.json` に保存され自動更新されます — この手順は一度だけ必要
+      5. 認証情報は永続ボリューム `/home/node/.codex/auth.json` に保存され、自動更新されます — 新しい会話は即座に新しい認証を使用するため、**再起動は不要です**（メモリ上の既存セッションを無効化したい場合のみ再起動してください）。この手順は一度だけ必要
 
       ### 3. Discord チャンネル ID の取得
 
@@ -682,13 +678,12 @@ localization:
       **Opción B: Suscripción ChatGPT** (Plus/Pro/Business — uso incluido en el plan)
       1. Dejar `OpenAI API Key` vacío al desplegar
       2. Después de que el servicio inicie, ir a Zeabur Dashboard → Servicio → **Exec**
-      3. El terminal Exec se abre como root. Especifica el HOME correcto para guardar las credenciales en el lugar adecuado:
+      3. Ejecutar el login como el usuario `node` para que las credenciales tengan el dueño correcto desde el inicio:
          ```
-         HOME=/home/node codex login --device-auth
+         runuser -u node -- codex login --device-auth
          ```
       4. Abrir la URL mostrada en el terminal y autorizar con la cuenta de ChatGPT
-      5. Reiniciar el servicio desde el Dashboard
-      6. Las credenciales se guardan en `/home/node/.codex/auth.json` en el volumen persistente y se actualizan automáticamente — este paso solo es necesario una vez
+      5. Las credenciales se guardan en `/home/node/.codex/auth.json` en el volumen persistente y se actualizan automáticamente — las nuevas conversaciones aplican la nueva autenticación inmediatamente, **sin reinicio** (solo reinicie si quiere invalidar las sesiones existentes en memoria). Este paso solo es necesario una vez
 
       ### 3. Obtener IDs de canales de Discord
 
@@ -803,13 +798,12 @@ localization:
       **Opsi B: Langganan ChatGPT** (Plus/Pro/Business — penggunaan termasuk dalam paket)
       1. Kosongkan `OpenAI API Key` saat deploy
       2. Setelah layanan berjalan, buka Zeabur Dashboard → Layanan → **Exec**
-      3. Terminal Exec terbuka sebagai root. Tentukan HOME yang benar agar kredensial tersimpan di lokasi yang tepat:
+      3. Jalankan login sebagai pengguna `node` agar kredensial dimiliki oleh node sejak awal:
          ```
-         HOME=/home/node codex login --device-auth
+         runuser -u node -- codex login --device-auth
          ```
       4. Buka URL yang ditampilkan di terminal, otorisasi dengan akun ChatGPT
-      5. Restart layanan dari Dashboard
-      6. Kredensial disimpan di `/home/node/.codex/auth.json` pada volume persisten dan diperbarui otomatis — langkah ini hanya diperlukan sekali
+      5. Kredensial disimpan di `/home/node/.codex/auth.json` pada volume persisten dan diperbarui otomatis — percakapan baru langsung mengambil autentikasi baru, **tidak perlu restart** (restart hanya diperlukan jika ingin membatalkan sesi yang masih berjalan di memori). Langkah ini hanya diperlukan sekali
 
       ### 3. Dapatkan ID Channel Discord
 

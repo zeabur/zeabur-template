@@ -27,8 +27,8 @@ spec:
       description: Token from https://discord.com/developers/applications
     - key: GEMINI_API_KEY
       type: STRING
-      name: Gemini API Key
-      description: "API key from https://aistudio.google.com/apikey"
+      name: Gemini API Key (optional)
+      description: "Optional. API key from https://aistudio.google.com/apikey. Leave empty to authenticate via Vertex AI or a personal Google account login — see readme for details."
     - key: OPENAB_ALLOWED_CHANNELS
       type: STRING
       name: Discord Channel IDs (optional)
@@ -68,11 +68,17 @@ spec:
     4. Go to **OAuth2 -> URL Generator** -> check scope `bot` -> check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
     5. Copy the generated URL and open it in your browser to invite the bot to your server
 
-    ### 2. Get a Gemini API Key
+    ### 2. Authenticate
 
-    1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
-    2. Click **Create API key**
-    3. Copy the generated API key
+    **Quickest:** fill in the `GEMINI_API_KEY` template variable at deploy time and you're done.
+
+    **Otherwise:** after deployment, open Zeabur Dashboard → Service → Exec and run:
+
+    ```
+    runuser -u node -- gemini
+    ```
+
+    Follow the on-screen prompts to pick and complete an auth method. Credentials are saved on the persistent volume; new conversations apply the new auth automatically — no restart needed.
 
     ### 3. Get Discord Channel IDs
 
@@ -165,11 +171,6 @@ spec:
               chown -R node:node /home/node
               chmod 755 /home/node/.config 2>/dev/null || true
 
-              if [ -z "$GEMINI_API_KEY" ]; then
-                echo "openab: GEMINI_API_KEY not set — sleeping"
-                exec sleep infinity
-              fi
-
               if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ]; then
                 echo "openab: neither DISCORD_BOT_TOKEN nor SLACK_BOT_TOKEN set — sleeping"
                 exec sleep infinity
@@ -240,8 +241,8 @@ localization:
         name: Discord Bot Token
         description: 從 https://discord.com/developers/applications 取得的 Token
       - key: GEMINI_API_KEY
-        name: Gemini API Key
-        description: "從 https://aistudio.google.com/apikey 取得的 API 金鑰"
+        name: Gemini API Key（選填）
+        description: "選填。從 https://aistudio.google.com/apikey 取得的 API 金鑰。留空可改用 Vertex AI 或個人 Google 帳號登入 — 詳見 readme。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord 頻道 ID（選填）
         description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
@@ -271,11 +272,17 @@ localization:
       4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
       5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
 
-      ### 2. 取得 Gemini API Key
+      ### 2. 認證
 
-      1. 前往 [Google AI Studio](https://aistudio.google.com/apikey)
-      2. 點擊 **Create API key**
-      3. 複製產生的 API 金鑰
+      **最快:** 部署時填 `GEMINI_API_KEY` 模板變數即可,服務啟動就直接用。
+
+      **其他方式:** 部署完成後,在 Zeabur Dashboard → 服務 → Exec 執行:
+
+      ```
+      runuser -u node -- gemini
+      ```
+
+      依照畫面提示選擇並完成認證。認證資料會存在持久化磁碟,新對話會自動套用,不需重啟。
 
       ### 3. 取得 Discord 頻道 ID
 
@@ -346,8 +353,8 @@ localization:
         name: Discord Bot Token
         description: 从 https://discord.com/developers/applications 获取的 Token
       - key: GEMINI_API_KEY
-        name: Gemini API Key
-        description: "从 https://aistudio.google.com/apikey 获取的 API 密钥"
+        name: Gemini API Key（选填）
+        description: "选填。从 https://aistudio.google.com/apikey 获取的 API 密钥。留空可改用 Vertex AI 或个人 Google 账号登录 — 详见 readme。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord 频道 ID（选填）
         description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
@@ -377,11 +384,17 @@ localization:
       4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
       5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
 
-      ### 2. 获取 Gemini API Key
+      ### 2. 认证
 
-      1. 前往 [Google AI Studio](https://aistudio.google.com/apikey)
-      2. 点击 **Create API key**
-      3. 复制生成的 API 密钥
+      **最快：** 部署时填 `GEMINI_API_KEY` 模板变量即可，服务启动就直接用。
+
+      **其他方式：** 部署完成后，在 Zeabur Dashboard → 服务 → Exec 运行：
+
+      ```
+      runuser -u node -- gemini
+      ```
+
+      按照屏幕提示选择并完成认证。认证数据会存在持久化磁盘，新对话会自动采用，无需重启。
 
       ### 3. 获取 Discord 频道 ID
 
@@ -452,8 +465,8 @@ localization:
         name: Discord Bot トークン
         description: https://discord.com/developers/applications から取得したトークン
       - key: GEMINI_API_KEY
-        name: Gemini API キー
-        description: "https://aistudio.google.com/apikey から取得した API キー"
+        name: Gemini API キー（オプション）
+        description: "オプション。https://aistudio.google.com/apikey から取得した API キー。空のままにすると Vertex AI または個人 Google アカウントログインを使用できます — readme を参照してください。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord チャンネル ID（オプション）
         description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
@@ -483,11 +496,17 @@ localization:
       4. **OAuth2 → URL Generator** → scope `bot` にチェック → 権限にチェック：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
       5. 生成された URL をコピーし、ブラウザで開いて Bot をサーバーに招待
 
-      ### 2. Gemini API キーの取得
+      ### 2. 認証
 
-      1. [Google AI Studio](https://aistudio.google.com/apikey) にアクセス
-      2. **Create API key** をクリック
-      3. 生成された API キーをコピー
+      **最速:** デプロイ時に `GEMINI_API_KEY` テンプレート変数を入力すれば、サービス起動時にそのまま使えます。
+
+      **その他の方法:** デプロイ後、Zeabur Dashboard → サービス → Exec で実行：
+
+      ```
+      runuser -u node -- gemini
+      ```
+
+      画面の指示に従って認証方法を選択し、完了させてください。認証情報は永続ボリュームに保存され、新しい会話に自動的に適用されます — 再起動は不要です。
 
       ### 3. Discord チャンネル ID の取得
 
@@ -558,8 +577,8 @@ localization:
         name: Token del Bot de Discord
         description: Token obtenido de https://discord.com/developers/applications
       - key: GEMINI_API_KEY
-        name: Clave API de Gemini
-        description: "Clave API de https://aistudio.google.com/apikey"
+        name: Clave API de Gemini (opcional)
+        description: "Opcional. Clave API de https://aistudio.google.com/apikey. Dejar vacio para autenticar mediante Vertex AI o inicio de sesion con cuenta personal de Google — ver readme."
       - key: OPENAB_ALLOWED_CHANNELS
         name: IDs de Canales de Discord (opcional)
         description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacio para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
@@ -589,11 +608,17 @@ localization:
       4. Ir a **OAuth2 -> URL Generator** -> marcar scope `bot` -> marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
       5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
 
-      ### 2. Obtener una Clave API de Gemini
+      ### 2. Autenticacion
 
-      1. Ir a [Google AI Studio](https://aistudio.google.com/apikey)
-      2. Hacer clic en **Create API key**
-      3. Copiar la clave API generada
+      **Lo mas rapido:** complete la variable de plantilla `GEMINI_API_KEY` al desplegar y listo.
+
+      **Otros metodos:** despues del despliegue, abra Zeabur Dashboard → Servicio → Exec y ejecute:
+
+      ```
+      runuser -u node -- gemini
+      ```
+
+      Siga las indicaciones en pantalla para elegir y completar un metodo de autenticacion. Las credenciales se guardan en el volumen persistente y las nuevas conversaciones las aplican automaticamente — sin reinicio.
 
       ### 3. Obtener IDs de canales de Discord
 
@@ -664,8 +689,8 @@ localization:
         name: Token Bot Discord
         description: Token dari https://discord.com/developers/applications
       - key: GEMINI_API_KEY
-        name: Kunci API Gemini
-        description: "Kunci API dari https://aistudio.google.com/apikey"
+        name: Kunci API Gemini (opsional)
+        description: "Opsional. Kunci API dari https://aistudio.google.com/apikey. Kosongkan untuk autentikasi melalui Vertex AI atau login akun Google pribadi — lihat readme."
       - key: OPENAB_ALLOWED_CHANNELS
         name: ID Channel Discord (opsional)
         description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
@@ -695,11 +720,17 @@ localization:
       4. Buka **OAuth2 -> URL Generator** -> centang scope `bot` -> centang izin: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
       5. Salin URL yang dihasilkan dan buka di browser untuk mengundang Bot ke server Anda
 
-      ### 2. Dapatkan Kunci API Gemini
+      ### 2. Autentikasi
 
-      1. Buka [Google AI Studio](https://aistudio.google.com/apikey)
-      2. Klik **Create API key**
-      3. Salin kunci API yang dihasilkan
+      **Tercepat:** isi variabel template `GEMINI_API_KEY` saat deploy, langsung selesai.
+
+      **Cara lain:** setelah deploy, buka Zeabur Dashboard → Layanan → Exec dan jalankan:
+
+      ```
+      runuser -u node -- gemini
+      ```
+
+      Ikuti petunjuk di layar untuk memilih dan menyelesaikan metode autentikasi. Kredensial tersimpan di volume persisten dan otomatis dipakai oleh percakapan baru — tanpa restart.
 
       ### 3. Dapatkan ID Channel Discord
 

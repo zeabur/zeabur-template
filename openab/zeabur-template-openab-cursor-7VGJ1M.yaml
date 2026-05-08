@@ -66,17 +66,27 @@ spec:
     4. Go to **OAuth2 → URL Generator** → check scope `bot` → check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
     5. Copy the generated URL and open it in your browser to invite the bot to your server
 
-    ### 2. Authenticate Cursor (after deployment)
+    ### 2. Authenticate Cursor (choose one)
 
-    Cursor uses device flow for authentication — no API key is needed at deploy time. After the service is running, open the service terminal in Zeabur Dashboard and run:
+    The startup script does not enforce any Cursor auth env var. Use whichever method you prefer:
+
+    **Option A: Device flow** (interactive, no env var needed)
+
+    After the service is running, open the service terminal in Zeabur Dashboard and run:
 
     ```
-    HOME=/home/agent cursor-agent login
+    runuser -u agent -- cursor-agent login
     ```
 
-    > ⚠️ Must set `HOME=/home/agent`. Without it, credentials are written to `/root/` which is not persisted and will be lost on restart.
+    > ℹ️ `runuser -u agent` runs the login as the `agent` user, so `HOME` is set to `/home/agent` automatically and credentials are owned by `agent` from the start — no chown or restart needed afterwards.
 
-    Follow the on-screen instructions to complete device flow authorization in your browser. Restart the service after login completes.
+    Follow the on-screen instructions to complete device flow authorization in your browser. New conversations will pick up the new auth on the next session — restart only if you need to invalidate existing in-memory sessions.
+
+    **Option B: `CURSOR_API_KEY` env var** (no terminal required)
+
+    1. In the Cursor dashboard, go to **Settings → Account** and create an API key
+    2. In Zeabur Dashboard → Service → Variables, add `CURSOR_API_KEY` with that value
+    3. Restart the service. `cursor-agent` reads the env var directly — no `cursor-agent login` step needed
 
     ### 3. Get Discord Channel IDs
 
@@ -267,17 +277,27 @@ localization:
       4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
       5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
 
-      ### 2. 認證 Cursor（部署後）
+      ### 2. 認證 Cursor（擇一）
 
-      Cursor 使用 device flow 進行認證，部署時不需要 API 金鑰。服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
+      啟動腳本不會強制任何 Cursor 認證 env var,任選下列一種方式即可:
+
+      **方式 A：Device Flow**（互動式,不需要 env var）
+
+      服務啟動後,在 Zeabur Dashboard 打開服務終端,執行:
 
       ```
-      HOME=/home/agent cursor-agent login
+      runuser -u agent -- cursor-agent login
       ```
 
-      > ⚠️ 必須設定 `HOME=/home/agent`。否則認證檔會寫到 `/root/`，該路徑未持久化，重啟後會遺失。
+      > ℹ️ `runuser -u agent` 會直接以 `agent` 身份執行,自動把 `HOME` 設為 `/home/agent`,認證檔寫入時就直接是 `agent` 擁有 — 不需要再 chown 或重啟。
 
-      依照畫面指示到瀏覽器完成授權。認證完成後請重啟服務。
+      依照畫面指示到瀏覽器完成授權。完成後新的對話會自動套用新認證,不必重啟服務(若要清掉現有的 session 才需重啟)。
+
+      **方式 B：`CURSOR_API_KEY` 環境變數**（不需進終端）
+
+      1. 在 Cursor Dashboard → **Settings → Account** 建立 API key
+      2. 到 Zeabur Dashboard → 服務 → 變數 新增 `CURSOR_API_KEY`,填入剛剛的 key
+      3. 重啟服務即可,`cursor-agent` 會直接讀取此變數,不需執行 `cursor-agent login`
 
       ### 3. 取得 Discord 頻道 ID
 
@@ -376,17 +396,27 @@ localization:
       4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
       5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
 
-      ### 2. 认证 Cursor（部署后）
+      ### 2. 认证 Cursor（任选其一）
 
-      Cursor 使用 device flow 进行认证，部署时不需要 API 密钥。服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
+      启动脚本不会强制任何 Cursor 认证 env var，任选下列一种方式即可：
+
+      **方式 A：Device Flow**（交互式，无需 env var）
+
+      服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
 
       ```
-      HOME=/home/agent cursor-agent login
+      runuser -u agent -- cursor-agent login
       ```
 
-      > ⚠️ 必须设置 `HOME=/home/agent`。否则认证文件会写到 `/root/`，该路径未持久化，重启后会丢失。
+      > ℹ️ `runuser -u agent` 直接以 `agent` 身份运行，自动将 `HOME` 设为 `/home/agent`，认证文件写入时就归 `agent` 所有 — 不需要再 chown 或重启。
 
-      按照屏幕指示到浏览器完成授权。认证完成后请重启服务。
+      按照屏幕指示到浏览器完成授权。完成后新对话会自动采用新认证，不必重启服务（如果要清掉现有 session 才需要重启）。
+
+      **方式 B：`CURSOR_API_KEY` 环境变量**（无需进终端）
+
+      1. 在 Cursor Dashboard → **Settings → Account** 创建 API key
+      2. 到 Zeabur Dashboard → 服务 → 变量 添加 `CURSOR_API_KEY`，填入刚刚的 key
+      3. 重启服务即可。`cursor-agent` 会直接读取此变量，无需执行 `cursor-agent login`
 
       ### 3. 获取 Discord 频道 ID
 
@@ -488,17 +518,27 @@ localization:
 
       Discord Bot Token を入力してデプロイします。
 
-      ### 3. Cursor を認証（device flow）
+      ### 3. Cursor を認証（いずれかを選択）
+
+      起動スクリプトは Cursor の認証 env var を強制しません。以下のいずれかを選んでください：
+
+      **オプション A：Device Flow**（インタラクティブ、env var 不要）
 
       サービス起動後、Zeabur Dashboard → サービス → **Exec** で以下を実行：
 
       ```bash
-      HOME=/home/agent cursor-agent login
+      runuser -u agent -- cursor-agent login
       ```
 
-      > ⚠️ `HOME=/home/agent` を設定してください。設定しないと認証情報が `/root/` に書き込まれ、再起動後に失われます。
+      > ℹ️ `runuser -u agent` は `agent` ユーザーとしてログインを実行するため、`HOME` が自動的に `/home/agent` に設定され、認証情報は最初から `agent` 所有になります — chown や再起動は不要です。
 
-      ブラウザで認証を完了し、サービスを再起動してください。
+      ブラウザで認証を完了してください。新しい会話は次のセッションから新しい認証を自動的に使用します — 再起動はメモリ上の既存セッションを無効化したい場合のみ必要です。
+
+      **オプション B：`CURSOR_API_KEY` 環境変数**（ターミナル不要）
+
+      1. Cursor Dashboard → **Settings → Account** で API キーを作成
+      2. Zeabur Dashboard → サービス → 変数 で `CURSOR_API_KEY` を追加し、上記キーを設定
+      3. サービスを再起動するだけ。`cursor-agent` が env var を直接読み取るため、`cursor-agent login` の実行は不要です
 
       ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams）
 
@@ -586,17 +626,27 @@ localization:
 
       Introducir el Discord Bot Token y hacer clic en desplegar.
 
-      ### 3. Autenticar Cursor (device flow)
+      ### 3. Autenticar Cursor (elija una)
+
+      El script de arranque no impone ninguna variable de entorno de autenticación. Use el método que prefiera:
+
+      **Opción A: Device flow** (interactivo, sin variable de entorno)
 
       Tras iniciar el servicio, ir a Zeabur Dashboard → Servicio → **Exec** y ejecutar:
 
       ```bash
-      HOME=/home/agent cursor-agent login
+      runuser -u agent -- cursor-agent login
       ```
 
-      > ⚠️ Debe establecer `HOME=/home/agent`. Sin esto, las credenciales se escriben en `/root/` y se pierden al reiniciar.
+      > ℹ️ `runuser -u agent` ejecuta el login como el usuario `agent`, por lo que `HOME` se establece automáticamente en `/home/agent` y las credenciales pertenecen a `agent` desde el inicio — sin chown ni reinicio necesarios.
 
-      Completar la autorización en el navegador y reiniciar el servicio.
+      Completar la autorización en el navegador. Las nuevas conversaciones recogerán la auth en la próxima sesión — solo reinicie si necesita invalidar las sesiones existentes en memoria.
+
+      **Opción B: variable `CURSOR_API_KEY`** (sin terminal)
+
+      1. En Cursor Dashboard → **Settings → Account**, crear una API key
+      2. En Zeabur Dashboard → Servicio → Variables, añadir `CURSOR_API_KEY` con ese valor
+      3. Reiniciar el servicio. `cursor-agent` lee la variable directamente — no necesita ejecutar `cursor-agent login`
 
       ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams)
 
@@ -684,17 +734,27 @@ localization:
 
       Masukkan Discord Bot Token dan klik deploy.
 
-      ### 3. Autentikasi Cursor (device flow)
+      ### 3. Autentikasi Cursor (pilih salah satu)
+
+      Skrip startup tidak mewajibkan env var autentikasi Cursor apa pun. Pilih metode yang Anda inginkan:
+
+      **Opsi A: Device flow** (interaktif, tanpa env var)
 
       Setelah layanan berjalan, buka Zeabur Dashboard → Layanan → **Exec** dan jalankan:
 
       ```bash
-      HOME=/home/agent cursor-agent login
+      runuser -u agent -- cursor-agent login
       ```
 
-      > ⚠️ Harus menetapkan `HOME=/home/agent`. Tanpa ini, kredensial ditulis ke `/root/` dan hilang saat restart.
+      > ℹ️ `runuser -u agent` menjalankan login sebagai pengguna `agent`, sehingga `HOME` otomatis menjadi `/home/agent` dan kredensial dimiliki oleh `agent` sejak awal — tidak perlu chown atau restart.
 
-      Ikuti instruksi di browser untuk menyelesaikan otorisasi, lalu restart layanan.
+      Ikuti instruksi di browser untuk menyelesaikan otorisasi. Percakapan baru akan mengambil autentikasi pada sesi berikutnya — restart hanya diperlukan jika Anda ingin membatalkan sesi yang masih berjalan di memori.
+
+      **Opsi B: env var `CURSOR_API_KEY`** (tanpa terminal)
+
+      1. Di Cursor Dashboard → **Settings → Account**, buat API key
+      2. Di Zeabur Dashboard → Layanan → Variabel, tambahkan `CURSOR_API_KEY` dengan nilai tersebut
+      3. Restart layanan. `cursor-agent` membaca env var ini secara langsung — tidak perlu menjalankan `cursor-agent login`
 
       ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams)
 

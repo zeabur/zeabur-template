@@ -104,12 +104,12 @@ spec:
     After the service is running, open the service terminal in Zeabur Dashboard and run:
 
     ```
-    HOME=/home/agent kiro-cli login --use-device-flow
+    runuser -u agent -- kiro-cli login --use-device-flow
     ```
 
-    > ⚠️ Must run as `agent`. Running as `root` writes credentials to `/root/` which is not persisted; they will be lost on restart.
+    > ℹ️ `runuser -u agent` runs the login as the `agent` user, so credentials are owned correctly from the start — no chown or restart needed.
 
-    Follow the on-screen URL and code to complete device flow authorization in your browser. Restart the service after login completes.
+    Follow the on-screen URL and code to complete device flow authorization in your browser. New conversations will pick up the new auth automatically — restart only if you need to invalidate existing in-memory sessions.
 
     ## Slack Setup (Optional)
 
@@ -320,12 +320,12 @@ localization:
       服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
 
       ```
-      HOME=/home/agent kiro-cli login --use-device-flow
+      runuser -u agent -- kiro-cli login --use-device-flow
       ```
 
-      > ⚠️ 必須以 `agent` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
+      > ℹ️ `runuser -u agent` 直接以 `agent` 身份執行登入，認證檔從一開始就有正確擁有者 — 不需要再 chown 或重啟。
 
-      依照畫面顯示的 URL 和 code 到瀏覽器完成授權。認證完成後請重啟服務。
+      依照畫面顯示的 URL 和 code 到瀏覽器完成授權。新對話會自動套用新認證，不需重啟服務（若要清掉現有 session 才需重啟）。
 
       ## Slack 設定（選用）
 
@@ -435,12 +435,12 @@ localization:
       服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
 
       ```
-      HOME=/home/agent kiro-cli login --use-device-flow
+      runuser -u agent -- kiro-cli login --use-device-flow
       ```
 
-      > ⚠️ 必须以 `agent` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
+      > ℹ️ `runuser -u agent` 直接以 `agent` 身份执行登录，认证文件从一开始就归 `agent` 所有 — 不需要再 chown 或重启。
 
-      按照屏幕显示的 URL 和 code 到浏览器完成授权。认证完成后请重启服务。
+      按照屏幕显示的 URL 和 code 到浏览器完成授权。新对话会自动采用新认证，无需重启服务（如果要清掉现有 session 才需要重启）。
 
       ## Slack 设置（可选）
 
@@ -550,12 +550,12 @@ localization:
       サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
 
       ```
-      HOME=/home/agent kiro-cli login --use-device-flow
+      runuser -u agent -- kiro-cli login --use-device-flow
       ```
 
-      > ⚠️ `agent` ユーザーで実行する必要があります。`root` で実行すると認証ファイルが `/root/` に書き込まれ、永続化されないため再起動時に失われます。
+      > ℹ️ `runuser -u agent` は `agent` ユーザーとしてログインを実行するため、認証ファイルは最初から正しい所有者になります — chown や再起動は不要です。
 
-      画面に表示される URL とコードをブラウザで開いて認証を完了してください。認証後はサービスを再起動してください。
+      画面に表示される URL とコードをブラウザで開いて認証を完了してください。新しい会話は自動的に新しい認証を使用します — メモリ上の既存セッションを無効化したい場合のみ再起動してください。
 
       ## Slack セットアップ（オプション）
 
@@ -665,12 +665,12 @@ localization:
       Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
 
       ```
-      HOME=/home/agent kiro-cli login --use-device-flow
+      runuser -u agent -- kiro-cli login --use-device-flow
       ```
 
-      > ⚠️ Debe ejecutarse como `agent`. Ejecutar como `root` escribe las credenciales en `/root/`, que no es persistente y se perderán al reiniciar.
+      > ℹ️ `runuser -u agent` ejecuta el login como el usuario `agent`, por lo que las credenciales pertenecen al dueño correcto desde el inicio — sin chown ni reinicio necesarios.
 
-      Sigue la URL y el código en pantalla para completar la autorización en tu navegador. Reinicia el servicio después de completar el login.
+      Sigue la URL y el código en pantalla para completar la autorización en tu navegador. Las nuevas conversaciones aplicarán la nueva autenticación automáticamente — solo reinicia si necesitas invalidar las sesiones existentes en memoria.
 
       ## Configuración de Slack (Opcional)
 
@@ -780,12 +780,12 @@ localization:
       Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
 
       ```
-      HOME=/home/agent kiro-cli login --use-device-flow
+      runuser -u agent -- kiro-cli login --use-device-flow
       ```
 
-      > ⚠️ Harus dijalankan sebagai `agent`. Menjalankan sebagai `root` akan menulis kredensial ke `/root/` yang tidak dipersistenkan; akan hilang saat restart.
+      > ℹ️ `runuser -u agent` menjalankan login sebagai pengguna `agent`, sehingga kredensial dimiliki oleh pemilik yang benar sejak awal — tanpa chown atau restart.
 
-      Ikuti URL dan kode di layar untuk menyelesaikan otorisasi device flow di browser Anda. Restart layanan setelah login selesai.
+      Ikuti URL dan kode di layar untuk menyelesaikan otorisasi device flow di browser Anda. Percakapan baru akan otomatis menggunakan autentikasi baru — restart hanya diperlukan jika Anda ingin membatalkan sesi yang masih berjalan di memori.
 
       ## Pengaturan Slack (Opsional)
 
