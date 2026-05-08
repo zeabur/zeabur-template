@@ -67,7 +67,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template uses a pinned version (`0.8.2`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+    - **Image tag:** This template uses a pinned version (`0.8.3-beta.4`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
     - **Config ownership:** The container runs directly as `node` user (uid 1000). If you encounter permission issues on the persistent volume, restart the service.
 
@@ -123,6 +123,14 @@ spec:
 
     Set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in the template variables before deploying. Both Discord and Slack can run simultaneously.
 
+    ## Add Messaging Platforms (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+    To bridge Telegram, LINE, Feishu/Lark, Google Chat, or MS Teams, deploy the [OpenAB Gateway template](https://zeabur.com/templates/IMRONB) into the same Zeabur project. Then add these environment variables to this service:
+
+    - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+    - `GATEWAY_PLATFORM` = one of `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+    Restart the service. The startup script auto-injects the `[gateway]` block into `config.toml`.
     ## Usage
 
     - **@mention the bot** in an allowed channel or Slack channel to start a conversation
@@ -154,7 +162,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-codex:0.8.2
+          image: ghcr.io/openabdev/openab-codex:0.8.3-beta.4
           command:
             - /bin/sh
             - -c
@@ -286,7 +294,7 @@ localization:
 
       ## 注意事項
 
-      - **映像標籤：** 此模板使用固定版本（`0.8.2`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.4`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
       - **持久化儲存：** `/home/node` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
       - **檔案權限：** 容器直接以 node 用戶（uid 1000）執行。如遇持久化磁碟的權限問題，重啟服務即可。
 
@@ -342,6 +350,14 @@ localization:
 
       部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 變數。Discord 和 Slack 可同時運作。
 
+      ## 新增通訊平台（Telegram / LINE / Feishu / Google Chat / MS Teams）
+
+      若要橋接 Telegram、LINE、Feishu/Lark、Google Chat 或 MS Teams，請在同一個 Zeabur 專案中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然後在此服務新增以下環境變數：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 其中之一
+
+      重新啟動服務後，啟動腳本會自動在 `config.toml` 中加入 `[gateway]` 區塊。
       ## 使用方式
 
       - 在允許的 Discord 或 Slack 頻道中 **@mention Bot** 即可開始對話
@@ -399,7 +415,7 @@ localization:
 
       ## 注意事项
 
-      - **镜像标签：** 此模板使用固定版本（`0.8.2`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.4`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
       - **持久化存储：** `/home/node` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
       - **文件权限：** 容器直接以 node 用户（uid 1000）运行。如遇持久化存储权限问题，重启服务即可。
 
@@ -455,6 +471,14 @@ localization:
 
       部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 变量。Discord 和 Slack 可同时运行。
 
+      ## 添加通讯平台（Telegram / LINE / 飞书 / Google Chat / MS Teams）
+
+      若要桥接 Telegram、LINE、飞书/Lark、Google Chat 或 MS Teams，请在同一个 Zeabur 项目中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然后在此服务上设置以下环境变量：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 之一
+
+      重启服务。启动脚本会自动将 `[gateway]` 块注入 `config.toml`。
       ## 使用方式
 
       - 在允许的 Discord 或 Slack 频道中 **@mention Bot** 即可开始对话
@@ -512,7 +536,7 @@ localization:
 
       ## 注意事項
 
-      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.2`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.4`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex)。
       - **永続ストレージ：** `/home/node` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
       - **ファイル権限：** コンテナは node ユーザー（uid 1000）として直接実行されます。永続ボリュームの権限問題が発生した場合、サービスを再起動してください。
 
@@ -568,6 +592,14 @@ localization:
 
       デプロイ前に `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` 変数を入力してください。Discord と Slack は同時に使用できます。
 
+      ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams）
+
+      Telegram、LINE、Feishu/Lark、Google Chat、MS Teams を接続するには、同じ Zeabur プロジェクトに [OpenAB Gateway テンプレート](https://zeabur.com/templates/IMRONB) をデプロイしてから、このサービスに次の環境変数を設定してください：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` のいずれか
+
+      サービスを再起動すると、起動スクリプトが `config.toml` に `[gateway]` セクションを自動追加します。
       ## 使い方
 
       - 許可された Discord または Slack チャンネルで **Bot を @mention** して会話を開始
@@ -625,7 +657,7 @@ localization:
 
       ## Notas Importantes
 
-      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.2`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3-beta.4`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
       - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente. Plugins, configuración y credenciales se conservan entre reinicios.
       - **Permisos de archivos:** El contenedor se ejecuta directamente como el usuario node (uid 1000). Si encuentra problemas de permisos en el volumen persistente, reinicie el servicio.
 
@@ -681,6 +713,14 @@ localization:
 
       Rellena `SLACK_BOT_TOKEN` y `SLACK_APP_TOKEN` antes de desplegar. Discord y Slack pueden funcionar simultáneamente.
 
+      ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+      Para conectar Telegram, LINE, Feishu/Lark, Google Chat o MS Teams, despliega la [plantilla OpenAB Gateway](https://zeabur.com/templates/IMRONB) en el mismo proyecto Zeabur. Luego añade estas variables de entorno a este servicio:
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = uno de `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+      Reinicia el servicio. El script de arranque inyecta automáticamente el bloque `[gateway]` en `config.toml`.
       ## Uso
 
       - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
@@ -738,7 +778,7 @@ localization:
 
       ## Catatan Penting
 
-      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.2`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.4`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
       - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
       - **Izin file:** Container berjalan langsung sebagai pengguna node (uid 1000). Jika mengalami masalah izin pada volume persisten, restart layanan.
 
@@ -794,6 +834,14 @@ localization:
 
       Isi `SLACK_BOT_TOKEN` dan `SLACK_APP_TOKEN` sebelum deploy. Discord dan Slack dapat berjalan bersamaan.
 
+      ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+      Untuk menjembatani Telegram, LINE, Feishu/Lark, Google Chat, atau MS Teams, deploy [template OpenAB Gateway](https://zeabur.com/templates/IMRONB) di proyek Zeabur yang sama. Kemudian tambahkan variabel lingkungan berikut ke layanan ini:
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = salah satu dari `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+      Restart layanan. Skrip startup otomatis menyuntikkan blok `[gateway]` ke `config.toml`.
       ## Penggunaan
 
       - **@mention bot** di channel Discord atau Slack yang diizinkan untuk memulai percakapan

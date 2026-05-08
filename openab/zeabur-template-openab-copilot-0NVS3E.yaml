@@ -53,7 +53,7 @@ spec:
     - **Paid subscription required:** GitHub Copilot CLI requires a **paid** Copilot plan (Pro, Pro+, Business, or Enterprise). The Free tier does not include CLI/ACP access.
     - **Public preview:** Copilot CLI ACP support has been in [public preview](https://github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview/) since Jan 2026. Behavior may change.
     - **Auth after deploy:** Unlike Claude/Codex, there is no API-key env var for Copilot. You must run `gh auth login` inside the container after the first deploy (see below).
-    - **Image tag:** This template uses a pinned version (`0.8.2`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot).
+    - **Image tag:** This template uses a pinned version (`0.8.3-beta.4`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and GitHub OAuth credentials (`~/.config/gh/`) survive restarts.
     - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
 
@@ -95,6 +95,14 @@ spec:
     2. Right-click the channel where you want the bot to respond → **Copy Channel ID**
     3. For multiple channels, separate IDs with commas: `123456789012345678,234567890123456789`
 
+    ## Add Messaging Platforms (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+    To bridge Telegram, LINE, Feishu/Lark, Google Chat, or MS Teams, deploy the [OpenAB Gateway template](https://zeabur.com/templates/IMRONB) into the same Zeabur project. Then add these environment variables to this service:
+
+    - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+    - `GATEWAY_PLATFORM` = one of `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+    Restart the service. The startup script auto-injects the `[gateway]` block into `config.toml`.
     ## Usage
 
     - **@mention the bot** in an allowed channel to start a conversation
@@ -146,7 +154,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-copilot:0.8.2
+          image: ghcr.io/openabdev/openab-copilot:0.8.3-beta.4
           command:
             - /bin/sh
             - -c
@@ -263,7 +271,7 @@ localization:
       - **需付費訂閱：** GitHub Copilot CLI 需要**付費** Copilot 方案（Pro、Pro+、Business 或 Enterprise），免費版不支援 CLI/ACP。
       - **Public preview：** Copilot CLI 的 ACP 支援自 2026 年 1 月起進入 [public preview](https://github.blog/changelog/2026-01-28-acp-support-in-copilot-cli-is-now-in-public-preview/)，行為可能變動。
       - **部署後才認證：** 與 Claude/Codex 不同，Copilot 沒有 API key 環境變數。首次部署後需進入容器執行 `gh auth login`（見下方步驟）。
-      - **映像標籤：** 此模板使用固定版本（`0.8.2`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot)。
+      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.4`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot)。
       - **持久化儲存：** `/home/node` 掛載為持久化磁碟，plugins、設定、config、GitHub OAuth 認證（`~/.config/gh/`）都會保留。
       - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。
 
@@ -305,6 +313,14 @@ localization:
       2. 對頻道按右鍵 → **複製頻道 ID**
       3. 多個頻道用逗號分隔
 
+      ## 新增通訊平台（Telegram / LINE / Feishu / Google Chat / MS Teams）
+
+      若要橋接 Telegram、LINE、Feishu/Lark、Google Chat 或 MS Teams，請在同一個 Zeabur 專案中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然後在此服務新增以下環境變數：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 其中之一
+
+      重新啟動服務後，啟動腳本會自動在 `config.toml` 中加入 `[gateway]` 區塊。
       ## 使用方式
 
       - 在允許的頻道中 **@mention Bot** 即可開始對話
@@ -373,7 +389,7 @@ localization:
       - **需付费订阅：** GitHub Copilot CLI 需要**付费** Copilot 方案（Pro、Pro+、Business 或 Enterprise），免费版不支持 CLI/ACP。
       - **Public preview：** Copilot CLI 的 ACP 支持自 2026 年 1 月起进入 public preview，行为可能变动。
       - **部署后才认证：** 与 Claude/Codex 不同，Copilot 没有 API key 环境变量。首次部署后需进入容器运行 `gh auth login`（见下方）。
-      - **镜像标签：** 此模板使用固定版本（`0.8.2`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
+      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.4`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
       - **持久化存储：** `/home/node` 挂载为持久化磁盘，包括 GitHub OAuth 凭证 `~/.config/gh/`。
       - **文件权限：** 容器以 root 启动后切换为 node 用户运行 openab。
 
@@ -401,6 +417,14 @@ localization:
 
       Discord → **用户设置** → **高级** → 启用 **开发者模式** → 右键频道 → **复制频道 ID**。
 
+      ## 添加通讯平台（Telegram / LINE / 飞书 / Google Chat / MS Teams）
+
+      若要桥接 Telegram、LINE、飞书/Lark、Google Chat 或 MS Teams，请在同一个 Zeabur 项目中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然后在此服务上设置以下环境变量：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 之一
+
+      重启服务。启动脚本会自动将 `[gateway]` 块注入 `config.toml`。
       ## 使用方式
 
       - 在允许的频道中 **@mention Bot** 即可开始对话
@@ -467,7 +491,7 @@ localization:
       - **有料サブスクリプション必須：** Copilot CLI には有料 Copilot プラン（Pro、Pro+、Business、Enterprise）が必要です。Free プランでは CLI/ACP が使用できません。
       - **Public preview：** Copilot CLI の ACP サポートは 2026 年 1 月から public preview で、動作が変わる可能性があります。
       - **デプロイ後に認証：** Claude/Codex と異なり、API キー環境変数はありません。初回デプロイ後にコンテナ内で `gh auth login` を実行してください。
-      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.2`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.4`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
       - **永続ストレージ：** `/home/node` が永続ボリュームで、GitHub OAuth 認証情報（`~/.config/gh/`）も保持されます。
 
       ## セットアップ
@@ -482,6 +506,14 @@ localization:
 
       4. 表示される URL で認証し、サービスを再起動
 
+      ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams）
+
+      Telegram、LINE、Feishu/Lark、Google Chat、MS Teams を接続するには、同じ Zeabur プロジェクトに [OpenAB Gateway テンプレート](https://zeabur.com/templates/IMRONB) をデプロイしてから、このサービスに次の環境変数を設定してください：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` のいずれか
+
+      サービスを再起動すると、起動スクリプトが `config.toml` に `[gateway]` セクションを自動追加します。
       ## 使い方
 
       - 許可されたチャンネルで **Bot を @mention** して会話を開始
@@ -546,7 +578,7 @@ localization:
       - **Suscripción de pago requerida:** Copilot CLI requiere un plan de pago (Pro, Pro+, Business o Enterprise). El plan Free no incluye acceso CLI/ACP.
       - **Public preview:** El soporte ACP de Copilot CLI está en public preview desde enero de 2026.
       - **Autenticación después del despliegue:** A diferencia de Claude/Codex, no hay variable de API key. Debe ejecutar `gh auth login` dentro del contenedor tras el primer despliegue.
-      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.2`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración.
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3-beta.4`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración.
       - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente e incluye las credenciales OAuth de GitHub.
 
       ## Configuración
@@ -561,6 +593,14 @@ localization:
 
       4. Completar la autorización en el navegador y reiniciar el servicio
 
+      ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+      Para conectar Telegram, LINE, Feishu/Lark, Google Chat o MS Teams, despliega la [plantilla OpenAB Gateway](https://zeabur.com/templates/IMRONB) en el mismo proyecto Zeabur. Luego añade estas variables de entorno a este servicio:
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = uno de `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+      Reinicia el servicio. El script de arranque inyecta automáticamente el bloque `[gateway]` en `config.toml`.
       ## Uso
 
       - **@mencionar al bot** en un canal permitido para iniciar una conversación
@@ -625,7 +665,7 @@ localization:
       - **Butuh langganan berbayar:** Copilot CLI membutuhkan paket Copilot berbayar (Pro, Pro+, Business, atau Enterprise). Paket Free tidak mendukung CLI/ACP.
       - **Public preview:** Dukungan ACP Copilot CLI dalam public preview sejak Januari 2026.
       - **Autentikasi setelah deploy:** Tidak seperti Claude/Codex, tidak ada env var API key. Anda perlu menjalankan `gh auth login` di dalam container setelah deploy pertama.
-      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.2`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan.
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.4`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan.
       - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten, termasuk kredensial OAuth GitHub.
 
       ## Pengaturan
@@ -640,6 +680,14 @@ localization:
 
       4. Ikuti URL untuk otorisasi di browser, lalu restart layanan
 
+      ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+      Untuk menjembatani Telegram, LINE, Feishu/Lark, Google Chat, atau MS Teams, deploy [template OpenAB Gateway](https://zeabur.com/templates/IMRONB) di proyek Zeabur yang sama. Kemudian tambahkan variabel lingkungan berikut ke layanan ini:
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = salah satu dari `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+      Restart layanan. Skrip startup otomatis menyuntikkan blok `[gateway]` ke `config.toml`.
       ## Penggunaan
 
       - **@mention bot** di channel yang diizinkan untuk memulai percakapan

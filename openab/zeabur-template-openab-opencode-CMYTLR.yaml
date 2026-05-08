@@ -50,7 +50,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template uses a pinned version (`0.8.2`). To upgrade, change the image tag in Zeabur Dashboard -> Service -> Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-opencode).
+    - **Image tag:** This template uses a pinned version (`0.8.3-beta.4`). To upgrade, change the image tag in Zeabur Dashboard -> Service -> Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-opencode).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Settings, config, credentials, and `opencode.json` survive restarts.
     - **Config ownership:** The container starts as root and switches to `node` user before running openab. If you encounter permission issues, restart the service -- ownership is fixed automatically on boot.
 
@@ -114,6 +114,14 @@ spec:
 
     Fill in the Discord Bot Token and click deploy. The service connects to Discord automatically. Then authenticate OpenCode using the method above.
 
+    ## Add Messaging Platforms (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+    To bridge Telegram, LINE, Feishu/Lark, Google Chat, or MS Teams, deploy the [OpenAB Gateway template](https://zeabur.com/templates/IMRONB) into the same Zeabur project. Then add these environment variables to this service:
+
+    - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+    - `GATEWAY_PLATFORM` = one of `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+    Restart the service. The startup script auto-injects the `[gateway]` block into `config.toml`.
     ## Usage
 
     - **@mention the bot** in an allowed channel to start a conversation
@@ -164,7 +172,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-opencode:0.8.2
+          image: ghcr.io/openabdev/openab-opencode:0.8.3-beta.4
           command:
             - /bin/sh
             - -c
@@ -271,7 +279,7 @@ localization:
 
       ## 注意事項
 
-      - **映像標籤：** 此模板使用固定版本（`0.8.2`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。
+      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.4`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。
       - **持久化儲存：** `/home/node` 掛載為持久化磁碟。設定、config、認證資料和 `opencode.json` 會在重啟後保留。
       - **檔案權限：** 容器以 root 啟動後切換為 `node` 用戶執行 openab。如遇權限問題，重啟服務即可。
 
@@ -335,6 +343,14 @@ localization:
 
       填入 Discord Bot Token 後點擊部署。服務會自動連線到 Discord。然後使用上述方法認證 OpenCode。
 
+      ## 新增通訊平台（Telegram / LINE / Feishu / Google Chat / MS Teams）
+
+      若要橋接 Telegram、LINE、Feishu/Lark、Google Chat 或 MS Teams，請在同一個 Zeabur 專案中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然後在此服務新增以下環境變數：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 其中之一
+
+      重新啟動服務後，啟動腳本會自動在 `config.toml` 中加入 `[gateway]` 區塊。
       ## 使用方式
 
       - 在允許的頻道中 **@mention Bot** 即可開始對話
@@ -398,7 +414,7 @@ localization:
 
       ## 注意事项
 
-      - **镜像标签：** 此模板使用固定版本（`0.8.2`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
+      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.4`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
       - **持久化存储：** `/home/node` 挂载为持久化磁盘。设置、config、认证数据和 `opencode.json` 会在重启后保留。
       - **文件权限：** 容器以 root 启动后切换为 `node` 用户运行 openab。如遇权限问题，重启服务即可。
 
@@ -462,6 +478,14 @@ localization:
 
       填入 Discord Bot Token 后点击部署。服务会自动连接到 Discord。然后使用上述方法认证 OpenCode。
 
+      ## 添加通讯平台（Telegram / LINE / 飞书 / Google Chat / MS Teams）
+
+      若要桥接 Telegram、LINE、飞书/Lark、Google Chat 或 MS Teams，请在同一个 Zeabur 项目中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然后在此服务上设置以下环境变量：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 之一
+
+      重启服务。启动脚本会自动将 `[gateway]` 块注入 `config.toml`。
       ## 使用方式
 
       - 在允许的频道中 **@mention Bot** 即可开始对话
@@ -525,7 +549,7 @@ localization:
 
       ## 注意事項
 
-      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.2`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.4`）を使用します。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
       - **永続ストレージ：** `/home/node` が永続ボリュームです。設定、認証情報、`opencode.json` が再起動後も保持されます。
       - **ファイル権限：** コンテナは root で起動後、`node` ユーザーに切り替えて openab を実行します。
 
@@ -567,6 +591,14 @@ localization:
 
       Discord → ユーザー設定 → 詳細 → 開発者モードを有効化 → チャンネルを右クリック → チャンネル ID をコピー
 
+      ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams）
+
+      Telegram、LINE、Feishu/Lark、Google Chat、MS Teams を接続するには、同じ Zeabur プロジェクトに [OpenAB Gateway テンプレート](https://zeabur.com/templates/IMRONB) をデプロイしてから、このサービスに次の環境変数を設定してください：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` のいずれか
+
+      サービスを再起動すると、起動スクリプトが `config.toml` に `[gateway]` セクションを自動追加します。
       ## 使い方
 
       - 許可されたチャンネルで **Bot を @mention** して会話を開始
@@ -632,7 +664,7 @@ localization:
 
       ## Notas Importantes
 
-      - **Etiqueta de imagen:** Este template usa una versión fijada (`0.8.2`). Para actualizar, cambie la etiqueta en Zeabur Dashboard → Servicio → Configuración.
+      - **Etiqueta de imagen:** Este template usa una versión fijada (`0.8.3-beta.4`). Para actualizar, cambie la etiqueta en Zeabur Dashboard → Servicio → Configuración.
       - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente.
       - **Permisos:** El contenedor inicia como root y cambia a `node` antes de ejecutar openab.
 
@@ -670,6 +702,14 @@ localization:
 
       > ⚠️ Debe ejecutarse como `node`.
 
+      ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+      Para conectar Telegram, LINE, Feishu/Lark, Google Chat o MS Teams, despliega la [plantilla OpenAB Gateway](https://zeabur.com/templates/IMRONB) en el mismo proyecto Zeabur. Luego añade estas variables de entorno a este servicio:
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = uno de `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+      Reinicia el servicio. El script de arranque inyecta automáticamente el bloque `[gateway]` en `config.toml`.
       ## Uso
 
       - **@mencionar al bot** en un canal permitido para iniciar conversación
@@ -735,7 +775,7 @@ localization:
 
       ## Catatan Penting
 
-      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.2`). Untuk upgrade, ubah tag di Zeabur Dashboard → Layanan → Pengaturan.
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.4`). Untuk upgrade, ubah tag di Zeabur Dashboard → Layanan → Pengaturan.
       - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten.
       - **Izin file:** Container dimulai sebagai root lalu beralih ke user `node` sebelum menjalankan openab.
 
@@ -773,6 +813,14 @@ localization:
 
       > ⚠️ Harus dijalankan sebagai `node`.
 
+      ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams)
+
+      Untuk menjembatani Telegram, LINE, Feishu/Lark, Google Chat, atau MS Teams, deploy [template OpenAB Gateway](https://zeabur.com/templates/IMRONB) di proyek Zeabur yang sama. Kemudian tambahkan variabel lingkungan berikut ke layanan ini:
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = salah satu dari `telegram`, `line`, `feishu`, `googlechat`, `teams`
+
+      Restart layanan. Skrip startup otomatis menyuntikkan blok `[gateway]` ke `config.toml`.
       ## Penggunaan
 
       - **@mention bot** di channel yang diizinkan untuk memulai percakapan
