@@ -91,6 +91,15 @@ spec:
 
     > **Warning:** Must run as `node`. Running as `root` writes credentials to `/root/` which is not persisted; they will be lost on restart.
 
+    > **Wiring API keys to the agent:** openab spawns the agent with `env_clear()`, so the env-var path requires an allowlist. After first boot edit `/home/node/.config/openab/config.toml` and add under `[agent]`:
+    >
+    > ```toml
+    > [agent]
+    > inherit_env = ["OPENCODE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY", "GROQ_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"]
+    > ```
+    >
+    > `opencode auth login` needs no edit — credentials live in `~/.opencode/`.
+
     ### 3. Model Selection (optional)
 
     To configure a specific model, create or edit `/home/node/opencode.json`:
@@ -320,6 +329,15 @@ localization:
 
       > ⚠️ 必須以 `node` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
 
+      > **將 API key 傳給 agent：** openab 會以 `env_clear()` 隔離 agent 子程序，因此 env var 路徑需要 allowlist。首次啟動後編輯 `/home/node/.config/openab/config.toml`，在 `[agent]` 區塊加入：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["OPENCODE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY", "GROQ_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"]
+      > ```
+      >
+      > `opencode auth login` 不需修改 — 認證資料存在 `~/.opencode/`。
+
       ### 3. 模型選擇（選填）
 
       如需設定特定模型，建立或編輯 `/home/node/opencode.json`：
@@ -455,6 +473,15 @@ localization:
 
       > ⚠️ 必须以 `node` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
 
+      > **将 API key 传给 agent：** openab 会以 `env_clear()` 隔离 agent 子进程，因此 env var 路径需要 allowlist。首次启动后编辑 `/home/node/.config/openab/config.toml`，在 `[agent]` 区块加入：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["OPENCODE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY", "GROQ_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"]
+      > ```
+      >
+      > `opencode auth login` 无需修改 — 认证数据存在 `~/.opencode/`。
+
       ### 3. 模型选择（选填）
 
       如需设置特定模型，创建或编辑 `/home/node/opencode.json`：
@@ -587,6 +614,15 @@ localization:
 
       > ⚠️ 必ず `node` ユーザーで実行してください。
 
+      > **API キーを agent に渡す：** openab は `env_clear()` で agent サブプロセスを分離するため、env var ルートには allowlist が必要です。初回起動後に `/home/node/.config/openab/config.toml` を編集し、`[agent]` セクションに追加：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["OPENCODE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY", "GROQ_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"]
+      > ```
+      >
+      > `opencode auth login` は編集不要 — 認証情報は `~/.opencode/` に保存されます。
+
       ### 3. チャンネル ID を取得
 
       Discord → ユーザー設定 → 詳細 → 開発者モードを有効化 → チャンネルを右クリック → チャンネル ID をコピー
@@ -702,6 +738,15 @@ localization:
 
       > ⚠️ Debe ejecutarse como `node`.
 
+      > **Conectar las API keys al agente:** openab lanza el agente con `env_clear()`, así que la vía de env var requiere un allowlist. Tras el primer arranque edita `/home/node/.config/openab/config.toml` y añade bajo `[agent]`:
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["OPENCODE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY", "GROQ_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"]
+      > ```
+      >
+      > `opencode auth login` no requiere edición — las credenciales viven en `~/.opencode/`.
+
       ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams)
 
       Para conectar Telegram, LINE, Feishu/Lark, Google Chat o MS Teams, despliega la [plantilla OpenAB Gateway](https://zeabur.com/templates/IMRONB) en el mismo proyecto Zeabur. Luego añade estas variables de entorno a este servicio:
@@ -812,6 +857,15 @@ localization:
       ```
 
       > ⚠️ Harus dijalankan sebagai `node`.
+
+      > **Menyambungkan API key ke agent:** openab menjalankan agent dengan `env_clear()`, jadi jalur env var memerlukan allowlist. Setelah boot pertama, edit `/home/node/.config/openab/config.toml` dan tambahkan di bawah `[agent]`:
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["OPENCODE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY", "GROQ_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"]
+      > ```
+      >
+      > `opencode auth login` tidak perlu diedit — kredensial ada di `~/.opencode/`.
 
       ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams)
 

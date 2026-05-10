@@ -80,6 +80,15 @@ spec:
 
     Follow the on-screen prompts to pick and complete an auth method. Credentials are saved on the persistent volume; new conversations apply the new auth automatically — no restart needed.
 
+    > **Wiring API keys to the agent:** openab spawns the agent with `env_clear()`, so the `GEMINI_API_KEY` path requires an env allowlist. After first boot edit `/home/node/.config/openab/config.toml` and add under `[agent]`:
+    >
+    > ```toml
+    > [agent]
+    > inherit_env = ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"]
+    > ```
+    >
+    > Interactive login needs no edit — credentials live in `~/.gemini/`.
+
     ### 3. Get Discord Channel IDs
 
     1. Open Discord -> go to **User Settings** (gear icon) -> **Advanced** -> enable **Developer Mode**
@@ -284,6 +293,15 @@ localization:
 
       依照畫面提示選擇並完成認證。認證資料會存在持久化磁碟,新對話會自動套用,不需重啟。
 
+      > **將 API key 傳給 agent：** openab 會以 `env_clear()` 隔離 agent 子程序，因此 `GEMINI_API_KEY` 路徑需要 env allowlist。首次啟動後編輯 `/home/node/.config/openab/config.toml`，在 `[agent]` 區塊加入：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"]
+      > ```
+      >
+      > 互動登入不需修改 — 認證資料存在 `~/.gemini/`。
+
       ### 3. 取得 Discord 頻道 ID
 
       1. 開啟 Discord → 前往 **使用者設定**（齒輪圖示）→ **進階** → 啟用 **開發者模式**
@@ -395,6 +413,15 @@ localization:
       ```
 
       按照屏幕提示选择并完成认证。认证数据会存在持久化磁盘，新对话会自动采用，无需重启。
+
+      > **将 API key 传给 agent：** openab 会以 `env_clear()` 隔离 agent 子进程，因此 `GEMINI_API_KEY` 路径需要 env allowlist。首次启动后编辑 `/home/node/.config/openab/config.toml`，在 `[agent]` 区块加入：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"]
+      > ```
+      >
+      > 交互登录无需修改 — 认证数据存在 `~/.gemini/`。
 
       ### 3. 获取 Discord 频道 ID
 
@@ -508,6 +535,15 @@ localization:
 
       画面の指示に従って認証方法を選択し、完了させてください。認証情報は永続ボリュームに保存され、新しい会話に自動的に適用されます — 再起動は不要です。
 
+      > **API キーを agent に渡す：** openab は `env_clear()` で agent サブプロセスを分離するため、`GEMINI_API_KEY` ルートには env allowlist が必要です。初回起動後に `/home/node/.config/openab/config.toml` を編集し、`[agent]` セクションに追加：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"]
+      > ```
+      >
+      > インタラクティブログインは編集不要 — 認証情報は `~/.gemini/` に保存されます。
+
       ### 3. Discord チャンネル ID の取得
 
       1. Discord を開く → **ユーザー設定**（歯車アイコン）→ **詳細設定** → **開発者モード** を有効化
@@ -620,6 +656,15 @@ localization:
 
       Siga las indicaciones en pantalla para elegir y completar un metodo de autenticacion. Las credenciales se guardan en el volumen persistente y las nuevas conversaciones las aplican automaticamente — sin reinicio.
 
+      > **Conectar las API keys al agente:** openab lanza el agente con `env_clear()`, por lo que la vía de `GEMINI_API_KEY` requiere un allowlist de env. Tras el primer arranque edita `/home/node/.config/openab/config.toml` y añade bajo `[agent]`:
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"]
+      > ```
+      >
+      > El login interactivo no requiere edición — las credenciales viven en `~/.gemini/`.
+
       ### 3. Obtener IDs de canales de Discord
 
       1. Abrir Discord -> **Ajustes de usuario** (icono de engranaje) -> **Avanzado** -> activar **Modo desarrollador**
@@ -731,6 +776,15 @@ localization:
       ```
 
       Ikuti petunjuk di layar untuk memilih dan menyelesaikan metode autentikasi. Kredensial tersimpan di volume persisten dan otomatis dipakai oleh percakapan baru — tanpa restart.
+
+      > **Menyambungkan API key ke agent:** openab menjalankan agent dengan `env_clear()`, jadi jalur `GEMINI_API_KEY` memerlukan env allowlist. Setelah boot pertama, edit `/home/node/.config/openab/config.toml` dan tambahkan di bawah `[agent]`:
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY"]
+      > ```
+      >
+      > Login interaktif tidak perlu diedit — kredensial ada di `~/.gemini/`.
 
       ### 3. Dapatkan ID Channel Discord
 
