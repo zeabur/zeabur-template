@@ -28,8 +28,8 @@ spec:
       description: "Optional. Token from https://discord.com/developers/applications. Leave empty if using Slack only."
     - key: OPENAB_AUTH_TOKEN
       type: STRING
-      name: Auth Token
-      description: "Anthropic API key, Zeabur AI Hub token, or Claude OAuth token (from: claude setup-token)"
+      name: Auth Token (optional)
+      description: "Optional. Anthropic API key, Zeabur AI Hub token, or Claude OAuth token (from: claude setup-token). Leave empty to use credentials persisted under /home/node/.claude/ (e.g. via `claude auth login` run inside the container)."
     - key: OPENAB_ALLOWED_CHANNELS
       type: STRING
       name: Discord Channel IDs (optional)
@@ -81,13 +81,23 @@ spec:
     4. Go to **OAuth2 → URL Generator** → check scope `bot` → check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
     5. Copy the generated URL and open it in your browser to invite the bot to your server
 
-    ### 2. Get an Auth Token (choose one)
+    ### 2. Choose an Auth Method (optional — leave token empty for in-container login)
 
-    | Method | How to get it |
-    |--------|--------------|
-    | **Anthropic API Key** | Go to [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → copy the `sk-ant-api...` key |
-    | **Zeabur AI Hub Token** | Go to [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → copy the token |
-    | **Claude OAuth Token** | Run `claude setup-token` in your terminal (requires Claude Pro/Max/Team/Enterprise subscription) → visit the URL it shows → authorize → paste the code back → copy the `sk-ant-oat...` token it outputs |
+    | Method | How to use |
+    |--------|-----------|
+    | **Anthropic API Key** | Go to [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → copy the `sk-ant-api...` key into `OPENAB_AUTH_TOKEN` |
+    | **Zeabur AI Hub Token** | Go to [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → copy the token into `OPENAB_AUTH_TOKEN` |
+    | **Claude OAuth Token** | Run `claude setup-token` in your terminal (requires Claude Pro/Max/Team/Enterprise subscription) → visit the URL it shows → authorize → paste the code back → copy the `sk-ant-oat...` token into `OPENAB_AUTH_TOKEN` |
+    | **In-container login** | Leave `OPENAB_AUTH_TOKEN` empty. After deploy, go to Zeabur Dashboard → Service → **Exec** and run `runuser -u node -- claude auth login` (or `claude setup-token`). Credentials are written to `/home/node/.claude/` on the persistent volume and survive restarts. |
+
+    > **Wiring tokens to the agent:** openab spawns the agent with `env_clear()`, so for methods 1–3 you must edit `/home/node/.config/openab/config.toml` after first boot and add an env allowlist (or explicit env map) under `[agent]`:
+    >
+    > ```toml
+    > [agent]
+    > inherit_env = ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"]
+    > ```
+    >
+    > Method 4 needs no edit — credentials are read from `~/.claude/.credentials.json`.
 
     ### 3. Get Discord Channel IDs
 
@@ -170,30 +180,30 @@ spec:
               #!/bin/sh
               set -e
 
-              if [ -z "$OPENAB_AUTH_TOKEN" ]; then
-                echo "openab: OPENAB_AUTH_TOKEN not set — sleeping"
-                exec sleep infinity
-              fi
-
               if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ] && [ -z "$GATEWAY_URL" ]; then
                 echo "openab: no adapter configured (set DISCORD_BOT_TOKEN, SLACK_BOT_TOKEN, or GATEWAY_URL) — sleeping"
                 exec sleep infinity
               fi
 
-              # Detect auth token type and export appropriate env var
-              case "$OPENAB_AUTH_TOKEN" in
-                sk-ant-oat*)
-                  export CLAUDE_CODE_OAUTH_TOKEN="$OPENAB_AUTH_TOKEN"
-                  ;;
-                sk-ant-*)
-                  export ANTHROPIC_API_KEY="$OPENAB_AUTH_TOKEN"
-                  ;;
-                *)
-                  export ANTHROPIC_API_KEY="$OPENAB_AUTH_TOKEN"
-                  export ANTHROPIC_BASE_URL="https://hnd1.aihub.zeabur.ai"
-                  export CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1
-                  ;;
-              esac
+              # Detect auth token type and export appropriate env var.
+              # When OPENAB_AUTH_TOKEN is empty, no env vars are exported — claude-agent-acp
+              # falls back to credentials on the persistent volume (e.g. /home/node/.claude/
+              # written by `claude auth login` or `claude setup-token` run inside the container).
+              if [ -n "$OPENAB_AUTH_TOKEN" ]; then
+                case "$OPENAB_AUTH_TOKEN" in
+                  sk-ant-oat*)
+                    export CLAUDE_CODE_OAUTH_TOKEN="$OPENAB_AUTH_TOKEN"
+                    ;;
+                  sk-ant-*)
+                    export ANTHROPIC_API_KEY="$OPENAB_AUTH_TOKEN"
+                    ;;
+                  *)
+                    export ANTHROPIC_API_KEY="$OPENAB_AUTH_TOKEN"
+                    export ANTHROPIC_BASE_URL="https://hnd1.aihub.zeabur.ai"
+                    export CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1
+                    ;;
+                esac
+              fi
 
               CONFIG_DIR=/home/node/.config/openab
               CONFIG_FILE=$CONFIG_DIR/config.toml
@@ -203,19 +213,6 @@ spec:
               # To regenerate, delete the file and restart
               if [ ! -f "$CONFIG_FILE" ]; then
                 cp /opt/config.toml.template "$CONFIG_FILE"
-
-                # Append agent env based on token type
-                case "$OPENAB_AUTH_TOKEN" in
-                  sk-ant-oat*)
-                    sed -i '/^\[agent\]/a env = { CLAUDE_CODE_OAUTH_TOKEN = "${OPENAB_AUTH_TOKEN}" }' "$CONFIG_FILE"
-                    ;;
-                  sk-ant-*)
-                    sed -i '/^\[agent\]/a env = { ANTHROPIC_API_KEY = "${OPENAB_AUTH_TOKEN}" }' "$CONFIG_FILE"
-                    ;;
-                  *)
-                    sed -i '/^\[agent\]/a env = { ANTHROPIC_API_KEY = "${OPENAB_AUTH_TOKEN}", ANTHROPIC_BASE_URL = "https://hnd1.aihub.zeabur.ai", CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1" }' "$CONFIG_FILE"
-                    ;;
-                esac
 
                 # Add [discord] section if token provided
                 if [ -n "$DISCORD_BOT_TOKEN" ]; then
@@ -306,8 +303,8 @@ localization:
         name: Discord Bot Token（選填）
         description: "選填。從 https://discord.com/developers/applications 取得的 Token。僅使用 Slack 時可留空。"
       - key: OPENAB_AUTH_TOKEN
-        name: 認證 Token
-        description: "Anthropic API 金鑰、Zeabur AI Hub token 或 Claude OAuth token（透過 claude setup-token 取得）"
+        name: 認證 Token（選填）
+        description: "選填。Anthropic API 金鑰、Zeabur AI Hub token 或 Claude OAuth token（透過 claude setup-token 取得）。留空時改用持久卷 /home/node/.claude/ 下的認證資料（例如進容器執行 `claude auth login` 寫入）。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord 頻道 ID（選填）
         description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
@@ -343,13 +340,23 @@ localization:
       4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
       5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
 
-      ### 2. 取得 Auth Token（擇一）
+      ### 2. 選擇認證方式（選填 — 留空則於容器內登入）
 
-      | 方式 | 取得方法 |
+      | 方式 | 使用方法 |
       |------|---------|
-      | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 複製 `sk-ant-api...` 金鑰 |
-      | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 複製 token |
-      | **Claude OAuth Token** | 在終端執行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 訂閱）→ 開啟顯示的 URL → 授權 → 貼回驗證碼 → 複製輸出的 `sk-ant-oat...` token |
+      | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 將 `sk-ant-api...` 金鑰填入 `OPENAB_AUTH_TOKEN` |
+      | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 將 token 填入 `OPENAB_AUTH_TOKEN` |
+      | **Claude OAuth Token** | 在終端執行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 訂閱）→ 開啟顯示的 URL → 授權 → 貼回驗證碼 → 將輸出的 `sk-ant-oat...` token 填入 `OPENAB_AUTH_TOKEN` |
+      | **容器內登入** | `OPENAB_AUTH_TOKEN` 留空。部署後到 Zeabur Dashboard → 服務 → **Exec** 執行 `runuser -u node -- claude auth login`（或 `claude setup-token`）。認證資料會寫入持久卷的 `/home/node/.claude/`，重啟後仍保留。 |
+
+      > **將 token 傳給 agent：** openab 會以 `env_clear()` 隔離 agent 子程序，因此方式 1–3 需在首次啟動後編輯 `/home/node/.config/openab/config.toml`，在 `[agent]` 區塊加入 env allowlist（或顯式 env map）：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"]
+      > ```
+      >
+      > 方式 4 不需修改 — 認證資料直接從 `~/.claude/.credentials.json` 讀取。
 
       ### 3. 取得 Discord 頻道 ID
 
@@ -419,8 +426,8 @@ localization:
         name: Discord Bot Token（选填）
         description: "选填。从 https://discord.com/developers/applications 获取的 Token。仅使用 Slack 时可留空。"
       - key: OPENAB_AUTH_TOKEN
-        name: 认证 Token
-        description: "Anthropic API 密钥、Zeabur AI Hub token 或 Claude OAuth token（通过 claude setup-token 获取）"
+        name: 认证 Token（选填）
+        description: "选填。Anthropic API 密钥、Zeabur AI Hub token 或 Claude OAuth token（通过 claude setup-token 获取）。留空时改用持久卷 /home/node/.claude/ 下的认证数据（例如进容器执行 `claude auth login` 写入）。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord 频道 ID（选填）
         description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
@@ -456,13 +463,23 @@ localization:
       4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
       5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
 
-      ### 2. 获取 Auth Token（任选其一）
+      ### 2. 选择认证方式（选填 — 留空可在容器内登录）
 
-      | 方式 | 获取方法 |
+      | 方式 | 使用方法 |
       |------|---------|
-      | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 复制 `sk-ant-api...` 密钥 |
-      | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 复制 token |
-      | **Claude OAuth Token** | 在终端运行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 订阅）→ 打开显示的 URL → 授权 → 粘贴验证码 → 复制输出的 `sk-ant-oat...` token |
+      | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 将 `sk-ant-api...` 密钥填入 `OPENAB_AUTH_TOKEN` |
+      | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 将 token 填入 `OPENAB_AUTH_TOKEN` |
+      | **Claude OAuth Token** | 在终端运行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 订阅）→ 打开显示的 URL → 授权 → 粘贴验证码 → 将输出的 `sk-ant-oat...` token 填入 `OPENAB_AUTH_TOKEN` |
+      | **容器内登录** | `OPENAB_AUTH_TOKEN` 留空。部署后到 Zeabur Dashboard → 服务 → **Exec** 运行 `runuser -u node -- claude auth login`（或 `claude setup-token`）。认证数据会写入持久卷的 `/home/node/.claude/`，重启后仍保留。 |
+
+      > **将 token 传给 agent：** openab 会以 `env_clear()` 隔离 agent 子进程，因此方式 1–3 需在首次启动后编辑 `/home/node/.config/openab/config.toml`，在 `[agent]` 区块加入 env allowlist（或显式 env map）：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"]
+      > ```
+      >
+      > 方式 4 无需修改 — 认证数据直接从 `~/.claude/.credentials.json` 读取。
 
       ### 3. 获取 Discord 频道 ID
 
@@ -532,8 +549,8 @@ localization:
         name: Discord Bot トークン（オプション）
         description: "オプション。https://discord.com/developers/applications から取得したトークン。Slack のみ使用する場合は空欄でも可。"
       - key: OPENAB_AUTH_TOKEN
-        name: 認証トークン
-        description: "Anthropic API キー、Zeabur AI Hub トークン、または Claude OAuth トークン（claude setup-token で取得）"
+        name: 認証トークン（オプション）
+        description: "オプション。Anthropic API キー、Zeabur AI Hub トークン、または Claude OAuth トークン（claude setup-token で取得）。空の場合、永続ボリュームの /home/node/.claude/ にある認証情報を使用します（例：コンテナ内で `claude auth login` を実行して書き込み）。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord チャンネル ID（オプション）
         description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
@@ -569,13 +586,23 @@ localization:
       4. **OAuth2 → URL Generator** → scope `bot` にチェック → 権限にチェック：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
       5. 生成された URL をコピーし、ブラウザで開いて Bot をサーバーに招待
 
-      ### 2. Auth Token の取得（いずれか一つ）
+      ### 2. 認証方法を選択（オプション — 空のままにするとコンテナ内ログインが可能）
 
-      | 方法 | 取得手順 |
+      | 方法 | 使用方法 |
       |------|---------|
-      | **Anthropic API Key** | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → `sk-ant-api...` キーをコピー |
-      | **Zeabur AI Hub Token** | [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → token をコピー |
-      | **Claude OAuth Token** | ターミナルで `claude setup-token` を実行（Claude Pro/Max/Team/Enterprise サブスクリプションが必要）→ 表示された URL を開く → 認証 → コードを貼り付け → 出力された `sk-ant-oat...` token をコピー |
+      | **Anthropic API Key** | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → `sk-ant-api...` キーを `OPENAB_AUTH_TOKEN` に貼り付け |
+      | **Zeabur AI Hub Token** | [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → token を `OPENAB_AUTH_TOKEN` に貼り付け |
+      | **Claude OAuth Token** | ターミナルで `claude setup-token` を実行（Claude Pro/Max/Team/Enterprise サブスクリプションが必要）→ 表示された URL を開く → 認証 → コードを貼り付け → 出力された `sk-ant-oat...` token を `OPENAB_AUTH_TOKEN` に貼り付け |
+      | **コンテナ内ログイン** | `OPENAB_AUTH_TOKEN` を空のままに。デプロイ後、Zeabur Dashboard → サービス → **Exec** で `runuser -u node -- claude auth login`（または `claude setup-token`）を実行。認証情報は永続ボリュームの `/home/node/.claude/` に書き込まれ、再起動後も保持されます。 |
+
+      > **トークンを agent に渡す：** openab は `env_clear()` で agent サブプロセスを分離するため、方法 1–3 では初回起動後に `/home/node/.config/openab/config.toml` を編集し、`[agent]` セクションに env allowlist（または明示的な env マップ）を追加する必要があります：
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"]
+      > ```
+      >
+      > 方法 4 は編集不要 — 認証情報は `~/.claude/.credentials.json` から直接読み込まれます。
 
       ### 3. Discord チャンネル ID の取得
 
@@ -645,8 +672,8 @@ localization:
         name: Token del Bot de Discord (opcional)
         description: "Opcional. Token obtenido de https://discord.com/developers/applications. Dejar vacío si solo usa Slack."
       - key: OPENAB_AUTH_TOKEN
-        name: Token de Autenticación
-        description: "Clave API de Anthropic, token de Zeabur AI Hub o token OAuth de Claude (obtenido con: claude setup-token)"
+        name: Token de Autenticación (opcional)
+        description: "Opcional. Clave API de Anthropic, token de Zeabur AI Hub o token OAuth de Claude (obtenido con: claude setup-token). Dejar vacío para usar las credenciales persistidas en /home/node/.claude/ (p. ej. ejecutando `claude auth login` dentro del contenedor)."
       - key: OPENAB_ALLOWED_CHANNELS
         name: IDs de Canales de Discord (opcional)
         description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacío para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
@@ -682,13 +709,23 @@ localization:
       4. Ir a **OAuth2 → URL Generator** → marcar scope `bot` → marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
       5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
 
-      ### 2. Obtener un Auth Token (elegir uno)
+      ### 2. Elegir método de autenticación (opcional — dejar vacío para login dentro del contenedor)
 
-      | Método | Cómo obtenerlo |
-      |--------|---------------|
-      | **Anthropic API Key** | Ir a [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → copiar la clave `sk-ant-api...` |
-      | **Zeabur AI Hub Token** | Ir a [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → copiar el token |
-      | **Claude OAuth Token** | Ejecutar `claude setup-token` en la terminal (requiere suscripción Claude Pro/Max/Team/Enterprise) → abrir la URL mostrada → autorizar → pegar el código → copiar el token `sk-ant-oat...` |
+      | Método | Cómo usarlo |
+      |--------|-------------|
+      | **Anthropic API Key** | Ir a [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → pegar la clave `sk-ant-api...` en `OPENAB_AUTH_TOKEN` |
+      | **Zeabur AI Hub Token** | Ir a [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → pegar el token en `OPENAB_AUTH_TOKEN` |
+      | **Claude OAuth Token** | Ejecutar `claude setup-token` en la terminal (requiere suscripción Claude Pro/Max/Team/Enterprise) → abrir la URL mostrada → autorizar → pegar el código → pegar el token `sk-ant-oat...` en `OPENAB_AUTH_TOKEN` |
+      | **Login dentro del contenedor** | Dejar `OPENAB_AUTH_TOKEN` vacío. Tras el despliegue, ir a Zeabur Dashboard → Servicio → **Exec** y ejecutar `runuser -u node -- claude auth login` (o `claude setup-token`). Las credenciales se guardan en `/home/node/.claude/` en el volumen persistente y se conservan tras reinicios. |
+
+      > **Conectar tokens al agente:** openab lanza el agente con `env_clear()`, por lo que para los métodos 1–3 hay que editar `/home/node/.config/openab/config.toml` tras el primer arranque y añadir un allowlist de env (o un mapa env explícito) bajo `[agent]`:
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"]
+      > ```
+      >
+      > El método 4 no requiere edición — las credenciales se leen de `~/.claude/.credentials.json`.
 
       ### 3. Obtener IDs de canales de Discord
 
@@ -769,8 +806,8 @@ localization:
         name: Token Bot Discord (opsional)
         description: "Opsional. Token dari https://discord.com/developers/applications. Kosongkan jika hanya menggunakan Slack."
       - key: OPENAB_AUTH_TOKEN
-        name: Token Autentikasi
-        description: "Kunci API Anthropic, token Zeabur AI Hub, atau token OAuth Claude (dari: claude setup-token)"
+        name: Token Autentikasi (opsional)
+        description: "Opsional. Kunci API Anthropic, token Zeabur AI Hub, atau token OAuth Claude (dari: claude setup-token). Kosongkan untuk menggunakan kredensial yang dipertahankan di /home/node/.claude/ (mis. menjalankan `claude auth login` di dalam kontainer)."
       - key: OPENAB_ALLOWED_CHANNELS
         name: ID Channel Discord (opsional)
         description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
@@ -806,13 +843,23 @@ localization:
       4. Buka **OAuth2 → URL Generator** → centang scope `bot` → centang izin: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
       5. Salin URL yang dihasilkan dan buka di browser untuk mengundang Bot ke server Anda
 
-      ### 2. Dapatkan Auth Token (pilih salah satu)
+      ### 2. Pilih metode autentikasi (opsional — kosongkan untuk login di dalam kontainer)
 
-      | Metode | Cara mendapatkan |
-      |--------|-----------------|
-      | **Anthropic API Key** | Buka [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → salin kunci `sk-ant-api...` |
-      | **Zeabur AI Hub Token** | Buka [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → salin token |
-      | **Claude OAuth Token** | Jalankan `claude setup-token` di terminal (memerlukan langganan Claude Pro/Max/Team/Enterprise) → buka URL yang ditampilkan → otorisasi → tempel kode → salin token `sk-ant-oat...` yang dihasilkan |
+      | Metode | Cara menggunakan |
+      |--------|------------------|
+      | **Anthropic API Key** | Buka [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → tempel kunci `sk-ant-api...` ke `OPENAB_AUTH_TOKEN` |
+      | **Zeabur AI Hub Token** | Buka [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → tempel token ke `OPENAB_AUTH_TOKEN` |
+      | **Claude OAuth Token** | Jalankan `claude setup-token` di terminal (memerlukan langganan Claude Pro/Max/Team/Enterprise) → buka URL yang ditampilkan → otorisasi → tempel kode → tempel token `sk-ant-oat...` yang dihasilkan ke `OPENAB_AUTH_TOKEN` |
+      | **Login di dalam kontainer** | Biarkan `OPENAB_AUTH_TOKEN` kosong. Setelah deploy, buka Zeabur Dashboard → Layanan → **Exec** dan jalankan `runuser -u node -- claude auth login` (atau `claude setup-token`). Kredensial ditulis ke `/home/node/.claude/` pada volume persisten dan dipertahankan setelah restart. |
+
+      > **Menyambungkan token ke agent:** openab menjalankan agent dengan `env_clear()`, jadi untuk metode 1–3 Anda perlu mengedit `/home/node/.config/openab/config.toml` setelah boot pertama dan menambahkan allowlist env (atau peta env eksplisit) di bawah `[agent]`:
+      >
+      > ```toml
+      > [agent]
+      > inherit_env = ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"]
+      > ```
+      >
+      > Metode 4 tidak perlu diedit — kredensial dibaca dari `~/.claude/.credentials.json`.
 
       ### 3. Dapatkan ID Channel Discord
 
