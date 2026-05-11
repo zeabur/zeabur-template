@@ -100,6 +100,12 @@ spec:
             volumes:
                 - id: data
                   dir: /home/node/app/data
+                - id: plugins
+                  dir: /home/node/app/plugins
+                - id: backups
+                  dir: /home/node/app/backups
+                - id: extensions
+                  dir: /home/node/app/public/scripts/extensions/third-party
             instructions:
                 - title: Default Username
                   content: ${ST_USERNAME}
