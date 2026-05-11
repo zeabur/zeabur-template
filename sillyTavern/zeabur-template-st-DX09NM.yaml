@@ -98,6 +98,8 @@ spec:
                   port: 8000
                   type: HTTP
             volumes:
+                - id: config
+                  dir: /home/node/app/config
                 - id: data
                   dir: /home/node/app/data
                 - id: plugins
