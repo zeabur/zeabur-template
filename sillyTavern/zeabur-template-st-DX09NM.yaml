@@ -92,7 +92,7 @@ spec:
           template: PREBUILT_V2
           spec:
             source:
-                image: ghcr.io/sillytavern/sillytavern:latest
+                image: ghcr.io/sillytavern/sillytavern:1.18.0
             ports:
                 - id: web
                   port: 8000
@@ -108,34 +108,138 @@ spec:
             configs:
                 - path: /home/node/app/config/config.yaml
                   template: |
+                    # -- DATA --
                     dataRoot: ./data
+                    # -- SERVER --
                     listen: false
+                    listenAddress:
+                      ipv4: 0.0.0.0
+                      ipv6: '[::]'
+                    protocol:
+                      ipv4: true
+                      ipv6: false
+                    dnsPreferIPv6: false
                     port: 8000
+                    heartbeatInterval: 0
+                    enableKeepAlive: false
+                    # -- BROWSER LAUNCH (disabled on server) --
+                    browserLaunch:
+                      enabled: false
+                      browser: 'default'
+                      hostname: 'auto'
+                      port: -1
+                      avoidLocalhost: false
+                    # -- SSL --
+                    ssl:
+                      enabled: false
+                      certPath: "./certs/cert.pem"
+                      keyPath: "./certs/privkey.pem"
+                      keyPassphrase: ""
+                    # -- SECURITY --
                     whitelistMode: false
                     enableForwardedWhitelist: true
                     whitelist:
+                      - ::1
                       - 127.0.0.1
+                    whitelistDockerHosts: true
                     basicAuthMode: true
                     basicAuthUser:
                       username: ${ST_USERNAME}
                       password: ${ST_PASSWORD}
                     enableCorsProxy: false
+                    cors:
+                      enabled: true
+                      origin:
+                        - "null"
+                      methods:
+                        - "OPTIONS"
+                      allowedHeaders: []
+                      exposedHeaders: []
+                      credentials: false
+                      maxAge: null
+                    # -- REQUEST PROXY --
+                    requestProxy:
+                      enabled: false
+                      url: "socks5://username:password@example.com:1080"
+                      bypass:
+                        - localhost
+                        - 127.0.0.1
                     enableUserAccounts: false
                     enableDiscreetLogin: false
+                    perUserBasicAuth: false
+                    # -- SSO --
+                    sso:
+                      autheliaAuth: false
+                      authentikAuth: false
+                      trustedProxies:
+                        - ::1
+                        - 127.0.0.1
+                    # -- HOST WHITELIST --
+                    hostWhitelist:
+                      enabled: false
+                      scan: true
+                      hosts: []
+                    # -- PRIVATE ADDRESS WHITELIST (SSRF protection) --
+                    privateAddressWhitelist:
+                      enabled: false
+                      allowUnresolvedHosts: false
+                      log:
+                        blockedRequests: true
+                        allowedRequests: false
+                      allowedRanges:
+                        - '127.0.0.0/8'
+                        - '::1/128'
+                    sessionTimeout: ${ST_SESSION_TIMEOUT}
                     disableCsrfProtection: false
                     securityOverride: false
-                    sessionTimeout: ${ST_SESSION_TIMEOUT}
-                    browserLaunch:
-                      enabled: false
-                    thumbnails:
-                      enabled: true
-                      format: jpg
-                      quality: 95
+                    # -- LOGGING --
+                    logging:
+                      enableAccessLog: true
+                      minLogLevel: 0
+                    # -- RATE LIMITING --
+                    rateLimiting:
+                      preferRealIpHeader: false
+                      basicAuthMaxAttempts: 5
+                      accountsLoginMaxAttempts: 5
+                      accountsRecoverMaxAttempts: 5
+                    # -- FORWARDED HEADERS --
+                    forwardedHeaders:
+                      xRealIp: true
+                      xForwardedFor: true
+                      cfConnectingIp: false
+                    # -- BACKUPS --
                     backups:
+                      allowFullDataBackup: true
                       common:
                         numberOfBackups: 50
                       chat:
                         enabled: true
+                        checkIntegrity: true
+                        maxTotalBackups: -1
+                        throttleInterval: 10000
+                    # -- THUMBNAILS --
+                    thumbnails:
+                      enabled: true
+                      format: "jpg"
+                      quality: 95
+                      dimensions:
+                        bg: [160, 90]
+                        avatar: [96, 144]
+                        persona: [96, 144]
+                    # -- PERFORMANCE --
+                    performance:
+                      lazyLoadCharacters: false
+                      memoryCacheCapacity: '100mb'
+                      useDiskCache: true
+                      requestCompression:
+                        enabled: false
+                        minPayloadSize: '256kb'
+                        maxPayloadSize: '8mb'
+                        timeout: 4000
+                    # -- CACHE BUSTER --
+                    cacheBuster:
+                      enabled: false
+                      userAgentPattern: ''
                     allowKeysExposure: false
                     skipContentCheck: false
                     whitelistImportDomains:
@@ -144,6 +248,7 @@ spec:
                       - files.catbox.moe
                       - raw.githubusercontent.com
                     requestOverrides: []
+                    # -- EXTENSIONS --
                     extensions:
                       enabled: true
                       autoUpdate: true
@@ -154,12 +259,41 @@ spec:
                         embedding: Cohee/jina-embeddings-v2-base-en
                         speechToText: Xenova/whisper-small
                         textToSpeech: Xenova/speecht5_tts
+                    # -- GIT --
+                    git:
+                      backend: auto
+                    enableDownloadableTokenizers: true
+                    # -- OPENAI --
+                    promptPlaceholder: "[Start a new chat]"
                     openai:
                       randomizeUserId: false
                       captionSystemPrompt: ""
+                    # -- DEEPL --
                     deepl:
                       formality: default
+                    # -- MISTRAL --
+                    mistral:
+                      enablePrefix: false
+                    # -- OLLAMA --
+                    ollama:
+                      keepAlive: -1
+                      batchSize: -1
+                    # -- ANTHROPIC CLAUDE --
+                    claude:
+                      enableSystemPromptCache: false
+                      cachingAtDepth: -1
+                      extendedTTL: false
+                      enableAdaptiveThinking: false
+                    # -- GOOGLE GEMINI --
+                    gemini:
+                      apiVersion: 'v1beta'
+                      thoughtSignatures: true
+                      enableSystemPromptCache: false
+                      image:
+                        personGeneration: 'allow_adult'
+                    # -- SERVER PLUGINS --
                     enableServerPlugins: false
+                    enableServerPluginsAutoUpdate: true
                   envsubst: true
             env:
                 ST_USERNAME:
