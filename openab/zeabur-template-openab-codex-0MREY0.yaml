@@ -177,6 +177,15 @@ spec:
               #!/bin/sh
               set -e
 
+              # Initialize shell config on first boot (volume is empty)
+              if [ ! -f /home/node/.bashrc ]; then
+                cp /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout /home/node/ 2>/dev/null || true
+              fi
+
+              # Fix ownership for persistent volume
+              chown -R node:node /home/node
+              chmod 755 /home/node/.config 2>/dev/null || true
+
               if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ]; then
                 echo "openab: neither DISCORD_BOT_TOKEN nor SLACK_BOT_TOKEN set — sleeping"
                 exec sleep infinity
@@ -231,10 +240,11 @@ spec:
 
               # Authenticate codex with API key if not already logged in
               if [ -n "$OPENAI_API_KEY" ] && [ ! -f "$HOME/.codex/auth.json" ]; then
-                printf '%s' "$OPENAI_API_KEY" | codex login --with-api-key
+                printf '%s' "$OPENAI_API_KEY" | runuser -u node --preserve-environment -- codex login --with-api-key
               fi
 
-              exec openab run --config "$CONFIG_FILE"
+              chown -R node:node "$CONFIG_DIR"
+              exec runuser -u node --preserve-environment -- openab run --config "$CONFIG_FILE"
           - path: /opt/config.toml.template
             template: |
               [agent]

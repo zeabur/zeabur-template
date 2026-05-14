@@ -178,6 +178,10 @@ spec:
               #!/bin/sh
               set -e
 
+              # Fix ownership for persistent volume
+              chown -R agent:agent /home/agent
+              chmod 755 /home/agent/.config 2>/dev/null || true
+
               if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ]; then
                 echo "openab: neither DISCORD_BOT_TOKEN nor SLACK_BOT_TOKEN set — sleeping"
                 exec sleep infinity
@@ -230,7 +234,8 @@ spec:
                 echo "openab: using existing config.toml (delete to regenerate)"
               fi
 
-              exec openab run --config "$CONFIG_FILE"
+              chown -R agent:agent "$CONFIG_DIR"
+              exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
           - path: /opt/config.toml.template
             template: |
               [agent]
