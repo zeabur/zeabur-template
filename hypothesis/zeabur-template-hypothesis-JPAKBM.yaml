@@ -1,0 +1,602 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Hypothesis
+spec:
+  description: |
+    Self-hosted Hypothesis (h) — an open-source web annotation server that lets you and your collaborators highlight, annotate, and discuss any web page or PDF. Bundled with its PostgreSQL, Elasticsearch, and RabbitMQ dependencies.
+  icon: https://raw.githubusercontent.com/hypothesis/h/main/h/static/images/logo.png
+  coverImage: https://raw.githubusercontent.com/hypothesis/h/main/h/static/images/share-image.png
+  tags:
+    - Productivity
+    - Collaboration
+  variables:
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Domain
+      description: The domain you want your Hypothesis server to be served on.
+  readme: |
+    # Hypothesis (self-hosted)
+
+    [Hypothesis](https://web.hypothes.is/) is an open-source web annotation tool.
+    `h` is the server that powers it: it serves the annotation web app and the
+    public annotation API. With a self-hosted instance you and your collaborators
+    can highlight, annotate, and discuss any web page or PDF on infrastructure you
+    control.
+
+    This template deploys four services as a single one-click stack:
+
+    - **hypothesis** — the `h` server (web app, API, real-time WebSocket, background worker)
+    - **postgresql** — stores accounts, groups, and annotations
+    - **elasticsearch** — powers annotation search (uses Hypothesis's ICU-enabled build)
+    - **rabbitmq** — message broker for the background worker
+
+    ## Getting started
+
+    1. Enter the domain you want to use and click **Deploy**.
+    2. Wait for all four services to finish deploying. The **hypothesis** service
+       runs a one-time initialization on first boot (database schema, search index,
+       and admin account), so its first start takes a few minutes — this is normal.
+    3. Open your domain. You should see the Hypothesis homepage.
+
+    ## Logging in
+
+    An administrator account is created automatically on first boot:
+
+    - **Username:** admin
+    - **Password:** see the `ADMIN_PASSWORD` variable on the **hypothesis** service
+      (Variables tab in the Zeabur dashboard)
+
+    Sign in at `https://YOUR_DOMAIN/login`, then **change this password immediately**
+    from the account settings page. Admin tools are available at
+    `https://YOUR_DOMAIN/admin`.
+
+    ## Using a custom domain
+
+    The annotation "authority" and public URL are derived from the domain at deploy
+    time. If you want to use a custom domain, bind it before your first deployment,
+    or be prepared to redeploy: changing the domain after accounts and annotations
+    exist will leave them tied to the old authority.
+
+    ## Important notes
+
+    - **The annotation client is loaded from `https://cdn.hypothes.is`.** This is
+      Hypothesis's default and keeps the client up to date; your annotation *data*
+      stays entirely on your own instance.
+    - **Email is not configured.** Account activation is skipped, and password-reset
+      emails will not be sent unless you add `MAIL_*` environment variables to the
+      **hypothesis** service.
+    - **Data lives in the postgresql and elasticsearch volumes.** The hypothesis
+      service itself is stateless. Do not delete those volumes.
+    - The PostgreSQL, Elasticsearch, and RabbitMQ services are reachable only inside
+      the project's private network — Elasticsearch in particular has no
+      authentication, so do not expose it publicly.
+
+    ## Attribution & license
+
+    Hypothesis (`h`) is developed by the Hypothes.is Project and contributors and is
+    released under the **BSD-2-Clause license**. This template only packages the
+    official `hypothesis/hypothesis` Docker image for deployment on Zeabur; it is not
+    affiliated with or endorsed by the Hypothes.is Project.
+
+    - Source code: https://github.com/hypothesis/h
+    - Official website: https://web.hypothes.is/
+
+    ## Changelog
+
+    - 2026-05-14: Initial release. Based on `hypothesis/hypothesis:20260504-g4d0056f`.
+  services:
+    - name: postgresql
+      icon: https://cdn.zeabur.com/marketplace/postgresql.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: postgres:15.10-alpine
+        ports:
+          - id: database
+            port: 5432
+            type: TCP
+        portForwarding:
+          enabled: false
+        healthCheck:
+          type: TCP
+          port: database
+        volumes:
+          - id: data
+            dir: /var/lib/postgresql/data
+        env:
+          PGDATA:
+            default: /var/lib/postgresql/data/pgdata
+          POSTGRES_USER:
+            default: postgres
+            expose: true
+          POSTGRES_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          POSTGRES_DB:
+            default: hypothesis
+            expose: true
+          POSTGRES_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+          POSTGRES_PORT:
+            default: ${DATABASE_PORT}
+            expose: true
+
+    - name: elasticsearch
+      icon: https://raw.githubusercontent.com/hypothesis/h/main/h/static/images/logo.png
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: hypothesis/elasticsearch:elasticsearch7.10
+        ports:
+          - id: es
+            port: 9200
+            type: TCP
+        portForwarding:
+          enabled: false
+        healthCheck:
+          type: TCP
+          port: es
+        volumes:
+          - id: data
+            dir: /usr/share/elasticsearch/data
+        env:
+          discovery.type:
+            default: single-node
+          ES_JAVA_OPTS:
+            default: -Xms512m -Xmx512m
+          bootstrap.memory_lock:
+            default: "false"
+          ELASTICSEARCH_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+
+    - name: rabbitmq
+      icon: https://raw.githubusercontent.com/hypothesis/h/main/h/static/images/logo.png
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: rabbitmq:3.12-management-alpine
+        ports:
+          - id: amqp
+            port: 5672
+            type: TCP
+        portForwarding:
+          enabled: false
+        healthCheck:
+          type: TCP
+          port: amqp
+        volumes:
+          - id: data
+            dir: /var/lib/rabbitmq
+        env:
+          RABBITMQ_DEFAULT_USER:
+            default: hypothesis
+            expose: true
+          RABBITMQ_DEFAULT_PASS:
+            default: ${PASSWORD}
+            expose: true
+          RABBITMQ_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+
+    - name: hypothesis
+      icon: https://raw.githubusercontent.com/hypothesis/h/main/h/static/images/logo.png
+      template: PREBUILT_V2
+      domainKey: PUBLIC_DOMAIN
+      dependencies:
+        - postgresql
+        - elasticsearch
+        - rabbitmq
+      spec:
+        source:
+          image: hypothesis/hypothesis:20260504-g4d0056f
+          command:
+            - /bin/sh
+            - -c
+            - /var/lib/hypothesis/zeabur-start.sh
+        ports:
+          - id: web
+            port: 5000
+            type: HTTP
+        healthCheck:
+          type: TCP
+          port: web
+        instructions:
+          - title: Hypothesis URL
+            content: ${ZEABUR_WEB_URL}
+          - title: Admin username
+            content: ${ADMIN_USERNAME}
+          - title: Admin password (change it after first login)
+            content: ${ADMIN_PASSWORD}
+          - title: Sign in
+            content: ${ZEABUR_WEB_URL}/login
+          - title: Admin panel
+            content: ${ZEABUR_WEB_URL}/admin
+        configs:
+          - path: /var/lib/hypothesis/zeabur-start.sh
+            permission: 493
+            envsubst: false
+            template: |
+              #!/bin/sh
+              set -eu
+              cd /var/lib/hypothesis
+
+              echo "[zeabur] Waiting for PostgreSQL ${PG_HOST}:${PG_PORT} ..."
+              until python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect((\"${PG_HOST}\", int(\"${PG_PORT}\"))); s.close()" 2>/dev/null; do sleep 2; done
+              echo "[zeabur] PostgreSQL is reachable."
+
+              echo "[zeabur] Waiting for Elasticsearch ${ELASTICSEARCH_URL} ..."
+              until wget -q -O /dev/null "${ELASTICSEARCH_URL}/_cluster/health" 2>/dev/null; do sleep 3; done
+              echo "[zeabur] Elasticsearch is reachable."
+
+              echo "[zeabur] Waiting for RabbitMQ ${RMQ_HOST}:5672 ..."
+              until python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect((\"${RMQ_HOST}\", 5672)); s.close()" 2>/dev/null; do sleep 2; done
+              echo "[zeabur] RabbitMQ is reachable."
+
+              echo "[zeabur] Initializing database schema ..."
+              python3 -m h.scripts.init_db --create --stamp
+
+              echo "[zeabur] Applying database migrations ..."
+              alembic -c conf/alembic.ini upgrade head
+
+              echo "[zeabur] Initializing Elasticsearch index ..."
+              python3 - <<'PYEOF'
+              import os
+              from h.cli import bootstrap
+              from h.search.config import init
+              request = bootstrap(os.environ["APP_URL"])
+              init(request.es)
+              print("[zeabur] Elasticsearch index ready.")
+              PYEOF
+
+              echo "[zeabur] Ensuring admin user '${ADMIN_USERNAME}' ..."
+              if bin/hypothesis user add --username "${ADMIN_USERNAME}" --email "${ADMIN_EMAIL}" --password "${ADMIN_PASSWORD}" --authority "${AUTHORITY}"; then
+                bin/hypothesis user admin "${ADMIN_USERNAME}" --authority "${AUTHORITY}" || true
+                echo "[zeabur] Admin user '${ADMIN_USERNAME}' created and promoted to administrator."
+              else
+                echo "[zeabur] Admin user '${ADMIN_USERNAME}' already exists — skipping creation."
+              fi
+
+              echo "[zeabur] Starting Hypothesis ..."
+              exec init-env supervisord -c conf/supervisord.conf
+        env:
+          # --- Datastores ---
+          DATABASE_URL:
+            default: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+          ELASTICSEARCH_URL:
+            default: http://${ELASTICSEARCH_HOST}:9200
+          BROKER_URL:
+            default: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@${RABBITMQ_HOST}:5672//
+          # Plain host/port copies so the startup script can wait on dependencies
+          # (distinct names to avoid colliding with the referenced variables)
+          PG_HOST:
+            default: ${POSTGRES_HOST}
+          PG_PORT:
+            default: ${POSTGRES_PORT}
+          RMQ_HOST:
+            default: ${RABBITMQ_HOST}
+          # --- Secrets ---
+          SECRET_KEY:
+            default: ${PASSWORD}
+          SECRET_SALT:
+            default: ${PASSWORD}
+          H_API_AUTH_COOKIE_SECRET_KEY:
+            default: ${PASSWORD}
+          H_API_AUTH_COOKIE_SALT:
+            default: ${PASSWORD}
+          # --- Public URLs / identity ---
+          APP_URL:
+            default: ${ZEABUR_WEB_URL}
+          AUTHORITY:
+            default: ${ZEABUR_WEB_DOMAIN}
+          WEBSOCKET_URL:
+            default: wss://${ZEABUR_WEB_DOMAIN}/ws
+          # --- Process toggles (supervisord) ---
+          ENABLE_NGINX:
+            default: "true"
+          ENABLE_WEB:
+            default: "true"
+          ENABLE_WEBSOCKET:
+            default: "false"
+          ENABLE_WEBSOCKET_MONOLITHIC:
+            default: "true"
+          ENABLE_WORKER:
+            default: "true"
+          WEB_NUM_WORKERS:
+            default: "2"
+          WEBSOCKET_NUM_WORKERS:
+            default: "2"
+          NEW_RELIC_APP_NAME:
+            default: hypothesis
+          # --- Bootstrap admin account (change the password after first login) ---
+          ADMIN_USERNAME:
+            default: admin
+          ADMIN_EMAIL:
+            default: admin@example.com
+          ADMIN_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+localization:
+  zh-TW:
+    description: |
+      自架 Hypothesis(h)— 開源的網頁標註伺服器,讓你和協作者在任何網頁或 PDF 上劃線、標註、討論。已一併綁定所需的 PostgreSQL、Elasticsearch 與 RabbitMQ 相依服務。
+    variables:
+      - key: PUBLIC_DOMAIN
+        type: DOMAIN
+        name: 網域
+        description: 你想讓 Hypothesis 伺服器對外服務的網域。
+    readme: |
+      # Hypothesis(自架版)
+
+      [Hypothesis](https://web.hypothes.is/) 是開源的網頁標註工具。`h` 是驅動它的伺服器:提供標註網頁應用與公開的標註 API。自架一套之後,你和協作者就能在你自己掌控的基礎設施上,對任何網頁或 PDF 劃線、標註、討論。
+
+      這個模板會一次部署四個服務,組成一鍵啟動的完整堆疊:
+
+      - **hypothesis** — `h` 伺服器(網頁應用、API、即時 WebSocket、背景 worker)
+      - **postgresql** — 儲存帳號、群組與標註
+      - **elasticsearch** — 提供標註搜尋(使用 Hypothesis 內建 ICU 套件的版本)
+      - **rabbitmq** — 背景 worker 的訊息佇列
+
+      ## 開始使用
+
+      1. 填入你想使用的網域,點 **Deploy**。
+      2. 等四個服務都部署完成。**hypothesis** 服務首次啟動會跑一次性初始化(建立資料庫結構、搜尋索引與管理員帳號),所以第一次啟動會花幾分鐘,這是正常的。
+      3. 開啟你的網域,應該會看到 Hypothesis 首頁。
+
+      ## 登入
+
+      系統會在首次啟動時自動建立一個管理員帳號:
+
+      - **使用者名稱:** admin
+      - **密碼:** 見 **hypothesis** 服務上的 `ADMIN_PASSWORD` 變數(Zeabur 儀表板的 Variables 分頁)
+
+      請到 `https://你的網域/login` 登入,然後**立刻從帳號設定頁更改這組密碼**。管理工具在 `https://你的網域/admin`。
+
+      ## 使用自訂網域
+
+      標註的 authority 與對外 URL 是在部署時依網域推導出來的。如果你想用自訂網域,請在第一次部署前就先綁定;否則就要有重新部署的準備:在帳號與標註已存在之後才更改網域,會讓它們仍綁在舊的 authority 上。
+
+      ## 重要事項
+
+      - **標註用的 client 是從 `https://cdn.hypothes.is` 載入的。** 這是 Hypothesis 的預設行為,可讓 client 保持最新;你的標註「資料」則完全留在你自己的實例上。
+      - **未設定 email。** 帳號啟用流程會被略過,密碼重設信也不會寄出,除非你在 **hypothesis** 服務加上 `MAIL_*` 環境變數。
+      - **資料存放在 postgresql 與 elasticsearch 的 volume 裡。** hypothesis 服務本身無狀態。請勿刪除那些 volume。
+      - PostgreSQL、Elasticsearch、RabbitMQ 三個服務只在專案的私有網路內可達 — 尤其 Elasticsearch 沒有任何認證,請勿對外公開。
+
+      ## 授權與標註出處
+
+      Hypothesis(`h`)由 Hypothes.is Project 與貢獻者開發,以 **BSD-2-Clause 授權**釋出。本模板僅將官方 `hypothesis/hypothesis` Docker image 打包以便在 Zeabur 上部署,與 Hypothes.is Project 無從屬或背書關係。
+
+      - 原始碼:https://github.com/hypothesis/h
+      - 官方網站:https://web.hypothes.is/
+
+      ## 變更紀錄
+
+      - 2026-05-14:首次發布。基於 `hypothesis/hypothesis:20260504-g4d0056f`。
+  zh-CN:
+    description: |
+      自托管 Hypothesis(h)— 开源的网页批注服务器,让你和协作者在任意网页或 PDF 上高亮、批注、讨论。已一并绑定所需的 PostgreSQL、Elasticsearch 与 RabbitMQ 依赖服务。
+    variables:
+      - key: PUBLIC_DOMAIN
+        type: DOMAIN
+        name: 域名
+        description: 你想让 Hypothesis 服务器对外提供服务的域名。
+    readme: |
+      # Hypothesis(自托管版)
+
+      [Hypothesis](https://web.hypothes.is/) 是开源的网页批注工具。`h` 是驱动它的服务器:提供批注网页应用与公开的批注 API。自托管一套之后,你和协作者就能在自己掌控的基础设施上,对任意网页或 PDF 高亮、批注、讨论。
+
+      这个模板会一次部署四个服务,组成一键启动的完整堆栈:
+
+      - **hypothesis** — `h` 服务器(网页应用、API、实时 WebSocket、后台 worker)
+      - **postgresql** — 存储账号、群组与批注
+      - **elasticsearch** — 提供批注搜索(使用 Hypothesis 内置 ICU 插件的版本)
+      - **rabbitmq** — 后台 worker 的消息队列
+
+      ## 开始使用
+
+      1. 填入你想使用的域名,点击 **Deploy**。
+      2. 等四个服务都部署完成。**hypothesis** 服务首次启动会跑一次性初始化(建立数据库结构、搜索索引与管理员账号),所以第一次启动会花几分钟,这是正常的。
+      3. 打开你的域名,应该会看到 Hypothesis 首页。
+
+      ## 登录
+
+      系统会在首次启动时自动创建一个管理员账号:
+
+      - **用户名:** admin
+      - **密码:** 见 **hypothesis** 服务上的 `ADMIN_PASSWORD` 变量(Zeabur 仪表盘的 Variables 标签页)
+
+      请到 `https://你的域名/login` 登录,然后**立即从账号设置页更改这组密码**。管理工具在 `https://你的域名/admin`。
+
+      ## 使用自定义域名
+
+      批注的 authority 与对外 URL 是在部署时根据域名推导出来的。如果你想用自定义域名,请在第一次部署前就先绑定;否则就要做好重新部署的准备:在账号与批注已存在之后才更改域名,会让它们仍绑在旧的 authority 上。
+
+      ## 重要事项
+
+      - **批注用的 client 是从 `https://cdn.hypothes.is` 加载的。** 这是 Hypothesis 的默认行为,可让 client 保持最新;你的批注「数据」则完全留在你自己的实例上。
+      - **未配置 email。** 账号激活流程会被跳过,密码重置邮件也不会发出,除非你在 **hypothesis** 服务加上 `MAIL_*` 环境变量。
+      - **数据存放在 postgresql 与 elasticsearch 的 volume 里。** hypothesis 服务本身无状态。请勿删除那些 volume。
+      - PostgreSQL、Elasticsearch、RabbitMQ 三个服务只在项目的私有网络内可达 — 尤其 Elasticsearch 没有任何认证,请勿对外公开。
+
+      ## 授权与署名
+
+      Hypothesis(`h`)由 Hypothes.is Project 与贡献者开发,以 **BSD-2-Clause 许可证**发布。本模板仅将官方 `hypothesis/hypothesis` Docker image 打包以便在 Zeabur 上部署,与 Hypothes.is Project 无从属或背书关系。
+
+      - 源代码:https://github.com/hypothesis/h
+      - 官方网站:https://web.hypothes.is/
+
+      ## 更新日志
+
+      - 2026-05-14:首次发布。基于 `hypothesis/hypothesis:20260504-g4d0056f`。
+  ja-JP:
+    description: |
+      セルフホスト版 Hypothesis(h)— あらゆる Web ページや PDF にハイライト・注釈・ディスカッションを残せる、オープンソースの Web アノテーションサーバー。必要な PostgreSQL・Elasticsearch・RabbitMQ もまとめてデプロイされます。
+    variables:
+      - key: PUBLIC_DOMAIN
+        type: DOMAIN
+        name: ドメイン
+        description: Hypothesis サーバーを公開するドメインです。
+    readme: |
+      # Hypothesis(セルフホスト）
+
+      [Hypothesis](https://web.hypothes.is/) はオープンソースの Web アノテーションツールです。`h` はそれを支えるサーバーで、アノテーション用の Web アプリと公開アノテーション API を提供します。セルフホストすれば、あなたとコラボレーターは自分で管理するインフラ上で、あらゆる Web ページや PDF にハイライト・注釈・ディスカッションを残せます。
+
+      このテンプレートは 4 つのサービスをまとめてデプロイし、ワンクリックで動くスタックを構成します:
+
+      - **hypothesis** — `h` サーバー（Web アプリ、API、リアルタイム WebSocket、バックグラウンドワーカー）
+      - **postgresql** — アカウント・グループ・アノテーションを保存
+      - **elasticsearch** — アノテーション検索（Hypothesis の ICU 同梱ビルドを使用）
+      - **rabbitmq** — バックグラウンドワーカー用のメッセージブローカー
+
+      ## はじめに
+
+      1. 使用したいドメインを入力し、**Deploy** をクリックします。
+      2. 4 つのサービスのデプロイ完了を待ちます。**hypothesis** サービスは初回起動時に一度だけ初期化（データベーススキーマ、検索インデックス、管理者アカウントの作成）を実行するため、初回起動には数分かかります。これは正常です。
+      3. ドメインを開くと Hypothesis のトップページが表示されます。
+
+      ## ログイン
+
+      初回起動時に管理者アカウントが自動的に作成されます:
+
+      - **ユーザー名:** admin
+      - **パスワード:** **hypothesis** サービスの `ADMIN_PASSWORD` 変数を参照（Zeabur ダッシュボードの Variables タブ）
+
+      `https://あなたのドメイン/login` からサインインし、**アカウント設定ページですぐにこのパスワードを変更してください**。管理ツールは `https://あなたのドメイン/admin` にあります。
+
+      ## カスタムドメインの利用
+
+      アノテーションの authority と公開 URL は、デプロイ時にドメインから導出されます。カスタムドメインを使いたい場合は、初回デプロイの前にバインドしてください。そうでなければ再デプロイが必要になります:アカウントやアノテーションが存在した後にドメインを変更すると、それらは古い authority に紐づいたままになります。
+
+      ## 重要な注意事項
+
+      - **アノテーション用クライアントは `https://cdn.hypothes.is` から読み込まれます。** これは Hypothesis のデフォルト動作で、クライアントを常に最新に保ちます。アノテーションの「データ」はすべてあなたのインスタンスに残ります。
+      - **メールは設定されていません。** アカウント有効化はスキップされ、パスワードリセットメールも送信されません。送信するには **hypothesis** サービスに `MAIL_*` 環境変数を追加してください。
+      - **データは postgresql と elasticsearch のボリュームに保存されます。** hypothesis サービス自体はステートレスです。これらのボリュームを削除しないでください。
+      - PostgreSQL・Elasticsearch・RabbitMQ の各サービスはプロジェクトのプライベートネットワーク内からのみ到達可能です。特に Elasticsearch には認証がないため、外部公開しないでください。
+
+      ## 帰属とライセンス
+
+      Hypothesis(`h`)は Hypothes.is Project と貢献者によって開発され、**BSD-2-Clause ライセンス**で公開されています。このテンプレートは公式の `hypothesis/hypothesis` Docker イメージを Zeabur 上でデプロイできるようにパッケージ化したものであり、Hypothes.is Project とは提携・推奨関係にありません。
+
+      - ソースコード:https://github.com/hypothesis/h
+      - 公式サイト:https://web.hypothes.is/
+
+      ## 変更履歴
+
+      - 2026-05-14:初回リリース。`hypothesis/hypothesis:20260504-g4d0056f` をベースにしています。
+  es-ES:
+    description: |
+      Hypothesis (h) autoalojado: un servidor de anotación web de código abierto que te permite a ti y a tus colaboradores resaltar, anotar y debatir cualquier página web o PDF. Incluye sus dependencias PostgreSQL, Elasticsearch y RabbitMQ.
+    variables:
+      - key: PUBLIC_DOMAIN
+        type: DOMAIN
+        name: Dominio
+        description: El dominio en el que quieres que se sirva tu servidor de Hypothesis.
+    readme: |
+      # Hypothesis (autoalojado)
+
+      [Hypothesis](https://web.hypothes.is/) es una herramienta de anotación web de código abierto. `h` es el servidor que la hace funcionar: sirve la aplicación web de anotación y la API pública de anotaciones. Con una instancia autoalojada, tú y tus colaboradores podéis resaltar, anotar y debatir cualquier página web o PDF en una infraestructura que controláis.
+
+      Esta plantilla despliega cuatro servicios como un único stack de un clic:
+
+      - **hypothesis** — el servidor `h` (aplicación web, API, WebSocket en tiempo real y worker en segundo plano)
+      - **postgresql** — almacena cuentas, grupos y anotaciones
+      - **elasticsearch** — potencia la búsqueda de anotaciones (usa la compilación de Hypothesis con ICU incluido)
+      - **rabbitmq** — broker de mensajes para el worker en segundo plano
+
+      ## Primeros pasos
+
+      1. Introduce el dominio que quieras usar y haz clic en **Deploy**.
+      2. Espera a que los cuatro servicios terminen de desplegarse. El servicio **hypothesis** ejecuta una inicialización única en el primer arranque (esquema de base de datos, índice de búsqueda y cuenta de administrador), por lo que su primer arranque tarda unos minutos: esto es normal.
+      3. Abre tu dominio. Deberías ver la página de inicio de Hypothesis.
+
+      ## Iniciar sesión
+
+      Se crea automáticamente una cuenta de administrador en el primer arranque:
+
+      - **Usuario:** admin
+      - **Contraseña:** consulta la variable `ADMIN_PASSWORD` del servicio **hypothesis** (pestaña Variables en el panel de Zeabur)
+
+      Inicia sesión en `https://TU_DOMINIO/login` y **cambia esta contraseña de inmediato** desde la página de ajustes de la cuenta. Las herramientas de administración están en `https://TU_DOMINIO/admin`.
+
+      ## Usar un dominio personalizado
+
+      La "authority" de las anotaciones y la URL pública se derivan del dominio en el momento del despliegue. Si quieres usar un dominio personalizado, vincúlalo antes de tu primer despliegue, o prepárate para volver a desplegar: cambiar el dominio cuando ya existen cuentas y anotaciones las dejará ligadas a la authority antigua.
+
+      ## Notas importantes
+
+      - **El cliente de anotación se carga desde `https://cdn.hypothes.is`.** Es el comportamiento predeterminado de Hypothesis y mantiene el cliente actualizado; tus *datos* de anotación permanecen íntegramente en tu propia instancia.
+      - **El correo no está configurado.** Se omite la activación de cuentas y no se enviarán correos de restablecimiento de contraseña a menos que añadas variables de entorno `MAIL_*` al servicio **hypothesis**.
+      - **Los datos residen en los volúmenes de postgresql y elasticsearch.** El servicio hypothesis en sí no tiene estado. No elimines esos volúmenes.
+      - Los servicios PostgreSQL, Elasticsearch y RabbitMQ solo son accesibles dentro de la red privada del proyecto; Elasticsearch en particular no tiene autenticación, así que no lo expongas públicamente.
+
+      ## Atribución y licencia
+
+      Hypothesis (`h`) está desarrollado por el Hypothes.is Project y sus colaboradores, y se publica bajo la **licencia BSD-2-Clause**. Esta plantilla solo empaqueta la imagen Docker oficial `hypothesis/hypothesis` para su despliegue en Zeabur; no está afiliada ni respaldada por el Hypothes.is Project.
+
+      - Código fuente: https://github.com/hypothesis/h
+      - Sitio web oficial: https://web.hypothes.is/
+
+      ## Registro de cambios
+
+      - 2026-05-14: Lanzamiento inicial. Basado en `hypothesis/hypothesis:20260504-g4d0056f`.
+  id-ID:
+    description: |
+      Hypothesis (h) yang dihosting sendiri — server anotasi web sumber terbuka yang memungkinkan Anda dan kolaborator menyorot, menganotasi, dan mendiskusikan halaman web atau PDF apa pun. Sudah disertai dependensi PostgreSQL, Elasticsearch, dan RabbitMQ.
+    variables:
+      - key: PUBLIC_DOMAIN
+        type: DOMAIN
+        name: Domain
+        description: Domain tempat server Hypothesis Anda akan disajikan.
+    readme: |
+      # Hypothesis (hosting sendiri)
+
+      [Hypothesis](https://web.hypothes.is/) adalah alat anotasi web sumber terbuka. `h` adalah server yang menjalankannya: menyajikan aplikasi web anotasi dan API anotasi publik. Dengan instance yang dihosting sendiri, Anda dan kolaborator dapat menyorot, menganotasi, dan mendiskusikan halaman web atau PDF apa pun di infrastruktur yang Anda kendalikan.
+
+      Template ini men-deploy empat layanan sebagai satu stack sekali klik:
+
+      - **hypothesis** — server `h` (aplikasi web, API, WebSocket real-time, worker latar belakang)
+      - **postgresql** — menyimpan akun, grup, dan anotasi
+      - **elasticsearch** — menjalankan pencarian anotasi (memakai build Hypothesis dengan ICU bawaan)
+      - **rabbitmq** — message broker untuk worker latar belakang
+
+      ## Memulai
+
+      1. Masukkan domain yang ingin Anda gunakan dan klik **Deploy**.
+      2. Tunggu keempat layanan selesai di-deploy. Layanan **hypothesis** menjalankan inisialisasi sekali jalan saat boot pertama (skema database, indeks pencarian, dan akun admin), jadi boot pertamanya butuh beberapa menit — ini normal.
+      3. Buka domain Anda. Anda akan melihat halaman beranda Hypothesis.
+
+      ## Masuk
+
+      Akun administrator dibuat otomatis saat boot pertama:
+
+      - **Nama pengguna:** admin
+      - **Kata sandi:** lihat variabel `ADMIN_PASSWORD` pada layanan **hypothesis** (tab Variables di dashboard Zeabur)
+
+      Masuk di `https://DOMAIN_ANDA/login`, lalu **segera ganti kata sandi ini** dari halaman pengaturan akun. Alat administrasi tersedia di `https://DOMAIN_ANDA/admin`.
+
+      ## Menggunakan domain kustom
+
+      "Authority" anotasi dan URL publik diturunkan dari domain pada saat deploy. Jika ingin memakai domain kustom, ikat domain tersebut sebelum deploy pertama, atau bersiaplah untuk men-deploy ulang: mengubah domain setelah akun dan anotasi ada akan membuatnya tetap terikat ke authority lama.
+
+      ## Catatan penting
+
+      - **Klien anotasi dimuat dari `https://cdn.hypothes.is`.** Ini perilaku bawaan Hypothesis dan menjaga klien tetap mutakhir; *data* anotasi Anda tetap sepenuhnya berada di instance Anda sendiri.
+      - **Email belum dikonfigurasi.** Aktivasi akun dilewati, dan email reset kata sandi tidak akan terkirim kecuali Anda menambahkan variabel lingkungan `MAIL_*` ke layanan **hypothesis**.
+      - **Data tersimpan di volume postgresql dan elasticsearch.** Layanan hypothesis sendiri bersifat stateless. Jangan hapus volume tersebut.
+      - Layanan PostgreSQL, Elasticsearch, dan RabbitMQ hanya dapat dijangkau di dalam jaringan privat proyek — khususnya Elasticsearch tidak memiliki autentikasi, jadi jangan mengeksposnya ke publik.
+
+      ## Atribusi & lisensi
+
+      Hypothesis (`h`) dikembangkan oleh Hypothes.is Project dan para kontributor, dirilis di bawah **lisensi BSD-2-Clause**. Template ini hanya mengemas image Docker resmi `hypothesis/hypothesis` untuk deployment di Zeabur; tidak berafiliasi dengan atau didukung oleh Hypothes.is Project.
+
+      - Kode sumber: https://github.com/hypothesis/h
+      - Situs web resmi: https://web.hypothes.is/
+
+      ## Catatan rilis
+
+      - 2026-05-14: Rilis awal. Berdasarkan `hypothesis/hypothesis:20260504-g4d0056f`.

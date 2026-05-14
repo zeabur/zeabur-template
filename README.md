@@ -17,6 +17,7 @@
 | [FossFLOW](FossFLOW/) | 開源工作流程工具 |
 | [Ghost](ghost/) | 開源部落格平台 |
 | [Graphiti](graphiti/) | 圖形資料庫服務 |
+| [Hypothesis](hypothesis/) | 開源網頁標註伺服器 |
 | [MetaMCP](MetaMCP/) | MCP 聚合器 |
 | [MinIO](minio/) | 高效能物件儲存 |
 | [Odoo](odoo/) | 開源 ERP/CRM 系統 |
