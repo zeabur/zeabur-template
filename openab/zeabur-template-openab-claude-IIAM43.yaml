@@ -180,6 +180,17 @@ spec:
               #!/bin/sh
               set -e
 
+              # Initialize shell config on first boot (volume is empty)
+              if [ ! -f /home/node/.bashrc ]; then
+                cp /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout /home/node/ 2>/dev/null || true
+              fi
+
+              # Fix ownership for persistent volume when startup runs as root
+              if [ "$(id -u)" = "0" ]; then
+                chown -R node:node /home/node
+                chmod 755 /home/node/.config 2>/dev/null || true
+              fi
+
               if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ] && [ -z "$GATEWAY_URL" ]; then
                 echo "openab: no adapter configured (set DISCORD_BOT_TOKEN, SLACK_BOT_TOKEN, or GATEWAY_URL) — sleeping"
                 exec sleep infinity
@@ -263,8 +274,13 @@ spec:
                 echo "openab: injected streaming = true"
               fi
 
-              # Run openab as node user (claude-code 2.1+ blocks bypassPermissions as root)
-              exec su -p -s /bin/sh node -c "exec openab run --config '$CONFIG_FILE'"
+              if [ "$(id -u)" = "0" ]; then
+                chown -R node:node "$CONFIG_DIR"
+                # Run openab as node user (claude-code 2.1+ blocks bypassPermissions as root)
+                exec runuser -u node --preserve-environment -- openab run --config "$CONFIG_FILE"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
           - path: /opt/config.toml.template
             template: |
               [agent]
