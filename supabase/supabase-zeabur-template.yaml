@@ -260,9 +260,9 @@ spec:
               content: psql "postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${DATABASE_NAME}"
             - title: PostgreSQL username
               content: ${DATABASE_USER}
-            - title: PostgresSQL password
+            - title: PostgreSQL password
               content: ${DATABASE_PASSWORD}
-            - title: PostgresSQL database
+            - title: PostgreSQL database
               content: ${DATABASE_NAME}
             - title: PostgreSQL host
               content: ${PORT_FORWARDED_HOSTNAME}
