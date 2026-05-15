@@ -178,7 +178,13 @@ spec:
               #!/bin/sh
               set -e
 
-              # Fix ownership for persistent volume
+              # Initialize shell dotfiles and fix ownership for persistent volume
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
               chown -R agent:agent /home/agent
               chmod 755 /home/agent/.config 2>/dev/null || true
 

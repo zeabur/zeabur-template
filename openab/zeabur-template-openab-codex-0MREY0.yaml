@@ -239,7 +239,7 @@ spec:
               fi
 
               # Authenticate codex with API key if not already logged in
-              if [ -n "$OPENAI_API_KEY" ] && [ ! -f "$HOME/.codex/auth.json" ]; then
+              if [ -n "$OPENAI_API_KEY" ] && [ ! -f /home/node/.codex/auth.json ]; then
                 printf '%s' "$OPENAI_API_KEY" | runuser -u node --preserve-environment -- codex login --with-api-key
               fi
 
