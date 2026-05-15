@@ -62,11 +62,11 @@ spec:
                 content: ${POSTGRES_USERNAME}
                 category: Credentials
               - type: PASSWORD
-                title: PostgresSQL password
+                title: PostgreSQL password
                 content: ${POSTGRES_PASSWORD}
                 category: Credentials
               - type: TEXT
-                title: PostgresSQL database
+                title: PostgreSQL database
                 content: ${POSTGRES_DATABASE}
                 category: Credentials
               - type: TEXT
