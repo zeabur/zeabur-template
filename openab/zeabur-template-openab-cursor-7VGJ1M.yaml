@@ -51,7 +51,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template uses a pinned version (`0.8.3-beta.4`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor).
+    - **Image tag:** This template uses a pinned version (`0.8.3-beta.11`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor).
     - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Auth credentials (`~/.cursor/`), MCP config, approvals, and settings survive restarts.
     - **Config ownership:** The container starts as root and switches to `agent` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
     - **Paid subscription required:** Cursor Agent CLI requires a paid Cursor subscription (Pro or Business).
@@ -153,7 +153,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-cursor:0.8.3-beta.4
+          image: ghcr.io/openabdev/openab-cursor:0.8.3-beta.11
           command:
             - /bin/sh
             - -c
@@ -262,7 +262,7 @@ localization:
 
       ## 注意事項
 
-      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.4`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor)。
+      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor)。
       - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。認證資料（`~/.cursor/`）、MCP 設定、approvals 和設定會在重啟後保留。
       - **檔案權限：** 容器以 root 啟動後切換為 agent 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
       - **需要付費訂閱：** Cursor Agent CLI 需要付費的 Cursor 訂閱方案（Pro 或 Business）。
@@ -381,7 +381,7 @@ localization:
 
       ## 注意事项
 
-      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.4`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor)。
+      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor)。
       - **持久化存储：** `/home/agent` 挂载为持久化磁盘。认证数据（`~/.cursor/`）、MCP 配置、approvals 和设置会在重启后保留。
       - **文件权限：** 容器以 root 启动后切换为 agent 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
       - **需要付费订阅：** Cursor Agent CLI 需要付费的 Cursor 订阅方案（Pro 或 Business）。
@@ -502,7 +502,7 @@ localization:
 
       - **有料サブスクリプション必須：** Cursor Agent CLI には有料の Cursor サブスクリプション（Pro または Business）が必要です。
       - **デプロイ後に認証：** API キー環境変数はありません。初回デプロイ後にコンテナ内で `cursor-agent login` を実行してください（下記参照）。
-      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.4`）を使用します。アップグレードするには Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。可用なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor)。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.11`）を使用します。アップグレードするには Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。可用なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor)。
       - **永続ストレージ：** `/home/agent` が永続ボリュームで、認証情報（`~/.cursor/`）、MCP 設定、approvals が保持されます。
 
       ## セットアップ
@@ -610,7 +610,7 @@ localization:
 
       - **Suscripción de pago requerida:** Cursor Agent CLI requiere una suscripción de pago de Cursor (Pro o Business).
       - **Autenticación después del despliegue:** No hay variable de API key. Debe ejecutar `cursor-agent login` dentro del contenedor tras el primer despliegue.
-      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3-beta.4`). Para actualizar, cambie la etiqueta en Zeabur Dashboard → Servicio → Configuración. Tags disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor).
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3-beta.11`). Para actualizar, cambie la etiqueta en Zeabur Dashboard → Servicio → Configuración. Tags disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor).
       - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente e incluye las credenciales de autenticación (`~/.cursor/`).
 
       ## Configuración
@@ -718,7 +718,7 @@ localization:
 
       - **Butuh langganan berbayar:** Cursor Agent CLI membutuhkan langganan Cursor berbayar (Pro atau Business).
       - **Autentikasi setelah deploy:** Tidak ada env var API key. Anda perlu menjalankan `cursor-agent login` di dalam container setelah deploy pertama.
-      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.4`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor).
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.11`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-cursor).
       - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten, termasuk kredensial autentikasi (`~/.cursor/`).
 
       ## Pengaturan

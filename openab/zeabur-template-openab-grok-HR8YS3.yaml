@@ -2,10 +2,10 @@
 apiVersion: zeabur.com/v1
 kind: Template
 metadata:
-  name: OpenAB Kiro
+  name: OpenAB Grok
 spec:
   description: |
-    Open Agent Broker — a lightweight Rust harness that bridges Discord and Slack to any ACP-compatible coding CLI (Claude Code, Codex, Gemini, Kiro) over stdio JSON-RPC. This template uses the Kiro CLI as the agent backend.
+    Open Agent Broker — a lightweight Rust harness that bridges Discord and Slack to any ACP-compatible coding CLI over stdio JSON-RPC. This template uses Grok Build (xAI's official coding agent CLI) as the backend via `grok agent stdio`.
     Source: https://github.com/openabdev/openab
   icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
   coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
@@ -42,10 +42,10 @@ spec:
       type: STRING
       name: Allow Bot Messages (optional)
       description: "Optional. Set to 'on' to allow messages from bots/webhooks to trigger the agent. Leave empty to disable (default)."
-    - key: KIRO_API_KEY
+    - key: GROK_CODE_XAI_API_KEY
       type: STRING
-      name: Kiro API Key (optional, Pro+)
-      description: "Optional. API key for Kiro Pro/Pro+/Power subscribers. Leave empty to authenticate via device flow after deployment (free tier)."
+      name: Grok / xAI API Key (optional)
+      description: "Optional. xAI API key (xai-...) from https://console.x.ai/. Leave empty to authenticate via device flow after deployment (SuperGrok subscription) or to use a deployment key set later in the Dashboard."
     - key: SLACK_BOT_TOKEN
       type: STRING
       name: Slack Bot Token (optional)
@@ -59,17 +59,16 @@ spec:
       name: Max Concurrent Sessions (optional)
       description: "Optional. Maximum number of concurrent agent sessions (default: 10). Oldest idle session is evicted when the limit is reached."
   readme: |
-    # OpenAB Kiro
+    # OpenAB Grok
 
-    [OpenAB](https://github.com/openabdev/openab) is a lightweight, open-source Rust harness that bridges Discord to any [Agent Client Protocol](https://github.com/anthropics/agent-protocol)-compatible coding CLI over stdio JSON-RPC.
+    [OpenAB](https://github.com/openabdev/openab) is a lightweight, open-source Rust harness that bridges Discord and Slack to any [Agent Client Protocol](https://github.com/anthropics/agent-protocol)-compatible coding CLI over stdio JSON-RPC.
 
-    This template deploys the Kiro variant using the base `openab` image with `kiro-cli` as the agent backend.
+    This template runs the Grok variant — it uses [Grok Build](https://x.ai/news/grok-build-cli), xAI's official coding agent CLI, as the backend via `grok agent stdio`.
 
     ## Important Notes
 
-    - **Image tag:** This template uses a pinned version (`0.8.3-beta.11`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
-    - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
-    - **Config ownership:** The container runs directly as `agent` user (uid 1000). If you encounter permission issues on the persistent volume, restart the service.
+    - **Image tag:** This template uses a pinned version (`0.8.3-beta.11`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-grok).
+    - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Grok credentials (`~/.grok/auth.json`), settings, and config survive restarts.
 
     ## Setup
 
@@ -87,29 +86,21 @@ spec:
     2. Right-click the channel where you want the bot to respond → **Copy Channel ID**
     3. For multiple channels, separate IDs with commas: `123456789012345678,234567890123456789`
 
-    ### 3. Get a Kiro API Key (Pro/Pro+/Power only)
+    ### 3. Choose an Auth Method
 
-    If you have a paid Kiro subscription, go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key and paste it into the `KIRO_API_KEY` variable. This lets the bot authenticate automatically — no post-deploy steps needed.
+    Grok Build supports three credential sources. Pick whichever fits your use case.
 
-    Free tier users can leave `KIRO_API_KEY` empty and authenticate after deployment (see step 5).
+    | Method | When to use | How |
+    |--------|-------------|-----|
+    | **API Key** | Pay-per-token API billing, CI / bot deployments | Get a key from [console.x.ai](https://console.x.ai/) → paste into `GROK_CODE_XAI_API_KEY` variable |
+    | **Device-Auth** | SuperGrok paid subscription | Leave `GROK_CODE_XAI_API_KEY` empty. After deploy, run `runuser -u agent -- grok login --device-auth` in the service Exec terminal. The CLI prints a short code + URL — open the URL on any device, enter the code, approve. Token stored at `/home/agent/.grok/auth.json` (persists across restarts). |
+    | **Deployment Key** | xAI enterprise customers | Add `GROK_DEPLOYMENT_KEY` as a custom variable in Zeabur Dashboard → Service → Variables after deploy. Takes precedence over `auth.json`. |
+
+    > 💡 Unlike OAuth flows that bind to a loopback port, Grok's device-auth works in any headless environment (no port-forward, no curl-the-callback trick).
 
     ### 4. Deploy
 
-    Fill in the variables and click deploy. The service connects to Discord automatically.
-
-    ### 5. Authenticate Kiro via Device Flow (Free tier only)
-
-    Skip this step if you set `KIRO_API_KEY` in step 3.
-
-    After the service is running, open the service terminal in Zeabur Dashboard and run:
-
-    ```
-    runuser -u agent -- kiro-cli login --use-device-flow
-    ```
-
-    > ℹ️ `runuser -u agent` runs the login as the `agent` user, so credentials are owned correctly from the start — no chown or restart needed.
-
-    Follow the on-screen URL and code to complete device flow authorization in your browser. New conversations will pick up the new auth automatically — restart only if you need to invalidate existing in-memory sessions.
+    Fill in the variables and click deploy. The service connects to Discord automatically. If you used **Device-Auth**, run the login command in step 3 after the service is running.
 
     ## Slack Setup (Optional)
 
@@ -124,37 +115,41 @@ spec:
 
     Set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in the template variables before deploying. Both Discord and Slack can run simultaneously.
 
-    ## Add Messaging Platforms (Telegram / LINE / Feishu / Google Chat / MS Teams)
+    ## Add Messaging Platforms (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
 
-    To bridge Telegram, LINE, Feishu/Lark, Google Chat, or MS Teams, deploy the [OpenAB Gateway template](https://zeabur.com/templates/IMRONB) into the same Zeabur project. Then add these environment variables to this service:
+    To bridge Telegram, LINE, Feishu/Lark, Google Chat, MS Teams, or WeCom, deploy the [OpenAB Gateway template](https://zeabur.com/templates/IMRONB) into the same Zeabur project. Then add these environment variables to this service:
 
     - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-    - `GATEWAY_PLATFORM` = one of `telegram`, `line`, `feishu`, `googlechat`, `teams`
+    - `GATEWAY_PLATFORM` = one of `telegram`, `line`, `feishu`, `googlechat`, `teams`, `wecom`
 
     Restart the service. The startup script auto-injects the `[gateway]` block into `config.toml`.
+
     ## Usage
 
-    - **@mention the bot** in an allowed channel or Slack channel to start a conversation
+    - **@mention the bot** in an allowed Discord channel or Slack channel to start a conversation
     - OpenAB creates a **thread** for multi-turn conversations — no @mention needed for follow-ups
-    - Each thread maps to a persistent Kiro session (24h TTL)
+    - Each thread maps to a persistent Grok session (24h TTL)
 
     ## Customization
 
     | File | Description |
     |------|-------------|
     | `/home/agent/.config/openab/config.toml` | OpenAB config (sessions, reactions, STT, etc.) |
+    | `/home/agent/.grok/auth.json` | Grok OAuth credentials (managed by `grok login`) |
+    | `/home/agent/.grok/config.toml` | Grok runtime config |
 
     `config.toml` is created from a built-in template on first boot. After that, edit the file directly — environment variables are only used for initial setup. To reset to defaults, delete the file and restart: `rm /home/agent/.config/openab/config.toml`
 
-    For config options, see the [OpenAB documentation](https://github.com/openabdev/openab).
+    For OpenAB config options, see the [OpenAB documentation](https://github.com/openabdev/openab). For Grok config options, see the [Grok Build docs](https://x.ai/news/grok-build-cli).
 
     ## Disabling
 
-    Leave `Discord Bot Token` empty. The service sleeps instead of crashing.
+    Leave `Discord Bot Token` empty (and `SLACK_BOT_TOKEN` empty). The service sleeps instead of crashing.
 
     ## Links
 
     - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [Grok Build (xAI)](https://x.ai/news/grok-build-cli)
     - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
   services:
     - name: openab
@@ -162,7 +157,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab:0.8.3-beta.11
+          image: ghcr.io/openabdev/openab-grok:0.8.3-beta.11
           command:
             - /bin/sh
             - -c
@@ -252,13 +247,13 @@ spec:
           - path: /opt/config.toml.template
             template: |
               [agent]
-              command = "kiro-cli"
-              args = ["acp", "--trust-all-tools"]
+              command = "grok"
+              args = ["agent", "stdio"]
               working_dir = "/home/agent"
         env:
           DISCORD_BOT_TOKEN:
             default: ${DISCORD_BOT_TOKEN}
-          KIRO_API_KEY:
+          GROK_CODE_XAI_API_KEY:
             default: ""
           OPENAB_ALLOWED_CHANNELS:
             default: ""
@@ -277,15 +272,15 @@ spec:
 localization:
   zh-TW:
     description: |
-      Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何 ACP 相容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作為 agent 後端。
+      Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何 ACP 相容的 coding CLI。此模板使用 Grok Build（xAI 官方 coding agent CLI）作為後端，透過 `grok agent stdio` 啟動。
       來源：https://github.com/openabdev/openab
     variables:
       - key: DISCORD_BOT_TOKEN
         name: Discord Bot Token
         description: 從 https://discord.com/developers/applications 取得的 Token
-      - key: KIRO_API_KEY
-        name: Kiro API Key（選填，Pro+ 方案）
-        description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
+      - key: GROK_CODE_XAI_API_KEY
+        name: Grok / xAI API Key（選填）
+        description: "選填。xAI API key（xai-...），從 https://console.x.ai/ 取得。留空則部署後使用 device flow 認證（SuperGrok 訂閱），或之後在 Dashboard 新增 deployment key。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord 頻道 ID（選填）
         description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
@@ -293,17 +288,16 @@ localization:
         name: Discord 用戶 ID（選填）
         description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
     readme: |
-      # OpenAB Kiro
+      # OpenAB Grok
 
-      [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+      [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-      此模板部署的是 Kiro 變體，使用基礎 `openab` 映像搭配 `kiro-cli` 作為 agent 後端。
+      此模板部署 Grok 變體 — 使用 xAI 官方 coding agent CLI [Grok Build](https://x.ai/news/grok-build-cli) 作為後端，透過 `grok agent stdio` 啟動。
 
       ## 注意事項
 
-      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
-      - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
-      - **檔案權限：** 容器以 root 啟動後切換為 agent 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
+      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-grok)。
+      - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Grok 認證資料（`~/.grok/auth.json`）、設定、config 會在重啟後保留。
 
       ## 設定步驟
 
@@ -321,29 +315,21 @@ localization:
       2. 對你要 Bot 回應的頻道按右鍵 → **複製頻道 ID**
       3. 多個頻道用逗號分隔：`123456789012345678,234567890123456789`
 
-      ### 3. 取得 Kiro API Key（僅 Pro/Pro+/Power 方案）
+      ### 3. 選擇認證方式
 
-      如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY` 變數。服務將自動認證，無需部署後的手動操作。
+      Grok Build 支援三種認證來源，選一個適合你的場景：
 
-      免費方案用戶將 `KIRO_API_KEY` 留空，部署後執行步驟 5 認證。
+      | 方法 | 適用場景 | 操作 |
+      |------|----------|------|
+      | **API Key** | 依使用量付費 API、CI / bot 部署 | 至 [console.x.ai](https://console.x.ai/) 取得 key，填入 `GROK_CODE_XAI_API_KEY` 變數 |
+      | **Device-Auth** | SuperGrok 訂閱 | `GROK_CODE_XAI_API_KEY` 留空。部署後到服務 Exec 終端執行 `runuser -u agent -- grok login --device-auth`。CLI 會印出短代碼 + URL — 在任何裝置開啟 URL、輸入代碼、同意授權。Token 寫入 `/home/agent/.grok/auth.json`（重啟後保留）。 |
+      | **Deployment Key** | xAI 企業客戶 | 部署後在 Zeabur Dashboard → 服務 → Variables 新增自訂變數 `GROK_DEPLOYMENT_KEY`。優先權高於 `auth.json`。 |
+
+      > 💡 跟 loopback OAuth 不同，Grok 的 device-auth 在任何 headless 環境都能用（不需 port-forward、不需 curl callback）。
 
       ### 4. 部署
 
-      填入變數後點擊部署即可。服務會自動連線到 Discord。
-
-      ### 5. 透過 Device Flow 認證 Kiro（僅免費方案）
-
-      若步驟 3 已填入 `KIRO_API_KEY`，跳過此步驟。
-
-      服務啟動後，在 Zeabur Dashboard 打開服務終端，執行：
-
-      ```
-      runuser -u agent -- kiro-cli login --use-device-flow
-      ```
-
-      > ℹ️ `runuser -u agent` 直接以 `agent` 身份執行登入，認證檔從一開始就有正確擁有者 — 不需要再 chown 或重啟。
-
-      依照畫面顯示的 URL 和 code 到瀏覽器完成授權。新對話會自動套用新認證，不需重啟服務（若要清掉現有 session 才需重啟）。
+      填入變數後點擊部署。服務會自動連線到 Discord。如果選擇 **Device-Auth**，部署後再執行步驟 3 中的 login 指令。
 
       ## Slack 設定（選用）
 
@@ -358,49 +344,53 @@ localization:
 
       部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 變數。Discord 和 Slack 可同時運作。
 
-      ## 新增通訊平台（Telegram / LINE / Feishu / Google Chat / MS Teams）
+      ## 新增通訊平台（Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom）
 
-      若要橋接 Telegram、LINE、Feishu/Lark、Google Chat 或 MS Teams，請在同一個 Zeabur 專案中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然後在此服務新增以下環境變數：
+      若要橋接 Telegram、LINE、Feishu/Lark、Google Chat、MS Teams 或 WeCom（企業微信），請在同一個 Zeabur 專案中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然後在此服務新增以下環境變數：
 
       - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 其中之一
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` 或 `wecom` 其中之一
 
       重新啟動服務後，啟動腳本會自動在 `config.toml` 中加入 `[gateway]` 區塊。
+
       ## 使用方式
 
       - 在允許的 Discord 或 Slack 頻道中 **@mention Bot** 即可開始對話
       - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
-      - 每個 thread 對應一個持久的 Kiro session（預設 24 小時 TTL）
+      - 每個 thread 對應一個持久的 Grok session（預設 24 小時 TTL）
 
       ## 自訂設定
 
       | 檔案 | 說明 |
       |------|------|
       | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT 等） |
+      | `/home/agent/.grok/auth.json` | Grok OAuth 認證（由 `grok login` 管理） |
+      | `/home/agent/.grok/config.toml` | Grok runtime 設定 |
 
       `config.toml` 在首次啟動時從內建範本建立。之後請直接編輯檔案，環境變數僅用於初始設定。要恢復預設值請刪除後重啟：`rm /home/agent/.config/openab/config.toml`
 
-      設定選項請參閱 [OpenAB 文件](https://github.com/openabdev/openab)。
+      OpenAB 設定選項請參閱 [OpenAB 文件](https://github.com/openabdev/openab)。Grok 設定選項請參閱 [Grok Build 文件](https://x.ai/news/grok-build-cli)。
 
       ## 停用
 
-      部署時將 `Discord Bot Token` 留空即可。服務會進入 sleep 狀態，不會崩潰。
+      部署時將 `Discord Bot Token` 和 `SLACK_BOT_TOKEN` 都留空即可。服務會進入 sleep 狀態，不會崩潰。
 
       ## 連結
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Grok Build（xAI）](https://x.ai/news/grok-build-cli)
       - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
   zh-CN:
     description: |
-      Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何 ACP 兼容的 coding CLI（Claude Code、Codex、Gemini、Kiro）。此模板使用 Kiro CLI 作为 agent 后端。
+      Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何 ACP 兼容的 coding CLI。此模板使用 Grok Build（xAI 官方 coding agent CLI）作为后端，通过 `grok agent stdio` 启动。
       来源：https://github.com/openabdev/openab
     variables:
       - key: DISCORD_BOT_TOKEN
         name: Discord Bot Token
         description: 从 https://discord.com/developers/applications 获取的 Token
-      - key: KIRO_API_KEY
-        name: Kiro API Key（选填，Pro+ 方案）
-        description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
+      - key: GROK_CODE_XAI_API_KEY
+        name: Grok / xAI API Key（选填）
+        description: "选填。xAI API key（xai-...），从 https://console.x.ai/ 获取。留空则部署后使用 device flow 认证（SuperGrok 订阅），或之后在 Dashboard 新增 deployment key。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord 频道 ID（选填）
         description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
@@ -408,17 +398,16 @@ localization:
         name: Discord 用户 ID（选填）
         description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
     readme: |
-      # OpenAB Kiro
+      # OpenAB Grok
 
-      [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+      [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
 
-      此模板部署的是 Kiro 变体，使用基础 `openab` 镜像搭配 `kiro-cli` 作为 agent 后端。
+      此模板部署 Grok 变体 — 使用 xAI 官方 coding agent CLI [Grok Build](https://x.ai/news/grok-build-cli) 作为后端，通过 `grok agent stdio` 启动。
 
       ## 注意事项
 
-      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
-      - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
-      - **文件权限：** 容器以 root 启动后切换为 agent 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
+      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-grok)。
+      - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Grok 认证数据（`~/.grok/auth.json`）、设置、config 会在重启后保留。
 
       ## 设置步骤
 
@@ -436,29 +425,21 @@ localization:
       2. 右键点击你要 Bot 回应的频道 → **复制频道 ID**
       3. 多个频道用逗号分隔：`123456789012345678,234567890123456789`
 
-      ### 3. 获取 Kiro API Key（仅 Pro/Pro+/Power 方案）
+      ### 3. 选择认证方式
 
-      如果你有付费的 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY` 变量。服务将自动认证，无需部署后的手动操作。
+      Grok Build 支持三种认证来源，选一个适合你的场景：
 
-      免费方案用户将 `KIRO_API_KEY` 留空，部署后执行步骤 5 认证。
+      | 方法 | 适用场景 | 操作 |
+      |------|----------|------|
+      | **API Key** | 按使用量付费 API、CI / bot 部署 | 至 [console.x.ai](https://console.x.ai/) 获取 key，填入 `GROK_CODE_XAI_API_KEY` 变量 |
+      | **Device-Auth** | SuperGrok 订阅 | `GROK_CODE_XAI_API_KEY` 留空。部署后到服务 Exec 终端执行 `runuser -u agent -- grok login --device-auth`。CLI 会打印短代码 + URL — 在任何设备打开 URL、输入代码、同意授权。Token 写入 `/home/agent/.grok/auth.json`（重启后保留）。 |
+      | **Deployment Key** | xAI 企业客户 | 部署后在 Zeabur Dashboard → 服务 → Variables 新增自定义变量 `GROK_DEPLOYMENT_KEY`。优先级高于 `auth.json`。 |
+
+      > 💡 跟 loopback OAuth 不同，Grok 的 device-auth 在任何 headless 环境都能用（不需 port-forward、不需 curl callback）。
 
       ### 4. 部署
 
-      填入变量后点击部署即可。服务会自动连接到 Discord。
-
-      ### 5. 通过 Device Flow 认证 Kiro（仅免费方案）
-
-      若步骤 3 已填入 `KIRO_API_KEY`，跳过此步骤。
-
-      服务启动后，在 Zeabur Dashboard 打开服务终端，运行：
-
-      ```
-      runuser -u agent -- kiro-cli login --use-device-flow
-      ```
-
-      > ℹ️ `runuser -u agent` 直接以 `agent` 身份执行登录，认证文件从一开始就归 `agent` 所有 — 不需要再 chown 或重启。
-
-      按照屏幕显示的 URL 和 code 到浏览器完成授权。新对话会自动采用新认证，无需重启服务（如果要清掉现有 session 才需要重启）。
+      填入变量后点击部署。服务会自动连接到 Discord。如果选择 **Device-Auth**，部署后再执行步骤 3 中的 login 指令。
 
       ## Slack 设置（可选）
 
@@ -473,49 +454,53 @@ localization:
 
       部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 变量。Discord 和 Slack 可同时运行。
 
-      ## 添加通讯平台（Telegram / LINE / 飞书 / Google Chat / MS Teams）
+      ## 添加通讯平台（Telegram / LINE / 飞书 / Google Chat / MS Teams / 企业微信）
 
-      若要桥接 Telegram、LINE、飞书/Lark、Google Chat 或 MS Teams，请在同一个 Zeabur 项目中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然后在此服务上设置以下环境变量：
+      若要桥接 Telegram、LINE、飞书/Lark、Google Chat、MS Teams 或企业微信（WeCom），请在同一个 Zeabur 项目中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然后在此服务上设置以下环境变量：
 
       - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 之一
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` 或 `wecom` 之一
 
       重启服务。启动脚本会自动将 `[gateway]` 块注入 `config.toml`。
+
       ## 使用方式
 
       - 在允许的 Discord 或 Slack 频道中 **@mention Bot** 即可开始对话
       - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
-      - 每个 thread 对应一个持久的 Kiro session（默认 24 小时 TTL）
+      - 每个 thread 对应一个持久的 Grok session（默认 24 小时 TTL）
 
       ## 自定义设置
 
       | 文件 | 说明 |
       |------|------|
       | `/home/agent/.config/openab/config.toml` | OpenAB 设置（sessions、reactions、STT 等） |
+      | `/home/agent/.grok/auth.json` | Grok OAuth 认证（由 `grok login` 管理） |
+      | `/home/agent/.grok/config.toml` | Grok runtime 设置 |
 
       `config.toml` 在首次启动时从内建模板创建。之后请直接编辑文件，环境变量仅用于初始设置。要恢复默认值请删除后重启：`rm /home/agent/.config/openab/config.toml`
 
-      设置选项请参阅 [OpenAB 文档](https://github.com/openabdev/openab)。
+      OpenAB 设置选项请参阅 [OpenAB 文档](https://github.com/openabdev/openab)。Grok 设置选项请参阅 [Grok Build 文档](https://x.ai/news/grok-build-cli)。
 
       ## 停用
 
-      部署时将 `Discord Bot Token` 留空即可。服务会进入 sleep 状态，不会崩溃。
+      部署时将 `Discord Bot Token` 和 `SLACK_BOT_TOKEN` 都留空即可。服务会进入 sleep 状态，不会崩溃。
 
       ## 链接
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Grok Build（xAI）](https://x.ai/news/grok-build-cli)
       - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
   ja-JP:
     description: |
-      Open Agent Broker — stdio JSON-RPC を通じて Discord と Slack を ACP 対応の coding CLI（Claude Code、Codex、Gemini、Kiro）にブリッジする軽量な Rust ハーネス。このテンプレートは Kiro CLI をエージェントバックエンドとして使用します。
+      Open Agent Broker — stdio JSON-RPC を通じて Discord と Slack を ACP 対応の coding CLI にブリッジする軽量な Rust ハーネス。このテンプレートは Grok Build（xAI 公式の coding agent CLI）をバックエンドとして使用し、`grok agent stdio` で起動します。
       ソース：https://github.com/openabdev/openab
     variables:
       - key: DISCORD_BOT_TOKEN
         name: Discord Bot トークン
         description: https://discord.com/developers/applications から取得したトークン
-      - key: KIRO_API_KEY
-        name: Kiro API Key（オプション、Pro+ プラン）
-        description: "オプション。Kiro Pro/Pro+/Power 加入者は API Key を入力することで、デプロイ後の手動ログインが不要になります。無料プランは空にして、デプロイ後に device flow で認証してください。"
+      - key: GROK_CODE_XAI_API_KEY
+        name: Grok / xAI API Key（オプション）
+        description: "オプション。xAI API key（xai-...）。[console.x.ai](https://console.x.ai/) から取得。空のままにするとデプロイ後の device flow 認証（SuperGrok サブスクリプション）、または後で Dashboard で deployment key を追加できます。"
       - key: OPENAB_ALLOWED_CHANNELS
         name: Discord チャンネル ID（オプション）
         description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
@@ -523,17 +508,16 @@ localization:
         name: Discord ユーザー ID（オプション）
         description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
     readme: |
-      # OpenAB Kiro
+      # OpenAB Grok
 
-      [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
+      [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord と Slack を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
 
-      このテンプレートは Kiro バリアントをデプロイし、ベース `openab` イメージと `kiro-cli` をエージェントバックエンドとして使用します。
+      このテンプレートは Grok バリアントを実行します — xAI 公式の coding agent CLI である [Grok Build](https://x.ai/news/grok-build-cli) をバックエンドとして使用し、`grok agent stdio` で起動します。
 
       ## 注意事項
 
-      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.11`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
-      - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
-      - **ファイル権限：** コンテナは root で起動し、openab 実行前に agent ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.11`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-grok)。
+      - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。Grok の認証情報（`~/.grok/auth.json`）、設定、config は再起動後も保持されます。
 
       ## セットアップ
 
@@ -551,29 +535,21 @@ localization:
       2. Bot に応答させたいチャンネルを右クリック → **チャンネル ID をコピー**
       3. 複数チャンネルはカンマで区切る：`123456789012345678,234567890123456789`
 
-      ### 3. Kiro API Key の取得（Pro/Pro+/Power プランのみ）
+      ### 3. 認証方法の選択
 
-      有料の Kiro サブスクリプションをお持ちの場合、[kiro.dev](https://kiro.dev) → Settings → API Keys で key を作成し、`KIRO_API_KEY` 変数に入力してください。サービスが自動的に認証されるため、デプロイ後の手動操作は不要です。
+      Grok Build は 3 種類の認証ソースをサポートします。ユースケースに合うものを選んでください。
 
-      無料プランのユーザーは `KIRO_API_KEY` を空のままにし、デプロイ後にステップ 5 で認証してください。
+      | 方法 | 利用シーン | 手順 |
+      |------|-----------|------|
+      | **API Key** | トークン課金の API 利用、CI / bot デプロイ | [console.x.ai](https://console.x.ai/) でキーを取得 → `GROK_CODE_XAI_API_KEY` 変数に貼り付け |
+      | **Device-Auth** | SuperGrok 有料サブスクリプション | `GROK_CODE_XAI_API_KEY` は空のまま。デプロイ後、サービスの Exec ターミナルで `runuser -u agent -- grok login --device-auth` を実行。CLI が短いコードと URL を表示するので、任意のデバイスで URL を開き、コードを入力して承認。Token は `/home/agent/.grok/auth.json` に保存され、再起動後も保持されます。 |
+      | **Deployment Key** | xAI エンタープライズ顧客 | デプロイ後、Zeabur Dashboard → サービス → Variables で `GROK_DEPLOYMENT_KEY` をカスタム変数として追加。`auth.json` より優先されます。 |
+
+      > 💡 loopback ポートにバインドする OAuth フローとは異なり、Grok の device-auth は任意のヘッドレス環境で動作します（port-forward 不要、curl-the-callback トリック不要）。
 
       ### 4. デプロイ
 
-      変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。
-
-      ### 5. Device Flow で Kiro を認証（無料プランのみ）
-
-      ステップ 3 で `KIRO_API_KEY` を入力した場合はこのステップをスキップしてください。
-
-      サービスが起動した後、Zeabur Dashboard でサービスターミナルを開き、以下を実行：
-
-      ```
-      runuser -u agent -- kiro-cli login --use-device-flow
-      ```
-
-      > ℹ️ `runuser -u agent` は `agent` ユーザーとしてログインを実行するため、認証ファイルは最初から正しい所有者になります — chown や再起動は不要です。
-
-      画面に表示される URL とコードをブラウザで開いて認証を完了してください。新しい会話は自動的に新しい認証を使用します — メモリ上の既存セッションを無効化したい場合のみ再起動してください。
+      変数を入力してデプロイをクリック。サービスは自動的に Discord に接続します。**Device-Auth** を使用する場合は、サービス起動後にステップ 3 の login コマンドを実行してください。
 
       ## Slack セットアップ（オプション）
 
@@ -588,49 +564,53 @@ localization:
 
       デプロイ前に `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` 変数を入力してください。Discord と Slack は同時に使用できます。
 
-      ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams）
+      ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom）
 
-      Telegram、LINE、Feishu/Lark、Google Chat、MS Teams を接続するには、同じ Zeabur プロジェクトに [OpenAB Gateway テンプレート](https://zeabur.com/templates/IMRONB) をデプロイしてから、このサービスに次の環境変数を設定してください：
+      Telegram、LINE、Feishu/Lark、Google Chat、MS Teams、WeCom を接続するには、同じ Zeabur プロジェクトに [OpenAB Gateway テンプレート](https://zeabur.com/templates/IMRONB) をデプロイしてから、このサービスに次の環境変数を設定してください：
 
       - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` のいずれか
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams`、`wecom` のいずれか
 
       サービスを再起動すると、起動スクリプトが `config.toml` に `[gateway]` セクションを自動追加します。
+
       ## 使い方
 
       - 許可された Discord または Slack チャンネルで **Bot を @mention** して会話を開始
       - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
-      - 各 thread は永続的な Kiro session に対応（デフォルト 24 時間 TTL）
+      - 各 thread は永続的な Grok session に対応（デフォルト 24 時間 TTL）
 
       ## カスタマイズ
 
       | ファイル | 説明 |
       |---------|------|
       | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT など） |
+      | `/home/agent/.grok/auth.json` | Grok OAuth 認証情報（`grok login` で管理） |
+      | `/home/agent/.grok/config.toml` | Grok ランタイム設定 |
 
       `config.toml` は初回起動時に内蔵テンプレートから作成されます。以降の変更はファイルを直接編集してください。環境変数は初期設定時のみ使用されます。デフォルトに戻すにはファイルを削除して再起動：`rm /home/agent/.config/openab/config.toml`
 
-      設定オプションは [OpenAB ドキュメント](https://github.com/openabdev/openab) を参照。
+      OpenAB の設定オプションは [OpenAB ドキュメント](https://github.com/openabdev/openab) を、Grok の設定オプションは [Grok Build ドキュメント](https://x.ai/news/grok-build-cli) を参照してください。
 
       ## 無効化
 
-      デプロイ時に `Discord Bot Token` を空にしてください。サービスはクラッシュせずスリープ状態になります。
+      デプロイ時に `Discord Bot Token` と `SLACK_BOT_TOKEN` の両方を空にしてください。サービスはクラッシュせずスリープ状態になります。
 
       ## リンク
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Grok Build（xAI）](https://x.ai/news/grok-build-cli)
       - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
   es-ES:
     description: |
-      Open Agent Broker — un arnés ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP (Claude Code, Codex, Gemini, Kiro) a través de stdio JSON-RPC. Esta plantilla usa Kiro CLI como backend de agente.
+      Open Agent Broker — un arnés ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP a través de stdio JSON-RPC. Esta plantilla usa Grok Build (el CLI oficial de coding agent de xAI) como backend mediante `grok agent stdio`.
       Fuente: https://github.com/openabdev/openab
     variables:
       - key: DISCORD_BOT_TOKEN
         name: Token del Bot de Discord
         description: Token obtenido de https://discord.com/developers/applications
-      - key: KIRO_API_KEY
-        name: Kiro API Key (opcional, plan Pro+)
-        description: "Opcional. Los suscriptores de Kiro Pro/Pro+/Power pueden ingresar su API Key para omitir el login manual tras el despliegue. Dejar vacío en el plan gratuito y autenticarse con device flow después."
+      - key: GROK_CODE_XAI_API_KEY
+        name: Grok / xAI API Key (opcional)
+        description: "Opcional. xAI API key (xai-...) obtenida de [console.x.ai](https://console.x.ai/). Dejar vacío para autenticar mediante device flow tras el despliegue (suscripción SuperGrok), o añadir un deployment key más tarde en el Dashboard."
       - key: OPENAB_ALLOWED_CHANNELS
         name: IDs de Canales de Discord (opcional)
         description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacío para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
@@ -638,17 +618,16 @@ localization:
         name: IDs de Usuarios de Discord (opcional)
         description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacío para permitir a todos en los canales permitidos."
     readme: |
-      # OpenAB Kiro
+      # OpenAB Grok
 
-      [OpenAB](https://github.com/openabdev/openab) es un arnés ligero de código abierto en Rust que conecta Discord con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a través de stdio JSON-RPC.
+      [OpenAB](https://github.com/openabdev/openab) es un arnés ligero de código abierto en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a través de stdio JSON-RPC.
 
-      Esta plantilla despliega la variante Kiro, usando la imagen base `openab` con `kiro-cli` como backend de agente.
+      Esta plantilla ejecuta la variante Grok — usa [Grok Build](https://x.ai/news/grok-build-cli), el CLI oficial de coding agent de xAI, como backend mediante `grok agent stdio`.
 
       ## Notas Importantes
 
-      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3-beta.11`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
-      - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente. Plugins, configuración y credenciales se conservan entre reinicios.
-      - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario agent (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automáticamente al arrancar.
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3-beta.11`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-grok).
+      - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente. Las credenciales de Grok (`~/.grok/auth.json`), settings y config se conservan entre reinicios.
 
       ## Configuración
 
@@ -666,29 +645,21 @@ localization:
       2. Clic derecho en el canal donde quieres que el Bot responda → **Copiar ID del canal**
       3. Para múltiples canales, separar con comas: `123456789012345678,234567890123456789`
 
-      ### 3. Obtener una Kiro API Key (solo plan Pro/Pro+/Power)
+      ### 3. Elegir un método de autenticación
 
-      Si tienes una suscripción de pago de Kiro, ve a [kiro.dev](https://kiro.dev) → Settings → API Keys, crea una key y pégala en la variable `KIRO_API_KEY`. El servicio se autenticará automáticamente sin pasos post-despliegue.
+      Grok Build soporta tres fuentes de credenciales. Elige la que se adapte a tu caso de uso.
 
-      Los usuarios del plan gratuito pueden dejar `KIRO_API_KEY` vacío y autenticarse después del despliegue en el paso 5.
+      | Método | Cuándo usar | Cómo |
+      |--------|-------------|------|
+      | **API Key** | Facturación pay-per-token, despliegues CI / bot | Obtén una clave en [console.x.ai](https://console.x.ai/) → pégala en la variable `GROK_CODE_XAI_API_KEY` |
+      | **Device-Auth** | Suscripción de pago SuperGrok | Deja `GROK_CODE_XAI_API_KEY` vacío. Tras el despliegue, ejecuta `runuser -u agent -- grok login --device-auth` en la terminal Exec del servicio. El CLI imprime un código corto + URL — abre la URL en cualquier dispositivo, introduce el código y aprueba. El token se guarda en `/home/agent/.grok/auth.json` (persiste entre reinicios). |
+      | **Deployment Key** | Clientes empresariales de xAI | Añade `GROK_DEPLOYMENT_KEY` como variable personalizada en Zeabur Dashboard → Servicio → Variables tras desplegar. Tiene prioridad sobre `auth.json`. |
+
+      > 💡 A diferencia de los flujos OAuth que se vinculan a un puerto loopback, el device-auth de Grok funciona en cualquier entorno headless (sin port-forward, sin truco curl-the-callback).
 
       ### 4. Desplegar
 
-      Completa las variables y haz clic en desplegar. El servicio se conecta a Discord automáticamente.
-
-      ### 5. Autenticar Kiro con Device Flow (solo plan gratuito)
-
-      Omite este paso si configuraste `KIRO_API_KEY` en el paso 3.
-
-      Después de que el servicio esté ejecutándose, abre la terminal del servicio en Zeabur Dashboard y ejecuta:
-
-      ```
-      runuser -u agent -- kiro-cli login --use-device-flow
-      ```
-
-      > ℹ️ `runuser -u agent` ejecuta el login como el usuario `agent`, por lo que las credenciales pertenecen al dueño correcto desde el inicio — sin chown ni reinicio necesarios.
-
-      Sigue la URL y el código en pantalla para completar la autorización en tu navegador. Las nuevas conversaciones aplicarán la nueva autenticación automáticamente — solo reinicia si necesitas invalidar las sesiones existentes en memoria.
+      Completa las variables y haz clic en desplegar. El servicio se conecta a Discord automáticamente. Si usaste **Device-Auth**, ejecuta el comando de login del paso 3 después de que el servicio esté en ejecución.
 
       ## Configuración de Slack (Opcional)
 
@@ -703,49 +674,53 @@ localization:
 
       Rellena `SLACK_BOT_TOKEN` y `SLACK_APP_TOKEN` antes de desplegar. Discord y Slack pueden funcionar simultáneamente.
 
-      ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams)
+      ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
 
-      Para conectar Telegram, LINE, Feishu/Lark, Google Chat o MS Teams, despliega la [plantilla OpenAB Gateway](https://zeabur.com/templates/IMRONB) en el mismo proyecto Zeabur. Luego añade estas variables de entorno a este servicio:
+      Para conectar Telegram, LINE, Feishu/Lark, Google Chat, MS Teams o WeCom, despliega la [plantilla OpenAB Gateway](https://zeabur.com/templates/IMRONB) en el mismo proyecto Zeabur. Luego añade estas variables de entorno a este servicio:
 
       - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = uno de `telegram`, `line`, `feishu`, `googlechat`, `teams`
+      - `GATEWAY_PLATFORM` = uno de `telegram`, `line`, `feishu`, `googlechat`, `teams`, `wecom`
 
       Reinicia el servicio. El script de arranque inyecta automáticamente el bloque `[gateway]` en `config.toml`.
+
       ## Uso
 
       - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
       - OpenAB crea un **thread** para conversaciones de múltiples turnos — no se necesita @mención en los mensajes siguientes
-      - Cada thread corresponde a una sesión persistente de Kiro (TTL de 24h por defecto)
+      - Cada thread corresponde a una sesión persistente de Grok (TTL de 24h por defecto)
 
       ## Personalización
 
       | Archivo | Descripción |
       |---------|-------------|
       | `/home/agent/.config/openab/config.toml` | Configuración de OpenAB (sessions, reactions, STT, etc.) |
+      | `/home/agent/.grok/auth.json` | Credenciales OAuth de Grok (gestionadas por `grok login`) |
+      | `/home/agent/.grok/config.toml` | Configuración runtime de Grok |
 
-      `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Después, edite el archivo directamente — las variables de entorno solo se usan para la configuración inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/agent/.config/openab/config.toml`
+      `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Después, edite el archivo directamente — las variables de entorno solo se usan para la configuración inicial. Para restablecer los valores predeterminados, elimine el archivo y reinicie: `rm /home/agent/.config/openab/config.toml`
 
-      Para opciones de configuración, consulte la [documentación de OpenAB](https://github.com/openabdev/openab).
+      Para las opciones de configuración de OpenAB, consulte la [documentación de OpenAB](https://github.com/openabdev/openab). Para las opciones de configuración de Grok, consulte la [documentación de Grok Build](https://x.ai/news/grok-build-cli).
 
       ## Desactivar
 
-      Dejar `Discord Bot Token` vacío al desplegar. El servicio entrará en modo sleep sin fallar.
+      Dejar `Discord Bot Token` y `SLACK_BOT_TOKEN` vacíos al desplegar. El servicio entrará en modo sleep sin fallar.
 
       ## Enlaces
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Grok Build (xAI)](https://x.ai/news/grok-build-cli)
       - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
   id-ID:
     description: |
-      Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan ACP (Claude Code, Codex, Gemini, Kiro) melalui stdio JSON-RPC. Template ini menggunakan Kiro CLI sebagai backend agen.
+      Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan ACP melalui stdio JSON-RPC. Template ini menggunakan Grok Build (CLI coding agent resmi xAI) sebagai backend melalui `grok agent stdio`.
       Sumber: https://github.com/openabdev/openab
     variables:
       - key: DISCORD_BOT_TOKEN
         name: Token Bot Discord
         description: Token dari https://discord.com/developers/applications
-      - key: KIRO_API_KEY
-        name: Kiro API Key (opsional, paket Pro+)
-        description: "Opsional. Pelanggan Kiro Pro/Pro+/Power dapat memasukkan API Key agar tidak perlu login manual setelah deploy. Kosongkan untuk paket gratis dan autentikasi dengan device flow setelahnya."
+      - key: GROK_CODE_XAI_API_KEY
+        name: Grok / xAI API Key (opsional)
+        description: "Opsional. xAI API key (xai-...) dari [console.x.ai](https://console.x.ai/). Kosongkan untuk autentikasi melalui device flow setelah deploy (langganan SuperGrok), atau tambahkan deployment key nanti di Dashboard."
       - key: OPENAB_ALLOWED_CHANNELS
         name: ID Channel Discord (opsional)
         description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
@@ -753,17 +728,16 @@ localization:
         name: ID Pengguna Discord (opsional)
         description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
     readme: |
-      # OpenAB Kiro
+      # OpenAB Grok
 
-      [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
+      [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
 
-      Template ini men-deploy varian Kiro menggunakan image dasar `openab` dengan `kiro-cli` sebagai backend agen.
+      Template ini menjalankan varian Grok — menggunakan [Grok Build](https://x.ai/news/grok-build-cli), CLI coding agent resmi dari xAI, sebagai backend melalui `grok agent stdio`.
 
       ## Catatan Penting
 
-      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.11`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
-      - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
-      - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna agent (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan — izin diperbaiki secara otomatis saat boot.
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.11`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-grok).
+      - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten. Kredensial Grok (`~/.grok/auth.json`), settings, dan config dipertahankan antar restart.
 
       ## Pengaturan
 
@@ -781,29 +755,21 @@ localization:
       2. Klik kanan channel tempat Anda ingin Bot merespons → **Salin ID Channel**
       3. Untuk beberapa channel, pisahkan dengan koma: `123456789012345678,234567890123456789`
 
-      ### 3. Dapatkan Kiro API Key (hanya paket Pro/Pro+/Power)
+      ### 3. Pilih Metode Autentikasi
 
-      Jika Anda memiliki langganan Kiro berbayar, buka [kiro.dev](https://kiro.dev) → Settings → API Keys, buat key dan masukkan ke variabel `KIRO_API_KEY`. Layanan akan otentikasi secara otomatis tanpa langkah manual setelah deploy.
+      Grok Build mendukung tiga sumber kredensial. Pilih yang sesuai dengan kasus penggunaan Anda.
 
-      Pengguna paket gratis dapat mengosongkan `KIRO_API_KEY` dan autentikasi setelah deploy di langkah 5.
+      | Metode | Kapan digunakan | Cara |
+      |--------|-----------------|------|
+      | **API Key** | Penagihan API pay-per-token, deployment CI / bot | Dapatkan key di [console.x.ai](https://console.x.ai/) → tempelkan ke variabel `GROK_CODE_XAI_API_KEY` |
+      | **Device-Auth** | Langganan berbayar SuperGrok | Biarkan `GROK_CODE_XAI_API_KEY` kosong. Setelah deploy, jalankan `runuser -u agent -- grok login --device-auth` di terminal Exec layanan. CLI mencetak kode pendek + URL — buka URL di perangkat mana pun, masukkan kode, lalu setujui. Token disimpan di `/home/agent/.grok/auth.json` (bertahan setelah restart). |
+      | **Deployment Key** | Pelanggan enterprise xAI | Tambahkan `GROK_DEPLOYMENT_KEY` sebagai variabel kustom di Zeabur Dashboard → Layanan → Variables setelah deploy. Lebih diutamakan daripada `auth.json`. |
+
+      > 💡 Tidak seperti alur OAuth yang terikat pada port loopback, device-auth Grok berfungsi di lingkungan headless mana pun (tanpa port-forward, tanpa trik curl-the-callback).
 
       ### 4. Deploy
 
-      Isi variabel dan klik deploy. Layanan akan terhubung ke Discord secara otomatis.
-
-      ### 5. Autentikasi Kiro via Device Flow (hanya paket gratis)
-
-      Lewati langkah ini jika Anda mengisi `KIRO_API_KEY` di langkah 3.
-
-      Setelah layanan berjalan, buka terminal layanan di Zeabur Dashboard dan jalankan:
-
-      ```
-      runuser -u agent -- kiro-cli login --use-device-flow
-      ```
-
-      > ℹ️ `runuser -u agent` menjalankan login sebagai pengguna `agent`, sehingga kredensial dimiliki oleh pemilik yang benar sejak awal — tanpa chown atau restart.
-
-      Ikuti URL dan kode di layar untuk menyelesaikan otorisasi device flow di browser Anda. Percakapan baru akan otomatis menggunakan autentikasi baru — restart hanya diperlukan jika Anda ingin membatalkan sesi yang masih berjalan di memori.
+      Isi variabel dan klik deploy. Layanan akan otomatis terhubung ke Discord. Jika menggunakan **Device-Auth**, jalankan perintah login di langkah 3 setelah layanan berjalan.
 
       ## Pengaturan Slack (Opsional)
 
@@ -818,35 +784,39 @@ localization:
 
       Isi `SLACK_BOT_TOKEN` dan `SLACK_APP_TOKEN` sebelum deploy. Discord dan Slack dapat berjalan bersamaan.
 
-      ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams)
+      ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
 
-      Untuk menjembatani Telegram, LINE, Feishu/Lark, Google Chat, atau MS Teams, deploy [template OpenAB Gateway](https://zeabur.com/templates/IMRONB) di proyek Zeabur yang sama. Kemudian tambahkan variabel lingkungan berikut ke layanan ini:
+      Untuk menjembatani Telegram, LINE, Feishu/Lark, Google Chat, MS Teams, atau WeCom, deploy [template OpenAB Gateway](https://zeabur.com/templates/IMRONB) di proyek Zeabur yang sama. Kemudian tambahkan variabel lingkungan berikut ke layanan ini:
 
       - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = salah satu dari `telegram`, `line`, `feishu`, `googlechat`, `teams`
+      - `GATEWAY_PLATFORM` = salah satu dari `telegram`, `line`, `feishu`, `googlechat`, `teams`, `wecom`
 
       Restart layanan. Skrip startup otomatis menyuntikkan blok `[gateway]` ke `config.toml`.
+
       ## Penggunaan
 
       - **@mention bot** di channel Discord atau Slack yang diizinkan untuk memulai percakapan
       - OpenAB membuat **thread** untuk percakapan multi-giliran — tidak perlu @mention untuk pesan selanjutnya
-      - Setiap thread dipetakan ke sesi Kiro yang persisten (TTL 24 jam secara default)
+      - Setiap thread dipetakan ke sesi Grok yang persisten (TTL 24 jam secara default)
 
       ## Kustomisasi
 
       | File | Deskripsi |
       |------|-----------|
       | `/home/agent/.config/openab/config.toml` | Konfigurasi OpenAB (sessions, reactions, STT, dll.) |
+      | `/home/agent/.grok/auth.json` | Kredensial OAuth Grok (dikelola oleh `grok login`) |
+      | `/home/agent/.grok/config.toml` | Konfigurasi runtime Grok |
 
       `config.toml` dibuat dari template bawaan saat boot pertama. Setelah itu, edit file secara langsung — variabel lingkungan hanya digunakan untuk pengaturan awal. Untuk mengembalikan ke default, hapus dan restart: `rm /home/agent/.config/openab/config.toml`
 
-      Untuk opsi konfigurasi, lihat [dokumentasi OpenAB](https://github.com/openabdev/openab).
+      Untuk opsi konfigurasi OpenAB, lihat [dokumentasi OpenAB](https://github.com/openabdev/openab). Untuk opsi konfigurasi Grok, lihat [dokumentasi Grok Build](https://x.ai/news/grok-build-cli).
 
       ## Menonaktifkan
 
-      Kosongkan `Discord Bot Token` saat deploy. Layanan akan tidur tanpa crash.
+      Kosongkan `Discord Bot Token` dan `SLACK_BOT_TOKEN` saat deploy. Layanan akan tidur tanpa crash.
 
       ## Tautan
 
       - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Grok Build (xAI)](https://x.ai/news/grok-build-cli)
       - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)

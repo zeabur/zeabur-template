@@ -1,0 +1,1058 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB Hermes
+spec:
+  description: |
+    Open Agent Broker — a lightweight Rust harness that bridges Discord and Slack to any ACP-compatible coding CLI over stdio JSON-RPC. This template uses Hermes Agent (by Nous Research) as the backend — a multi-provider inference gateway with OAuth support for 30+ LLM providers (xAI Grok, Anthropic, OpenAI, Nous Portal, and more).
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - Discord
+    - Slack
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: DISCORD_BOT_TOKEN
+      type: STRING
+      name: Discord Bot Token
+      description: Token from https://discord.com/developers/applications
+    - key: OPENAB_ALLOWED_CHANNELS
+      type: STRING
+      name: Discord Channel IDs (optional)
+      description: "Optional. Comma-separated Discord channel IDs where the bot listens. Leave empty to allow all channels. Example: 123456789012345678,234567890123456789"
+    - key: OPENAB_ALLOWED_USERS
+      type: STRING
+      name: Discord User IDs (optional)
+      description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone in the allowed channels."
+    - key: OPENAB_TRUSTED_BOT_IDS
+      type: STRING
+      name: Trusted Bot IDs (optional)
+      description: "Optional. Comma-separated Discord bot IDs trusted to send messages to this bot. Leave empty to trust all bots (default). Only applies when Allow Bot Messages is set."
+    - key: OPENAB_ALLOW_BOT_MESSAGES
+      type: STRING
+      name: Allow Bot Messages (optional)
+      description: "Optional. Set to 'on' to allow messages from bots/webhooks to trigger the agent. Leave empty to disable (default)."
+    - key: SLACK_BOT_TOKEN
+      type: STRING
+      name: Slack Bot Token (optional)
+      description: "Optional. Bot User OAuth Token (xoxb-...) from Slack App settings. Leave empty to disable Slack adapter."
+    - key: SLACK_APP_TOKEN
+      type: STRING
+      name: Slack App Token (optional)
+      description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
+    - key: OPENAB_MAX_SESSIONS
+      type: STRING
+      name: Max Concurrent Sessions (optional)
+      description: "Optional. Maximum number of concurrent agent sessions (default: 10). Oldest idle session is evicted when the limit is reached."
+  readme: |
+    # OpenAB Hermes
+
+    [OpenAB](https://github.com/openabdev/openab) is a lightweight, open-source Rust harness that bridges Discord and Slack to any [Agent Client Protocol](https://github.com/anthropics/agent-protocol)-compatible coding CLI over stdio JSON-RPC.
+
+    This template runs the Hermes variant: it uses [Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous Research as the backend. Hermes is a multi-provider inference gateway — it handles OAuth token lifecycle, credential storage, and routing for **30+ LLM providers** (xAI Grok, Anthropic, OpenAI, Nous Portal, and more), so OAB doesn't need to manage provider auth directly.
+
+    ## Important Notes
+
+    - **Image tag:** This template uses a pinned version (`0.8.3-beta.11`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
+    - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Hermes credentials, plugins, settings, and config survive restarts.
+    - **Authentication is in-container only:** Hermes auth is OAuth-based per provider. There is no single API key variable — after deploying, run `hermes auth add <provider>` inside the service to pair with each LLM provider you want.
+
+    ## Setup
+
+    ### 1. Get a Discord Bot Token
+
+    1. Go to https://discord.com/developers/applications and click **New Application**
+    2. Navigate to **Bot** tab → click **Reset Token** → copy the token
+    3. On the same page, scroll down and enable **Message Content Intent** under Privileged Gateway Intents
+    4. Go to **OAuth2 → URL Generator** → check scope `bot` → check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+    5. Copy the generated URL and open it in your browser to invite the bot to your server
+
+    ### 2. Get Discord Channel IDs
+
+    1. Open Discord → go to **User Settings** (gear icon) → **Advanced** → enable **Developer Mode**
+    2. Right-click the channel where you want the bot to respond → **Copy Channel ID**
+    3. For multiple channels, separate IDs with commas: `123456789012345678,234567890123456789`
+
+    ### 3. Deploy
+
+    Fill in the variables and click deploy. The service connects to Discord but will not produce LLM responses until you authenticate at least one provider (step 4).
+
+    ### 4. Authenticate a Hermes Provider
+
+    After the service is running, open the Zeabur Dashboard → Service → **Exec** terminal. Hermes supports many providers — pick one to start. Two of the most common paths are below.
+
+    #### Option A: Nous Portal (simplest)
+
+    ```
+    runuser -u agent -- hermes auth add nous
+    ```
+
+    Follow the prompts to complete OAuth via the displayed URL.
+
+    #### Option B: xAI Grok OAuth (recommended for general use)
+
+    > ⚠️ **Requires an active [SuperGrok paid subscription](https://x.ai/grok) ($30/mo).** Auth will succeed without one, but the API silently returns empty responses — the bot appears to work but never replies.
+
+    xAI's OAuth uses a loopback redirect to `127.0.0.1:56121` inside the container. Zeabur doesn't expose that port, so use the two-terminal trick:
+
+    **Terminal 1** — start the auth listener:
+
+    ```
+    runuser -u agent -- hermes auth add xai-oauth --no-browser
+    ```
+
+    It prints an authorize URL containing `&state=XXXXX` and waits on `http://127.0.0.1:56121/callback`.
+
+    **In your browser** — open that authorize URL → approve. The browser redirects to `http://127.0.0.1:56121/callback?code=...` and fails ("Could not establish connection"). **Copy the `code` value** from the URL bar.
+
+    **Terminal 2** — open another Exec session and deliver the callback locally:
+
+    ```
+    runuser -u agent -- curl "http://127.0.0.1:56121/callback?code=<CODE>&state=<STATE>"
+    ```
+
+    Terminal 1 should print `Added xai-oauth OAuth credential #1`. The `code` expires in seconds — if you see `invalid_grant`, re-run `hermes auth add xai-oauth` and try again.
+
+    #### After auth: pick a default model
+
+    Either run the interactive picker:
+
+    ```
+    runuser -u agent -- hermes model
+    ```
+
+    …or set provider and model **as two separate keys** (this is what `hermes-acp` needs — the combined `provider/model` shortcut shown in `hermes config set` examples is for the standalone CLI and is **not** picked up by openab):
+
+    ```
+    runuser -u agent -- hermes config set provider xai-oauth
+    runuser -u agent -- hermes config set model grok-4-latest
+    ```
+
+    Your choice is persisted under `/home/agent` and survives restarts. New Discord sessions pick up the new model automatically — no restart needed.
+
+    For other providers (Anthropic, OpenAI, etc.) see the [Hermes Agent docs](https://github.com/NousResearch/hermes-agent).
+
+    ## Slack Setup (Optional)
+
+    OpenAB supports Slack via Socket Mode — no public URL needed.
+
+    1. Go to https://api.slack.com/apps → **Create New App** → **From scratch**
+    2. **Socket Mode** → Enable → generate an App-Level Token with scope `connections:write` → copy the `xapp-...` token (`SLACK_APP_TOKEN`)
+    3. **Event Subscriptions** → Enable Events → add bot events: `app_mention`, `message.channels`, `message.groups`
+    4. **OAuth & Permissions** → Bot Token Scopes → add: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+    5. **Install App** → Install to Workspace → copy the `xoxb-...` token (`SLACK_BOT_TOKEN`)
+    6. In each Slack channel you want the bot in, run `/invite @YourAppName`
+
+    Set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in the template variables before deploying. Both Discord and Slack can run simultaneously.
+
+    ## Add Messaging Platforms (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
+
+    To bridge Telegram, LINE, Feishu/Lark, Google Chat, MS Teams, or WeCom, deploy the [OpenAB Gateway template](https://zeabur.com/templates/IMRONB) into the same Zeabur project. Then add these environment variables to this service:
+
+    - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+    - `GATEWAY_PLATFORM` = one of `telegram`, `line`, `feishu`, `googlechat`, `teams`, `wecom`
+
+    Restart the service. The startup script auto-injects the `[gateway]` block into `config.toml`.
+
+    ## Usage
+
+    - **@mention the bot** in an allowed Discord channel or Slack channel to start a conversation
+    - OpenAB creates a **thread** for multi-turn conversations — no @mention needed for follow-ups
+    - Each thread maps to a persistent Hermes session (24h TTL)
+
+    ## Customization
+
+    | File | Description |
+    |------|-------------|
+    | `/home/agent/.config/openab/config.toml` | OpenAB config (sessions, reactions, STT, etc.) |
+    | `/home/agent/.config/hermes/` | Hermes credentials and provider config (managed by `hermes auth` / `hermes model`) |
+
+    `config.toml` is created from a built-in template on first boot. After that, edit the file directly — environment variables are only used for initial setup. To reset to defaults, delete the file and restart: `rm /home/agent/.config/openab/config.toml`
+
+    For OpenAB config options, see the [OpenAB documentation](https://github.com/openabdev/openab). For Hermes provider options, see the [Hermes docs](https://github.com/NousResearch/hermes-agent).
+
+    ## Disabling
+
+    Leave `Discord Bot Token` empty (and `SLACK_BOT_TOKEN` empty). The service sleeps instead of crashing.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [Hermes Agent (Nous Research)](https://github.com/NousResearch/hermes-agent)
+    - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-hermes:0.8.3-beta.11
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        runAsUserID: 1000
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell dotfiles and fix ownership for persistent volume
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
+              # Fix ownership for persistent volume when startup runs as root
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent
+                chmod 755 /home/agent/.config 2>/dev/null || true
+              fi
+
+              if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ]; then
+                echo "openab: neither DISCORD_BOT_TOKEN nor SLACK_BOT_TOKEN set — sleeping"
+                exec sleep infinity
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              # Generate config.toml on first boot only
+              # To regenerate, delete the file and restart
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # Add [discord] section if token provided
+                if [ -n "$DISCORD_BOT_TOKEN" ]; then
+                  printf '\n[discord]\nbot_token = "${DISCORD_BOT_TOKEN}"\n' >> "$CONFIG_FILE"
+                  if [ -n "$OPENAB_ALLOW_BOT_MESSAGES" ]; then
+                    printf 'allow_bot_messages = "%s"\n' "$OPENAB_ALLOW_BOT_MESSAGES" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
+                    IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do
+                      id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
+                    printf 'allowed_channels = [%s]\n' "$(echo "$channels" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_USERS" ]; then
+                    IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do
+                      id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
+                    printf 'allowed_users = [%s]\n' "$(echo "$users" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_TRUSTED_BOT_IDS" ]; then
+                    IFS=','; bots=""; for id in $OPENAB_TRUSTED_BOT_IDS; do
+                      id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && bots="${bots}\"${id}\","; done; unset IFS
+                    printf 'trusted_bot_ids = [%s]\n' "$(echo "$bots" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                fi
+
+                # Add [slack] section if tokens provided
+                if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
+                  printf '\n[slack]\nbot_token = "${SLACK_BOT_TOKEN}"\napp_token = "${SLACK_APP_TOKEN}"\n' >> "$CONFIG_FILE"
+                fi
+
+                # Add [pool] section if max_sessions provided
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent "$CONFIG_DIR"
+                exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "hermes-acp"
+              working_dir = "/home/agent"
+        env:
+          DISCORD_BOT_TOKEN:
+            default: ${DISCORD_BOT_TOKEN}
+          OPENAB_ALLOWED_CHANNELS:
+            default: ""
+          OPENAB_ALLOWED_USERS:
+            default: ""
+          SLACK_BOT_TOKEN:
+            default: ""
+          SLACK_APP_TOKEN:
+            default: ""
+          OPENAB_ALLOW_BOT_MESSAGES:
+            default: ""
+          OPENAB_TRUSTED_BOT_IDS:
+            default: ""
+          OPENAB_MAX_SESSIONS:
+            default: ""
+localization:
+  zh-TW:
+    description: |
+      Open Agent Broker — 輕量的 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何 ACP 相容的 coding CLI。此模板使用 Nous Research 的 Hermes Agent 作為後端 — 一個 multi-provider inference gateway，透過 OAuth 支援 30+ LLM 供應商（xAI Grok、Anthropic、OpenAI、Nous Portal 等）。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot Token
+        description: 從 https://discord.com/developers/applications 取得的 Token
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 頻道 ID（選填）
+        description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。範例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用戶 ID（選填）
+        description: "選填。以逗號分隔的 Discord 用戶 ID，限制可與 Bot 互動的用戶。留空則允許頻道中所有人。"
+    readme: |
+      # OpenAB Hermes
+
+      [OpenAB](https://github.com/openabdev/openab) 是一個輕量的開源 Rust 程式，透過 stdio JSON-RPC 將 Discord 和 Slack 橋接到任何支援 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+
+      此模板使用 Hermes 變體：以 Nous Research 的 [Hermes Agent](https://github.com/NousResearch/hermes-agent) 為後端。Hermes 本身是一個 multi-provider inference gateway — 內建管理 OAuth token、認證儲存、provider 路由，可串接 **30+ LLM 供應商**（xAI Grok、Anthropic、OpenAI、Nous Portal 等），OpenAB 不需自行處理供應商認證。
+
+      ## 注意事項
+
+      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
+      - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Hermes 認證、plugins、設定、config 會在重啟後保留。
+      - **認證僅能在容器內進行：** Hermes 採用各供應商的 OAuth 流程，沒有單一 API key 變數。部署完成後請在服務終端執行 `hermes auth add <provider>` 來綁定要使用的 LLM 供應商。
+
+      ## 設定步驟
+
+      ### 1. 取得 Discord Bot Token
+
+      1. 前往 https://discord.com/developers/applications，點擊 **New Application**
+      2. 進入 **Bot** 頁籤 → 點擊 **Reset Token** → 複製 token
+      3. 同一頁面往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
+      4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 複製產生的 URL，在瀏覽器中開啟以邀請 Bot 到你的伺服器
+
+      ### 2. 取得 Discord 頻道 ID
+
+      1. 開啟 Discord → 前往 **使用者設定**（齒輪圖示）→ **進階** → 啟用 **開發者模式**
+      2. 對你要 Bot 回應的頻道按右鍵 → **複製頻道 ID**
+      3. 多個頻道用逗號分隔：`123456789012345678,234567890123456789`
+
+      ### 3. 部署
+
+      填入變數後點擊部署即可。服務會自動連線到 Discord，但在你完成步驟 4 認證之前，bot 不會產生任何 LLM 回覆。
+
+      ### 4. 認證 Hermes Provider
+
+      服務啟動後，在 Zeabur Dashboard → 服務 → **Exec** 開啟容器終端。Hermes 支援多家供應商，以下是兩種常見的選擇。
+
+      #### 選項 A：Nous Portal（最簡單）
+
+      ```
+      runuser -u agent -- hermes auth add nous
+      ```
+
+      依照提示開啟畫面顯示的 URL 完成 OAuth。
+
+      #### 選項 B：xAI Grok OAuth（推薦給一般用途）
+
+      > ⚠️ **需要 [SuperGrok 付費訂閱](https://x.ai/grok)（$30/月）。** 沒有訂閱時 auth 仍會成功，但 API 回傳空字串 — bot 看似運作卻不會回覆任何訊息。
+
+      xAI OAuth 採用 loopback 重新導向 `127.0.0.1:56121`。Zeabur 不會對外暴露此 port，請使用「雙終端」流程：
+
+      **終端 1** — 啟動 auth listener：
+
+      ```
+      runuser -u agent -- hermes auth add xai-oauth --no-browser
+      ```
+
+      畫面會印出含 `&state=XXXXX` 的授權 URL，並在 `http://127.0.0.1:56121/callback` 等待。
+
+      **在你的瀏覽器** — 開啟該授權 URL → 同意授權。瀏覽器會被導向 `http://127.0.0.1:56121/callback?code=...` 並顯示連線失敗（這是預期的）。**從網址列複製 `code` 的值**。
+
+      **終端 2** — 在 Zeabur 再開一個 Exec session，在容器內把 callback 餵回去：
+
+      ```
+      runuser -u agent -- curl "http://127.0.0.1:56121/callback?code=<CODE>&state=<STATE>"
+      ```
+
+      終端 1 應該會印出 `Added xai-oauth OAuth credential #1`。`code` 數秒後就會失效，若出現 `invalid_grant` 請重新執行 `hermes auth add xai-oauth` 再試。
+
+      #### 認證完成後：選擇預設 model
+
+      用互動式 picker：
+
+      ```
+      runuser -u agent -- hermes model
+      ```
+
+      …或手動把 provider 和 model **分成兩個 key 設定**（這是 `hermes-acp` 能讀到的格式 — `hermes config set` 範例中合併成 `provider/model` 的寫法只有 standalone CLI 認得，openab spawn 出的 hermes-acp **不會生效**）：
+
+      ```
+      runuser -u agent -- hermes config set provider xai-oauth
+      runuser -u agent -- hermes config set model grok-4-latest
+      ```
+
+      設定會寫入 `/home/agent`，重啟後仍保留。新的 Discord session 會自動套用新 model，**不需重啟服務**。
+
+      其他供應商（Anthropic、OpenAI 等）請參閱 [Hermes Agent 文件](https://github.com/NousResearch/hermes-agent)。
+
+      ## Slack 設定（選用）
+
+      OpenAB 支援透過 Socket Mode 連接 Slack，不需要公開 URL。
+
+      1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → 啟用 → 產生 App-Level Token，scope 選 `connections:write` → 複製 `xapp-...` token（`SLACK_APP_TOKEN`）
+      3. **Event Subscriptions** → 啟用 → 新增 bot events：`app_mention`、`message.channels`、`message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → 新增：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+      5. **Install App** → 安裝到工作區 → 複製 `xoxb-...` token（`SLACK_BOT_TOKEN`）
+      6. 在每個要使用 Bot 的 Slack 頻道執行 `/invite @YourAppName`
+
+      部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 變數。Discord 和 Slack 可同時運作。
+
+      ## 新增通訊平台（Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom）
+
+      若要橋接 Telegram、LINE、Feishu/Lark、Google Chat、MS Teams 或 WeCom（企業微信），請在同一個 Zeabur 專案中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然後在此服務新增以下環境變數：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` 或 `wecom` 其中之一
+
+      重新啟動服務後，啟動腳本會自動在 `config.toml` 中加入 `[gateway]` 區塊。
+
+      ## 使用方式
+
+      - 在允許的 Discord 或 Slack 頻道中 **@mention Bot** 即可開始對話
+      - OpenAB 會自動建立 **thread** 進行多輪對話 — 後續訊息不需要再 @mention
+      - 每個 thread 對應一個持久的 Hermes session（預設 24 小時 TTL）
+
+      ## 自訂設定
+
+      | 檔案 | 說明 |
+      |------|------|
+      | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT 等） |
+      | `/home/agent/.config/hermes/` | Hermes 認證與 provider 設定（由 `hermes auth` / `hermes model` 管理） |
+
+      `config.toml` 在首次啟動時從內建範本建立。之後請直接編輯檔案，環境變數僅用於初始設定。要恢復預設值請刪除後重啟：`rm /home/agent/.config/openab/config.toml`
+
+      OpenAB 設定選項請參閱 [OpenAB 文件](https://github.com/openabdev/openab)。Hermes provider 選項請參閱 [Hermes 文件](https://github.com/NousResearch/hermes-agent)。
+
+      ## 停用
+
+      部署時將 `Discord Bot Token` 和 `SLACK_BOT_TOKEN` 都留空即可。服務會進入 sleep 狀態，不會崩潰。
+
+      ## 連結
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Hermes Agent（Nous Research）](https://github.com/NousResearch/hermes-agent)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  zh-CN:
+    description: |
+      Open Agent Broker — 轻量的 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何 ACP 兼容的 coding CLI。此模板使用 Nous Research 的 Hermes Agent 作为后端 — 一个 multi-provider inference gateway，通过 OAuth 支持 30+ LLM 供应商（xAI Grok、Anthropic、OpenAI、Nous Portal 等）。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot Token
+        description: 从 https://discord.com/developers/applications 获取的 Token
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 频道 ID（选填）
+        description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。示例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用户 ID（选填）
+        description: "选填。以逗号分隔的 Discord 用户 ID，限制可与 Bot 互动的用户。留空则允许频道中所有人。"
+    readme: |
+      # OpenAB Hermes
+
+      [OpenAB](https://github.com/openabdev/openab) 是一个轻量的开源 Rust 程序，通过 stdio JSON-RPC 将 Discord 和 Slack 桥接到任何支持 [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 的 coding CLI。
+
+      此模板使用 Hermes 变体：以 Nous Research 的 [Hermes Agent](https://github.com/NousResearch/hermes-agent) 为后端。Hermes 本身是一个 multi-provider inference gateway — 内置管理 OAuth token、认证存储、provider 路由，可对接 **30+ LLM 供应商**（xAI Grok、Anthropic、OpenAI、Nous Portal 等），OpenAB 不需要自行处理供应商认证。
+
+      ## 注意事项
+
+      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
+      - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Hermes 认证、plugins、设置、config 会在重启后保留。
+      - **认证只能在容器内进行：** Hermes 采用各供应商的 OAuth 流程，没有单一 API key 变量。部署完成后请在服务终端执行 `hermes auth add <provider>` 来绑定要使用的 LLM 供应商。
+
+      ## 设置步骤
+
+      ### 1. 获取 Discord Bot Token
+
+      1. 前往 https://discord.com/developers/applications，点击 **New Application**
+      2. 进入 **Bot** 页签 → 点击 **Reset Token** → 复制 token
+      3. 同一页面往下滑，在 Privileged Gateway Intents 下启用 **Message Content Intent**
+      4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 复制生成的 URL，在浏览器中打开以邀请 Bot 到你的服务器
+
+      ### 2. 获取 Discord 频道 ID
+
+      1. 打开 Discord → 前往 **用户设置**（齿轮图标）→ **高级** → 启用 **开发者模式**
+      2. 右键点击你要 Bot 回应的频道 → **复制频道 ID**
+      3. 多个频道用逗号分隔：`123456789012345678,234567890123456789`
+
+      ### 3. 部署
+
+      填入变量后点击部署即可。服务会自动连接到 Discord，但在你完成步骤 4 认证之前，bot 不会产生任何 LLM 回复。
+
+      ### 4. 认证 Hermes Provider
+
+      服务启动后，在 Zeabur Dashboard → 服务 → **Exec** 打开容器终端。Hermes 支持多家供应商，以下是两种常见的选择。
+
+      #### 选项 A：Nous Portal（最简单）
+
+      ```
+      runuser -u agent -- hermes auth add nous
+      ```
+
+      按照提示打开显示的 URL 完成 OAuth。
+
+      #### 选项 B：xAI Grok OAuth（推荐通用）
+
+      > ⚠️ **需要 [SuperGrok 付费订阅](https://x.ai/grok)（$30/月）。** 没有订阅时 auth 仍会成功，但 API 返回空字符串 — bot 看似在运行却不会回复任何消息。
+
+      xAI OAuth 使用 loopback 重定向到 `127.0.0.1:56121`。Zeabur 不暴露此端口，请使用「双终端」流程：
+
+      **终端 1** — 启动 auth listener：
+
+      ```
+      runuser -u agent -- hermes auth add xai-oauth --no-browser
+      ```
+
+      画面会打印含 `&state=XXXXX` 的授权 URL，并在 `http://127.0.0.1:56121/callback` 等待。
+
+      **在你的浏览器** — 打开该授权 URL → 同意授权。浏览器会被重定向到 `http://127.0.0.1:56121/callback?code=...` 并显示连接失败（这是预期的）。**从地址栏复制 `code` 的值**。
+
+      **终端 2** — 在 Zeabur 再开一个 Exec session，在容器内把 callback 喂回去：
+
+      ```
+      runuser -u agent -- curl "http://127.0.0.1:56121/callback?code=<CODE>&state=<STATE>"
+      ```
+
+      终端 1 应该会打印 `Added xai-oauth OAuth credential #1`。`code` 几秒后就会失效，若出现 `invalid_grant` 请重新执行 `hermes auth add xai-oauth` 再试。
+
+      #### 认证完成后：选择默认 model
+
+      用交互式 picker：
+
+      ```
+      runuser -u agent -- hermes model
+      ```
+
+      …或手动把 provider 和 model **分成两个 key 设置**（这是 `hermes-acp` 能读到的格式 — `hermes config set` 示例中合并成 `provider/model` 的写法只有 standalone CLI 能识别，openab spawn 的 hermes-acp **不会生效**）：
+
+      ```
+      runuser -u agent -- hermes config set provider xai-oauth
+      runuser -u agent -- hermes config set model grok-4-latest
+      ```
+
+      设置会写入 `/home/agent`，重启后仍保留。新的 Discord session 会自动应用新 model，**无需重启服务**。
+
+      其他供应商（Anthropic、OpenAI 等）请参阅 [Hermes Agent 文档](https://github.com/NousResearch/hermes-agent)。
+
+      ## Slack 设置（可选）
+
+      OpenAB 支持通过 Socket Mode 连接 Slack，无需公开 URL。
+
+      1. 前往 https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → 启用 → 生成 App-Level Token，scope 选 `connections:write` → 复制 `xapp-...` token（`SLACK_APP_TOKEN`）
+      3. **Event Subscriptions** → 启用 → 添加 bot events：`app_mention`、`message.channels`、`message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → 添加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+      5. **Install App** → 安装到工作区 → 复制 `xoxb-...` token（`SLACK_BOT_TOKEN`）
+      6. 在每个要使用 Bot 的 Slack 频道执行 `/invite @YourAppName`
+
+      部署前填入 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN` 变量。Discord 和 Slack 可同时运行。
+
+      ## 添加通讯平台（Telegram / LINE / 飞书 / Google Chat / MS Teams / 企业微信）
+
+      若要桥接 Telegram、LINE、飞书/Lark、Google Chat、MS Teams 或企业微信（WeCom），请在同一个 Zeabur 项目中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然后在此服务上设置以下环境变量：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` 或 `wecom` 之一
+
+      重启服务。启动脚本会自动将 `[gateway]` 块注入 `config.toml`。
+
+      ## 使用方式
+
+      - 在允许的 Discord 或 Slack 频道中 **@mention Bot** 即可开始对话
+      - OpenAB 会自动创建 **thread** 进行多轮对话 — 后续消息不需要再 @mention
+      - 每个 thread 对应一个持久的 Hermes session（默认 24 小时 TTL）
+
+      ## 自定义设置
+
+      | 文件 | 说明 |
+      |------|------|
+      | `/home/agent/.config/openab/config.toml` | OpenAB 设置（sessions、reactions、STT 等） |
+      | `/home/agent/.config/hermes/` | Hermes 认证与 provider 设置（由 `hermes auth` / `hermes model` 管理） |
+
+      `config.toml` 在首次启动时从内建模板创建。之后请直接编辑文件，环境变量仅用于初始设置。要恢复默认值请删除后重启：`rm /home/agent/.config/openab/config.toml`
+
+      OpenAB 设置选项请参阅 [OpenAB 文档](https://github.com/openabdev/openab)。Hermes provider 选项请参阅 [Hermes 文档](https://github.com/NousResearch/hermes-agent)。
+
+      ## 停用
+
+      部署时将 `Discord Bot Token` 和 `SLACK_BOT_TOKEN` 都留空即可。服务会进入 sleep 状态，不会崩溃。
+
+      ## 链接
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Hermes Agent（Nous Research）](https://github.com/NousResearch/hermes-agent)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  ja-JP:
+    description: |
+      Open Agent Broker — stdio JSON-RPC を通じて Discord と Slack を ACP 対応の coding CLI にブリッジする軽量な Rust ハーネス。このテンプレートは Nous Research の Hermes Agent をバックエンドとして使用します — OAuth により 30+ の LLM プロバイダー（xAI Grok、Anthropic、OpenAI、Nous Portal など）に対応した multi-provider inference gateway です。
+      ソース：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord Bot トークン
+        description: https://discord.com/developers/applications から取得したトークン
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord チャンネル ID（オプション）
+        description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。例：123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord ユーザー ID（オプション）
+        description: "オプション。Bot と対話できるユーザーの Discord ユーザー ID（カンマ区切り）。空の場合、許可チャンネルの全員が利用可能。"
+    readme: |
+      # OpenAB Hermes
+
+      [OpenAB](https://github.com/openabdev/openab) は、stdio JSON-RPC を通じて Discord と Slack を [Agent Client Protocol](https://github.com/anthropics/agent-protocol) 対応の coding CLI にブリッジする軽量なオープンソース Rust ハーネスです。
+
+      このテンプレートは Hermes バリアントを使用します：Nous Research の [Hermes Agent](https://github.com/NousResearch/hermes-agent) をバックエンドとして採用しています。Hermes 自体が multi-provider inference gateway であり、OAuth トークンのライフサイクル、認証情報の保存、プロバイダーのルーティングを内部で処理します。**30+ の LLM プロバイダー**（xAI Grok、Anthropic、OpenAI、Nous Portal など）に対応しているため、OpenAB 側でプロバイダー認証を扱う必要はありません。
+
+      ## 注意事項
+
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.11`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
+      - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。Hermes の認証情報、プラグイン、設定、config は再起動後も保持されます。
+      - **認証はコンテナ内でのみ可能：** Hermes はプロバイダーごとに OAuth ベースで認証を行います。単一の API key 変数はありません — デプロイ後、サービス内で `hermes auth add <provider>` を実行して、使用したい各 LLM プロバイダーを紐付けてください。
+
+      ## セットアップ
+
+      ### 1. Discord Bot Token の取得
+
+      1. https://discord.com/developers/applications にアクセスし、**New Application** をクリック
+      2. **Bot** タブ → **Reset Token** をクリック → token をコピー
+      3. 同じページを下にスクロールし、Privileged Gateway Intents の **Message Content Intent** を有効化
+      4. **OAuth2 → URL Generator** → scope `bot` にチェック → 権限にチェック：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
+      5. 生成された URL をコピーし、ブラウザで開いて Bot をサーバーに招待
+
+      ### 2. Discord チャンネル ID の取得
+
+      1. Discord を開く → **ユーザー設定**（歯車アイコン）→ **詳細設定** → **開発者モード** を有効化
+      2. Bot に応答させたいチャンネルを右クリック → **チャンネル ID をコピー**
+      3. 複数チャンネルはカンマで区切る：`123456789012345678,234567890123456789`
+
+      ### 3. デプロイ
+
+      変数を入力してデプロイをクリック。サービスは自動的に Discord に接続しますが、ステップ 4 で少なくとも 1 つのプロバイダーで認証するまで LLM 応答は生成されません。
+
+      ### 4. Hermes プロバイダーの認証
+
+      サービスが起動した後、Zeabur Dashboard → サービス → **Exec** ターミナルを開いてください。Hermes は多数のプロバイダーをサポートしています — まずは 1 つ選んで始めましょう。一般的な 2 つの選択肢を以下に示します。
+
+      #### 選択肢 A：Nous Portal（最もシンプル）
+
+      ```
+      runuser -u agent -- hermes auth add nous
+      ```
+
+      表示される URL を開いて OAuth を完了してください。
+
+      #### 選択肢 B：xAI Grok OAuth（一般用途向けに推奨）
+
+      > ⚠️ **有効な [SuperGrok 有料プラン](https://x.ai/grok)（$30/月）が必要です。** サブスクリプションがなくても認証は成功しますが、API は黙って空のレスポンスを返します — bot は動作しているように見えても、決して返信しません。
+
+      xAI の OAuth はコンテナ内の `127.0.0.1:56121` へのループバックリダイレクトを使用します。Zeabur はこのポートを公開しないため、「2 つのターミナル」のテクニックを使用します：
+
+      **ターミナル 1** — auth listener を起動：
+
+      ```
+      runuser -u agent -- hermes auth add xai-oauth --no-browser
+      ```
+
+      `&state=XXXXX` を含む authorize URL が出力され、`http://127.0.0.1:56121/callback` で待機します。
+
+      **ブラウザ側** — その authorize URL を開く → 承認。ブラウザは `http://127.0.0.1:56121/callback?code=...` にリダイレクトされ、失敗します（"Could not establish connection"）。**URL バーから `code` の値をコピー**してください。
+
+      **ターミナル 2** — もう 1 つの Exec セッションを開いて、callback をローカルに送信：
+
+      ```
+      runuser -u agent -- curl "http://127.0.0.1:56121/callback?code=<CODE>&state=<STATE>"
+      ```
+
+      ターミナル 1 に `Added xai-oauth OAuth credential #1` と表示されるはずです。`code` は数秒で期限切れになります — `invalid_grant` が表示された場合は、`hermes auth add xai-oauth` を再実行してやり直してください。
+
+      #### 認証後：デフォルト model の選択
+
+      インタラクティブピッカーを使用：
+
+      ```
+      runuser -u agent -- hermes model
+      ```
+
+      …または provider と model を **2 つの別々の key として設定**します（これが `hermes-acp` に必要な形式です — `hermes config set` の例で示される `provider/model` の結合形式は standalone CLI 用であり、openab では **動作しません**）：
+
+      ```
+      runuser -u agent -- hermes config set provider xai-oauth
+      runuser -u agent -- hermes config set model grok-4-latest
+      ```
+
+      設定は `/home/agent` に保存され、再起動後も保持されます。新しい Discord セッションは自動的に新しい model を使用します — 再起動は不要です。
+
+      その他のプロバイダー（Anthropic、OpenAI など）については、[Hermes Agent ドキュメント](https://github.com/NousResearch/hermes-agent) を参照してください。
+
+      ## Slack セットアップ（オプション）
+
+      OpenAB は Socket Mode 経由で Slack をサポートします — 公開 URL は不要です。
+
+      1. https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → 有効化 → scope `connections:write` で App-Level Token を生成 → `xapp-...` token をコピー（`SLACK_APP_TOKEN`）
+      3. **Event Subscriptions** → 有効化 → bot events を追加：`app_mention`、`message.channels`、`message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → 追加：`app_mentions:read`、`chat:write`、`channels:history`、`groups:history`、`channels:read`、`groups:read`、`reactions:write`、`files:read`、`users:read`
+      5. **Install App** → ワークスペースにインストール → `xoxb-...` token をコピー（`SLACK_BOT_TOKEN`）
+      6. Bot を使用したい各 Slack チャンネルで `/invite @YourAppName` を実行
+
+      デプロイ前に `SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` 変数を入力してください。Discord と Slack は同時に使用できます。
+
+      ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom）
+
+      Telegram、LINE、Feishu/Lark、Google Chat、MS Teams、WeCom を接続するには、同じ Zeabur プロジェクトに [OpenAB Gateway テンプレート](https://zeabur.com/templates/IMRONB) をデプロイしてから、このサービスに次の環境変数を設定してください：
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams`、`wecom` のいずれか
+
+      サービスを再起動すると、起動スクリプトが `config.toml` に `[gateway]` セクションを自動追加します。
+
+      ## 使い方
+
+      - 許可された Discord または Slack チャンネルで **Bot を @mention** して会話を開始
+      - OpenAB は自動的に **thread** を作成してマルチターン会話を行います — 以降のメッセージでは @mention 不要
+      - 各 thread は永続的な Hermes session に対応（デフォルト 24 時間 TTL）
+
+      ## カスタマイズ
+
+      | ファイル | 説明 |
+      |---------|------|
+      | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions、STT など） |
+      | `/home/agent/.config/hermes/` | Hermes 認証情報とプロバイダー設定（`hermes auth` / `hermes model` で管理） |
+
+      `config.toml` は初回起動時に内蔵テンプレートから作成されます。以降の変更はファイルを直接編集してください。環境変数は初期設定時のみ使用されます。デフォルトに戻すにはファイルを削除して再起動：`rm /home/agent/.config/openab/config.toml`
+
+      OpenAB の設定オプションは [OpenAB ドキュメント](https://github.com/openabdev/openab) を、Hermes プロバイダーのオプションは [Hermes ドキュメント](https://github.com/NousResearch/hermes-agent) を参照してください。
+
+      ## 無効化
+
+      デプロイ時に `Discord Bot Token` と `SLACK_BOT_TOKEN` の両方を空にしてください。サービスはクラッシュせずスリープ状態になります。
+
+      ## リンク
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Hermes Agent（Nous Research）](https://github.com/NousResearch/hermes-agent)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  es-ES:
+    description: |
+      Open Agent Broker — un arnés ligero en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con ACP a través de stdio JSON-RPC. Esta plantilla usa Hermes Agent (de Nous Research) como backend — un multi-provider inference gateway con soporte OAuth para 30+ proveedores de LLM (xAI Grok, Anthropic, OpenAI, Nous Portal y más).
+      Fuente: https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token del Bot de Discord
+        description: Token obtenido de https://discord.com/developers/applications
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: IDs de Canales de Discord (opcional)
+        description: "Opcional. IDs de canales de Discord donde el bot escucha, separados por comas. Dejar vacío para permitir todos los canales. Ejemplo: 123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: IDs de Usuarios de Discord (opcional)
+        description: "Opcional. IDs de usuarios de Discord permitidos para interactuar con el bot, separados por comas. Dejar vacío para permitir a todos en los canales permitidos."
+    readme: |
+      # OpenAB Hermes
+
+      [OpenAB](https://github.com/openabdev/openab) es un arnés ligero de código abierto en Rust que conecta Discord y Slack con cualquier CLI de coding compatible con [Agent Client Protocol](https://github.com/anthropics/agent-protocol) a través de stdio JSON-RPC.
+
+      Esta plantilla usa la variante Hermes: utiliza [Hermes Agent](https://github.com/NousResearch/hermes-agent) de Nous Research como backend. Hermes es un multi-provider inference gateway — gestiona el ciclo de vida de tokens OAuth, el almacenamiento de credenciales y el routing para **30+ proveedores de LLM** (xAI Grok, Anthropic, OpenAI, Nous Portal y más), por lo que OAB no necesita gestionar la autenticación de proveedores directamente.
+
+      ## Notas Importantes
+
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3-beta.11`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
+      - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente. Las credenciales de Hermes, plugins, configuración y config se conservan entre reinicios.
+      - **La autenticación es solo dentro del contenedor:** Hermes usa OAuth por proveedor. No hay una única variable de API key — tras desplegar, ejecute `hermes auth add <provider>` dentro del servicio para emparejar cada proveedor de LLM que quiera usar.
+
+      ## Configuración
+
+      ### 1. Obtener el Discord Bot Token
+
+      1. Ir a https://discord.com/developers/applications y hacer clic en **New Application**
+      2. Ir a la pestaña **Bot** → clic en **Reset Token** → copiar el token
+      3. En la misma página, bajar y habilitar **Message Content Intent** en Privileged Gateway Intents
+      4. Ir a **OAuth2 → URL Generator** → marcar scope `bot` → marcar permisos: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+      5. Copiar la URL generada y abrirla en el navegador para invitar al Bot al servidor
+
+      ### 2. Obtener IDs de canales de Discord
+
+      1. Abrir Discord → **Ajustes de usuario** (icono de engranaje) → **Avanzado** → activar **Modo desarrollador**
+      2. Clic derecho en el canal donde quieres que el Bot responda → **Copiar ID del canal**
+      3. Para múltiples canales, separar con comas: `123456789012345678,234567890123456789`
+
+      ### 3. Desplegar
+
+      Completa las variables y haz clic en desplegar. El servicio se conecta a Discord pero no producirá respuestas LLM hasta que autentiques al menos un proveedor (paso 4).
+
+      ### 4. Autenticar un proveedor de Hermes
+
+      Después de que el servicio esté en ejecución, abre Zeabur Dashboard → Servicio → terminal **Exec**. Hermes soporta muchos proveedores — elige uno para empezar. A continuación se muestran dos de los caminos más comunes.
+
+      #### Opción A: Nous Portal (la más simple)
+
+      ```
+      runuser -u agent -- hermes auth add nous
+      ```
+
+      Sigue las indicaciones para completar el OAuth a través de la URL mostrada.
+
+      #### Opción B: xAI Grok OAuth (recomendada para uso general)
+
+      > ⚠️ **Requiere una [suscripción de pago SuperGrok](https://x.ai/grok) activa ($30/mes).** La autenticación tendrá éxito sin ella, pero la API devuelve silenciosamente respuestas vacías — el bot parece funcionar pero nunca responde.
+
+      El OAuth de xAI usa una redirección loopback a `127.0.0.1:56121` dentro del contenedor. Zeabur no expone ese puerto, así que usa el truco de las dos terminales:
+
+      **Terminal 1** — inicia el listener de auth:
+
+      ```
+      runuser -u agent -- hermes auth add xai-oauth --no-browser
+      ```
+
+      Imprime una URL de autorización que contiene `&state=XXXXX` y espera en `http://127.0.0.1:56121/callback`.
+
+      **En tu navegador** — abre esa URL de autorización → aprueba. El navegador redirige a `http://127.0.0.1:56121/callback?code=...` y falla ("Could not establish connection"). **Copia el valor de `code`** de la barra de direcciones.
+
+      **Terminal 2** — abre otra sesión Exec y entrega el callback localmente:
+
+      ```
+      runuser -u agent -- curl "http://127.0.0.1:56121/callback?code=<CODE>&state=<STATE>"
+      ```
+
+      La Terminal 1 debería imprimir `Added xai-oauth OAuth credential #1`. El `code` expira en segundos — si ves `invalid_grant`, vuelve a ejecutar `hermes auth add xai-oauth` e inténtalo de nuevo.
+
+      #### Tras autenticar: elige un model por defecto
+
+      O bien ejecuta el selector interactivo:
+
+      ```
+      runuser -u agent -- hermes model
+      ```
+
+      …o establece provider y model **como dos claves separadas** (esto es lo que `hermes-acp` necesita — el atajo combinado `provider/model` mostrado en los ejemplos de `hermes config set` es para el CLI standalone y **no** lo recoge openab):
+
+      ```
+      runuser -u agent -- hermes config set provider xai-oauth
+      runuser -u agent -- hermes config set model grok-4-latest
+      ```
+
+      Tu elección se persiste en `/home/agent` y sobrevive a los reinicios. Las nuevas sesiones de Discord aplican el nuevo model automáticamente — no se necesita reinicio.
+
+      Para otros proveedores (Anthropic, OpenAI, etc.) consulta la [documentación de Hermes Agent](https://github.com/NousResearch/hermes-agent).
+
+      ## Configuración de Slack (Opcional)
+
+      OpenAB soporta Slack mediante Socket Mode — no se necesita URL pública.
+
+      1. Ir a https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → Habilitar → generar App-Level Token con scope `connections:write` → copiar el token `xapp-...` (`SLACK_APP_TOKEN`)
+      3. **Event Subscriptions** → Habilitar → añadir bot events: `app_mention`, `message.channels`, `message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → añadir: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+      5. **Install App** → Instalar en el workspace → copiar el token `xoxb-...` (`SLACK_BOT_TOKEN`)
+      6. En cada canal de Slack donde quieras usar el bot, ejecuta `/invite @YourAppName`
+
+      Rellena `SLACK_BOT_TOKEN` y `SLACK_APP_TOKEN` antes de desplegar. Discord y Slack pueden funcionar simultáneamente.
+
+      ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
+
+      Para conectar Telegram, LINE, Feishu/Lark, Google Chat, MS Teams o WeCom, despliega la [plantilla OpenAB Gateway](https://zeabur.com/templates/IMRONB) en el mismo proyecto Zeabur. Luego añade estas variables de entorno a este servicio:
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = uno de `telegram`, `line`, `feishu`, `googlechat`, `teams`, `wecom`
+
+      Reinicia el servicio. El script de arranque inyecta automáticamente el bloque `[gateway]` en `config.toml`.
+
+      ## Uso
+
+      - **@mencionar al bot** en un canal de Discord o Slack permitido para iniciar una conversación
+      - OpenAB crea un **thread** para conversaciones de múltiples turnos — no se necesita @mención en los mensajes siguientes
+      - Cada thread corresponde a una sesión persistente de Hermes (TTL de 24h por defecto)
+
+      ## Personalización
+
+      | Archivo | Descripción |
+      |---------|-------------|
+      | `/home/agent/.config/openab/config.toml` | Configuración de OpenAB (sessions, reactions, STT, etc.) |
+      | `/home/agent/.config/hermes/` | Credenciales y configuración de proveedores de Hermes (gestionadas por `hermes auth` / `hermes model`) |
+
+      `config.toml` se crea a partir de una plantilla integrada en el primer arranque. Después, edite el archivo directamente — las variables de entorno solo se usan para la configuración inicial. Para restablecer los valores predeterminados, elimine y reinicie: `rm /home/agent/.config/openab/config.toml`
+
+      Para las opciones de configuración de OpenAB, consulte la [documentación de OpenAB](https://github.com/openabdev/openab). Para las opciones de proveedores de Hermes, consulte la [documentación de Hermes](https://github.com/NousResearch/hermes-agent).
+
+      ## Desactivar
+
+      Dejar `Discord Bot Token` y `SLACK_BOT_TOKEN` vacíos al desplegar. El servicio entrará en modo sleep sin fallar.
+
+      ## Enlaces
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Hermes Agent (Nous Research)](https://github.com/NousResearch/hermes-agent)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  id-ID:
+    description: |
+      Open Agent Broker — harness Rust yang ringan untuk menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan ACP melalui stdio JSON-RPC. Template ini menggunakan Hermes Agent (oleh Nous Research) sebagai backend — sebuah multi-provider inference gateway dengan dukungan OAuth untuk 30+ penyedia LLM (xAI Grok, Anthropic, OpenAI, Nous Portal, dan lainnya).
+      Sumber: https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token Bot Discord
+        description: Token dari https://discord.com/developers/applications
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: ID Channel Discord (opsional)
+        description: "Opsional. ID channel Discord tempat bot mendengarkan, dipisahkan koma. Kosongkan untuk mengizinkan semua channel. Contoh: 123456789012345678,234567890123456789"
+      - key: OPENAB_ALLOWED_USERS
+        name: ID Pengguna Discord (opsional)
+        description: "Opsional. ID pengguna Discord yang diizinkan berinteraksi dengan bot, dipisahkan koma. Kosongkan untuk mengizinkan semua orang di channel yang diizinkan."
+    readme: |
+      # OpenAB Hermes
+
+      [OpenAB](https://github.com/openabdev/openab) adalah harness Rust yang ringan dan open-source yang menjembatani Discord dan Slack ke CLI coding yang kompatibel dengan [Agent Client Protocol](https://github.com/anthropics/agent-protocol) melalui stdio JSON-RPC.
+
+      Template ini menggunakan varian Hermes: menggunakan [Hermes Agent](https://github.com/NousResearch/hermes-agent) oleh Nous Research sebagai backend. Hermes adalah multi-provider inference gateway — menangani siklus hidup token OAuth, penyimpanan kredensial, dan routing untuk **30+ penyedia LLM** (xAI Grok, Anthropic, OpenAI, Nous Portal, dan lainnya), sehingga OAB tidak perlu mengelola autentikasi penyedia secara langsung.
+
+      ## Catatan Penting
+
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.11`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
+      - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten. Kredensial Hermes, plugin, pengaturan, dan config dipertahankan antar restart.
+      - **Autentikasi hanya dilakukan di dalam container:** Hermes menggunakan OAuth per penyedia. Tidak ada variabel API key tunggal — setelah deploy, jalankan `hermes auth add <provider>` di dalam layanan untuk menghubungkan setiap penyedia LLM yang ingin Anda gunakan.
+
+      ## Pengaturan
+
+      ### 1. Dapatkan Discord Bot Token
+
+      1. Buka https://discord.com/developers/applications dan klik **New Application**
+      2. Buka tab **Bot** → klik **Reset Token** → salin token
+      3. Di halaman yang sama, scroll ke bawah dan aktifkan **Message Content Intent** di Privileged Gateway Intents
+      4. Buka **OAuth2 → URL Generator** → centang scope `bot` → centang izin: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+      5. Salin URL yang dihasilkan dan buka di browser untuk mengundang Bot ke server Anda
+
+      ### 2. Dapatkan ID Channel Discord
+
+      1. Buka Discord → **Pengaturan Pengguna** (ikon roda gigi) → **Lanjutan** → aktifkan **Mode Pengembang**
+      2. Klik kanan channel tempat Anda ingin Bot merespons → **Salin ID Channel**
+      3. Untuk beberapa channel, pisahkan dengan koma: `123456789012345678,234567890123456789`
+
+      ### 3. Deploy
+
+      Isi variabel dan klik deploy. Layanan akan terhubung ke Discord tetapi tidak akan menghasilkan respons LLM sampai Anda mengautentikasi setidaknya satu penyedia (langkah 4).
+
+      ### 4. Autentikasi Penyedia Hermes
+
+      Setelah layanan berjalan, buka Zeabur Dashboard → Layanan → terminal **Exec**. Hermes mendukung banyak penyedia — pilih satu untuk memulai. Dua jalur paling umum ada di bawah ini.
+
+      #### Opsi A: Nous Portal (paling sederhana)
+
+      ```
+      runuser -u agent -- hermes auth add nous
+      ```
+
+      Ikuti petunjuk untuk menyelesaikan OAuth melalui URL yang ditampilkan.
+
+      #### Opsi B: xAI Grok OAuth (direkomendasikan untuk penggunaan umum)
+
+      > ⚠️ **Membutuhkan [langganan berbayar SuperGrok](https://x.ai/grok) aktif ($30/bulan).** Autentikasi akan berhasil tanpa langganan, tetapi API secara diam-diam mengembalikan respons kosong — bot tampak berfungsi tetapi tidak pernah membalas.
+
+      OAuth xAI menggunakan redirect loopback ke `127.0.0.1:56121` di dalam container. Zeabur tidak meng-expose port tersebut, jadi gunakan trik dua terminal:
+
+      **Terminal 1** — mulai auth listener:
+
+      ```
+      runuser -u agent -- hermes auth add xai-oauth --no-browser
+      ```
+
+      Ini mencetak URL otorisasi yang berisi `&state=XXXXX` dan menunggu di `http://127.0.0.1:56121/callback`.
+
+      **Di browser Anda** — buka URL otorisasi tersebut → setujui. Browser akan mengarahkan ke `http://127.0.0.1:56121/callback?code=...` dan gagal ("Could not establish connection"). **Salin nilai `code`** dari bilah URL.
+
+      **Terminal 2** — buka sesi Exec lain dan kirim callback secara lokal:
+
+      ```
+      runuser -u agent -- curl "http://127.0.0.1:56121/callback?code=<CODE>&state=<STATE>"
+      ```
+
+      Terminal 1 seharusnya mencetak `Added xai-oauth OAuth credential #1`. `code` kedaluwarsa dalam hitungan detik — jika Anda melihat `invalid_grant`, jalankan ulang `hermes auth add xai-oauth` dan coba lagi.
+
+      #### Setelah autentikasi: pilih model default
+
+      Bisa menggunakan picker interaktif:
+
+      ```
+      runuser -u agent -- hermes model
+      ```
+
+      …atau set provider dan model **sebagai dua key terpisah** (ini yang dibutuhkan `hermes-acp` — singkatan gabungan `provider/model` yang ditampilkan pada contoh `hermes config set` adalah untuk CLI standalone dan **tidak** dibaca oleh openab):
+
+      ```
+      runuser -u agent -- hermes config set provider xai-oauth
+      runuser -u agent -- hermes config set model grok-4-latest
+      ```
+
+      Pilihan Anda disimpan di `/home/agent` dan bertahan setelah restart. Sesi Discord baru akan otomatis menggunakan model baru — tidak perlu restart.
+
+      Untuk penyedia lain (Anthropic, OpenAI, dll.) lihat [dokumentasi Hermes Agent](https://github.com/NousResearch/hermes-agent).
+
+      ## Pengaturan Slack (Opsional)
+
+      OpenAB mendukung Slack melalui Socket Mode — tidak perlu URL publik.
+
+      1. Buka https://api.slack.com/apps → **Create New App** → **From scratch**
+      2. **Socket Mode** → Aktifkan → buat App-Level Token dengan scope `connections:write` → salin token `xapp-...` (`SLACK_APP_TOKEN`)
+      3. **Event Subscriptions** → Aktifkan → tambahkan bot events: `app_mention`, `message.channels`, `message.groups`
+      4. **OAuth & Permissions** → Bot Token Scopes → tambahkan: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+      5. **Install App** → Install ke workspace → salin token `xoxb-...` (`SLACK_BOT_TOKEN`)
+      6. Di setiap channel Slack yang ingin menggunakan bot, jalankan `/invite @YourAppName`
+
+      Isi `SLACK_BOT_TOKEN` dan `SLACK_APP_TOKEN` sebelum deploy. Discord dan Slack dapat berjalan bersamaan.
+
+      ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
+
+      Untuk menjembatani Telegram, LINE, Feishu/Lark, Google Chat, MS Teams, atau WeCom, deploy [template OpenAB Gateway](https://zeabur.com/templates/IMRONB) di proyek Zeabur yang sama. Kemudian tambahkan variabel lingkungan berikut ke layanan ini:
+
+      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
+      - `GATEWAY_PLATFORM` = salah satu dari `telegram`, `line`, `feishu`, `googlechat`, `teams`, `wecom`
+
+      Restart layanan. Skrip startup otomatis menyuntikkan blok `[gateway]` ke `config.toml`.
+
+      ## Penggunaan
+
+      - **@mention bot** di channel Discord atau Slack yang diizinkan untuk memulai percakapan
+      - OpenAB membuat **thread** untuk percakapan multi-giliran — tidak perlu @mention untuk pesan selanjutnya
+      - Setiap thread dipetakan ke sesi Hermes yang persisten (TTL 24 jam secara default)
+
+      ## Kustomisasi
+
+      | File | Deskripsi |
+      |------|-----------|
+      | `/home/agent/.config/openab/config.toml` | Konfigurasi OpenAB (sessions, reactions, STT, dll.) |
+      | `/home/agent/.config/hermes/` | Kredensial Hermes dan konfigurasi penyedia (dikelola oleh `hermes auth` / `hermes model`) |
+
+      `config.toml` dibuat dari template bawaan saat boot pertama. Setelah itu, edit file secara langsung — variabel lingkungan hanya digunakan untuk pengaturan awal. Untuk mengembalikan ke default, hapus dan restart: `rm /home/agent/.config/openab/config.toml`
+
+      Untuk opsi konfigurasi OpenAB, lihat [dokumentasi OpenAB](https://github.com/openabdev/openab). Untuk opsi penyedia Hermes, lihat [dokumentasi Hermes](https://github.com/NousResearch/hermes-agent).
+
+      ## Menonaktifkan
+
+      Kosongkan `Discord Bot Token` dan `SLACK_BOT_TOKEN` saat deploy. Layanan akan tidur tanpa crash.
+
+      ## Tautan
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Hermes Agent (Nous Research)](https://github.com/NousResearch/hermes-agent)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
