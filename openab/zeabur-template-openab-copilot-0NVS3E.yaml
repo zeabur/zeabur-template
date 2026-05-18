@@ -279,7 +279,7 @@ localization:
 
       ### 1. 取得 Discord Bot Token
 
-      1. 前往 https://discord.com/developers/applications，點擊 **New Application**
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)，點擊 **New Application**
       2. 進入 **Bot** → 點擊 **Reset Token** → 複製 token
       3. 往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
       4. **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
