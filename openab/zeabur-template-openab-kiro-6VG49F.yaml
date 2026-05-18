@@ -309,7 +309,7 @@ localization:
 
       ### 1. 取得 Discord Bot Token
 
-      1. 前往 https://discord.com/developers/applications，點擊 **New Application**
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)，點擊 **New Application**
       2. 進入 **Bot** 頁籤 → 點擊 **Reset Token** → 複製 token
       3. 同一頁面往下滑，在 Privileged Gateway Intents 下啟用 **Message Content Intent**
       4. 前往 **OAuth2 → URL Generator** → 勾選 scope `bot` → 勾選權限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
@@ -424,7 +424,7 @@ localization:
 
       ### 1. 获取 Discord Bot Token
 
-      1. 前往 https://discord.com/developers/applications，点击 **New Application**
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)，点击 **New Application**
       2. 进入 **Bot** 页签 → 点击 **Reset Token** → 复制 token
       3. 同一页面往下滑，在 Privileged Gateway Intents 下启用 **Message Content Intent**
       4. 前往 **OAuth2 → URL Generator** → 勾选 scope `bot` → 勾选权限：Send Messages、Send Messages in Threads、Create Public Threads、Read Message History、Add Reactions、Manage Messages
