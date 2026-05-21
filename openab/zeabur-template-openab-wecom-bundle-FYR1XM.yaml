@@ -1,0 +1,504 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB WeCom Bundle
+spec:
+  description: |
+    All-in-one WeCom (企业微信) bot powered by OpenAB + Kiro. Deploys the OAB agent and the WeCom gateway together — fill in the 5 WeCom credentials, paste the gateway URL into WeCom admin once, and you're done. No separate gateway setup, no manual config.toml edits.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - WeCom
+    - 企业微信
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: WECOM_CORP_ID
+      type: STRING
+      name: WeCom Corp ID (企业ID)
+      description: "From WeCom Admin Console → 我的企业 → 企业信息 → 企业ID. Required."
+    - key: WECOM_AGENT_ID
+      type: STRING
+      name: WeCom Agent ID
+      description: "From your self-built app's detail page → AgentId. Required."
+    - key: WECOM_SECRET
+      type: STRING
+      name: WeCom Secret
+      description: "From your self-built app's detail page → Secret. Required."
+    - key: WECOM_TOKEN
+      type: STRING
+      name: WeCom Callback Token
+      description: "Token you set under 接收消息 → 设置API接收 → Token. Use WeCom's '随机获取' or set your own. Required."
+    - key: WECOM_ENCODING_AES_KEY
+      type: STRING
+      name: WeCom EncodingAESKey
+      description: "EncodingAESKey set under 接收消息 → 设置API接收 → EncodingAESKey. 43-character base64. Use WeCom's '随机获取' or set your own. Required."
+    - key: KIRO_API_KEY
+      type: STRING
+      name: Kiro API Key (optional, Pro+)
+      description: "Optional. API key for Kiro Pro/Pro+/Power subscribers. Leave empty to authenticate via device flow after deployment (free tier)."
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Gateway Domain
+      description: "Public HTTPS domain for receiving WeCom callbacks. Auto-assigned."
+  readme: |
+    # OpenAB WeCom Bundle
+
+    One-click [OpenAB](https://github.com/openabdev/openab) deployment for WeCom (企业微信) — bot agent + callback gateway bundled together. Fill in the 5 WeCom credentials and paste the callback URL into WeCom admin once.
+
+    ```
+    WeCom ──POST──▶ ┌──────────────────┐ ◀──WebSocket── ┌────────────┐
+                    │  openab-gateway  │                │   openab   │
+                    │  (wecom only)    │                │  (Kiro CLI) │
+                    └──────────────────┘                └────────────┘
+                       public HTTPS                       internal only
+    ```
+
+    > **Limitation**: WeCom self-built app callbacks only deliver **direct messages** to the bot. **Group chat is not supported** via this channel (it requires the WeCom appchat / WS bot API, which is not yet wired into the gateway). DMs work fine.
+
+    ## What's deployed
+
+    | Service | Purpose | Public |
+    |---|---|---|
+    | `openab` | OAB agent running Kiro CLI | No |
+    | `openab-gateway` | WeCom callback → WebSocket bridge | Yes (auto HTTPS) |
+
+    No PVC sharing, no manual `config.toml` edits. The agent's `config.toml` is generated on first boot with the gateway URL pre-wired to `ws://openab-gateway:8080/ws` and `platform = "wecom"`.
+
+    ## Setup order matters
+
+    Unlike Telegram (auto-register) or LINE (paste URL anytime), WeCom **verifies the callback URL when you click Save in WeCom admin** — so the gateway must be running with the matching `Token` + `EncodingAESKey` before you save in WeCom.
+
+    Recommended order: prepare the values in WeCom (without saving) → deploy bundle with those values → save in WeCom.
+
+    ## Setup
+
+    ### 1. Create a Self-Built App in WeCom
+
+    > Requires a WeCom (企业微信) enterprise account with admin access.
+
+    1. Go to [WeCom Admin Console](https://work.weixin.qq.com/wework_admin/frame) → **应用管理 → 自建 → 创建应用** → fill in name / icon / visible scope.
+    2. On the new app's detail page, copy:
+       - **AgentId** → paste into **WeCom Agent ID**
+       - **Secret** → click "查看", verify via WeCom mobile app → copy → paste into **WeCom Secret**
+    3. Click **我的企业** (top nav) → **企业信息** → copy **企业ID** → paste into **WeCom Corp ID**.
+
+    ### 2. Prepare Token + EncodingAESKey (don't save yet)
+
+    On the app detail page → **接收消息 → 设置API接收**:
+
+    1. **Token** → click "随机获取" (random) or set your own → paste into **WeCom Callback Token**.
+    2. **EncodingAESKey** → click "随机获取" (random) → paste into **WeCom EncodingAESKey**.
+    3. **URL** field stays blank for now — you'll fill it in step 5.
+    4. **Do NOT click Save** — WeCom would try to verify the URL immediately and fail.
+
+    ### 3. (Optional) Get a Kiro API Key
+
+    If you have a paid Kiro subscription, go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key and paste it into `KIRO_API_KEY`. Free tier users skip this and authenticate post-deploy in step 6.
+
+    ### 4. Deploy
+
+    Click deploy with the 5 WeCom values filled in. A public HTTPS domain is auto-assigned to the gateway service.
+
+    ### 5. Fill the Callback URL in WeCom & Save
+
+    1. Open the **openab-gateway** service page in Zeabur Dashboard → look at the auto-assigned domain.
+    2. The full callback URL is: `https://<YOUR_GATEWAY_DOMAIN>/webhook/wecom`
+    3. Back in WeCom admin → 接收消息 → 设置API接收 → **URL** → paste the URL.
+    4. Click **保存** — WeCom hits the gateway with a verification GET; if your Token + EncodingAESKey match the env vars, the save succeeds. If verification fails, double-check both values in both places.
+
+    The `openab-gateway` service Instructions section shows the exact callback URL pre-filled.
+
+    ### 6. Authenticate Kiro via Device Flow (free tier only)
+
+    Skip if you set `KIRO_API_KEY` in step 3.
+
+    After the `openab` service is running, open its terminal in Zeabur Dashboard and run:
+
+    ```
+    runuser -u agent -- kiro-cli login --use-device-flow
+    ```
+
+    Follow the URL and code to authorize in your browser.
+
+    ### 7. Test
+
+    In WeCom, open the bot (under your app's visible scope) and send a DM. The gateway decrypts the callback, forwards to OAB, and OAB replies back through the gateway → WeCom message API.
+
+    Remember: only DMs trigger the bot. Group chat is not supported.
+
+    ## Customization
+
+    - **`/home/agent/.config/openab/config.toml`** — OAB config (sessions, reactions, etc.). Created on first boot from a built-in template with the `[gateway]` block pre-wired. To regenerate, delete and restart.
+    - **Image tags** — bot tracks the floating `stable` channel (`ghcr.io/openabdev/openab:stable`) and auto-updates with each OpenAB stable release. Gateway is pinned at `ghcr.io/openabdev/openab-gateway:0.5.1` (no `:stable` tag yet). To pin or bump, change the tag in Zeabur Dashboard → Service → Settings. Available tags: [OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway).
+
+    ## Why no automatic callback registration?
+
+    WeCom's self-built app callback is configured in the WeCom admin console, not via API. The bundle pre-fills the callback URL in the gateway's Instructions section for easy copy-paste; you only need to paste it once.
+
+    ## Want a different agent backend?
+
+    This bundle uses Kiro as the default agent. For Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok, deploy the corresponding [bot template](https://zeabur.com/templates) separately together with the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB).
+
+    ## Want a different platform?
+
+    See [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) or the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB) for Google Chat, MS Teams.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [WeCom Setup Guide](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
+    - [Standalone OpenAB Gateway Template](https://zeabur.com/templates/IMRONB)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab:stable
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        runAsUserID: 1000
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell dotfiles and fix ownership for persistent volume
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent
+                chmod 755 /home/agent/.config 2>/dev/null || true
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # [gateway] block — always set (this bundle is gateway-bound)
+                printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\n' \
+                  "${GATEWAY_URL:-ws://openab-gateway:8080/ws}" \
+                  "${GATEWAY_PLATFORM:-wecom}" >> "$CONFIG_FILE"
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent "$CONFIG_DIR"
+                exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "kiro-cli"
+              args = ["acp", "--trust-all-tools"]
+              working_dir = "/home/agent"
+        env:
+          GATEWAY_URL:
+            default: ws://openab-gateway:8080/ws
+          GATEWAY_PLATFORM:
+            default: wecom
+          KIRO_API_KEY:
+            default: ${KIRO_API_KEY}
+          OPENAB_MAX_SESSIONS:
+            default: ""
+    - name: openab-gateway
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-gateway:0.5.1
+        ports:
+          - id: web
+            port: 8080
+            type: HTTP
+        healthCheck:
+          type: TCP
+          port: web
+        instructions:
+          - type: TEXT
+            title: WeCom Callback URL (paste into WeCom admin → 接收消息 → 设置API接收 → URL, then 保存)
+            content: "${ZEABUR_WEB_URL}/webhook/wecom"
+        env:
+          WECOM_CORP_ID:
+            default: ${WECOM_CORP_ID}
+          WECOM_AGENT_ID:
+            default: ${WECOM_AGENT_ID}
+          WECOM_SECRET:
+            default: ${WECOM_SECRET}
+          WECOM_TOKEN:
+            default: ${WECOM_TOKEN}
+          WECOM_ENCODING_AES_KEY:
+            default: ${WECOM_ENCODING_AES_KEY}
+localization:
+  zh-TW:
+    description: |
+      一鍵部署的 WeCom（企業微信）Bot，整合 OpenAB + Kiro。同時部署 OAB agent 與 WeCom gateway，只需填入 5 個 WeCom 憑證，並把 callback URL 貼進 WeCom 管理後台一次即可使用。無需另外部署 gateway、無需手動修改 config.toml。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: WECOM_CORP_ID
+        name: 企業 ID（Corp ID）
+        description: "WeCom 管理後台 → 我的企業 → 企業信息 → 企業 ID。必填。"
+      - key: WECOM_AGENT_ID
+        name: 應用 AgentId
+        description: "自建應用詳情頁的 AgentId。必填。"
+      - key: WECOM_SECRET
+        name: 應用 Secret
+        description: "自建應用詳情頁的 Secret（點「查看」、用 WeCom 手機 app 驗證後取得）。必填。"
+      - key: WECOM_TOKEN
+        name: 回調 Token
+        description: "接收消息 → 设置API接收 → Token。可用 WeCom 的「隨機獲取」或自訂。必填。"
+      - key: WECOM_ENCODING_AES_KEY
+        name: EncodingAESKey
+        description: "接收消息 → 设置API接收 → EncodingAESKey，43 字元 base64。可用「隨機獲取」或自訂。必填。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（選填，Pro+ 方案）
+        description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 網域
+        description: "用於接收 WeCom callback 的公開 HTTPS 網域，自動分配。"
+    readme: |
+      # OpenAB WeCom Bundle
+
+      一鍵部署的 [OpenAB](https://github.com/openabdev/openab) WeCom（企業微信）bot — bot agent 與 callback gateway 打包在一起，只需填入 5 個 WeCom 憑證，並把 callback URL 貼進 WeCom 管理後台一次。
+
+      > **限制**：WeCom 自建應用 callback 只能收**單聊（DM）**訊息，**不支援群組**（群組需要 appchat / WS bot API，目前 gateway 還沒接）。DM 流程完全沒問題。
+
+      ## 部署內容
+
+      | 服務 | 用途 | 公開 |
+      |---|---|---|
+      | `openab` | 執行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | WeCom callback → WebSocket 橋接 | 是（自動 HTTPS） |
+
+      無需共用 PVC、無需手動修改 `config.toml`。Agent 的 `config.toml` 在首次啟動時自動生成，gateway URL 已預先設為 `ws://openab-gateway:8080/ws`、`platform = "wecom"`。
+
+      ## 設定順序有講究
+
+      不像 Telegram（自動註冊）或 LINE（隨時貼 URL），WeCom **在你按管理後台「保存」時會立刻打 gateway 驗證**——所以必須先把 Token + EncodingAESKey 在 gateway 設好、服務跑起來，再去 WeCom 按保存。
+
+      建議順序：在 WeCom 準備好值（**先不要按保存**）→ 用同樣的值部署 bundle → 回 WeCom 按保存。
+
+      ## 設定步驟
+
+      ### 1. 在 WeCom 建立自建應用
+
+      > 需要 WeCom（企業微信）企業帳號 + 管理員權限。
+
+      1. 至 [WeCom 管理後台](https://work.weixin.qq.com/wework_admin/frame) → **應用管理 → 自建 → 創建應用** → 填名稱 / icon / 可見範圍。
+      2. 新應用詳情頁複製：
+         - **AgentId** → 貼到 **應用 AgentId**
+         - **Secret** → 點「查看」、用 WeCom 手機 app 驗證 → 複製 → 貼到 **應用 Secret**
+      3. 點 **我的企業**（頂部選單）→ **企業信息** → 複製 **企業 ID** → 貼到 **企業 ID**。
+
+      ### 2. 準備 Token + EncodingAESKey（**先不要按保存**）
+
+      應用詳情頁 → **接收消息 → 设置API接收**：
+
+      1. **Token** → 點「隨機獲取」或自訂 → 貼到 **回調 Token**。
+      2. **EncodingAESKey** → 點「隨機獲取」→ 貼到 **EncodingAESKey**。
+      3. **URL** 欄位先留空——步驟 5 才填。
+      4. **不要按「保存」**——WeCom 會立刻驗證 URL，這時候 gateway 還沒部署會失敗。
+
+      ### 3. （選填）取得 Kiro API Key
+
+      如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY`。免費方案跳過此步驟，於步驟 6 部署後再認證。
+
+      ### 4. 部署
+
+      確認 5 個 WeCom 值都已填好 → 點部署。系統會自動分配公開 HTTPS 網域給 gateway 服務。
+
+      ### 5. 回 WeCom 填 Callback URL 並保存
+
+      1. 打開 **openab-gateway** 服務頁面 → 查自動分配的網域。
+      2. 完整 callback URL 為：`https://<你的_GATEWAY_網域>/webhook/wecom`
+      3. 回 WeCom 管理後台 → 接收消息 → 设置API接收 → **URL** → 貼上 URL。
+      4. 點 **保存** — WeCom 會發 verification GET 給 gateway，如果你的 Token + EncodingAESKey 兩邊一致，保存成功。若驗證失敗，回頭核對兩邊的 Token 和 EncodingAESKey 是否完全一致。
+
+      `openab-gateway` 服務 Instructions 區會顯示已自動填好的完整 callback URL，可直接複製。
+
+      ### 6. 透過 Device Flow 認證 Kiro（僅免費方案）
+
+      若步驟 3 已填入 `KIRO_API_KEY`，跳過此步驟。
+
+      待 `openab` 服務啟動後，於 Zeabur Dashboard 開啟該服務的終端機，執行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      依照畫面顯示的 URL 與 code 完成瀏覽器授權。
+
+      ### 7. 測試
+
+      在 WeCom 開啟 bot（在你應用的可見範圍內）發 DM。Gateway 解密 callback → 透過 WebSocket 轉給 OAB → OAB 回覆透過 gateway → WeCom message API 送回。
+
+      記得：**只有單聊會觸發 bot，群組不支援。**
+
+      ## 自訂設定
+
+      - **`/home/agent/.config/openab/config.toml`** — OAB 設定（sessions、reactions 等）。首次啟動時從內建範本建立，`[gateway]` 區塊已預先設好。如需重建，刪除檔案後重啟服務。
+      - **映像標籤** — bot 追蹤 floating `stable` 標籤（`ghcr.io/openabdev/openab:stable`），OpenAB 推出新穩定版時自動更新。Gateway 目前 pin 在 `ghcr.io/openabdev/openab-gateway:0.5.1`（尚未發布 `:stable` 標籤）。可至 Zeabur Dashboard → 服務 → 設定修改映像標籤。
+
+      ## 為什麼 callback 沒有自動註冊？
+
+      WeCom 自建應用的 callback URL 是在管理後台手動設定，沒有 API。Bundle 在 gateway 的 Instructions 區預填了完整 URL 方便複製，只需要做一次。
+
+      ## 想換不同的 agent 後端？
+
+      本 bundle 預設使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，請改部署對應的 [bot template](https://zeabur.com/templates) 搭配獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通訊平台？
+
+      請參考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) 或獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支援 Google Chat、MS Teams。
+
+      ## 連結
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [WeCom 設定指南](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
+      - [獨立 OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)
+  zh-CN:
+    description: |
+      一键部署的 WeCom（企业微信）Bot，集成 OpenAB + Kiro。同时部署 OAB agent 与 WeCom gateway，只需填入 5 个 WeCom 凭证，并把 callback URL 粘贴到 WeCom 管理后台一次即可使用。无需另外部署 gateway、无需手动修改 config.toml。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: WECOM_CORP_ID
+        name: 企业 ID（Corp ID）
+        description: "WeCom 管理后台 → 我的企业 → 企业信息 → 企业 ID。必填。"
+      - key: WECOM_AGENT_ID
+        name: 应用 AgentId
+        description: "自建应用详情页的 AgentId。必填。"
+      - key: WECOM_SECRET
+        name: 应用 Secret
+        description: "自建应用详情页的 Secret（点「查看」、用 WeCom 手机 app 验证后获取）。必填。"
+      - key: WECOM_TOKEN
+        name: 回调 Token
+        description: "接收消息 → 设置API接收 → Token。可用 WeCom 的「随机获取」或自定义。必填。"
+      - key: WECOM_ENCODING_AES_KEY
+        name: EncodingAESKey
+        description: "接收消息 → 设置API接收 → EncodingAESKey，43 字元 base64。可用「随机获取」或自定义。必填。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（选填，Pro+ 方案）
+        description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 域名
+        description: "用于接收 WeCom callback 的公开 HTTPS 域名，自动分配。"
+    readme: |
+      # OpenAB WeCom Bundle
+
+      一键部署的 [OpenAB](https://github.com/openabdev/openab) WeCom（企业微信）bot — bot agent 与 callback gateway 打包在一起，只需填入 5 个 WeCom 凭证，并把 callback URL 粘贴到 WeCom 管理后台一次。
+
+      > **限制**：WeCom 自建应用 callback 只能收**单聊（DM）**消息，**不支持群聊**（群聊需要 appchat / WS bot API，目前 gateway 还没接）。DM 流程完全没问题。
+
+      ## 部署内容
+
+      | 服务 | 用途 | 公开 |
+      |---|---|---|
+      | `openab` | 运行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | WeCom callback → WebSocket 桥接 | 是（自动 HTTPS） |
+
+      ## 设置顺序有讲究
+
+      不像 Telegram（自动注册）或 LINE（随时贴 URL），WeCom **在你按管理后台「保存」时会立即打 gateway 验证**——所以必须先把 Token + EncodingAESKey 在 gateway 设好、服务跑起来，再去 WeCom 按保存。
+
+      推荐顺序：在 WeCom 准备好值（**先别按保存**）→ 用同样的值部署 bundle → 回 WeCom 按保存。
+
+      ## 设置步骤
+
+      ### 1. 在 WeCom 创建自建应用
+
+      > 需要 WeCom（企业微信）企业账号 + 管理员权限。
+
+      1. 到 [WeCom 管理后台](https://work.weixin.qq.com/wework_admin/frame) → **应用管理 → 自建 → 创建应用** → 填名称 / icon / 可见范围。
+      2. 新应用详情页复制：
+         - **AgentId** → 粘贴到 **应用 AgentId**
+         - **Secret** → 点「查看」、用 WeCom 手机 app 验证 → 复制 → 粘贴到 **应用 Secret**
+      3. 点 **我的企业**（顶部菜单）→ **企业信息** → 复制 **企业 ID** → 粘贴到 **企业 ID**。
+
+      ### 2. 准备 Token + EncodingAESKey（**先别按保存**）
+
+      应用详情页 → **接收消息 → 设置API接收**：
+
+      1. **Token** → 点「随机获取」或自定义 → 粘贴到 **回调 Token**。
+      2. **EncodingAESKey** → 点「随机获取」→ 粘贴到 **EncodingAESKey**。
+      3. **URL** 字段先留空——步骤 5 才填。
+      4. **不要点「保存」**——WeCom 会立即验证 URL，这时候 gateway 还没部署会失败。
+
+      ### 3. （选填）获取 Kiro API Key
+
+      如有付费 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY`。免费方案跳过此步骤。
+
+      ### 4. 部署
+
+      确认 5 个 WeCom 值都已填好 → 点部署。系统会自动分配公开 HTTPS 域名给 gateway 服务。
+
+      ### 5. 回 WeCom 填 Callback URL 并保存
+
+      1. 打开 **openab-gateway** 服务页面 → 查自动分配的域名。
+      2. 完整 callback URL：`https://<你的_GATEWAY_域名>/webhook/wecom`
+      3. 回 WeCom 管理后台 → 接收消息 → 设置API接收 → **URL** → 粘贴。
+      4. 点 **保存** — WeCom 会发 verification GET 给 gateway，如果两边 Token + EncodingAESKey 一致，保存成功。
+
+      `openab-gateway` 服务 Instructions 区显示已自动填好的完整 callback URL，可直接复制。
+
+      ### 6. 通过 Device Flow 认证 Kiro（仅免费方案）
+
+      若步骤 3 已填入 `KIRO_API_KEY`，跳过此步骤。
+
+      待 `openab` 服务启动后，在 Zeabur Dashboard 打开该服务的终端，运行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      ### 7. 测试
+
+      在 WeCom 打开 bot（在你应用的可见范围内）发 DM。Gateway 解密 callback → 通过 WebSocket 转发给 OAB → OAB 回复通过 gateway → WeCom message API 发出。
+
+      记得：**只有单聊会触发 bot，群聊不支持。**
+
+      ## 想换不同的 agent 后端？
+
+      本 bundle 默认使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，请改部署对应的 [bot template](https://zeabur.com/templates) 搭配独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通讯平台？
+
+      请参考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) 或独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支持 Google Chat、MS Teams。
+
+      ## 链接
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [WeCom 设置指南](https://github.com/openabdev/openab/blob/main/docs/wecom.md)

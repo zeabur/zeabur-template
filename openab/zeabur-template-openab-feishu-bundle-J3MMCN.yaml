@@ -1,0 +1,407 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB Feishu/Lark Bundle
+spec:
+  description: |
+    All-in-one Feishu / Lark bot powered by OpenAB + Kiro. Deploys the OAB agent and the Feishu gateway together — fill in App ID + App Secret and you're done. WebSocket mode by default (no public webhook URL needed), no separate gateway setup, no manual config.toml edits.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - Feishu
+    - Lark
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: FEISHU_APP_ID
+      type: STRING
+      name: Feishu/Lark App ID
+      description: "App ID from Feishu (open.feishu.cn) or Lark (open.larksuite.com) Open Platform. Required."
+    - key: FEISHU_APP_SECRET
+      type: STRING
+      name: Feishu/Lark App Secret
+      description: "App Secret from the same Open Platform app. Required."
+    - key: FEISHU_DOMAIN
+      type: STRING
+      name: Feishu/Lark Domain
+      description: "Use `feishu` for China (default) or `lark` for international Lark."
+    - key: KIRO_API_KEY
+      type: STRING
+      name: Kiro API Key (optional, Pro+)
+      description: "Optional. API key for Kiro Pro/Pro+/Power subscribers. Leave empty to authenticate via device flow after deployment (free tier)."
+  readme: |
+    # OpenAB Feishu/Lark Bundle
+
+    One-click [OpenAB](https://github.com/openabdev/openab) deployment for Feishu / Lark — bot agent + WebSocket gateway bundled together. Just fill in your App ID and App Secret.
+
+    ```
+    Feishu/Lark ◀──Long Connection──▶ ┌──────────────────┐ ◀──WebSocket── ┌────────────┐
+                  (outbound from gw) │  openab-gateway  │                │   openab   │
+                                     │ (feishu only)    │                │  (Kiro CLI) │
+                                     └──────────────────┘                └────────────┘
+                                       internal only                       internal only
+    ```
+
+    **No public HTTPS, no webhook URL, no firewall config** — the gateway initiates an outbound WebSocket connection to Feishu Open Platform.
+
+    ## What's deployed
+
+    | Service | Purpose | Public |
+    |---|---|---|
+    | `openab` | OAB agent running Kiro CLI | No |
+    | `openab-gateway` | Feishu Long Connection ↔ OAB WebSocket bridge | No |
+
+    No PVC sharing, no manual `config.toml` edits. The agent's `config.toml` is generated on first boot with the `[gateway]` block pre-wired to `ws://openab-gateway:8080/ws` and `platform = "feishu"`.
+
+    ## Setup
+
+    ### 1. Create a Feishu / Lark App
+
+    1. Go to [open.feishu.cn](https://open.feishu.cn) (China) or [open.larksuite.com](https://open.larksuite.com) (international) → **Create Custom App**.
+    2. Enable the **Bot** capability.
+    3. **Event Subscriptions** → choose **Long Connection** (WebSocket) mode → subscribe to the `im.message.receive_v1` event.
+    4. **Permissions & Scopes** → grant:
+       - `im:message`
+       - `im:message:send_as_bot`
+       - `contact:user.base:readonly`
+    5. **Credentials & Basic Info** → copy **App ID** → paste into **Feishu/Lark App ID**.
+    6. Same page → copy **App Secret** → paste into **Feishu/Lark App Secret**.
+    7. If using Lark international, set **Feishu/Lark Domain** to `lark` (otherwise leave at `feishu`).
+    8. Publish the app version (Feishu / Lark requires a published version before the bot is reachable).
+
+    ### 2. (Optional) Get a Kiro API Key
+
+    If you have a paid Kiro subscription, go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key and paste it into `KIRO_API_KEY`. Free tier users skip this and authenticate post-deploy in step 4.
+
+    ### 3. Deploy
+
+    Click deploy. No domain is assigned — both services run on the internal network.
+
+    ### 4. Authenticate Kiro via Device Flow (free tier only)
+
+    Skip if you set `KIRO_API_KEY` in step 2.
+
+    After the `openab` service is running, open its terminal in Zeabur Dashboard and run:
+
+    ```
+    runuser -u agent -- kiro-cli login --use-device-flow
+    ```
+
+    Follow the URL and code to authorize in your browser.
+
+    ### 5. Test
+
+    Open the bot inside Feishu / Lark and send a direct message. The gateway receives it via its outbound Long Connection, forwards it to OAB, and OAB replies through the gateway.
+
+    Group chats: invite the bot, then `@<your-bot> hello`. By default Feishu requires @mention in groups (`FEISHU_REQUIRE_MENTION=true`). DMs do not need @mention.
+
+    ## Customization
+
+    - **`/home/agent/.config/openab/config.toml`** — OAB config (sessions, reactions, etc.). Created on first boot from a built-in template with the `[gateway]` block pre-wired. To regenerate, delete and restart.
+    - **Image tags** — bot tracks the floating `stable` channel (`ghcr.io/openabdev/openab:stable`) and auto-updates with each OpenAB stable release. Gateway is pinned at `ghcr.io/openabdev/openab-gateway:0.5.1` (no `:stable` tag yet). To pin or bump, change the tag in Zeabur Dashboard → Service → Settings. Available tags: [OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway).
+    - **Advanced env** — set on `openab-gateway`: `FEISHU_ALLOWED_GROUPS` / `FEISHU_ALLOWED_USERS` (comma-separated IDs to restrict access), `FEISHU_REQUIRE_MENTION=false` (auto-respond in groups without @), `FEISHU_ALLOW_BOTS=mentions|all` (let other bots @ mention this bot).
+
+    ## Want a different agent backend?
+
+    This bundle uses Kiro as the default agent. For Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok, deploy the corresponding [bot template](https://zeabur.com/templates) separately together with the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB).
+
+    ## Want a different platform?
+
+    See [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) or the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB) for Telegram, LINE, Google Chat, MS Teams, WeCom.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [Feishu/Lark Setup Guide](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+    - [Standalone OpenAB Gateway Template](https://zeabur.com/templates/IMRONB)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab:stable
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        runAsUserID: 1000
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell dotfiles and fix ownership for persistent volume
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent
+                chmod 755 /home/agent/.config 2>/dev/null || true
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # [gateway] block — always set (this bundle is gateway-bound)
+                printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\n' \
+                  "${GATEWAY_URL:-ws://openab-gateway:8080/ws}" \
+                  "${GATEWAY_PLATFORM:-feishu}" >> "$CONFIG_FILE"
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent "$CONFIG_DIR"
+                exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "kiro-cli"
+              args = ["acp", "--trust-all-tools"]
+              working_dir = "/home/agent"
+        env:
+          GATEWAY_URL:
+            default: ws://openab-gateway:8080/ws
+          GATEWAY_PLATFORM:
+            default: feishu
+          KIRO_API_KEY:
+            default: ${KIRO_API_KEY}
+          OPENAB_MAX_SESSIONS:
+            default: ""
+    - name: openab-gateway
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-gateway:0.5.1
+        ports:
+          - id: web
+            port: 8080
+            type: HTTP
+        healthCheck:
+          type: TCP
+          port: web
+        env:
+          FEISHU_APP_ID:
+            default: ${FEISHU_APP_ID}
+          FEISHU_APP_SECRET:
+            default: ${FEISHU_APP_SECRET}
+          FEISHU_DOMAIN:
+            default: ${FEISHU_DOMAIN}
+          FEISHU_CONNECTION_MODE:
+            default: websocket
+localization:
+  zh-TW:
+    description: |
+      一鍵部署的 Feishu / Lark Bot，整合 OpenAB + Kiro。同時部署 OAB agent 與 Feishu gateway，只需填入 App ID 與 App Secret 即可使用。預設使用 WebSocket 模式（無需 public webhook URL），無需另外部署 gateway、無需手動修改 config.toml。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: FEISHU_APP_ID
+        name: Feishu/Lark App ID
+        description: "來自 Feishu（open.feishu.cn）或 Lark（open.larksuite.com）Open Platform 的 App ID。必填。"
+      - key: FEISHU_APP_SECRET
+        name: Feishu/Lark App Secret
+        description: "同一個 Open Platform App 的 App Secret。必填。"
+      - key: FEISHU_DOMAIN
+        name: Feishu/Lark Domain
+        description: "中國地區用 `feishu`（預設），國際版 Lark 用 `lark`。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（選填，Pro+ 方案）
+        description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
+    readme: |
+      # OpenAB Feishu/Lark Bundle
+
+      一鍵部署的 [OpenAB](https://github.com/openabdev/openab) Feishu / Lark bot — bot agent 與 WebSocket gateway 打包在一起，只需填入 App ID 與 App Secret 即可使用。
+
+      ```
+      Feishu/Lark ◀──Long Connection──▶ ┌──────────────────┐ ◀──WebSocket── ┌────────────┐
+                    （gateway 主動連） │  openab-gateway  │                │   openab   │
+                                       │ （僅 Feishu）    │                │ （Kiro CLI）│
+                                       └──────────────────┘                └────────────┘
+                                            內部使用                          內部使用
+      ```
+
+      **不需要 public HTTPS、不需要 webhook URL、不需要防火牆設定**——gateway 主動發起到 Feishu Open Platform 的 outbound WebSocket 連線。
+
+      ## 部署內容
+
+      | 服務 | 用途 | 公開 |
+      |---|---|---|
+      | `openab` | 執行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | Feishu Long Connection ↔ OAB WebSocket 橋接 | 否 |
+
+      無需共用 PVC、無需手動修改 `config.toml`。Agent 的 `config.toml` 在首次啟動時自動生成，gateway URL 已預先設為 `ws://openab-gateway:8080/ws`、`platform = "feishu"`。
+
+      ## 設定步驟
+
+      ### 1. 建立 Feishu / Lark App
+
+      1. 至 [open.feishu.cn](https://open.feishu.cn)（中國）或 [open.larksuite.com](https://open.larksuite.com)（國際）→ **建立自建應用**。
+      2. 啟用 **機器人（Bot）** 能力。
+      3. **事件訂閱** → 選 **長連線 / Long Connection**（WebSocket）模式 → 訂閱 `im.message.receive_v1` 事件。
+      4. **權限與作用域** → 授予：
+         - `im:message`
+         - `im:message:send_as_bot`
+         - `contact:user.base:readonly`
+      5. **憑證與基本資訊** → 複製 **App ID** → 貼到 **Feishu/Lark App ID**。
+      6. 同一頁 → 複製 **App Secret** → 貼到 **Feishu/Lark App Secret**。
+      7. 若使用 Lark 國際版，**Feishu/Lark Domain** 填 `lark`（否則保持 `feishu`）。
+      8. 發布應用版本（Feishu / Lark 需要先發布版本，bot 才能被使用）。
+
+      ### 2. （選填）取得 Kiro API Key
+
+      如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY`。免費方案跳過此步驟，於步驟 4 部署後再認證。
+
+      ### 3. 部署
+
+      點擊部署。**不會分配公開網域**——兩個服務都在內部網路執行。
+
+      ### 4. 透過 Device Flow 認證 Kiro（僅免費方案）
+
+      若步驟 2 已填入 `KIRO_API_KEY`，跳過此步驟。
+
+      待 `openab` 服務啟動後，於 Zeabur Dashboard 開啟該服務的終端機，執行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      依照畫面顯示的 URL 與 code 完成瀏覽器授權。
+
+      ### 5. 測試
+
+      在 Feishu / Lark 內開啟 bot 並發送私訊。Gateway 透過 outbound Long Connection 收到 → 透過 WebSocket 轉發給 OAB → OAB 回覆透過 Gateway 送出。
+
+      群組對話：把 bot 邀請進群，然後 `@<你的 bot> hello`。預設 Feishu 群組需要 @mention（`FEISHU_REQUIRE_MENTION=true`），私訊不需要。
+
+      ## 自訂設定
+
+      - **`/home/agent/.config/openab/config.toml`** — OAB 設定（sessions、reactions 等）。首次啟動時從內建範本建立，`[gateway]` 區塊已預先設好。如需重建，刪除檔案後重啟服務。
+      - **映像標籤** — bot 追蹤 floating `stable` 標籤（`ghcr.io/openabdev/openab:stable`），OpenAB 推出新穩定版時自動更新。Gateway 目前 pin 在 `ghcr.io/openabdev/openab-gateway:0.5.1`（尚未發布 `:stable` 標籤）。可至 Zeabur Dashboard → 服務 → 設定修改映像標籤。
+      - **進階 env**（設在 `openab-gateway`）：`FEISHU_ALLOWED_GROUPS` / `FEISHU_ALLOWED_USERS`（CSV 限制特定群組或使用者）、`FEISHU_REQUIRE_MENTION=false`（群組免 @ 自動回應）、`FEISHU_ALLOW_BOTS=mentions|all`（允許其他 bot @ 本 bot）。
+
+      ## 想換不同的 agent 後端？
+
+      本 bundle 預設使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，請改部署對應的 [bot template](https://zeabur.com/templates) 搭配獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通訊平台？
+
+      請參考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) 或獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支援 Telegram、LINE、Google Chat、MS Teams、WeCom。
+
+      ## 連結
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Feishu/Lark 設定指南](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
+      - [獨立 OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)
+  zh-CN:
+    description: |
+      一键部署的 Feishu / Lark Bot，集成 OpenAB + Kiro。同时部署 OAB agent 与 Feishu gateway，只需填入 App ID 与 App Secret 即可使用。默认使用 WebSocket 模式（无需 public webhook URL），无需另外部署 gateway、无需手动修改 config.toml。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: FEISHU_APP_ID
+        name: Feishu/Lark App ID
+        description: "来自 Feishu（open.feishu.cn）或 Lark（open.larksuite.com）Open Platform 的 App ID。必填。"
+      - key: FEISHU_APP_SECRET
+        name: Feishu/Lark App Secret
+        description: "同一个 Open Platform App 的 App Secret。必填。"
+      - key: FEISHU_DOMAIN
+        name: Feishu/Lark Domain
+        description: "中国地区用 `feishu`（默认），国际版 Lark 用 `lark`。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（选填，Pro+ 方案）
+        description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
+    readme: |
+      # OpenAB Feishu/Lark Bundle
+
+      一键部署的 [OpenAB](https://github.com/openabdev/openab) Feishu / Lark bot — bot agent 与 WebSocket gateway 打包在一起，只需填入 App ID 与 App Secret 即可使用。
+
+      **不需要 public HTTPS、不需要 webhook URL、不需要防火墙设置**——gateway 主动发起到 Feishu Open Platform 的 outbound WebSocket 连线。
+
+      ## 部署内容
+
+      | 服务 | 用途 | 公开 |
+      |---|---|---|
+      | `openab` | 运行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | Feishu Long Connection ↔ OAB WebSocket 桥接 | 否 |
+
+      ## 设置步骤
+
+      ### 1. 创建 Feishu / Lark App
+
+      1. 到 [open.feishu.cn](https://open.feishu.cn)（中国）或 [open.larksuite.com](https://open.larksuite.com)（国际）→ **创建自建应用**。
+      2. 启用 **机器人（Bot）** 能力。
+      3. **事件订阅** → 选 **长连接 / Long Connection**（WebSocket）模式 → 订阅 `im.message.receive_v1` 事件。
+      4. **权限与作用域** → 授予 `im:message`、`im:message:send_as_bot`、`contact:user.base:readonly`。
+      5. **凭证与基本信息** → 复制 **App ID** 与 **App Secret** → 分别粘贴到 **Feishu/Lark App ID** 与 **Feishu/Lark App Secret**。
+      6. 国际版 Lark 把 **Feishu/Lark Domain** 设为 `lark`（否则保持 `feishu`）。
+      7. 发布应用版本（Feishu / Lark 需要先发布版本，bot 才能被使用）。
+
+      ### 2. （选填）获取 Kiro API Key
+
+      如有付费 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY`。免费方案跳过此步骤，于步骤 4 部署后再认证。
+
+      ### 3. 部署
+
+      点击部署。**不会分配公开域名**——两个服务都在内部网络运行。
+
+      ### 4. 通过 Device Flow 认证 Kiro（仅免费方案）
+
+      若步骤 2 已填入 `KIRO_API_KEY`，跳过此步骤。
+
+      待 `openab` 服务启动后，在 Zeabur Dashboard 打开该服务的终端，运行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      按照屏幕显示的 URL 和 code 完成浏览器授权。
+
+      ### 5. 测试
+
+      在 Feishu / Lark 内打开 bot 并发送私信。Gateway 通过 outbound Long Connection 收到 → 通过 WebSocket 转发给 OAB → OAB 回复通过 Gateway 发出。
+
+      群聊：把 bot 邀请进群，然后 `@<你的 bot> hello`。默认 Feishu 群聊需要 @mention（`FEISHU_REQUIRE_MENTION=true`），私信不需要。
+
+      ## 想换不同的 agent 后端？
+
+      本 bundle 默认使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，请改部署对应的 [bot template](https://zeabur.com/templates) 搭配独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通讯平台？
+
+      请参考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) 或独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支持 Telegram、LINE、Google Chat、MS Teams、WeCom。
+
+      ## 链接
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Feishu/Lark 设置指南](https://github.com/openabdev/openab/blob/main/docs/feishu.md)

@@ -1,0 +1,428 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB LINE Bundle
+spec:
+  description: |
+    All-in-one LINE bot powered by OpenAB + Kiro. Deploys the OAB agent and the LINE gateway together — fill in your channel secret + access token, paste the webhook URL into LINE Developers Console once, and you're done. No separate gateway setup, no manual config.toml edits.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - LINE
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: LINE_CHANNEL_SECRET
+      type: STRING
+      name: LINE Channel Secret
+      description: "Channel secret from LINE Developers Console → Basic settings. Required for webhook signature validation."
+    - key: LINE_CHANNEL_ACCESS_TOKEN
+      type: STRING
+      name: LINE Channel Access Token
+      description: "Channel access token from LINE Developers Console → Messaging API tab → Issue. Required for sending replies."
+    - key: KIRO_API_KEY
+      type: STRING
+      name: Kiro API Key (optional, Pro+)
+      description: "Optional. API key for Kiro Pro/Pro+/Power subscribers. Leave empty to authenticate via device flow after deployment (free tier)."
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Gateway Domain
+      description: "Public HTTPS domain for receiving LINE webhooks. Auto-assigned."
+  readme: |
+    # OpenAB LINE Bundle
+
+    One-click [OpenAB](https://github.com/openabdev/openab) deployment for LINE — bot agent + webhook gateway bundled together. Fill in your LINE channel credentials and paste one webhook URL into the LINE Developers Console.
+
+    ```
+    LINE ──POST──▶ ┌──────────────────┐ ◀──WebSocket── ┌────────────┐
+                   │  openab-gateway  │                │   openab   │
+                   │  (line only)     │                │  (Kiro CLI) │
+                   └──────────────────┘                └────────────┘
+                      public HTTPS                       internal only
+    ```
+
+    ## What's deployed
+
+    | Service | Purpose | Public |
+    |---|---|---|
+    | `openab` | OAB agent running Kiro CLI | No |
+    | `openab-gateway` | LINE webhook → WebSocket bridge | Yes (auto HTTPS) |
+
+    No PVC sharing, no manual `config.toml` edits. The agent's `config.toml` is generated on first boot with the gateway URL pre-wired to `ws://openab-gateway:8080/ws` and `platform = "line"`.
+
+    ## Setup
+
+    ### 1. Create a LINE Official Account + Channel
+
+    1. Go to [LINE Official Account Manager](https://manager.line.biz) → create a new account (or use an existing one).
+    2. **Settings** → **Messaging API** → **Enable Messaging API** → follow the prompts (you may need to create / pick a LINE Developers provider).
+    3. Open [LINE Developers Console](https://developers.line.biz) → your provider → your channel.
+    4. **Basic settings** tab → scroll to **Channel secret** → copy → paste into **LINE Channel Secret**.
+    5. **Messaging API** tab → scroll to **Channel access token** → click **Issue** → copy the long-lived token → paste into **LINE Channel Access Token**.
+    6. While in **Messaging API** tab, set:
+       - **Auto-reply messages**: OFF (so LINE doesn't pre-empt your bot)
+       - **Greeting messages**: optional, your call
+
+    ### 2. (Optional) Get a Kiro API Key
+
+    If you have a paid Kiro subscription, go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key and paste it into `KIRO_API_KEY`. Free tier users skip this and authenticate post-deploy in step 4.
+
+    ### 3. Deploy
+
+    Click deploy. A public HTTPS domain is auto-assigned to the gateway service.
+
+    ### 4. Authenticate Kiro via Device Flow (free tier only)
+
+    Skip if you set `KIRO_API_KEY` in step 2.
+
+    After the `openab` service is running, open its terminal in Zeabur Dashboard and run:
+
+    ```
+    runuser -u agent -- kiro-cli login --use-device-flow
+    ```
+
+    Follow the URL and code to authorize in your browser.
+
+    ### 5. Register the LINE Webhook URL
+
+    LINE has no programmatic setWebhook API — you must paste the URL into LINE Developers Console once.
+
+    1. Open the **openab-gateway** service page in Zeabur Dashboard → look at the auto-assigned domain (e.g. `https://your-gateway.zeabur.app`).
+    2. The full webhook URL is: `https://<YOUR_GATEWAY_DOMAIN>/webhook/line`
+    3. Go to [LINE Developers Console](https://developers.line.biz) → your channel → **Messaging API** tab.
+    4. **Webhook URL** → **Edit** → paste the URL → **Update**.
+    5. **Use webhook** → toggle **ON**.
+    6. Click **Verify** — you should see ✅ Success.
+
+    The `openab-gateway` service Instructions section shows the exact webhook URL pre-filled with your domain.
+
+    ### 6. Test
+
+    Open the LINE app, scan the QR code from your channel's Messaging API page, add the bot as a friend, and send a message. The gateway receives it, forwards it to OAB via WebSocket, and OAB replies through the gateway.
+
+    Group chats: LINE bots can be invited to group chats. Behavior depends on your channel's settings under **LINE Official Account Manager → Response settings**.
+
+    ## Customization
+
+    - **`/home/agent/.config/openab/config.toml`** — OAB config (sessions, reactions, etc.). Created on first boot from a built-in template with the `[gateway]` block pre-wired. To regenerate, delete and restart.
+    - **Image tags** — bot tracks the floating `stable` channel (`ghcr.io/openabdev/openab:stable`) and auto-updates with each OpenAB stable release. Gateway is pinned at `ghcr.io/openabdev/openab-gateway:0.5.1` (no `:stable` tag yet). To pin or bump, change the tag in Zeabur Dashboard → Service → Settings. Available tags: [OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway).
+    - **Reply token caching** — LINE reply tokens expire after ~1 minute. The gateway caches them and falls back to push API if expired or missing — no config needed.
+
+    ## Why no automatic webhook registration?
+
+    Unlike Telegram (which has a `setWebhook` API), LINE requires you to paste the webhook URL into the Developers Console and click Verify yourself — there's no server-to-server registration endpoint. This is a one-time setup; redeployments keep the same URL as long as the gateway domain is unchanged.
+
+    ## Want a different agent backend?
+
+    This bundle uses Kiro as the default agent. For Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok, deploy the corresponding [bot template](https://zeabur.com/templates) separately together with the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB).
+
+    ## Want a different platform?
+
+    See [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) or the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB) for Google Chat, MS Teams, WeCom.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [LINE Setup Guide](https://github.com/openabdev/openab/blob/main/docs/line.md)
+    - [Standalone OpenAB Gateway Template](https://zeabur.com/templates/IMRONB)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab:stable
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        runAsUserID: 1000
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell dotfiles and fix ownership for persistent volume
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent
+                chmod 755 /home/agent/.config 2>/dev/null || true
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # [gateway] block — always set (this bundle is gateway-bound)
+                printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\n' \
+                  "${GATEWAY_URL:-ws://openab-gateway:8080/ws}" \
+                  "${GATEWAY_PLATFORM:-line}" >> "$CONFIG_FILE"
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent "$CONFIG_DIR"
+                exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "kiro-cli"
+              args = ["acp", "--trust-all-tools"]
+              working_dir = "/home/agent"
+        env:
+          GATEWAY_URL:
+            default: ws://openab-gateway:8080/ws
+          GATEWAY_PLATFORM:
+            default: line
+          KIRO_API_KEY:
+            default: ${KIRO_API_KEY}
+          OPENAB_MAX_SESSIONS:
+            default: ""
+    - name: openab-gateway
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-gateway:0.5.1
+        ports:
+          - id: web
+            port: 8080
+            type: HTTP
+        healthCheck:
+          type: TCP
+          port: web
+        instructions:
+          - type: TEXT
+            title: LINE Webhook URL (paste into LINE Developers Console → Messaging API → Webhook URL)
+            content: "${ZEABUR_WEB_URL}/webhook/line"
+        env:
+          LINE_CHANNEL_SECRET:
+            default: ${LINE_CHANNEL_SECRET}
+          LINE_CHANNEL_ACCESS_TOKEN:
+            default: ${LINE_CHANNEL_ACCESS_TOKEN}
+localization:
+  zh-TW:
+    description: |
+      一鍵部署的 LINE Bot，整合 OpenAB + Kiro。同時部署 OAB agent 與 LINE gateway，只需填入 channel secret + access token，並把 webhook URL 貼進 LINE Developers Console 一次即可使用。無需另外部署 gateway、無需手動修改 config.toml。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: LINE_CHANNEL_SECRET
+        name: LINE Channel Secret
+        description: "來自 LINE Developers Console → Basic settings 的 Channel secret，用於 webhook 簽章驗證。必填。"
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        name: LINE Channel Access Token
+        description: "來自 LINE Developers Console → Messaging API → Issue 取得的 Channel access token，用於發送回覆。必填。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（選填，Pro+ 方案）
+        description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 網域
+        description: "用於接收 LINE Webhook 的公開 HTTPS 網域，自動分配。"
+    readme: |
+      # OpenAB LINE Bundle
+
+      一鍵部署的 [OpenAB](https://github.com/openabdev/openab) LINE bot — bot agent 與 webhook gateway 打包在一起，只需填入 LINE channel 憑證，並把 webhook URL 貼進 LINE Developers Console 一次。
+
+      ## 部署內容
+
+      | 服務 | 用途 | 公開 |
+      |---|---|---|
+      | `openab` | 執行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | LINE webhook → WebSocket 橋接 | 是（自動 HTTPS） |
+
+      無需共用 PVC、無需手動修改 `config.toml`。Agent 的 `config.toml` 在首次啟動時自動生成，gateway URL 已預先設為 `ws://openab-gateway:8080/ws`、`platform = "line"`。
+
+      ## 設定步驟
+
+      ### 1. 建立 LINE Official Account + Channel
+
+      1. 至 [LINE Official Account Manager](https://manager.line.biz) → 建立新帳號（或使用既有的）。
+      2. **設定** → **Messaging API** → **啟用 Messaging API** → 依提示完成（可能需要建立 / 選擇 LINE Developers provider）。
+      3. 開啟 [LINE Developers Console](https://developers.line.biz) → 你的 provider → 你的 channel。
+      4. **Basic settings** tab → 滑到 **Channel secret** → 複製 → 貼到 **LINE Channel Secret**。
+      5. **Messaging API** tab → 滑到 **Channel access token** → 點 **Issue** → 複製長效 token → 貼到 **LINE Channel Access Token**。
+      6. 同樣在 **Messaging API** tab：
+         - **Auto-reply messages**：關閉（避免 LINE 自動回覆搶在 bot 之前）
+         - **Greeting messages**：選填
+
+      ### 2. （選填）取得 Kiro API Key
+
+      如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY`。免費方案跳過此步驟，於步驟 4 部署後再認證。
+
+      ### 3. 部署
+
+      點擊部署。系統會自動分配公開 HTTPS 網域給 gateway 服務。
+
+      ### 4. 透過 Device Flow 認證 Kiro（僅免費方案）
+
+      若步驟 2 已填入 `KIRO_API_KEY`，跳過此步驟。
+
+      待 `openab` 服務啟動後，於 Zeabur Dashboard 開啟該服務的終端機，執行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      依照畫面顯示的 URL 與 code 完成瀏覽器授權。
+
+      ### 5. 註冊 LINE Webhook URL
+
+      LINE 沒有 setWebhook API——必須手動把 URL 貼到 LINE Developers Console 一次。
+
+      1. 打開 **openab-gateway** 服務頁面 → 查自動分配的網域（例如 `https://your-gateway.zeabur.app`）。
+      2. 完整 webhook URL 為：`https://<你的_GATEWAY_網域>/webhook/line`
+      3. 至 [LINE Developers Console](https://developers.line.biz) → 你的 channel → **Messaging API** tab。
+      4. **Webhook URL** → **Edit** → 貼上 URL → **Update**。
+      5. **Use webhook** → 切換為 **ON**。
+      6. 按 **Verify** — 應看到 ✅ Success。
+
+      `openab-gateway` 服務 Instructions 區會顯示已自動填好的完整 webhook URL，可直接複製。
+
+      ### 6. 測試
+
+      在 LINE app 內掃 channel 的 Messaging API 頁面上的 QR code 加 bot 為好友，發訊息。Gateway 收到後透過 WebSocket 轉發給 OAB，OAB 處理後透過 Gateway 回覆。
+
+      群組對話：LINE bot 可以被邀請進群組。群組行為取決於 **LINE Official Account Manager → Response settings** 的設定。
+
+      ## 自訂設定
+
+      - **`/home/agent/.config/openab/config.toml`** — OAB 設定（sessions、reactions 等）。首次啟動時從內建範本建立，`[gateway]` 區塊已預先設好。如需重建，刪除檔案後重啟服務。
+      - **映像標籤** — bot 追蹤 floating `stable` 標籤（`ghcr.io/openabdev/openab:stable`），OpenAB 推出新穩定版時自動更新。Gateway 目前 pin 在 `ghcr.io/openabdev/openab-gateway:0.5.1`（尚未發布 `:stable` 標籤）。可至 Zeabur Dashboard → 服務 → 設定修改映像標籤。
+      - **Reply token 快取** — LINE reply token 約 1 分鐘過期，gateway 自動快取並在 token 過期 / 缺失時 fallback 到 push API，不需設定。
+
+      ## 為什麼 webhook 沒有自動註冊？
+
+      不像 Telegram 有 `setWebhook` API，LINE 規定你**必須在 Developers Console 自己貼 URL 並按 Verify**——沒有 server-to-server 註冊端點。這只需做一次；後續 redeploy 只要 gateway 網域沒變，URL 就持續有效。
+
+      ## 想換不同的 agent 後端？
+
+      本 bundle 預設使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，請改部署對應的 [bot template](https://zeabur.com/templates) 搭配獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通訊平台？
+
+      請參考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) 或獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支援 Google Chat、MS Teams、WeCom。
+
+      ## 連結
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [LINE 設定指南](https://github.com/openabdev/openab/blob/main/docs/line.md)
+      - [獨立 OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)
+  zh-CN:
+    description: |
+      一键部署的 LINE Bot，集成 OpenAB + Kiro。同时部署 OAB agent 与 LINE gateway，只需填入 channel secret + access token，并把 webhook URL 粘贴到 LINE Developers Console 一次即可使用。无需另外部署 gateway、无需手动修改 config.toml。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: LINE_CHANNEL_SECRET
+        name: LINE Channel Secret
+        description: "来自 LINE Developers Console → Basic settings 的 Channel secret，用于 webhook 签名验证。必填。"
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        name: LINE Channel Access Token
+        description: "来自 LINE Developers Console → Messaging API → Issue 获取的 Channel access token，用于发送回复。必填。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（选填，Pro+ 方案）
+        description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 域名
+        description: "用于接收 LINE Webhook 的公开 HTTPS 域名，自动分配。"
+    readme: |
+      # OpenAB LINE Bundle
+
+      一键部署的 [OpenAB](https://github.com/openabdev/openab) LINE bot — bot agent 与 webhook gateway 打包在一起，只需填入 LINE channel 凭证，并把 webhook URL 粘贴到 LINE Developers Console 一次。
+
+      ## 部署内容
+
+      | 服务 | 用途 | 公开 |
+      |---|---|---|
+      | `openab` | 运行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | LINE webhook → WebSocket 桥接 | 是（自动 HTTPS） |
+
+      ## 设置步骤
+
+      ### 1. 创建 LINE Official Account + Channel
+
+      1. 到 [LINE Official Account Manager](https://manager.line.biz) → 创建新账号（或使用现有的）。
+      2. **设置** → **Messaging API** → **启用 Messaging API**。
+      3. 打开 [LINE Developers Console](https://developers.line.biz) → 你的 channel。
+      4. **Basic settings** → 复制 **Channel secret** → 粘贴到 **LINE Channel Secret**。
+      5. **Messaging API** tab → **Issue** Channel access token → 复制 → 粘贴到 **LINE Channel Access Token**。
+      6. 同一 tab 关掉 **Auto-reply messages**。
+
+      ### 2. （选填）获取 Kiro API Key
+
+      如有付费 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY`。免费方案跳过此步骤。
+
+      ### 3. 部署
+
+      点击部署。系统会自动分配公开 HTTPS 域名给 gateway 服务。
+
+      ### 4. 通过 Device Flow 认证 Kiro（仅免费方案）
+
+      若步骤 2 已填入 `KIRO_API_KEY`，跳过此步骤。
+
+      待 `openab` 服务启动后，在 Zeabur Dashboard 打开该服务的终端，运行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      ### 5. 注册 LINE Webhook URL
+
+      LINE 没有 setWebhook API——必须手动把 URL 粘贴到 LINE Developers Console 一次。
+
+      1. 打开 **openab-gateway** 服务页面 → 查自动分配的域名。
+      2. 完整 webhook URL：`https://<你的_GATEWAY_域名>/webhook/line`
+      3. 到 [LINE Developers Console](https://developers.line.biz) → 你的 channel → **Messaging API** tab → **Webhook URL** → **Edit** → 粘贴 → **Update**。
+      4. **Use webhook** → 切换为 **ON**。
+      5. 点 **Verify** → 应看到 ✅ Success。
+
+      `openab-gateway` 服务 Instructions 区显示已自动填好的完整 webhook URL，可直接复制。
+
+      ### 6. 测试
+
+      在 LINE app 扫 channel 的 QR code 加 bot 为好友 → 发消息。Gateway 收到后通过 WebSocket 转发给 OAB → OAB 回复通过 Gateway 发出。
+
+      ## 想换不同的 agent 后端？
+
+      本 bundle 默认使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，请改部署对应的 [bot template](https://zeabur.com/templates) 搭配独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通讯平台？
+
+      请参考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) 或独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支持 Google Chat、MS Teams、WeCom。
+
+      ## 链接
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [LINE 设置指南](https://github.com/openabdev/openab/blob/main/docs/line.md)

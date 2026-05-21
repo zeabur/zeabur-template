@@ -1,0 +1,449 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB MS Teams Bundle
+spec:
+  description: |
+    All-in-one Microsoft Teams bot powered by OpenAB + Kiro. Deploys the OAB agent and the Teams gateway together — register a Bot Framework app, paste the messaging endpoint, and you're done. No separate gateway setup, no manual config.toml edits.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - MS Teams
+    - Microsoft Teams
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: TEAMS_APP_ID
+      type: STRING
+      name: Teams App ID
+      description: "Microsoft App ID from Azure Bot Service / Bot Framework registration. Required."
+    - key: TEAMS_APP_SECRET
+      type: STRING
+      name: Teams App Secret
+      description: "Client secret generated under the app's Certificates & secrets blade in Azure. Required."
+    - key: KIRO_API_KEY
+      type: STRING
+      name: Kiro API Key (optional, Pro+)
+      description: "Optional. API key for Kiro Pro/Pro+/Power subscribers. Leave empty to authenticate via device flow after deployment (free tier)."
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Gateway Domain
+      description: "Public HTTPS domain for receiving Teams Bot Framework activity. Auto-assigned."
+  readme: |
+    # OpenAB MS Teams Bundle
+
+    One-click [OpenAB](https://github.com/openabdev/openab) deployment for Microsoft Teams — bot agent + Bot Framework gateway bundled together. Register a bot in Azure, paste the messaging endpoint, you're done.
+
+    ```
+    MS Teams ──Bot Framework──▶ ┌──────────────────┐ ◀──WebSocket── ┌────────────┐
+                                │  openab-gateway  │                │   openab   │
+                                │  (teams only)    │                │  (Kiro CLI) │
+                                └──────────────────┘                └────────────┘
+                                   public HTTPS                       internal only
+    ```
+
+    > **Prerequisites**: Azure account with permission to register Bot Service / App Registrations, and a Microsoft 365 tenant where you can sideload or publish a Teams app. Personal Microsoft accounts (Hotmail / Live) typically cannot register Azure Bot Service resources — use an Azure AD work/school account.
+
+    ## What's deployed
+
+    | Service | Purpose | Public |
+    |---|---|---|
+    | `openab` | OAB agent running Kiro CLI | No |
+    | `openab-gateway` | Teams Bot Framework → WebSocket bridge | Yes (auto HTTPS) |
+
+    No PVC sharing, no manual `config.toml` edits. The agent's `config.toml` is generated on first boot with the gateway URL pre-wired to `ws://openab-gateway:8080/ws` and `platform = "teams"`.
+
+    ## Setup
+
+    ### 1. Create a Bot in Azure
+
+    1. Go to [Azure Portal](https://portal.azure.com) → **Create a resource** → search for **Azure Bot** → Create.
+    2. Bot handle: pick a unique name. Subscription / Resource group: your choice. Pricing tier: F0 (free) is fine for dev.
+    3. Microsoft App ID: choose **Type → Multi Tenant** (or single tenant if you only need one org) → **Creation type → Create new Microsoft App ID**.
+    4. Click **Review + create → Create**. Wait for deployment.
+    5. Open the new Azure Bot resource → **Configuration**:
+       - **Microsoft App ID** → copy → paste into **Teams App ID**
+       - **Messaging endpoint** → leave blank for now (you'll fill after deploy)
+    6. From the same Configuration page → click **Manage Password** (or **Manage** under app credentials) → opens App Registration → **Certificates & secrets** → **New client secret** → copy the **Value** (not the ID) → paste into **Teams App Secret**.
+
+    ### 2. (Optional) Get a Kiro API Key
+
+    If you have a paid Kiro subscription, go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key and paste it into `KIRO_API_KEY`. Free tier users skip this and authenticate post-deploy in step 5.
+
+    ### 3. Deploy
+
+    Click deploy with the App ID + App Secret filled in. A public HTTPS domain is auto-assigned to the gateway service.
+
+    ### 4. Set the Messaging Endpoint
+
+    Bot Framework has no setEndpoint API — paste the URL in Azure Portal.
+
+    1. Open the **openab-gateway** service page in Zeabur Dashboard → look at the auto-assigned domain (e.g. `https://your-gateway.zeabur.app`).
+    2. The full messaging endpoint is: `https://<YOUR_GATEWAY_DOMAIN>/webhook/teams`
+    3. Back in Azure Portal → your Azure Bot resource → **Configuration** → **Messaging endpoint** → paste → **Apply**.
+
+    The `openab-gateway` service Instructions section shows the exact messaging endpoint pre-filled.
+
+    ### 5. Authenticate Kiro via Device Flow (free tier only)
+
+    Skip if you set `KIRO_API_KEY` in step 2.
+
+    After the `openab` service is running, open its terminal in Zeabur Dashboard and run:
+
+    ```
+    runuser -u agent -- kiro-cli login --use-device-flow
+    ```
+
+    Follow the URL and code to authorize in your browser.
+
+    ### 6. Add the Bot to a Teams Channel
+
+    1. In Azure Bot resource → **Channels** → **Microsoft Teams** → Apply standard channel terms.
+    2. Open [Teams admin / Teams Developer Portal](https://dev.teams.microsoft.com) → **Apps** → **+ New app** → fill basic info → under **App features** → **Bot** → select the bot you just created.
+    3. Set scope (Personal / Team / Group chat) and download / publish the app manifest. For dev: **Preview in Teams** → install in a chat / channel.
+
+    Detailed guide: [docs/msteams-selfhosted.md](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md).
+
+    ### 7. Test
+
+    Open Teams → DM the bot or @mention it in a channel where the app is installed. Gateway receives the activity, forwards to OAB, OAB replies via Bot Framework reply API.
+
+    ## Customization
+
+    - **`/home/agent/.config/openab/config.toml`** — OAB config (sessions, reactions, etc.). Created on first boot from a built-in template with the `[gateway]` block pre-wired. To regenerate, delete and restart.
+    - **Image tags** — bot tracks the floating `stable` channel (`ghcr.io/openabdev/openab:stable`) and auto-updates with each OpenAB stable release. Gateway is pinned at `ghcr.io/openabdev/openab-gateway:0.5.1` (no `:stable` tag yet). To pin or bump, change the tag in Zeabur Dashboard → Service → Settings. Available tags: [OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway).
+    - **Tenant restriction** — set `TEAMS_ALLOWED_TENANTS=<tenant-id-1>,<tenant-id-2>` on `openab-gateway` to only accept activities from specific Microsoft 365 tenants (defense-in-depth on top of multi-tenant App ID).
+
+    ## Why no automatic endpoint registration?
+
+    Bot Framework requires the messaging endpoint to be set in the Azure portal manually — there's no programmatic API to update it. The bundle pre-fills the URL in the gateway's Instructions section; you paste it once.
+
+    ## Want a different agent backend?
+
+    This bundle uses Kiro as the default agent. For Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok, deploy the corresponding [bot template](https://zeabur.com/templates) separately together with the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB).
+
+    ## Want a different platform?
+
+    See [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) / [WeCom Bundle](https://zeabur.com/templates/FYR1XM) or the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB) for Google Chat.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [MS Teams Setup Guide](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+    - [Azure Bot Service Docs](https://learn.microsoft.com/en-us/azure/bot-service/)
+    - [Standalone OpenAB Gateway Template](https://zeabur.com/templates/IMRONB)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab:stable
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        runAsUserID: 1000
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell dotfiles and fix ownership for persistent volume
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent
+                chmod 755 /home/agent/.config 2>/dev/null || true
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # [gateway] block — always set (this bundle is gateway-bound)
+                printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\n' \
+                  "${GATEWAY_URL:-ws://openab-gateway:8080/ws}" \
+                  "${GATEWAY_PLATFORM:-teams}" >> "$CONFIG_FILE"
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent "$CONFIG_DIR"
+                exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "kiro-cli"
+              args = ["acp", "--trust-all-tools"]
+              working_dir = "/home/agent"
+        env:
+          GATEWAY_URL:
+            default: ws://openab-gateway:8080/ws
+          GATEWAY_PLATFORM:
+            default: teams
+          KIRO_API_KEY:
+            default: ${KIRO_API_KEY}
+          OPENAB_MAX_SESSIONS:
+            default: ""
+    - name: openab-gateway
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-gateway:0.5.1
+        ports:
+          - id: web
+            port: 8080
+            type: HTTP
+        healthCheck:
+          type: TCP
+          port: web
+        instructions:
+          - type: TEXT
+            title: Teams Messaging Endpoint (paste into Azure Bot resource → Configuration → Messaging endpoint)
+            content: "${ZEABUR_WEB_URL}/webhook/teams"
+        env:
+          TEAMS_APP_ID:
+            default: ${TEAMS_APP_ID}
+          TEAMS_APP_SECRET:
+            default: ${TEAMS_APP_SECRET}
+localization:
+  zh-TW:
+    description: |
+      一鍵部署的 Microsoft Teams Bot，整合 OpenAB + Kiro。同時部署 OAB agent 與 Teams gateway，只需在 Azure 註冊 Bot Framework app、貼 messaging endpoint 即可使用。無需另外部署 gateway、無需手動修改 config.toml。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: TEAMS_APP_ID
+        name: Teams App ID
+        description: "Azure Bot Service / Bot Framework 註冊的 Microsoft App ID。必填。"
+      - key: TEAMS_APP_SECRET
+        name: Teams App Secret
+        description: "在 Azure 該 app 的 Certificates & secrets 區產生的 client secret。必填。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（選填，Pro+ 方案）
+        description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 網域
+        description: "用於接收 Teams Bot Framework activity 的公開 HTTPS 網域，自動分配。"
+    readme: |
+      # OpenAB MS Teams Bundle
+
+      一鍵部署的 [OpenAB](https://github.com/openabdev/openab) Microsoft Teams bot — bot agent 與 Bot Framework gateway 打包在一起，在 Azure 註冊 bot、貼 messaging endpoint 即可。
+
+      > **前置需求**：擁有可註冊 Bot Service / App Registrations 的 Azure 帳號，以及可 sideload 或發佈 Teams app 的 Microsoft 365 tenant。個人 Microsoft 帳號（Hotmail / Live）通常無法註冊 Azure Bot Service，請使用 Azure AD 工作 / 學校帳號。
+
+      ## 部署內容
+
+      | 服務 | 用途 | 公開 |
+      |---|---|---|
+      | `openab` | 執行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | Teams Bot Framework → WebSocket 橋接 | 是（自動 HTTPS） |
+
+      無需共用 PVC、無需手動修改 `config.toml`。Agent 的 `config.toml` 在首次啟動時自動生成，gateway URL 已預先設為 `ws://openab-gateway:8080/ws`、`platform = "teams"`。
+
+      ## 設定步驟
+
+      ### 1. 在 Azure 建立 Bot
+
+      1. 至 [Azure Portal](https://portal.azure.com) → **建立資源** → 搜 **Azure Bot** → 建立。
+      2. Bot handle：填一個唯一名稱。Subscription / Resource group 自選。Pricing tier：dev 用 F0 (免費)。
+      3. Microsoft App ID：選 **Type → Multi Tenant**（或單一 tenant，視需求）→ **Creation type → Create new Microsoft App ID**。
+      4. 按 **Review + create → Create**。等部署完成。
+      5. 打開新建立的 Azure Bot 資源 → **Configuration**：
+         - **Microsoft App ID** → 複製 → 貼到 **Teams App ID**
+         - **Messaging endpoint** → 先留空（部署後再填）
+      6. 同 Configuration 頁 → 點 **Manage Password**（或 app credentials 下的 **Manage**）→ 開啟 App Registration → **Certificates & secrets** → **New client secret** → 複製 **Value**（不是 ID）→ 貼到 **Teams App Secret**。
+
+      ### 2. （選填）取得 Kiro API Key
+
+      如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY`。免費方案跳過此步驟，於步驟 5 部署後再認證。
+
+      ### 3. 部署
+
+      確認 App ID 與 App Secret 都填好 → 點部署。系統會自動分配公開 HTTPS 網域給 gateway 服務。
+
+      ### 4. 設定 Messaging Endpoint
+
+      Bot Framework 沒有 setEndpoint API——必須在 Azure Portal 手動貼 URL。
+
+      1. 打開 **openab-gateway** 服務頁面 → 查自動分配的網域。
+      2. 完整 messaging endpoint：`https://<你的_GATEWAY_網域>/webhook/teams`
+      3. 回 Azure Portal → 你的 Azure Bot 資源 → **Configuration** → **Messaging endpoint** → 貼上 → **Apply**。
+
+      `openab-gateway` 服務 Instructions 區會顯示已自動填好的完整 endpoint，可直接複製。
+
+      ### 5. 透過 Device Flow 認證 Kiro（僅免費方案）
+
+      若步驟 2 已填入 `KIRO_API_KEY`，跳過此步驟。
+
+      待 `openab` 服務啟動後，於 Zeabur Dashboard 開啟該服務的終端機，執行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      依照畫面顯示的 URL 與 code 完成瀏覽器授權。
+
+      ### 6. 把 Bot 加進 Teams
+
+      1. Azure Bot 資源 → **Channels** → **Microsoft Teams** → 同意 channel 條款。
+      2. 開 [Teams Developer Portal](https://dev.teams.microsoft.com) → **Apps** → **+ New app** → 填基本資料 → **App features** → **Bot** → 選剛剛建立的 bot。
+      3. 設定 scope（Personal / Team / Group chat），下載或發布 app manifest。Dev 階段可用：**Preview in Teams** → 安裝到 chat / channel。
+
+      詳細指南：[docs/msteams-selfhosted.md](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)。
+
+      ### 7. 測試
+
+      開 Teams → DM bot 或在 app 安裝過的 channel @mention。Gateway 收到 activity → 透過 WebSocket 轉發給 OAB → OAB 回覆透過 Bot Framework reply API 送回。
+
+      ## 自訂設定
+
+      - **`/home/agent/.config/openab/config.toml`** — OAB 設定（sessions、reactions 等）。首次啟動時從內建範本建立，`[gateway]` 區塊已預先設好。如需重建，刪除檔案後重啟服務。
+      - **映像標籤** — bot 追蹤 floating `stable` 標籤（`ghcr.io/openabdev/openab:stable`），OpenAB 推出新穩定版時自動更新。Gateway 目前 pin 在 `ghcr.io/openabdev/openab-gateway:0.5.1`（尚未發布 `:stable` 標籤）。可至 Zeabur Dashboard → 服務 → 設定修改映像標籤。
+      - **Tenant 限制** — 在 `openab-gateway` 設 `TEAMS_ALLOWED_TENANTS=<tenant-id-1>,<tenant-id-2>`，只接受特定 Microsoft 365 tenants 的 activity（在 multi-tenant App ID 之上的縱深防禦）。
+
+      ## 為什麼 endpoint 沒有自動註冊？
+
+      Bot Framework 規定 messaging endpoint 在 Azure Portal 手動設定，沒有 API。Bundle 在 gateway 的 Instructions 區預填了完整 URL 方便複製，只需要做一次。
+
+      ## 想換不同的 agent 後端？
+
+      本 bundle 預設使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，請改部署對應的 [bot template](https://zeabur.com/templates) 搭配獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通訊平台？
+
+      請參考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) / [WeCom Bundle](https://zeabur.com/templates/FYR1XM) 或獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支援 Google Chat。
+
+      ## 連結
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [MS Teams 設定指南](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+      - [Azure Bot Service 文件](https://learn.microsoft.com/zh-tw/azure/bot-service/)
+      - [獨立 OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)
+  zh-CN:
+    description: |
+      一键部署的 Microsoft Teams Bot，集成 OpenAB + Kiro。同时部署 OAB agent 与 Teams gateway，只需在 Azure 注册 Bot Framework app、粘贴 messaging endpoint 即可使用。无需另外部署 gateway、无需手动修改 config.toml。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: TEAMS_APP_ID
+        name: Teams App ID
+        description: "Azure Bot Service / Bot Framework 注册的 Microsoft App ID。必填。"
+      - key: TEAMS_APP_SECRET
+        name: Teams App Secret
+        description: "在 Azure 该 app 的 Certificates & secrets 区生成的 client secret。必填。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（选填，Pro+ 方案）
+        description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 域名
+        description: "用于接收 Teams Bot Framework activity 的公开 HTTPS 域名，自动分配。"
+    readme: |
+      # OpenAB MS Teams Bundle
+
+      一键部署的 [OpenAB](https://github.com/openabdev/openab) Microsoft Teams bot — bot agent 与 Bot Framework gateway 打包在一起，在 Azure 注册 bot、粘贴 messaging endpoint 即可。
+
+      > **前置需求**：拥有可注册 Bot Service / App Registrations 的 Azure 账号，以及可 sideload 或发布 Teams app 的 Microsoft 365 tenant。个人 Microsoft 账号（Hotmail / Live）通常无法注册 Azure Bot Service，请使用 Azure AD 工作 / 学校账号。
+
+      ## 部署内容
+
+      | 服务 | 用途 | 公开 |
+      |---|---|---|
+      | `openab` | 运行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | Teams Bot Framework → WebSocket 桥接 | 是（自动 HTTPS） |
+
+      ## 设置步骤
+
+      ### 1. 在 Azure 创建 Bot
+
+      1. 到 [Azure Portal](https://portal.azure.com) → **创建资源** → 搜 **Azure Bot** → 创建。
+      2. Bot handle：填一个唯一名称。Subscription / Resource group 自选。Pricing tier：dev 用 F0（免费）。
+      3. Microsoft App ID：选 **Type → Multi Tenant** → **Creation type → Create new Microsoft App ID**。
+      4. 点 **Review + create → Create**。等部署完成。
+      5. 打开新建的 Azure Bot 资源 → **Configuration**：
+         - **Microsoft App ID** → 复制 → 粘贴到 **Teams App ID**
+         - **Messaging endpoint** → 先留空
+      6. 同 Configuration 页 → 点 **Manage Password** → 开启 App Registration → **Certificates & secrets** → **New client secret** → 复制 **Value** → 粘贴到 **Teams App Secret**。
+
+      ### 2. （选填）获取 Kiro API Key
+
+      如有付费 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY`。免费方案跳过此步骤。
+
+      ### 3. 部署
+
+      确认 App ID 与 App Secret 都填好 → 点部署。系统会自动分配公开 HTTPS 域名给 gateway 服务。
+
+      ### 4. 设置 Messaging Endpoint
+
+      Bot Framework 没有 setEndpoint API——必须在 Azure Portal 手动粘贴 URL。
+
+      1. 打开 **openab-gateway** 服务页面 → 查自动分配的域名。
+      2. 完整 messaging endpoint：`https://<你的_GATEWAY_域名>/webhook/teams`
+      3. 回 Azure Portal → 你的 Azure Bot 资源 → **Configuration** → **Messaging endpoint** → 粘贴 → **Apply**。
+
+      `openab-gateway` 服务 Instructions 区显示已自动填好的完整 endpoint，可直接复制。
+
+      ### 5. 通过 Device Flow 认证 Kiro（仅免费方案）
+
+      若步骤 2 已填入 `KIRO_API_KEY`，跳过此步骤。
+
+      待 `openab` 服务启动后，在 Zeabur Dashboard 打开该服务的终端，运行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      ### 6. 把 Bot 加进 Teams
+
+      1. Azure Bot 资源 → **Channels** → **Microsoft Teams** → 同意条款。
+      2. 开 [Teams Developer Portal](https://dev.teams.microsoft.com) → **Apps** → **+ New app** → 填基本资料 → **App features** → **Bot** → 选刚才创建的 bot。
+      3. 设置 scope（Personal / Team / Group chat），下载或发布 app manifest。Dev 阶段可用：**Preview in Teams** → 安装到 chat / channel。
+
+      ### 7. 测试
+
+      打开 Teams → DM bot 或在 app 安装过的 channel @mention。Gateway 收到 activity → 通过 WebSocket 转发给 OAB → OAB 回复通过 Bot Framework reply API 发出。
+
+      ## 想换不同的 agent 后端？
+
+      本 bundle 默认使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，请改部署对应的 [bot template](https://zeabur.com/templates) 搭配独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通讯平台？
+
+      请参考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) / [WeCom Bundle](https://zeabur.com/templates/FYR1XM) 或独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支持 Google Chat。
+
+      ## 链接
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [MS Teams 设置指南](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)

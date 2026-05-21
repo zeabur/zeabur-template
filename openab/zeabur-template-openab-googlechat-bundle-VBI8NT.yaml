@@ -1,0 +1,445 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB Google Chat Bundle
+spec:
+  description: |
+    All-in-one Google Chat bot powered by OpenAB + Kiro. Deploys the OAB agent and the Google Chat gateway together — paste the Service Account JSON, configure the app URL in Google Cloud Console once, and you're done. No separate gateway setup, no manual config.toml edits.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - Google Chat
+    - Google Workspace
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: GOOGLE_CHAT_SA_KEY_JSON
+      type: STRING
+      name: Service Account JSON
+      description: "Full Service Account key JSON (paste as a single-line string). Used by the gateway to call Google Chat REST API for posting replies. Required."
+    - key: KIRO_API_KEY
+      type: STRING
+      name: Kiro API Key (optional, Pro+)
+      description: "Optional. API key for Kiro Pro/Pro+/Power subscribers. Leave empty to authenticate via device flow after deployment (free tier)."
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Gateway Domain
+      description: "Public HTTPS domain for receiving Google Chat events. Auto-assigned."
+  readme: |
+    # OpenAB Google Chat Bundle
+
+    One-click [OpenAB](https://github.com/openabdev/openab) deployment for Google Chat — bot agent + gateway bundled together. Paste your Service Account JSON, configure one URL in Google Cloud Console, and you're done.
+
+    ```
+    Google Chat ──POST──▶ ┌──────────────────┐ ◀──WebSocket── ┌────────────┐
+                          │  openab-gateway  │                │   openab   │
+                          │ (googlechat only)│                │  (Kiro CLI) │
+                          └──────────────────┘                └────────────┘
+                            public HTTPS                       internal only
+    ```
+
+    > **Prerequisites**: A Google Workspace account (Business / Enterprise tier). **Consumer `@gmail.com` accounts cannot create Google Chat apps.** You also need access to a Google Cloud Console project where you can enable the Chat API and create a service account.
+
+    ## What's deployed
+
+    | Service | Purpose | Public |
+    |---|---|---|
+    | `openab` | OAB agent running Kiro CLI | No |
+    | `openab-gateway` | Google Chat events → WebSocket bridge | Yes (auto HTTPS) |
+
+    No PVC sharing, no manual `config.toml` edits. The agent's `config.toml` is generated on first boot with the gateway URL pre-wired to `ws://openab-gateway:8080/ws` and `platform = "googlechat"`.
+
+    `GOOGLE_CHAT_ENABLED=true` and `GOOGLE_CHAT_AUDIENCE` (the JWT verification audience) are set automatically — no manual input needed.
+
+    ## Setup
+
+    ### 1. Enable Google Chat API + Create Service Account
+
+    1. Open [Google Cloud Console](https://console.cloud.google.com) → select or create a project.
+    2. **APIs & Services → Library** → search **Google Chat API** → **Enable**.
+    3. **APIs & Services → Credentials** → **+ CREATE CREDENTIALS** → **Service account** → fill name → **CREATE AND CONTINUE** (no roles needed) → **DONE**.
+    4. Click the newly created service account → **Keys** tab → **ADD KEY** → **Create new key** → JSON → **Create**. A JSON file downloads.
+    5. Open the JSON file, copy the **entire content**, and paste it (as one single-line string — Zeabur's UI handles this) into **Service Account JSON**.
+
+    ### 2. (Optional) Get a Kiro API Key
+
+    If you have a paid Kiro subscription, go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key and paste it into `KIRO_API_KEY`. Free tier users skip this and authenticate post-deploy in step 4.
+
+    ### 3. Deploy
+
+    Click deploy. A public HTTPS domain is auto-assigned to the gateway service.
+
+    ### 4. Authenticate Kiro via Device Flow (free tier only)
+
+    Skip if you set `KIRO_API_KEY` in step 2.
+
+    After the `openab` service is running, open its terminal in Zeabur Dashboard and run:
+
+    ```
+    runuser -u agent -- kiro-cli login --use-device-flow
+    ```
+
+    Follow the URL and code to authorize in your browser.
+
+    ### 5. Configure the Chat App in Google Cloud Console
+
+    Google Chat App URL must be set manually in GCP — no programmatic API.
+
+    1. Open the **openab-gateway** service page in Zeabur Dashboard → look at the auto-assigned domain (e.g. `https://your-gateway.zeabur.app`).
+    2. The full App URL is: `https://<YOUR_GATEWAY_DOMAIN>/webhook/googlechat`
+    3. Back in [Google Cloud Console](https://console.cloud.google.com) → **APIs & Services → Google Chat API → Configuration**:
+       - **App name / Avatar URL / Description**: your choice.
+       - **Functionality**: tick **Receive 1:1 messages** and **Join spaces and group conversations** as needed.
+       - **Connection settings**: choose **App URL** → paste the URL → set **Authentication Audience** to **HTTP Endpoint URL** (the default).
+       - **Visibility**: limit to your Workspace domain or specific users.
+    4. **SAVE**.
+
+    The `openab-gateway` service Instructions section shows the exact App URL pre-filled.
+
+    ### 6. Test
+
+    In Google Chat (`mail.google.com/chat` or the standalone app), find your app by its name → start a DM → send a message. The gateway verifies the JWT, forwards the message to OAB, and OAB replies via the Chat REST API using your service account.
+
+    For spaces / group chats: invite the app from the space's **Apps & integrations** menu.
+
+    ## Customization
+
+    - **`/home/agent/.config/openab/config.toml`** — OAB config (sessions, reactions, etc.). Created on first boot from a built-in template with the `[gateway]` block pre-wired. To regenerate, delete and restart.
+    - **Image tags** — bot tracks the floating `stable` channel (`ghcr.io/openabdev/openab:stable`) and auto-updates with each OpenAB stable release. Gateway is pinned at `ghcr.io/openabdev/openab-gateway:0.5.1` (no `:stable` tag yet). To pin or bump, change the tag in Zeabur Dashboard → Service → Settings. Available tags: [OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway).
+
+    ## How JWT verification works
+
+    Google Chat signs every incoming POST with a JWT. The gateway:
+    1. Validates the JWT signature against Google's public JWKS.
+    2. Validates the `iss` claim is `chat@system.gserviceaccount.com`.
+    3. Validates the `aud` claim matches `GOOGLE_CHAT_AUDIENCE` (auto-set by this bundle to `${gateway-url}/webhook/googlechat`).
+
+    Any tampered or replayed request fails one of these checks and is rejected with 401.
+
+    ## Want a different agent backend?
+
+    This bundle uses Kiro as the default agent. For Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok, deploy the corresponding [bot template](https://zeabur.com/templates) separately together with the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB).
+
+    ## Want a different platform?
+
+    See [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) / [WeCom Bundle](https://zeabur.com/templates/FYR1XM) / [MS Teams Bundle](https://zeabur.com/templates/SHS0SO) or the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB).
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [Google Chat Setup Guide](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+    - [Google Chat API Docs](https://developers.google.com/chat/api)
+    - [Standalone OpenAB Gateway Template](https://zeabur.com/templates/IMRONB)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab:stable
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        runAsUserID: 1000
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell dotfiles and fix ownership for persistent volume
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent
+                chmod 755 /home/agent/.config 2>/dev/null || true
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # [gateway] block — always set (this bundle is gateway-bound)
+                printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\n' \
+                  "${GATEWAY_URL:-ws://openab-gateway:8080/ws}" \
+                  "${GATEWAY_PLATFORM:-googlechat}" >> "$CONFIG_FILE"
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent "$CONFIG_DIR"
+                exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "kiro-cli"
+              args = ["acp", "--trust-all-tools"]
+              working_dir = "/home/agent"
+        env:
+          GATEWAY_URL:
+            default: ws://openab-gateway:8080/ws
+          GATEWAY_PLATFORM:
+            default: googlechat
+          KIRO_API_KEY:
+            default: ${KIRO_API_KEY}
+          OPENAB_MAX_SESSIONS:
+            default: ""
+    - name: openab-gateway
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-gateway:0.5.1
+        ports:
+          - id: web
+            port: 8080
+            type: HTTP
+        healthCheck:
+          type: TCP
+          port: web
+        instructions:
+          - type: TEXT
+            title: Google Chat App URL (paste into GCP → APIs & Services → Google Chat API → Configuration → App URL, with Authentication Audience set to HTTP Endpoint URL)
+            content: "${ZEABUR_WEB_URL}webhook/googlechat"
+        env:
+          GOOGLE_CHAT_ENABLED:
+            default: "true"
+          GOOGLE_CHAT_SA_KEY_JSON:
+            default: ${GOOGLE_CHAT_SA_KEY_JSON}
+          GOOGLE_CHAT_AUDIENCE:
+            default: ${ZEABUR_WEB_URL}webhook/googlechat
+localization:
+  zh-TW:
+    description: |
+      一鍵部署的 Google Chat Bot，整合 OpenAB + Kiro。同時部署 OAB agent 與 Google Chat gateway，只需貼上 Service Account JSON、於 Google Cloud Console 設定一次 App URL 即可使用。無需另外部署 gateway、無需手動修改 config.toml。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: GOOGLE_CHAT_SA_KEY_JSON
+        name: Service Account JSON
+        description: "完整的 Service Account 金鑰 JSON（貼成單行字串）。Gateway 用此呼叫 Google Chat REST API 發送回覆。必填。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（選填，Pro+ 方案）
+        description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 網域
+        description: "用於接收 Google Chat 事件的公開 HTTPS 網域，自動分配。"
+    readme: |
+      # OpenAB Google Chat Bundle
+
+      一鍵部署的 [OpenAB](https://github.com/openabdev/openab) Google Chat bot — bot agent 與 gateway 打包在一起，貼上 Service Account JSON、在 Google Cloud Console 設定一次 App URL 即可。
+
+      > **前置需求**：Google Workspace 帳號（Business / Enterprise 方案）。**消費者 `@gmail.com` 帳號無法建立 Google Chat App。** 同時需要可在 Google Cloud Console 啟用 Chat API 並建立 service account 的專案存取權。
+
+      ## 部署內容
+
+      | 服務 | 用途 | 公開 |
+      |---|---|---|
+      | `openab` | 執行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | Google Chat 事件 → WebSocket 橋接 | 是（自動 HTTPS） |
+
+      無需共用 PVC、無需手動修改 `config.toml`。Agent 的 `config.toml` 在首次啟動時自動生成，gateway URL 已預先設為 `ws://openab-gateway:8080/ws`、`platform = "googlechat"`。
+
+      `GOOGLE_CHAT_ENABLED=true` 與 `GOOGLE_CHAT_AUDIENCE`（JWT 驗證的 audience）由 bundle 自動設定，無需手動輸入。
+
+      ## 設定步驟
+
+      ### 1. 啟用 Google Chat API + 建立 Service Account
+
+      1. 開 [Google Cloud Console](https://console.cloud.google.com) → 選擇或建立專案。
+      2. **APIs & Services → Library** → 搜 **Google Chat API** → **Enable**。
+      3. **APIs & Services → Credentials** → **+ CREATE CREDENTIALS** → **Service account** → 填名稱 → **CREATE AND CONTINUE**（不需賦予 role）→ **DONE**。
+      4. 點剛建立的 service account → **Keys** tab → **ADD KEY** → **Create new key** → JSON → **Create**。會下載一個 JSON 檔。
+      5. 開 JSON 檔，複製**全部內容**，貼到 **Service Account JSON**（Zeabur UI 會處理單行）。
+
+      ### 2. （選填）取得 Kiro API Key
+
+      如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY`。免費方案跳過此步驟，於步驟 4 部署後再認證。
+
+      ### 3. 部署
+
+      點擊部署。系統會自動分配公開 HTTPS 網域給 gateway 服務。
+
+      ### 4. 透過 Device Flow 認證 Kiro（僅免費方案）
+
+      若步驟 2 已填入 `KIRO_API_KEY`，跳過此步驟。
+
+      待 `openab` 服務啟動後，於 Zeabur Dashboard 開啟該服務的終端機，執行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      依照畫面顯示的 URL 與 code 完成瀏覽器授權。
+
+      ### 5. 於 Google Cloud Console 設定 Chat App
+
+      Google Chat App URL 必須在 GCP 手動設定——沒有 API。
+
+      1. 打開 **openab-gateway** 服務頁面 → 查自動分配的網域。
+      2. 完整 App URL 為：`https://<你的_GATEWAY_網域>/webhook/googlechat`
+      3. 回 [Google Cloud Console](https://console.cloud.google.com) → **APIs & Services → Google Chat API → Configuration**：
+         - **App name / Avatar URL / Description**：自選。
+         - **Functionality**：勾選 **Receive 1:1 messages** 與 **Join spaces and group conversations**。
+         - **Connection settings**：選 **App URL** → 貼上 URL → **Authentication Audience** 保持 **HTTP Endpoint URL**（預設）。
+         - **Visibility**：限制 Workspace 網域或特定使用者。
+      4. **SAVE**。
+
+      `openab-gateway` 服務 Instructions 區會顯示已自動填好的完整 App URL，可直接複製。
+
+      ### 6. 測試
+
+      在 Google Chat（`mail.google.com/chat` 或獨立 app）內以 app 名稱搜尋 → 開 DM → 發訊息。Gateway 驗證 JWT → 透過 WebSocket 轉發給 OAB → OAB 透過 service account 呼叫 Chat REST API 回覆。
+
+      Space / group chat：從 space 的 **Apps & integrations** 選單邀請 app 加入。
+
+      ## 自訂設定
+
+      - **`/home/agent/.config/openab/config.toml`** — OAB 設定（sessions、reactions 等）。首次啟動時從內建範本建立，`[gateway]` 區塊已預先設好。如需重建，刪除檔案後重啟服務。
+      - **映像標籤** — bot 追蹤 floating `stable` 標籤（`ghcr.io/openabdev/openab:stable`），OpenAB 推出新穩定版時自動更新。Gateway 目前 pin 在 `ghcr.io/openabdev/openab-gateway:0.5.1`（尚未發布 `:stable` 標籤）。可至 Zeabur Dashboard → 服務 → 設定修改映像標籤。
+
+      ## JWT 驗證如何運作
+
+      Google Chat 對每個 incoming POST 都會簽 JWT。Gateway：
+      1. 對 Google public JWKS 驗證 JWT 簽章。
+      2. 驗證 `iss` claim 為 `chat@system.gserviceaccount.com`。
+      3. 驗證 `aud` claim 與 `GOOGLE_CHAT_AUDIENCE` 相符（bundle 自動設為 `${gateway-url}/webhook/googlechat`）。
+
+      任何被竄改或 replay 的 request 都會被其中一項驗證攔下，回 401。
+
+      ## 想換不同的 agent 後端？
+
+      本 bundle 預設使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，請改部署對應的 [bot template](https://zeabur.com/templates) 搭配獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通訊平台？
+
+      請參考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) / [WeCom Bundle](https://zeabur.com/templates/FYR1XM) / [MS Teams Bundle](https://zeabur.com/templates/SHS0SO) 或獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 連結
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Google Chat 設定指南](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
+      - [Google Chat API 文件](https://developers.google.com/chat/api)
+      - [獨立 OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)
+  zh-CN:
+    description: |
+      一键部署的 Google Chat Bot，集成 OpenAB + Kiro。同时部署 OAB agent 与 Google Chat gateway，只需粘贴 Service Account JSON、于 Google Cloud Console 设置一次 App URL 即可使用。无需另外部署 gateway、无需手动修改 config.toml。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: GOOGLE_CHAT_SA_KEY_JSON
+        name: Service Account JSON
+        description: "完整的 Service Account 密钥 JSON（粘贴成单行字符串）。Gateway 用此调用 Google Chat REST API 发送回复。必填。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（选填，Pro+ 方案）
+        description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 域名
+        description: "用于接收 Google Chat 事件的公开 HTTPS 域名，自动分配。"
+    readme: |
+      # OpenAB Google Chat Bundle
+
+      一键部署的 [OpenAB](https://github.com/openabdev/openab) Google Chat bot — bot agent 与 gateway 打包在一起，粘贴 Service Account JSON、在 Google Cloud Console 设置一次 App URL 即可。
+
+      > **前置需求**：Google Workspace 账号（Business / Enterprise 方案）。**消费者 `@gmail.com` 账号无法创建 Google Chat App。** 同时需要可在 Google Cloud Console 启用 Chat API 并创建 service account 的项目访问权。
+
+      ## 部署内容
+
+      | 服务 | 用途 | 公开 |
+      |---|---|---|
+      | `openab` | 运行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | Google Chat 事件 → WebSocket 桥接 | 是（自动 HTTPS） |
+
+      `GOOGLE_CHAT_ENABLED=true` 与 `GOOGLE_CHAT_AUDIENCE`（JWT 验证的 audience）由 bundle 自动设置，无需手动输入。
+
+      ## 设置步骤
+
+      ### 1. 启用 Google Chat API + 创建 Service Account
+
+      1. 开 [Google Cloud Console](https://console.cloud.google.com) → 选择或创建项目。
+      2. **APIs & Services → Library** → 搜 **Google Chat API** → **Enable**。
+      3. **APIs & Services → Credentials** → **+ CREATE CREDENTIALS** → **Service account** → 填名称 → **CREATE AND CONTINUE**（不需赋予 role）→ **DONE**。
+      4. 点刚创建的 service account → **Keys** tab → **ADD KEY** → **Create new key** → JSON → **Create**。下载 JSON 文件。
+      5. 开 JSON 文件，复制**全部内容**，粘贴到 **Service Account JSON**。
+
+      ### 2. （选填）获取 Kiro API Key
+
+      如有付费 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY`。免费方案跳过此步骤。
+
+      ### 3. 部署
+
+      点击部署。系统会自动分配公开 HTTPS 域名给 gateway 服务。
+
+      ### 4. 通过 Device Flow 认证 Kiro（仅免费方案）
+
+      若步骤 2 已填入 `KIRO_API_KEY`，跳过此步骤。
+
+      待 `openab` 服务启动后，在 Zeabur Dashboard 打开该服务的终端，运行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      ### 5. 于 Google Cloud Console 设置 Chat App
+
+      Google Chat App URL 必须在 GCP 手动设置——没有 API。
+
+      1. 打开 **openab-gateway** 服务页面 → 查自动分配的域名。
+      2. 完整 App URL：`https://<你的_GATEWAY_域名>/webhook/googlechat`
+      3. 回 [Google Cloud Console](https://console.cloud.google.com) → **APIs & Services → Google Chat API → Configuration**：
+         - **App name / Avatar URL / Description**：自选。
+         - **Functionality**：勾选 **Receive 1:1 messages** 与 **Join spaces and group conversations**。
+         - **Connection settings**：选 **App URL** → 粘贴 URL → **Authentication Audience** 保持 **HTTP Endpoint URL**。
+         - **Visibility**：限制 Workspace 域名或特定用户。
+      4. **SAVE**。
+
+      `openab-gateway` 服务 Instructions 区显示已自动填好的完整 App URL，可直接复制。
+
+      ### 6. 测试
+
+      在 Google Chat（`mail.google.com/chat` 或独立 app）内搜 app 名称 → 开 DM → 发消息。Gateway 验证 JWT → 通过 WebSocket 转发给 OAB → OAB 通过 service account 调用 Chat REST API 回复。
+
+      Space / group chat：从 space 的 **Apps & integrations** 菜单邀请 app 加入。
+
+      ## 想换不同的 agent 后端？
+
+      本 bundle 默认使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，请改部署对应的 [bot template](https://zeabur.com/templates) 搭配独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通讯平台？
+
+      请参考 [OpenAB Telegram Bundle](https://zeabur.com/templates/RUBDBP) / [Feishu Bundle](https://zeabur.com/templates/J3MMCN) / [LINE Bundle](https://zeabur.com/templates/G5TV99) / [WeCom Bundle](https://zeabur.com/templates/FYR1XM) / [MS Teams Bundle](https://zeabur.com/templates/SHS0SO) 或独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 链接
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Google Chat 设置指南](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
