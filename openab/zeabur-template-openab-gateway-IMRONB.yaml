@@ -5,7 +5,7 @@ metadata:
   name: OpenAB Gateway
 spec:
   description: |
-    Standalone webhook gateway for OpenAB — bridges Telegram, LINE, Feishu/Lark, Google Chat, and MS Teams to any running OAB instance via WebSocket. Deploy alongside an existing OpenAB service to enable messaging platform support. At least one platform must be configured.
+    Standalone webhook gateway for OpenAB — bridges Telegram, LINE, Feishu/Lark, Google Chat, MS Teams, and WeCom to any running OAB instance via WebSocket. Deploy alongside an existing OpenAB service to enable messaging platform support. At least one platform must be configured.
     Source: https://github.com/openabdev/openab
   icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
   coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
@@ -17,6 +17,7 @@ spec:
     - Feishu
     - Google Chat
     - Teams
+    - WeCom
   variables:
     - key: TELEGRAM_BOT_TOKEN
       type: STRING
@@ -62,10 +63,30 @@ spec:
       type: STRING
       name: MS Teams App Secret (optional)
       description: "Optional. Bot Framework App Secret. Required when Teams App ID is set."
+    - key: WECOM_CORP_ID
+      type: STRING
+      name: WeCom Corp ID (optional)
+      description: "Optional. Enterprise Corp ID from the WeCom Admin Console (我的企业 → 企业ID). Leave empty to disable WeCom. All five WECOM_* values are required together."
+    - key: WECOM_AGENT_ID
+      type: STRING
+      name: WeCom Agent ID (optional)
+      description: "Optional. App Agent ID from the self-built app detail page. Required when WeCom Corp ID is set."
+    - key: WECOM_SECRET
+      type: STRING
+      name: WeCom App Secret (optional)
+      description: "Optional. App Secret from the self-built app detail page. Required when WeCom Corp ID is set."
+    - key: WECOM_TOKEN
+      type: STRING
+      name: WeCom Callback Token (optional)
+      description: "Optional. Callback verification Token configured under 接收消息 → 设置API接收. Required when WeCom Corp ID is set."
+    - key: WECOM_ENCODING_AES_KEY
+      type: STRING
+      name: WeCom Encoding AES Key (optional)
+      description: "Optional. Callback EncodingAESKey (43 characters) configured under 接收消息 → 设置API接收. Required when WeCom Corp ID is set."
     - key: PUBLIC_DOMAIN
       type: DOMAIN
       name: Gateway Domain
-      description: "Public HTTPS domain for receiving webhooks (Telegram, LINE, Google Chat, Teams, Feishu webhook mode)."
+      description: "Public HTTPS domain for receiving webhooks (Telegram, LINE, Google Chat, Teams, WeCom, Feishu webhook mode)."
   readme: |
     # OpenAB Gateway
 
@@ -77,6 +98,7 @@ spec:
     Feishu/Lark  ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
     Google Chat  ──POST──▶ │     :8080        │   (OAB connects out)
     MS Teams     ──POST──▶ │                  │
+    WeCom        ──POST──▶ │                  │
                            └──────────────────┘
     ```
 
@@ -91,6 +113,7 @@ spec:
     | Feishu / Lark | [#feishu](#feishu--lark-setup-optional) | `FEISHU_APP_ID`, `FEISHU_APP_SECRET` |
     | Google Chat | [#google-chat](#google-chat-setup-optional) | `GOOGLE_CHAT_ENABLED=true`, `GOOGLE_CHAT_SA_KEY_JSON` |
     | MS Teams | [#teams](#ms-teams-setup-optional) | `TEAMS_APP_ID`, `TEAMS_APP_SECRET` |
+    | WeCom (企业微信) | [#wecom](#wecom-setup-optional) | `WECOM_CORP_ID`, `WECOM_AGENT_ID`, `WECOM_SECRET`, `WECOM_TOKEN`, `WECOM_ENCODING_AES_KEY` |
 
     ## Prerequisites
 
@@ -218,6 +241,23 @@ spec:
 
     Configure OAB with `platform = "teams"`. Full guide: [docs/msteams-selfhosted.md](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
 
+    ## WeCom Setup (Optional)
+
+    > Requires a WeCom (企业微信) enterprise account with admin access.
+
+    1. In the [WeCom Admin Console](https://work.weixin.qq.com/wework_admin/frame), go to **应用管理 → 自建 → 创建应用** and create a self-built app.
+    2. On the app detail page, copy **AgentId** → `WECOM_AGENT_ID` and **Secret** → `WECOM_SECRET`. From **我的企业**, copy **企业ID** → `WECOM_CORP_ID`.
+    3. On the app detail page → **接收消息 → 设置API接收**:
+       - **URL** → `https://YOUR_DOMAIN/webhook/wecom`
+       - **Token** → click "随机获取" or set your own → `WECOM_TOKEN`
+       - **EncodingAESKey** → click "随机获取" or set your own → `WECOM_ENCODING_AES_KEY`
+       - Do **not** click Save in WeCom yet — fill the env vars and let this template deploy first.
+    4. After deployment finishes, return to the WeCom console and click **保存** — WeCom will hit the gateway to verify the callback URL.
+
+    Configure OAB with `platform = "wecom"`. Full guide: [docs/wecom.md](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
+
+    > **Limitation:** WeCom self-built app callback only delivers DMs to the bot. Group chat is not supported via the callback channel.
+
     ## Webhook Endpoints
 
     | Path | Platform |
@@ -227,6 +267,8 @@ spec:
     | `POST /webhook/feishu` | Feishu/Lark (webhook mode only; default uses WebSocket) |
     | `POST /webhook/googlechat` | Google Chat |
     | `POST /webhook/teams` | MS Teams |
+    | `GET /webhook/wecom` | WeCom callback URL verification |
+    | `POST /webhook/wecom` | WeCom message callback receiver |
     | `GET /ws` | OAB WebSocket (internal) |
     | `GET /health` | Health check |
 
@@ -238,6 +280,7 @@ spec:
     - [Feishu/Lark Setup Guide](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
     - [Google Chat Setup Guide](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
     - [MS Teams Setup Guide](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+    - [WeCom Setup Guide](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
     - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   services:
     - name: openab-gateway
@@ -286,10 +329,20 @@ spec:
             default: ${TEAMS_APP_ID}
           TEAMS_APP_SECRET:
             default: ${TEAMS_APP_SECRET}
+          WECOM_CORP_ID:
+            default: ${WECOM_CORP_ID}
+          WECOM_AGENT_ID:
+            default: ${WECOM_AGENT_ID}
+          WECOM_SECRET:
+            default: ${WECOM_SECRET}
+          WECOM_TOKEN:
+            default: ${WECOM_TOKEN}
+          WECOM_ENCODING_AES_KEY:
+            default: ${WECOM_ENCODING_AES_KEY}
 localization:
   zh-TW:
     description: |
-      OpenAB 獨立 Webhook Gateway — 透過 WebSocket 將 Telegram、LINE、Feishu/Lark、Google Chat、MS Teams 橋接到任何正在運行的 OAB 實例。部署於現有 OpenAB 服務旁即可啟用對應通訊平台。至少須設定一個平台。
+      OpenAB 獨立 Webhook Gateway — 透過 WebSocket 將 Telegram、LINE、Feishu/Lark、Google Chat、MS Teams、WeCom（企業微信）橋接到任何正在運行的 OAB 實例。部署於現有 OpenAB 服務旁即可啟用對應通訊平台。至少須設定一個平台。
       來源：https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
@@ -325,9 +378,24 @@ localization:
       - key: TEAMS_APP_SECRET
         name: MS Teams App Secret（選填）
         description: "選填。Bot Framework App Secret。填寫 Teams App ID 時必填。"
+      - key: WECOM_CORP_ID
+        name: WeCom 企業 ID（選填）
+        description: "選填。WeCom 後台「我的企業 → 企業ID」。留空則停用 WeCom。五個 WECOM_* 欄位必須一起填寫。"
+      - key: WECOM_AGENT_ID
+        name: WeCom Agent ID（選填）
+        description: "選填。自建應用詳情頁的 AgentId。填寫 WeCom 企業 ID 時必填。"
+      - key: WECOM_SECRET
+        name: WeCom App Secret（選填）
+        description: "選填。自建應用詳情頁的 Secret。填寫 WeCom 企業 ID 時必填。"
+      - key: WECOM_TOKEN
+        name: WeCom 回調 Token（選填）
+        description: "選填。「接收消息 → 設置API接收」中設定的 Token。填寫 WeCom 企業 ID 時必填。"
+      - key: WECOM_ENCODING_AES_KEY
+        name: WeCom EncodingAESKey（選填)
+        description: "選填。「接收消息 → 設置API接收」中設定的 EncodingAESKey（43 字元）。填寫 WeCom 企業 ID 時必填。"
       - key: PUBLIC_DOMAIN
         name: Gateway 網域
-        description: "用於接收 Webhook 的公開 HTTPS 網域（Telegram、LINE、Google Chat、Teams、Feishu webhook 模式）。"
+        description: "用於接收 Webhook 的公開 HTTPS 網域（Telegram、LINE、Google Chat、Teams、WeCom、Feishu webhook 模式）。"
     readme: |
       # OpenAB Gateway
 
@@ -339,6 +407,7 @@ localization:
       Feishu/Lark  ──POST──▶ │  OpenAB Gateway  │ ◀──WebSocket── OAB Pod
       Google Chat  ──POST──▶ │     :8080        │   （OAB 主動對外連線）
       MS Teams     ──POST──▶ │                  │
+      WeCom        ──POST──▶ │                  │
                              └──────────────────┘
       ```
 
@@ -353,6 +422,7 @@ localization:
       | Feishu / Lark | [#feishu](#feishu--lark-設定選填) | `FEISHU_APP_ID`、`FEISHU_APP_SECRET` |
       | Google Chat | [#google-chat](#google-chat-設定選填) | `GOOGLE_CHAT_ENABLED=true`、`GOOGLE_CHAT_SA_KEY_JSON` |
       | MS Teams | [#teams](#ms-teams-設定選填) | `TEAMS_APP_ID`、`TEAMS_APP_SECRET` |
+      | WeCom（企業微信） | [#wecom](#wecom-設定選填) | `WECOM_CORP_ID`、`WECOM_AGENT_ID`、`WECOM_SECRET`、`WECOM_TOKEN`、`WECOM_ENCODING_AES_KEY` |
 
       ## 前置條件
 
@@ -480,6 +550,23 @@ localization:
 
       OAB 端設定 `platform = "teams"`。完整指南：[docs/msteams-selfhosted.md](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
 
+      ## WeCom 設定（選填）
+
+      > 需要 WeCom（企業微信）企業帳號與管理員權限。
+
+      1. 在 [WeCom 後台](https://work.weixin.qq.com/wework_admin/frame)前往 **應用管理 → 自建 → 創建應用**，建立自建應用。
+      2. 應用詳情頁複製 **AgentId** → `WECOM_AGENT_ID`、**Secret** → `WECOM_SECRET`。**我的企業** 頁面複製 **企業ID** → `WECOM_CORP_ID`。
+      3. 應用詳情頁 → **接收消息 → 設置API接收**：
+         - **URL** → `https://YOUR_DOMAIN/webhook/wecom`
+         - **Token** → 點「隨機獲取」或自訂 → `WECOM_TOKEN`
+         - **EncodingAESKey** → 點「隨機獲取」或自訂 → `WECOM_ENCODING_AES_KEY`
+         - **此時先別在 WeCom 端點儲存** — 待 template 部署完成後再回來儲存。
+      4. 部署完成後回 WeCom 後台點 **保存**，WeCom 會打到 Gateway 驗證回調 URL。
+
+      OAB 端設定 `platform = "wecom"`。完整指南：[docs/wecom.md](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
+
+      > **限制：** WeCom 自建應用回調僅支援 Bot 私訊；群組訊息無法透過 callback 通道接收。
+
       ## Webhook 端點
 
       | 路徑 | 平台 |
@@ -489,6 +576,8 @@ localization:
       | `POST /webhook/feishu` | Feishu/Lark（僅 webhook 模式；預設使用 WebSocket） |
       | `POST /webhook/googlechat` | Google Chat |
       | `POST /webhook/teams` | MS Teams |
+      | `GET /webhook/wecom` | WeCom 回調 URL 驗證 |
+      | `POST /webhook/wecom` | WeCom 訊息回調接收 |
       | `GET /ws` | OAB WebSocket（內部使用） |
       | `GET /health` | 健康檢查 |
 
@@ -500,10 +589,11 @@ localization:
       - [Feishu/Lark 設定指南](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
       - [Google Chat 設定指南](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
       - [MS Teams 設定指南](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+      - [WeCom 設定指南](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   zh-CN:
     description: |
-      OpenAB 独立 Webhook Gateway — 通过 WebSocket 将 Telegram、LINE、飞书/Lark、Google Chat、MS Teams 桥接到任何正在运行的 OAB 实例。部署于现有 OpenAB 服务旁，即可启用对应通讯平台。至少须配置一个平台。
+      OpenAB 独立 Webhook Gateway — 通过 WebSocket 将 Telegram、LINE、飞书/Lark、Google Chat、MS Teams、WeCom（企业微信）桥接到任何正在运行的 OAB 实例。部署于现有 OpenAB 服务旁，即可启用对应通讯平台。至少须配置一个平台。
       来源：https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
@@ -539,9 +629,24 @@ localization:
       - key: TEAMS_APP_SECRET
         name: MS Teams App Secret（选填）
         description: "选填。Bot Framework App Secret。填写 Teams App ID 时必填。"
+      - key: WECOM_CORP_ID
+        name: WeCom 企业 ID（选填）
+        description: "选填。WeCom 后台「我的企业 → 企业ID」。留空则禁用 WeCom。五个 WECOM_* 字段必须一起填写。"
+      - key: WECOM_AGENT_ID
+        name: WeCom Agent ID（选填）
+        description: "选填。自建应用详情页的 AgentId。填写 WeCom 企业 ID 时必填。"
+      - key: WECOM_SECRET
+        name: WeCom App Secret（选填）
+        description: "选填。自建应用详情页的 Secret。填写 WeCom 企业 ID 时必填。"
+      - key: WECOM_TOKEN
+        name: WeCom 回调 Token（选填）
+        description: "选填。「接收消息 → 设置API接收」中设定的 Token。填写 WeCom 企业 ID 时必填。"
+      - key: WECOM_ENCODING_AES_KEY
+        name: WeCom EncodingAESKey（选填）
+        description: "选填。「接收消息 → 设置API接收」中设定的 EncodingAESKey（43 字符）。填写 WeCom 企业 ID 时必填。"
       - key: PUBLIC_DOMAIN
         name: Gateway 域名
-        description: "用于接收 Webhook 的公开 HTTPS 域名（Telegram、LINE、Google Chat、Teams、飞书 webhook 模式）。"
+        description: "用于接收 Webhook 的公开 HTTPS 域名（Telegram、LINE、Google Chat、Teams、WeCom、飞书 webhook 模式）。"
     readme: |
       # OpenAB Gateway
 
@@ -631,15 +736,18 @@ localization:
       | `GET /ws` | OAB WebSocket（内部使用） |
       | `GET /health` | 健康检查 |
 
-      ## 其他平台（飞书 / Google Chat / MS Teams）
+      ## 其他平台（飞书 / Google Chat / MS Teams / WeCom）
 
-      Gateway 也支持飞书/Lark、Google Chat、MS Teams。设置流程请参考：
+      Gateway 也支持飞书/Lark、Google Chat、MS Teams、WeCom（企业微信）。设置流程请参考：
 
       - [飞书/Lark 设置指南](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
       - [Google Chat 设置指南](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
       - [MS Teams 设置指南](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+      - [WeCom（企业微信）设置指南](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
 
-      OAB 端在 `config.toml` 中将 `platform` 设为 `feishu`、`googlechat` 或 `teams` 即可。
+      OAB 端在 `config.toml` 中将 `platform` 设为 `feishu`、`googlechat`、`teams` 或 `wecom` 即可。
+
+      > **WeCom 限制：** 自建应用回调仅支持 Bot 私聊；群组消息无法通过 callback 通道接收。
 
       ## 链接
 
@@ -647,7 +755,7 @@ localization:
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   ja-JP:
     description: |
-      OpenAB スタンドアロン Webhook Gateway — WebSocket を通じて Telegram、LINE、Feishu/Lark、Google Chat、MS Teams を既存の OAB インスタンスに接続します。少なくとも 1 つのプラットフォームを設定する必要があります。
+      OpenAB スタンドアロン Webhook Gateway — WebSocket を通じて Telegram、LINE、Feishu/Lark、Google Chat、MS Teams、WeCom（企業微信）を既存の OAB インスタンスに接続します。少なくとも 1 つのプラットフォームを設定する必要があります。
       ソース：https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
@@ -683,9 +791,24 @@ localization:
       - key: TEAMS_APP_SECRET
         name: MS Teams App Secret（オプション）
         description: "オプション。Bot Framework App Secret。Teams App ID を設定する場合は必須。"
+      - key: WECOM_CORP_ID
+        name: WeCom Corp ID（オプション）
+        description: "オプション。WeCom 管理コンソール「我的企业 → 企业ID」の Corp ID。空の場合 WeCom は無効。5 つの WECOM_* 項目はまとめて設定する必要があります。"
+      - key: WECOM_AGENT_ID
+        name: WeCom Agent ID（オプション）
+        description: "オプション。自建アプリ詳細ページの AgentId。WeCom Corp ID を設定する場合は必須。"
+      - key: WECOM_SECRET
+        name: WeCom App Secret（オプション）
+        description: "オプション。自建アプリ詳細ページの Secret。WeCom Corp ID を設定する場合は必須。"
+      - key: WECOM_TOKEN
+        name: WeCom コールバック Token（オプション）
+        description: "オプション。「接收消息 → 设置API接收」で設定する Token。WeCom Corp ID を設定する場合は必須。"
+      - key: WECOM_ENCODING_AES_KEY
+        name: WeCom EncodingAESKey（オプション）
+        description: "オプション。「接收消息 → 设置API接收」で設定する EncodingAESKey（43 文字）。WeCom Corp ID を設定する場合は必須。"
       - key: PUBLIC_DOMAIN
         name: Gateway ドメイン
-        description: "Webhook を受信する公開 HTTPS ドメイン（Telegram、LINE、Google Chat、Teams、Feishu webhook モード）。"
+        description: "Webhook を受信する公開 HTTPS ドメイン（Telegram、LINE、Google Chat、Teams、WeCom、Feishu webhook モード）。"
     readme: |
       # OpenAB Gateway
 
@@ -765,15 +888,18 @@ localization:
       | `GET /ws` | OAB WebSocket（内部） |
       | `GET /health` | ヘルスチェック |
 
-      ## その他のプラットフォーム（Feishu / Google Chat / MS Teams）
+      ## その他のプラットフォーム（Feishu / Google Chat / MS Teams / WeCom）
 
-      Gateway は Feishu/Lark、Google Chat、MS Teams にも対応しています。設定手順は各ガイドを参照：
+      Gateway は Feishu/Lark、Google Chat、MS Teams、WeCom（企業微信）にも対応しています。設定手順は各ガイドを参照：
 
       - [Feishu/Lark 設定ガイド](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
       - [Google Chat 設定ガイド](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
       - [MS Teams 設定ガイド](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+      - [WeCom（企業微信）設定ガイド](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
 
-      OAB 側では `config.toml` の `platform` を `feishu`、`googlechat`、`teams` のいずれかに設定してください。
+      OAB 側では `config.toml` の `platform` を `feishu`、`googlechat`、`teams`、`wecom` のいずれかに設定してください。
+
+      > **WeCom 制限：** 自建アプリのコールバックは Bot への DM のみ対応。グループチャットは callback チャンネル経由では受信できません。
 
       ## リンク
 
@@ -783,7 +909,7 @@ localization:
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   es-ES:
     description: |
-      Gateway Webhook independiente para OpenAB — conecta Telegram, LINE, Feishu/Lark, Google Chat y MS Teams a cualquier instancia de OAB en ejecución mediante WebSocket. Se debe configurar al menos una plataforma.
+      Gateway Webhook independiente para OpenAB — conecta Telegram, LINE, Feishu/Lark, Google Chat, MS Teams y WeCom (企业微信) a cualquier instancia de OAB en ejecución mediante WebSocket. Se debe configurar al menos una plataforma.
       Fuente: https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
@@ -819,9 +945,24 @@ localization:
       - key: TEAMS_APP_SECRET
         name: MS Teams App Secret (opcional)
         description: "Opcional. Bot Framework App Secret. Requerido si se configura Teams App ID."
+      - key: WECOM_CORP_ID
+        name: WeCom Corp ID (opcional)
+        description: "Opcional. Corp ID del panel de WeCom (我的企业 → 企业ID). Dejar vacío para deshabilitar WeCom. Los cinco valores WECOM_* deben configurarse juntos."
+      - key: WECOM_AGENT_ID
+        name: WeCom Agent ID (opcional)
+        description: "Opcional. AgentId de la página de la app autoconstruida. Requerido si se configura WeCom Corp ID."
+      - key: WECOM_SECRET
+        name: WeCom App Secret (opcional)
+        description: "Opcional. Secret de la página de la app autoconstruida. Requerido si se configura WeCom Corp ID."
+      - key: WECOM_TOKEN
+        name: WeCom Callback Token (opcional)
+        description: "Opcional. Token de verificación de callback configurado en 接收消息 → 设置API接收. Requerido si se configura WeCom Corp ID."
+      - key: WECOM_ENCODING_AES_KEY
+        name: WeCom EncodingAESKey (opcional)
+        description: "Opcional. EncodingAESKey (43 caracteres) configurado en 接收消息 → 设置API接收. Requerido si se configura WeCom Corp ID."
       - key: PUBLIC_DOMAIN
         name: Dominio del Gateway
-        description: "Dominio HTTPS público para recibir webhooks (Telegram, LINE, Google Chat, Teams, Feishu modo webhook)."
+        description: "Dominio HTTPS público para recibir webhooks (Telegram, LINE, Google Chat, Teams, WeCom, Feishu modo webhook)."
     readme: |
       # OpenAB Gateway
 
@@ -901,15 +1042,18 @@ localization:
       | `GET /ws` | OAB WebSocket (interno) |
       | `GET /health` | Health check |
 
-      ## Otras plataformas (Feishu / Google Chat / MS Teams)
+      ## Otras plataformas (Feishu / Google Chat / MS Teams / WeCom)
 
-      El Gateway también soporta Feishu/Lark, Google Chat y MS Teams. Consulta las guías:
+      El Gateway también soporta Feishu/Lark, Google Chat, MS Teams y WeCom (企业微信). Consulta las guías:
 
       - [Guía Feishu/Lark](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
       - [Guía Google Chat](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
       - [Guía MS Teams](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+      - [Guía WeCom (企业微信)](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
 
-      En el lado de OAB, configura `platform` en `config.toml` como `feishu`, `googlechat` o `teams`.
+      En el lado de OAB, configura `platform` en `config.toml` como `feishu`, `googlechat`, `teams` o `wecom`.
+
+      > **Limitación WeCom:** el callback de la app autoconstruida sólo admite mensajes directos al bot; los mensajes de grupo no llegan por este canal.
 
       ## Enlaces
 
@@ -919,7 +1063,7 @@ localization:
       - [Gateway README](https://github.com/openabdev/openab/blob/main/gateway/README.md)
   id-ID:
     description: |
-      Gateway Webhook mandiri untuk OpenAB — menghubungkan Telegram, LINE, Feishu/Lark, Google Chat, dan MS Teams ke instansi OAB mana pun melalui WebSocket. Setidaknya satu platform harus dikonfigurasi.
+      Gateway Webhook mandiri untuk OpenAB — menghubungkan Telegram, LINE, Feishu/Lark, Google Chat, MS Teams, dan WeCom (企业微信) ke instansi OAB mana pun melalui WebSocket. Setidaknya satu platform harus dikonfigurasi.
       Sumber: https://github.com/openabdev/openab
     variables:
       - key: TELEGRAM_BOT_TOKEN
@@ -955,9 +1099,24 @@ localization:
       - key: TEAMS_APP_SECRET
         name: MS Teams App Secret (opsional)
         description: "Opsional. Bot Framework App Secret. Wajib jika Teams App ID diisi."
+      - key: WECOM_CORP_ID
+        name: WeCom Corp ID (opsional)
+        description: "Opsional. Corp ID dari panel WeCom (我的企业 → 企业ID). Kosongkan untuk menonaktifkan WeCom. Kelima nilai WECOM_* harus dikonfigurasi bersamaan."
+      - key: WECOM_AGENT_ID
+        name: WeCom Agent ID (opsional)
+        description: "Opsional. AgentId dari halaman aplikasi self-built. Wajib jika WeCom Corp ID diisi."
+      - key: WECOM_SECRET
+        name: WeCom App Secret (opsional)
+        description: "Opsional. Secret dari halaman aplikasi self-built. Wajib jika WeCom Corp ID diisi."
+      - key: WECOM_TOKEN
+        name: WeCom Callback Token (opsional)
+        description: "Opsional. Token verifikasi callback yang dikonfigurasi di 接收消息 → 设置API接收. Wajib jika WeCom Corp ID diisi."
+      - key: WECOM_ENCODING_AES_KEY
+        name: WeCom EncodingAESKey (opsional)
+        description: "Opsional. EncodingAESKey (43 karakter) yang dikonfigurasi di 接收消息 → 设置API接收. Wajib jika WeCom Corp ID diisi."
       - key: PUBLIC_DOMAIN
         name: Domain Gateway
-        description: "Domain HTTPS publik untuk menerima webhook (Telegram, LINE, Google Chat, Teams, Feishu mode webhook)."
+        description: "Domain HTTPS publik untuk menerima webhook (Telegram, LINE, Google Chat, Teams, WeCom, Feishu mode webhook)."
     readme: |
       # OpenAB Gateway
 
@@ -1037,15 +1196,18 @@ localization:
       | `GET /ws` | OAB WebSocket (internal) |
       | `GET /health` | Health check |
 
-      ## Platform lain (Feishu / Google Chat / MS Teams)
+      ## Platform lain (Feishu / Google Chat / MS Teams / WeCom)
 
-      Gateway juga mendukung Feishu/Lark, Google Chat, dan MS Teams. Lihat panduan masing-masing:
+      Gateway juga mendukung Feishu/Lark, Google Chat, MS Teams, dan WeCom (企业微信). Lihat panduan masing-masing:
 
       - [Panduan Feishu/Lark](https://github.com/openabdev/openab/blob/main/docs/feishu.md)
       - [Panduan Google Chat](https://github.com/openabdev/openab/blob/main/docs/google-chat.md)
       - [Panduan MS Teams](https://github.com/openabdev/openab/blob/main/docs/msteams-selfhosted.md)
+      - [Panduan WeCom (企业微信)](https://github.com/openabdev/openab/blob/main/docs/wecom.md)
 
-      Di sisi OAB, atur `platform` di `config.toml` menjadi `feishu`, `googlechat`, atau `teams`.
+      Di sisi OAB, atur `platform` di `config.toml` menjadi `feishu`, `googlechat`, `teams`, atau `wecom`.
+
+      > **Batasan WeCom:** callback aplikasi self-built hanya mendukung DM ke bot; pesan grup tidak diterima melalui kanal callback ini.
 
       ## Tautan
 
