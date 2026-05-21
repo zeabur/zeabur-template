@@ -70,13 +70,15 @@ spec:
     2. Enable the **Bot** capability.
     3. **Event Subscriptions** → choose **Long Connection** (WebSocket) mode → subscribe to the `im.message.receive_v1` event.
     4. **Permissions & Scopes** → grant:
-       - `im:message`
-       - `im:message:send_as_bot`
-       - `contact:user.base:readonly`
+       - `im:message` — send & receive messages
+       - `im:message:send_as_bot` — send messages as bot
+       - `contact:user.base:readonly` — resolve sender display names
+       - **「读取用户发给机器人的单聊消息」(`im:message.p2p_msg:readonly`)** — required for **DMs to bot**. The base `im:message` scope above does NOT cover this on its own; both must be enabled.
+       - (Optional, group only) **「获取群组中其他机器人和用户@当前机器人的消息」** — already granted by default when bot capability is enabled; covers group @mention.
     5. **Credentials & Basic Info** → copy **App ID** → paste into **Feishu/Lark App ID**.
     6. Same page → copy **App Secret** → paste into **Feishu/Lark App Secret**.
     7. If using Lark international, set **Feishu/Lark Domain** to `lark` (otherwise leave at `feishu`).
-    8. Publish the app version (Feishu / Lark requires a published version before the bot is reachable).
+    8. Publish the app version (Feishu / Lark requires a published version before the bot is reachable). Any permission change requires re-publishing.
 
     ### 2. (Optional) Get a Kiro API Key
 
@@ -103,6 +105,8 @@ spec:
     Open the bot inside Feishu / Lark and send a direct message. The gateway receives it via its outbound Long Connection, forwards it to OAB, and OAB replies through the gateway.
 
     Group chats: invite the bot, then `@<your-bot> hello`. By default Feishu requires @mention in groups (`FEISHU_REQUIRE_MENTION=true`). DMs do not need @mention.
+
+    **Lark quirk**: the "add bot to group" entry is sometimes missing from the desktop client. If you can't find it on desktop, use the **Lark mobile app** — group settings → Members → `+` → switch to Bot tab → search your bot. Once added (visible in the group's right-side Bots panel), `@mention` works from any client including desktop.
 
     ## Customization
 
@@ -271,13 +275,15 @@ localization:
       2. 啟用 **機器人（Bot）** 能力。
       3. **事件訂閱** → 選 **長連線 / Long Connection**（WebSocket）模式 → 訂閱 `im.message.receive_v1` 事件。
       4. **權限與作用域** → 授予：
-         - `im:message`
-         - `im:message:send_as_bot`
-         - `contact:user.base:readonly`
+         - `im:message` — 收發訊息
+         - `im:message:send_as_bot` — 以機器人身份發訊息
+         - `contact:user.base:readonly` — 解析發訊者顯示名稱
+         - **「读取用户发给机器人的单聊消息」(`im:message.p2p_msg:readonly`)** — **bot 收 DM 必須**。上面的 `im:message` 並不會自動涵蓋 DM 場景的事件推送，兩個 scope 都要開。
+         - （選填，群組才需要）**「获取群组中其他机器人和用户@当前机器人的消息」** — 啟用 bot 能力時通常已預設開通；負責群組 @mention 觸發。
       5. **憑證與基本資訊** → 複製 **App ID** → 貼到 **Feishu/Lark App ID**。
       6. 同一頁 → 複製 **App Secret** → 貼到 **Feishu/Lark App Secret**。
       7. 若使用 Lark 國際版，**Feishu/Lark Domain** 填 `lark`（否則保持 `feishu`）。
-      8. 發布應用版本（Feishu / Lark 需要先發布版本，bot 才能被使用）。
+      8. 發布應用版本（Feishu / Lark 需要先發布版本，bot 才能被使用）。任何權限變更都要重新發布版本才會生效。
 
       ### 2. （選填）取得 Kiro API Key
 
@@ -304,6 +310,8 @@ localization:
       在 Feishu / Lark 內開啟 bot 並發送私訊。Gateway 透過 outbound Long Connection 收到 → 透過 WebSocket 轉發給 OAB → OAB 回覆透過 Gateway 送出。
 
       群組對話：把 bot 邀請進群，然後 `@<你的 bot> hello`。預設 Feishu 群組需要 @mention（`FEISHU_REQUIRE_MENTION=true`），私訊不需要。
+
+      **Lark 介面雷點**：Lark **desktop 版**有時候找不到「加 bot 進群組」的入口。找不到請改用 **Lark 手機 app**——群組設定 → 成員 → `+` → 切換到 Bot tab → 搜你的 bot。加進去後（群組右側 Bots 面板可見），desktop 也能正常 @mention。
 
       ## 自訂設定
 
@@ -362,7 +370,7 @@ localization:
       1. 到 [open.feishu.cn](https://open.feishu.cn)（中国）或 [open.larksuite.com](https://open.larksuite.com)（国际）→ **创建自建应用**。
       2. 启用 **机器人（Bot）** 能力。
       3. **事件订阅** → 选 **长连接 / Long Connection**（WebSocket）模式 → 订阅 `im.message.receive_v1` 事件。
-      4. **权限与作用域** → 授予 `im:message`、`im:message:send_as_bot`、`contact:user.base:readonly`。
+      4. **权限与作用域** → 授予 `im:message`、`im:message:send_as_bot`、`contact:user.base:readonly`、**「读取用户发给机器人的单聊消息」(`im:message.p2p_msg:readonly`，bot 收 DM 必须，上面的 `im:message` 不涵盖 DM 场景的事件推送)**。任何权限变更要重新发布版本才生效。
       5. **凭证与基本信息** → 复制 **App ID** 与 **App Secret** → 分别粘贴到 **Feishu/Lark App ID** 与 **Feishu/Lark App Secret**。
       6. 国际版 Lark 把 **Feishu/Lark Domain** 设为 `lark`（否则保持 `feishu`）。
       7. 发布应用版本（Feishu / Lark 需要先发布版本，bot 才能被使用）。
@@ -392,6 +400,8 @@ localization:
       在 Feishu / Lark 内打开 bot 并发送私信。Gateway 通过 outbound Long Connection 收到 → 通过 WebSocket 转发给 OAB → OAB 回复通过 Gateway 发出。
 
       群聊：把 bot 邀请进群，然后 `@<你的 bot> hello`。默认 Feishu 群聊需要 @mention（`FEISHU_REQUIRE_MENTION=true`），私信不需要。
+
+      **Lark 界面雷点**：Lark **desktop 版**有时找不到「加 bot 进群组」入口。找不到请改用 **Lark 手机 app**——群组设置 → 成员 → `+` → 切换到 Bot tab → 搜你的 bot。加进去后（群组右侧 Bots 面板可见），desktop 也能正常 @mention。
 
       ## 想换不同的 agent 后端？
 
