@@ -63,7 +63,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template uses a pinned version (`0.8.3-beta.11`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
+    - **Image tag:** This template uses a pinned version (`0.8.3`). To upgrade, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
     - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Hermes credentials, plugins, settings, and config survive restarts.
     - **Authentication is in-container only:** Hermes auth is OAuth-based per provider. There is no single API key variable — after deploying, run `hermes auth add <provider>` inside the service to pair with each LLM provider you want.
 
@@ -196,7 +196,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-hermes:0.8.3-beta.11
+          image: ghcr.io/openabdev/openab-hermes:0.8.3
           command:
             - /bin/sh
             - -c
@@ -329,7 +329,7 @@ localization:
 
       ## 注意事項
 
-      - **映像標籤：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
+      - **映像標籤：** 此模板使用固定版本（`0.8.3`）。如需升級，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
       - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Hermes 認證、plugins、設定、config 會在重啟後保留。
       - **認證僅能在容器內進行：** Hermes 採用各供應商的 OAuth 流程，沒有單一 API key 變數。部署完成後請在服務終端執行 `hermes auth add <provider>` 來綁定要使用的 LLM 供應商。
 
@@ -479,7 +479,7 @@ localization:
 
       ## 注意事项
 
-      - **镜像标签：** 此模板使用固定版本（`0.8.3-beta.11`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
+      - **镜像标签：** 此模板使用固定版本（`0.8.3`）。如需升级，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
       - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Hermes 认证、plugins、设置、config 会在重启后保留。
       - **认证只能在容器内进行：** Hermes 采用各供应商的 OAuth 流程，没有单一 API key 变量。部署完成后请在服务终端执行 `hermes auth add <provider>` 来绑定要使用的 LLM 供应商。
 
@@ -629,7 +629,7 @@ localization:
 
       ## 注意事項
 
-      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3-beta.11`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
+      - **イメージタグ：** このテンプレートは固定バージョン（`0.8.3`）を使用しています。アップグレードするには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes)。
       - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。Hermes の認証情報、プラグイン、設定、config は再起動後も保持されます。
       - **認証はコンテナ内でのみ可能：** Hermes はプロバイダーごとに OAuth ベースで認証を行います。単一の API key 変数はありません — デプロイ後、サービス内で `hermes auth add <provider>` を実行して、使用したい各 LLM プロバイダーを紐付けてください。
 
@@ -779,7 +779,7 @@ localization:
 
       ## Notas Importantes
 
-      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3-beta.11`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
+      - **Etiqueta de imagen:** Esta plantilla usa una versión fijada (`0.8.3`). Para actualizar, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
       - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente. Las credenciales de Hermes, plugins, configuración y config se conservan entre reinicios.
       - **La autenticación es solo dentro del contenedor:** Hermes usa OAuth por proveedor. No hay una única variable de API key — tras desplegar, ejecute `hermes auth add <provider>` dentro del servicio para emparejar cada proveedor de LLM que quiera usar.
 
@@ -929,7 +929,7 @@ localization:
 
       ## Catatan Penting
 
-      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3-beta.11`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
+      - **Tag image:** Template ini menggunakan versi yang dipin (`0.8.3`). Untuk upgrade, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-hermes).
       - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten. Kredensial Hermes, plugin, pengaturan, dan config dipertahankan antar restart.
       - **Autentikasi hanya dilakukan di dalam container:** Hermes menggunakan OAuth per penyedia. Tidak ada variabel API key tunggal — setelah deploy, jalankan `hermes auth add <provider>` di dalam layanan untuk menghubungkan setiap penyedia LLM yang ingin Anda gunakan.
 
