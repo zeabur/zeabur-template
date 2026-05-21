@@ -94,9 +94,9 @@ spec:
 
     Send a message to your Telegram bot. The gateway receives it, forwards it to OAB via WebSocket, and OAB replies through the gateway.
 
-    **The Telegram webhook is registered automatically** by the `openab` service at startup — look for `openab: telegram webhook registered → https://...` in its logs. No manual `curl setWebhook` needed.
+    **The Telegram webhook is registered automatically** by an init container in the `openab-gateway` service at startup — look for `openab-gateway: telegram webhook registered → https://...` in the gateway logs. No manual `curl setWebhook` needed.
 
-    If you ever need to re-trigger it (e.g. after rotating the bot token or changing the gateway domain), the **openab-gateway** service page in Zeabur Dashboard has a pre-filled `Re-register Telegram Webhook` curl under **Instructions**.
+    If you ever need to re-trigger it (e.g. after rotating the bot token or changing the gateway domain), open the **openab-gateway** service page in Zeabur Dashboard — under **Instructions**, the `Re-register Telegram Webhook` curl is pre-filled.
 
     ## Customization
 
@@ -321,7 +321,7 @@ localization:
 
       向你的 Telegram Bot 發送訊息。Gateway 收到後透過 WebSocket 轉發給 OAB，OAB 處理後透過 Gateway 回覆。
 
-      **Telegram webhook 由 `openab` 服務啟動時自動註冊**——log 找 `openab: telegram webhook registered → https://...` 確認。不需要手動跑 `curl setWebhook`。
+      **Telegram webhook 由 `openab-gateway` 服務的 init container 在啟動時自動註冊**——於 gateway log 找 `openab-gateway: telegram webhook registered → https://...` 確認。不需要手動跑 `curl setWebhook`。
 
       若日後需要重新觸發（例如 revoke bot token 後、或更換 gateway 網域），可至 **openab-gateway** 服務頁面 → **Instructions** 區，已預填好的 `Re-register Telegram Webhook` curl 指令可手動執行。
 
@@ -409,7 +409,7 @@ localization:
 
       向 Telegram Bot 发送消息。Gateway 收到后通过 WebSocket 转发给 OAB，OAB 处理后通过 Gateway 回复。
 
-      **Telegram webhook 由 `openab` 服务启动时自动注册**——log 找 `openab: telegram webhook registered → https://...` 确认。不需要手动跑 `curl setWebhook`。
+      **Telegram webhook 由 `openab-gateway` 服务的 init container 在启动时自动注册**——于 gateway log 找 `openab-gateway: telegram webhook registered → https://...` 确认。不需要手动跑 `curl setWebhook`。
 
       若日后需要重新触发（例如 revoke bot token 后、或更换 gateway 域名），可到 **openab-gateway** 服务页面 → **Instructions** 区，已预填好的 `Re-register Telegram Webhook` curl 指令可手动执行。
 
