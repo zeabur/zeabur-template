@@ -1,0 +1,426 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB Telegram Bundle
+spec:
+  description: |
+    All-in-one Telegram bot powered by OpenAB + Kiro. Deploys the OAB agent and the Telegram gateway together — fill in one bot token and you're done. No separate gateway setup, no manual config.toml edits.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - Telegram
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: TELEGRAM_BOT_TOKEN
+      type: STRING
+      name: Telegram Bot Token
+      description: "Bot token from @BotFather (https://t.me/BotFather). Required."
+    - key: BOT_USERNAME
+      type: STRING
+      name: Bot Username
+      description: "Your bot's username without the @ (e.g. `my_zeabur_bot`). Required for @mention gating in Telegram groups."
+    - key: KIRO_API_KEY
+      type: STRING
+      name: Kiro API Key (optional, Pro+)
+      description: "Optional. API key for Kiro Pro/Pro+/Power subscribers. Leave empty to authenticate via device flow after deployment (free tier)."
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Gateway Domain
+      description: "Public HTTPS domain for receiving Telegram webhooks. Auto-assigned."
+  readme: |
+    # OpenAB Telegram Bundle
+
+    One-click [OpenAB](https://github.com/openabdev/openab) deployment for Telegram — bot agent + webhook gateway bundled together. Just fill in your Telegram bot token.
+
+    ```
+    Telegram ──POST──▶ ┌──────────────────┐ ◀──WebSocket── ┌────────────┐
+                       │  openab-gateway  │                │   openab   │
+                       │  (telegram only) │                │  (Kiro CLI) │
+                       └──────────────────┘                └────────────┘
+                          public HTTPS                       internal only
+    ```
+
+    ## What's deployed
+
+    | Service | Purpose | Public |
+    |---|---|---|
+    | `openab` | OAB agent running Kiro CLI | No |
+    | `openab-gateway` | Telegram webhook → WebSocket bridge | Yes (auto HTTPS) |
+
+    No PVC sharing, no manual `config.toml` edits. The agent's `config.toml` is generated on first boot with the gateway URL pre-wired to `ws://openab-gateway:8080/ws` and `platform = "telegram"`.
+
+    ## Setup
+
+    ### 1. Create a Telegram Bot
+
+    1. Open [@BotFather](https://t.me/BotFather) in Telegram
+    2. Send `/newbot` and follow the prompts
+    3. **Username** you chose (e.g. `my_zeabur_bot`, must end in `bot`) → paste into **Bot Username**
+    4. **Bot token** that follows (e.g. `123456:ABC-DEF...`) → paste into **Telegram Bot Token**
+    5. For group/supergroup use: send `/setprivacy` → `Disable` so the bot can see all messages (required for @mention gating)
+    6. For supergroups with forum topics (auto thread-per-conversation): add the bot to the group → group settings → Administrators → enable **Manage Topics**
+
+    ### 2. (Optional) Get a Kiro API Key
+
+    If you have a paid Kiro subscription, go to [kiro.dev](https://kiro.dev) → Settings → API Keys → create a key and paste it into `KIRO_API_KEY`. Free tier users skip this and authenticate post-deploy in step 4.
+
+    ### 3. Deploy
+
+    Click deploy. A public HTTPS domain is auto-assigned to the gateway service.
+
+    ### 4. Authenticate Kiro via Device Flow (free tier only)
+
+    Skip if you set `KIRO_API_KEY` in step 2.
+
+    After the `openab` service is running, open its terminal in Zeabur Dashboard and run:
+
+    ```
+    runuser -u agent -- kiro-cli login --use-device-flow
+    ```
+
+    Follow the URL and code to authorize in your browser.
+
+    ### 5. Test
+
+    Send a message to your Telegram bot. The gateway receives it, forwards it to OAB via WebSocket, and OAB replies through the gateway.
+
+    **The Telegram webhook is registered automatically** by the `openab` service at startup — look for `openab: telegram webhook registered → https://...` in its logs. No manual `curl setWebhook` needed.
+
+    If you ever need to re-trigger it (e.g. after rotating the bot token or changing the gateway domain), the **openab-gateway** service page in Zeabur Dashboard has a pre-filled `Re-register Telegram Webhook` curl under **Instructions**.
+
+    ## Customization
+
+    - **`/home/agent/.config/openab/config.toml`** — OAB config (sessions, reactions, etc.). Created on first boot from a built-in template with the `[gateway]` block pre-wired. To regenerate, delete and restart.
+    - **Image tags** — bot tracks the floating `stable` channel (`ghcr.io/openabdev/openab:stable`) and auto-updates with each OpenAB stable release. Gateway is pinned at `ghcr.io/openabdev/openab-gateway:0.5.1` (no `:stable` tag yet). To pin or bump, change the tag in Zeabur Dashboard → Service → Settings. Available tags: [OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway).
+
+    ## Want a different agent backend?
+
+    This bundle uses Kiro as the default agent. For Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok, deploy the corresponding [bot template](https://zeabur.com/templates) separately together with the standalone [OpenAB Gateway](https://zeabur.com/templates/IMRONB).
+
+    ## Want a different platform?
+
+    See [OpenAB Gateway](https://zeabur.com/templates/IMRONB) for LINE, Feishu/Lark, Google Chat, MS Teams, WeCom.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [Telegram Setup Guide](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
+    - [Standalone OpenAB Gateway Template](https://zeabur.com/templates/IMRONB)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab:stable
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        runAsUserID: 1000
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              # Initialize shell dotfiles and fix ownership for persistent volume
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent
+                chmod 755 /home/agent/.config 2>/dev/null || true
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                # [gateway] block — always set (this bundle is gateway-bound)
+                printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\n' \
+                  "${GATEWAY_URL:-ws://openab-gateway:8080/ws}" \
+                  "${GATEWAY_PLATFORM:-telegram}" >> "$CONFIG_FILE"
+
+                if [ -n "$BOT_USERNAME" ]; then
+                  printf 'bot_username = "%s"\n' "$BOT_USERNAME" >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent "$CONFIG_DIR"
+                exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "kiro-cli"
+              args = ["acp", "--trust-all-tools"]
+              working_dir = "/home/agent"
+        env:
+          GATEWAY_URL:
+            default: ws://openab-gateway:8080/ws
+          GATEWAY_PLATFORM:
+            default: telegram
+          BOT_USERNAME:
+            default: ${BOT_USERNAME}
+          KIRO_API_KEY:
+            default: ${KIRO_API_KEY}
+          OPENAB_MAX_SESSIONS:
+            default: ""
+    - name: openab-gateway
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-gateway:0.5.1
+        ports:
+          - id: web
+            port: 8080
+            type: HTTP
+        healthCheck:
+          type: TCP
+          port: web
+        init:
+          - id: register-telegram-webhook
+            image: curlimages/curl:8.5.0
+            volumes: []
+            command:
+              - sh
+              - -c
+              - |
+                for i in 1 2 3 4 5; do
+                  if curl -fsS -m 10 \
+                       "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+                       --data-urlencode "url=https://${ZEABUR_WEB_DOMAIN}/webhook/telegram" \
+                       --data-urlencode "secret_token=${TELEGRAM_SECRET_TOKEN}"; then
+                    echo
+                    echo "openab-gateway: telegram webhook registered → https://${ZEABUR_WEB_DOMAIN}/webhook/telegram"
+                    exit 0
+                  fi
+                  echo "openab-gateway: webhook register attempt $i failed, retrying in 3s"
+                  sleep 3
+                done
+                echo "openab-gateway: all webhook register attempts failed — gateway will still start; use the dashboard 'Re-register Telegram Webhook' instruction to recover."
+                exit 0
+        instructions:
+          - type: TEXT
+            title: Re-register Telegram Webhook (auto-runs at deploy — use this only to manually re-trigger)
+            content: "curl \"https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${ZEABUR_WEB_URL}/webhook/telegram&secret_token=${TELEGRAM_SECRET_TOKEN}\""
+          - type: TEXT
+            title: Unregister Telegram Webhook
+            content: "curl \"https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook\""
+        env:
+          TELEGRAM_BOT_TOKEN:
+            default: ${TELEGRAM_BOT_TOKEN}
+          TELEGRAM_SECRET_TOKEN:
+            default: ${PASSWORD}
+localization:
+  zh-TW:
+    description: |
+      一鍵部署的 Telegram Bot，整合 OpenAB + Kiro。同時部署 OAB agent 與 Telegram gateway，只需填入 Bot Token 即可使用。無需另外部署 gateway、無需手動修改 config.toml。
+      來源：https://github.com/openabdev/openab
+    variables:
+      - key: TELEGRAM_BOT_TOKEN
+        name: Telegram Bot Token
+        description: "來自 @BotFather 的 Bot Token（https://t.me/BotFather）。必填。"
+      - key: BOT_USERNAME
+        name: Bot Username
+        description: "Bot 的 username（不含 @，例如 `my_zeabur_bot`）。群組中 @mention 判定需要這個值。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（選填，Pro+ 方案）
+        description: "選填。Kiro Pro/Pro+/Power 訂閱者可填入 API Key，部署後無需手動登入。免費方案留空，部署後使用 device flow 認證。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 網域
+        description: "用於接收 Telegram Webhook 的公開 HTTPS 網域，自動分配。"
+    readme: |
+      # OpenAB Telegram Bundle
+
+      一鍵部署的 [OpenAB](https://github.com/openabdev/openab) Telegram bot — bot agent 與 webhook gateway 打包在一起，只需填入 Telegram Bot Token 即可使用。
+
+      ```
+      Telegram ──POST──▶ ┌──────────────────┐ ◀──WebSocket── ┌────────────┐
+                         │  openab-gateway  │                │   openab   │
+                         │  （僅 Telegram） │                │ （Kiro CLI）│
+                         └──────────────────┘                └────────────┘
+                            公開 HTTPS                          內部使用
+      ```
+
+      ## 部署內容
+
+      | 服務 | 用途 | 公開 |
+      |---|---|---|
+      | `openab` | 執行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | Telegram webhook → WebSocket 橋接 | 是（自動 HTTPS） |
+
+      無需共用 PVC、無需手動修改 `config.toml`。Agent 的 `config.toml` 在首次啟動時自動生成，gateway URL 已預先設為 `ws://openab-gateway:8080/ws`、`platform = "telegram"`。
+
+      ## 設定步驟
+
+      ### 1. 建立 Telegram Bot
+
+      1. 在 Telegram 開啟 [@BotFather](https://t.me/BotFather)
+      2. 發送 `/newbot` 並依照提示操作
+      3. **你設定的 username**（例如 `my_zeabur_bot`，必須以 `bot` 結尾）→ 貼到 **Bot Username**
+      4. **產生的 bot token**（例如 `123456:ABC-DEF...`）→ 貼到 **Telegram Bot Token**
+      5. 群組 / supergroup 使用：發送 `/setprivacy` → `Disable`，讓 Bot 可以看到所有訊息（@mention 判定需要此設定）
+      6. Supergroup 含 forum topic（自動「每段對話一個 thread」）：把 bot 加入群組 → 群組設定 → 管理員 → 開啟 **Manage Topics** 權限
+
+      ### 2. （選填）取得 Kiro API Key
+
+      如果你有付費的 Kiro 訂閱，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 建立 key，填入 `KIRO_API_KEY`。免費方案跳過此步驟，於步驟 4 部署後再認證。
+
+      ### 3. 部署
+
+      點擊部署。系統會自動分配公開 HTTPS 網域給 gateway 服務。
+
+      ### 4. 透過 Device Flow 認證 Kiro（僅免費方案）
+
+      若步驟 2 已填入 `KIRO_API_KEY`，跳過此步驟。
+
+      待 `openab` 服務啟動後，於 Zeabur Dashboard 開啟該服務的終端機，執行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      依照畫面顯示的 URL 與 code 完成瀏覽器授權。
+
+      ### 5. 測試
+
+      向你的 Telegram Bot 發送訊息。Gateway 收到後透過 WebSocket 轉發給 OAB，OAB 處理後透過 Gateway 回覆。
+
+      **Telegram webhook 由 `openab` 服務啟動時自動註冊**——log 找 `openab: telegram webhook registered → https://...` 確認。不需要手動跑 `curl setWebhook`。
+
+      若日後需要重新觸發（例如 revoke bot token 後、或更換 gateway 網域），可至 **openab-gateway** 服務頁面 → **Instructions** 區，已預填好的 `Re-register Telegram Webhook` curl 指令可手動執行。
+
+      ## 自訂設定
+
+      - **`/home/agent/.config/openab/config.toml`** — OAB 設定（sessions、reactions 等）。首次啟動時從內建範本建立，`[gateway]` 區塊已預先設好。如需重建，刪除檔案後重啟服務。
+      - **映像標籤** — bot 追蹤 floating `stable` 標籤（`ghcr.io/openabdev/openab:stable`），OpenAB 推出新穩定版時自動更新。Gateway 目前 pin 在 `ghcr.io/openabdev/openab-gateway:0.5.1`（尚未發布 `:stable` 標籤）。若要 pin 至特定版本或手動升版，請至 Zeabur Dashboard → 服務 → 設定修改映像標籤。可用標籤：[OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway)。
+
+      ## 想換不同的 agent 後端？
+
+      本 bundle 預設使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，請改部署對應的 [bot template](https://zeabur.com/templates) 搭配獨立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通訊平台？
+
+      請參考 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支援 LINE、Feishu/Lark、Google Chat、MS Teams、WeCom。
+
+      ## 連結
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [Telegram 設定指南](https://github.com/openabdev/openab/blob/main/docs/telegram.md)
+      - [獨立 OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)
+  zh-CN:
+    description: |
+      一键部署的 Telegram Bot，集成 OpenAB + Kiro。同时部署 OAB agent 与 Telegram gateway，只需填入 Bot Token 即可使用。无需另外部署 gateway、无需手动修改 config.toml。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: TELEGRAM_BOT_TOKEN
+        name: Telegram Bot Token
+        description: "来自 @BotFather 的 Bot Token（https://t.me/BotFather）。必填。"
+      - key: BOT_USERNAME
+        name: Bot Username
+        description: "Bot 的 username（不含 @，例如 `my_zeabur_bot`）。群组中 @mention 判定需要这个值。"
+      - key: KIRO_API_KEY
+        name: Kiro API Key（选填，Pro+ 方案）
+        description: "选填。Kiro Pro/Pro+/Power 订阅者可填入 API Key，部署后无需手动登录。免费方案留空，部署后使用 device flow 认证。"
+      - key: PUBLIC_DOMAIN
+        name: Gateway 域名
+        description: "用于接收 Telegram Webhook 的公开 HTTPS 域名，自动分配。"
+    readme: |
+      # OpenAB Telegram Bundle
+
+      一键部署的 [OpenAB](https://github.com/openabdev/openab) Telegram bot — bot agent 与 webhook gateway 打包在一起，只需填入 Telegram Bot Token 即可使用。
+
+      ## 部署内容
+
+      | 服务 | 用途 | 公开 |
+      |---|---|---|
+      | `openab` | 运行 Kiro CLI 的 OAB agent | 否 |
+      | `openab-gateway` | Telegram webhook → WebSocket 桥接 | 是（自动 HTTPS） |
+
+      无需共享 PVC、无需手动修改 `config.toml`。Agent 的 `config.toml` 在首次启动时自动生成，gateway URL 已预先设为 `ws://openab-gateway:8080/ws`、`platform = "telegram"`。
+
+      ## 设置步骤
+
+      ### 1. 创建 Telegram Bot
+
+      1. 在 Telegram 打开 [@BotFather](https://t.me/BotFather)
+      2. 发送 `/newbot` 并按照提示操作
+      3. **你设置的 username**（例如 `my_zeabur_bot`，必须以 `bot` 结尾）→ 粘贴到 **Bot Username**
+      4. **生成的 bot token**（例如 `123456:ABC-DEF...`）→ 粘贴到 **Telegram Bot Token**
+      5. 群组 / supergroup 使用：发送 `/setprivacy` → `Disable`，让 Bot 可以看到所有消息（@mention 判定需要此设置）
+      6. Supergroup 含 forum topic（自动「每段对话一个 thread」）：把 bot 加入群组 → 群组设置 → 管理员 → 开启 **Manage Topics** 权限
+
+      ### 2. （选填）获取 Kiro API Key
+
+      如有付费 Kiro 订阅，前往 [kiro.dev](https://kiro.dev) → Settings → API Keys 创建 key，填入 `KIRO_API_KEY`。免费方案跳过此步骤，于步骤 4 部署后再认证。
+
+      ### 3. 部署
+
+      点击部署。系统会自动分配公开 HTTPS 域名给 gateway 服务。
+
+      ### 4. 通过 Device Flow 认证 Kiro（仅免费方案）
+
+      若步骤 2 已填入 `KIRO_API_KEY`，跳过此步骤。
+
+      待 `openab` 服务启动后，在 Zeabur Dashboard 打开该服务的终端，运行：
+
+      ```
+      runuser -u agent -- kiro-cli login --use-device-flow
+      ```
+
+      按照屏幕显示的 URL 和 code 完成浏览器授权。
+
+      ### 5. 测试
+
+      向 Telegram Bot 发送消息。Gateway 收到后通过 WebSocket 转发给 OAB，OAB 处理后通过 Gateway 回复。
+
+      **Telegram webhook 由 `openab` 服务启动时自动注册**——log 找 `openab: telegram webhook registered → https://...` 确认。不需要手动跑 `curl setWebhook`。
+
+      若日后需要重新触发（例如 revoke bot token 后、或更换 gateway 域名），可到 **openab-gateway** 服务页面 → **Instructions** 区，已预填好的 `Re-register Telegram Webhook` curl 指令可手动执行。
+
+      ## 想换不同的 agent 后端？
+
+      本 bundle 默认使用 Kiro。若想用 Claude / Codex / Cursor / Gemini / OpenCode / Hermes / Grok，请改部署对应的 [bot template](https://zeabur.com/templates) 搭配独立的 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)。
+
+      ## 想用其他通讯平台？
+
+      请参考 [OpenAB Gateway](https://zeabur.com/templates/IMRONB)，支持 LINE、飞书/Lark、Google Chat、MS Teams、WeCom。
+
+      ## 链接
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
