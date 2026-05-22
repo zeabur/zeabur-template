@@ -150,7 +150,7 @@ spec:
                 cp /opt/config.toml.template "$CONFIG_FILE"
 
                 if [ -n "$DISCORD_BOT_TOKEN" ]; then
-                  printf '\n[discord]\nbot_token = "${DISCORD_BOT_TOKEN}"\n' >> "$CONFIG_FILE"
+                  printf '\n[discord]\nbot_token = "%s"\n' "$DISCORD_BOT_TOKEN" >> "$CONFIG_FILE"
                   if [ -n "$OPENAB_ALLOW_BOT_MESSAGES" ]; then
                     printf 'allow_bot_messages = "%s"\n' "$OPENAB_ALLOW_BOT_MESSAGES" >> "$CONFIG_FILE"
                   fi
@@ -169,7 +169,7 @@ spec:
                 fi
 
                 if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
-                  printf '\n[slack]\nbot_token = "${SLACK_BOT_TOKEN}"\napp_token = "${SLACK_APP_TOKEN}"\n' >> "$CONFIG_FILE"
+                  printf '\n[slack]\nbot_token = "%s"\napp_token = "%s"\n' "$SLACK_BOT_TOKEN" "$SLACK_APP_TOKEN" >> "$CONFIG_FILE"
                 fi
 
                 if [ -n "$GATEWAY_URL" ]; then
@@ -213,6 +213,10 @@ spec:
             default: ""
           OPENAB_MAX_SESSIONS:
             default: ""
+          GATEWAY_URL:
+            default: ""
+          GATEWAY_PLATFORM:
+            default: ""
 localization:
   zh-TW:
     description: |
@@ -232,7 +236,25 @@ localization:
         description: "選填。Slack App 的 Bot User OAuth Token（xoxb-...）。留空則停用 Slack。"
       - key: SLACK_APP_TOKEN
         name: Slack App Token（選填）
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: 允許 Bot 訊息（選填）
+        description: "選填。設為 'on' 或 'mentions' 以允許 bot 訊息觸發。留空則停用。"
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: 信任的 Bot ID（選填）
+        description: "選填。以逗號分隔的信任 Bot ID。留空則信任所有 bot。"
+      - key: OPENAB_MAX_SESSIONS
+        name: 最大並行 Session 數（選填）
+        description: "選填。最大並行 agent session 數量（預設：5）。"
         description: "選填。Socket Mode 用的 App-Level Token（xapp-...）。設定 Slack Bot Token 時必填。"
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: 允許 Bot 訊息（選填）
+        description: "選填。設為 'on' 或 'mentions' 以允許 bot 訊息觸發。留空則停用。"
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: 信任的 Bot ID（選填）
+        description: "選填。以逗號分隔的信任 Bot ID。留空則信任所有 bot。"
+      - key: OPENAB_MAX_SESSIONS
+        name: 最大並行 Session 數（選填）
+        description: "選填。最大並行 agent session 數量（預設：5）。"
     readme: |
       # OpenAB Antigravity
 
@@ -287,7 +309,25 @@ localization:
         description: "选填。Slack App 的 Bot User OAuth Token（xoxb-...）。留空则禁用 Slack。"
       - key: SLACK_APP_TOKEN
         name: Slack App Token（选填）
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: 允许 Bot 消息（选填）
+        description: "选填。设为 'on' 或 'mentions' 以允许 bot 消息触发。留空则禁用。"
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: 信任的 Bot ID（选填）
+        description: "选填。以逗号分隔的信任 Bot ID。留空则信任所有 bot。"
+      - key: OPENAB_MAX_SESSIONS
+        name: 最大并行 Session 数（选填）
+        description: "选填。最大并行 agent session 数量（默认：5）。"
         description: "选填。Socket Mode 用的 App-Level Token（xapp-...）。设置 Slack Bot Token 时必填。"
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: 允许 Bot 消息（选填）
+        description: "选填。设为 'on' 或 'mentions' 以允许 bot 消息触发。留空则禁用。"
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: 信任的 Bot ID（选填）
+        description: "选填。以逗号分隔的信任 Bot ID。留空则信任所有 bot。"
+      - key: OPENAB_MAX_SESSIONS
+        name: 最大并行 Session 数（选填）
+        description: "选填。最大并行 agent session 数量（默认：5）。"
     readme: |
       # OpenAB Antigravity
 
@@ -342,7 +382,25 @@ localization:
         description: "オプション。Bot User OAuth Token（xoxb-...）。空の場合、Slack は無効。"
       - key: SLACK_APP_TOKEN
         name: Slack App トークン（オプション）
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: Bot メッセージ許可（オプション）
+        description: "オプション。'on' または 'mentions' に設定して bot メッセージを許可。空の場合は無効。"
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: 信頼する Bot ID（オプション）
+        description: "オプション。信頼する Bot ID（カンマ区切り）。空の場合は全 bot を信頼。"
+      - key: OPENAB_MAX_SESSIONS
+        name: 最大同時セッション数（オプション）
+        description: "オプション。最大同時 agent セッション数（デフォルト：5）。"
         description: "オプション。Socket Mode 用の App-Level Token（xapp-...）。Slack Bot Token 設定時は必須。"
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: Bot メッセージ許可（オプション）
+        description: "オプション。'on' または 'mentions' に設定して bot メッセージを許可。空の場合は無効。"
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: 信頼する Bot ID（オプション）
+        description: "オプション。信頼する Bot ID（カンマ区切り）。空の場合は全 bot を信頼。"
+      - key: OPENAB_MAX_SESSIONS
+        name: 最大同時セッション数（オプション）
+        description: "オプション。最大同時 agent セッション数（デフォルト：5）。"
     readme: |
       # OpenAB Antigravity
 
@@ -391,7 +449,25 @@ localization:
         description: "Opcional. Bot User OAuth Token (xoxb-...). Dejar vacío para deshabilitar Slack."
       - key: SLACK_APP_TOKEN
         name: Token de App de Slack (opcional)
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: Permitir Mensajes de Bot (opcional)
+        description: "Opcional. Establecer 'on' o 'mentions' para permitir mensajes de bots. Dejar vacío para deshabilitar."
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: IDs de Bots Confiables (opcional)
+        description: "Opcional. IDs de bots confiables separados por comas. Dejar vacío para confiar en todos."
+      - key: OPENAB_MAX_SESSIONS
+        name: Sesiones Concurrentes Máximas (opcional)
+        description: "Opcional. Número máximo de sesiones de agente concurrentes (por defecto: 5)."
         description: "Opcional. App-Level Token (xapp-...) para Socket Mode."
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: Permitir Mensajes de Bot (opcional)
+        description: "Opcional. Establecer 'on' o 'mentions' para permitir mensajes de bots. Dejar vacío para deshabilitar."
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: IDs de Bots Confiables (opcional)
+        description: "Opcional. IDs de bots confiables separados por comas. Dejar vacío para confiar en todos."
+      - key: OPENAB_MAX_SESSIONS
+        name: Sesiones Concurrentes Máximas (opcional)
+        description: "Opcional. Número máximo de sesiones de agente concurrentes (por defecto: 5)."
     readme: |
       # OpenAB Antigravity
 
@@ -426,7 +502,25 @@ localization:
         description: "Opsional. Bot User OAuth Token (xoxb-...). Kosongkan untuk menonaktifkan Slack."
       - key: SLACK_APP_TOKEN
         name: Token App Slack (opsional)
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: Izinkan Pesan Bot (opsional)
+        description: "Opsional. Atur 'on' atau 'mentions' untuk mengizinkan pesan bot. Kosongkan untuk menonaktifkan."
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: ID Bot Terpercaya (opsional)
+        description: "Opsional. ID bot terpercaya dipisah koma. Kosongkan untuk mempercayai semua bot."
+      - key: OPENAB_MAX_SESSIONS
+        name: Sesi Bersamaan Maksimum (opsional)
+        description: "Opsional. Jumlah maksimum sesi agen bersamaan (default: 5)."
         description: "Opsional. App-Level Token (xapp-...) untuk Socket Mode."
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: Izinkan Pesan Bot (opsional)
+        description: "Opsional. Atur 'on' atau 'mentions' untuk mengizinkan pesan bot. Kosongkan untuk menonaktifkan."
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: ID Bot Terpercaya (opsional)
+        description: "Opsional. ID bot terpercaya dipisah koma. Kosongkan untuk mempercayai semua bot."
+      - key: OPENAB_MAX_SESSIONS
+        name: Sesi Bersamaan Maksimum (opsional)
+        description: "Opsional. Jumlah maksimum sesi agen bersamaan (default: 5)."
     readme: |
       # OpenAB Antigravity
 
