@@ -1,0 +1,387 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB Antigravity
+spec:
+  description: |
+    Deploy OpenAB with Google Antigravity CLI (agy) as a Discord bot. Uses the agy-acp Rust adapter for reliable ACP stdio communication. Supports multi-turn conversations via --continue session continuity.
+  icon: https://avatars.githubusercontent.com/u/274127192?v=4
+  coverImage: https://raw.githubusercontent.com/openabdev/openab/main/images/banner.jpg
+  tags:
+    - AI
+    - Discord Bot
+    - Developer Tools
+  variables:
+    - key: DISCORD_BOT_TOKEN
+      type: STRING
+      name: Discord Bot Token
+      description: Your Discord bot token from the Discord Developer Portal
+    - key: DISCORD_ALLOWED_CHANNELS
+      type: STRING
+      name: Allowed Channel IDs
+      description: Comma-separated Discord channel IDs to restrict the bot (leave empty to allow all channels)
+  readme: |
+    # OpenAB Antigravity
+
+    One-click deployment of [OpenAB](https://github.com/openabdev/openab) with Google Antigravity CLI as the AI agent backend. This template uses the `agy-acp` Rust adapter for stable stdin/stdout pipe communication.
+
+    ## Features
+
+    - Lightweight Rust ACP adapter (`agy-acp`) bridges OpenAB to Google Antigravity CLI
+    - Multi-turn conversations via `--continue` session continuity
+    - ~5 second response time per prompt
+    - Discord bot with emoji reaction status feedback
+
+    ## Setup
+
+    ### 1. Create a Discord Bot
+
+    1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+    2. Create a new application and add a Bot
+    3. Enable **Message Content Intent** under Privileged Gateway Intents
+    4. Copy the bot token and paste it as `DISCORD_BOT_TOKEN`
+    5. Invite the bot to your server with appropriate permissions
+
+    ### 2. Authenticate Antigravity CLI
+
+    After deployment, open the **Terminal** tab in Zeabur Dashboard and run:
+
+    ```bash
+    agy auth
+    ```
+
+    Complete the device flow in your browser. Auth tokens persist in the volume at `~/.gemini/`.
+
+    ### 3. Configure Channels (Optional)
+
+    Set `DISCORD_ALLOWED_CHANNELS` to restrict which channels the bot responds in. Leave empty to allow all channels.
+
+    ## Limitations
+
+    - No streaming — `agy -p` returns the full response at once
+    - Cancel is a no-op — `agy -p` runs to completion
+    - Session continuity uses `--continue` (resumes most recent conversation per container)
+
+    ## License
+
+    OpenAB is open source. See [GitHub repository](https://github.com/openabdev/openab) for license details.
+  services:
+    - name: openab-antigravity
+      icon: https://avatars.githubusercontent.com/u/274127192?v=4
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-antigravity:pr896
+          runAsUserID: 1000
+          command:
+            - tini
+            - --
+            - openab
+            - run
+            - -c
+            - /etc/openab/config.toml
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /etc/openab/config.toml
+            permission: 420
+            template: |
+              [discord]
+              bot_token = "${DISCORD_BOT_TOKEN}"
+              allow_all_channels = true
+
+              [agent]
+              command = "agy-acp"
+              args = []
+              working_dir = "/home/agent"
+              env = { AGY_WORKING_DIR = "/home/agent" }
+
+              [pool]
+              max_sessions = 5
+              session_ttl_hours = 24
+
+              [reactions]
+              enabled = true
+        env:
+          DISCORD_BOT_TOKEN:
+            default: ${DISCORD_BOT_TOKEN}
+          DISCORD_ALLOWED_CHANNELS:
+            default: ${DISCORD_ALLOWED_CHANNELS}
+localization:
+  zh-TW:
+    description: |
+      部署 OpenAB 搭配 Google Antigravity CLI (agy) 作為 Discord 機器人。使用 agy-acp Rust 適配器進行穩定的 ACP stdio 通訊，支援透過 --continue 延續多輪對話。
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord 機器人 Token
+        description: 從 Discord Developer Portal 取得的機器人 Token
+      - key: DISCORD_ALLOWED_CHANNELS
+        name: 允許的頻道 ID
+        description: 限制機器人回應的 Discord 頻道 ID（逗號分隔，留空則允許所有頻道）
+    readme: |
+      # OpenAB Antigravity
+
+      一鍵部署 [OpenAB](https://github.com/openabdev/openab) 搭配 Google Antigravity CLI 作為 AI 代理後端。此模板使用 `agy-acp` Rust 適配器確保穩定的 stdin/stdout pipe 通訊。
+
+      ## 特色
+
+      - 輕量 Rust ACP 適配器 (`agy-acp`) 橋接 OpenAB 至 Google Antigravity CLI
+      - 透過 `--continue` 支援多輪對話延續
+      - 每次回應約 5 秒
+      - Discord 機器人附帶 emoji 反應狀態回饋
+
+      ## 設定
+
+      ### 1. 建立 Discord 機器人
+
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)
+      2. 建立新的 Application 並新增 Bot
+      3. 在 Privileged Gateway Intents 中啟用 **Message Content Intent**
+      4. 複製 Bot Token 並填入 `DISCORD_BOT_TOKEN`
+      5. 邀請機器人加入你的伺服器
+
+      ### 2. 認證 Antigravity CLI
+
+      部署後，在 Zeabur Dashboard 的 **Terminal** 分頁執行：
+
+      ```bash
+      agy auth
+      ```
+
+      在瀏覽器完成裝置驗證流程，認證 Token 會持久化於 `~/.gemini/` 目錄。
+
+      ### 3. 設定頻道（選填）
+
+      設定 `DISCORD_ALLOWED_CHANNELS` 以限制機器人回應的頻道，留空則回應所有頻道。
+
+      ## 限制
+
+      - 不支援串流 — `agy -p` 一次回傳完整回應
+      - 取消為空操作 — `agy -p` 會執行到完成
+      - 對話延續使用 `--continue`（每個容器僅恢復最近一次對話）
+
+      ## 授權
+
+      OpenAB 為開源專案，詳見 [GitHub 儲存庫](https://github.com/openabdev/openab)。
+  zh-CN:
+    description: |
+      部署 OpenAB 搭配 Google Antigravity CLI (agy) 作为 Discord 机器人。使用 agy-acp Rust 适配器进行稳定的 ACP stdio 通信，支持通过 --continue 延续多轮对话。
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord 机器人 Token
+        description: 从 Discord Developer Portal 获取的机器人 Token
+      - key: DISCORD_ALLOWED_CHANNELS
+        name: 允许的频道 ID
+        description: 限制机器人响应的 Discord 频道 ID（逗号分隔，留空则允许所有频道）
+    readme: |
+      # OpenAB Antigravity
+
+      一键部署 [OpenAB](https://github.com/openabdev/openab) 搭配 Google Antigravity CLI 作为 AI 代理后端。此模板使用 `agy-acp` Rust 适配器确保稳定的 stdin/stdout pipe 通信。
+
+      ## 特色
+
+      - 轻量 Rust ACP 适配器 (`agy-acp`) 桥接 OpenAB 至 Google Antigravity CLI
+      - 通过 `--continue` 支持多轮对话延续
+      - 每次响应约 5 秒
+      - Discord 机器人附带 emoji 反应状态反馈
+
+      ## 设置
+
+      ### 1. 创建 Discord 机器人
+
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)
+      2. 创建新的 Application 并添加 Bot
+      3. 在 Privileged Gateway Intents 中启用 **Message Content Intent**
+      4. 复制 Bot Token 并填入 `DISCORD_BOT_TOKEN`
+      5. 邀请机器人加入你的服务器
+
+      ### 2. 认证 Antigravity CLI
+
+      部署后，在 Zeabur Dashboard 的 **Terminal** 分页执行：
+
+      ```bash
+      agy auth
+      ```
+
+      在浏览器完成设备验证流程，认证 Token 会持久化于 `~/.gemini/` 目录。
+
+      ### 3. 设置频道（可选）
+
+      设置 `DISCORD_ALLOWED_CHANNELS` 以限制机器人响应的频道，留空则响应所有频道。
+
+      ## 限制
+
+      - 不支持流式传输 — `agy -p` 一次返回完整响应
+      - 取消为空操作 — `agy -p` 会执行到完成
+      - 对话延续使用 `--continue`（每个容器仅恢复最近一次对话）
+
+      ## 许可
+
+      OpenAB 为开源项目，详见 [GitHub 仓库](https://github.com/openabdev/openab)。
+  ja-JP:
+    description: |
+      OpenAB と Google Antigravity CLI (agy) を Discord ボットとしてデプロイします。agy-acp Rust アダプターによる安定した ACP stdio 通信で、--continue によるマルチターン会話をサポートします。
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord ボットトークン
+        description: Discord Developer Portal から取得したボットトークン
+      - key: DISCORD_ALLOWED_CHANNELS
+        name: 許可チャンネル ID
+        description: ボットが応答する Discord チャンネル ID（カンマ区切り、空欄で全チャンネル許可）
+    readme: |
+      # OpenAB Antigravity
+
+      [OpenAB](https://github.com/openabdev/openab) と Google Antigravity CLI を AI エージェントバックエンドとしてワンクリックデプロイ。`agy-acp` Rust アダプターで安定した stdin/stdout パイプ通信を実現します。
+
+      ## 特徴
+
+      - 軽量 Rust ACP アダプター (`agy-acp`) が OpenAB と Google Antigravity CLI を橋渡し
+      - `--continue` によるマルチターン会話の継続
+      - レスポンス時間は約 5 秒
+      - Discord ボットの絵文字リアクションによるステータスフィードバック
+
+      ## セットアップ
+
+      ### 1. Discord ボットの作成
+
+      1. [Discord Developer Portal](https://discord.com/developers/applications) にアクセス
+      2. 新しいアプリケーションを作成し、Bot を追加
+      3. Privileged Gateway Intents で **Message Content Intent** を有効化
+      4. Bot Token をコピーし `DISCORD_BOT_TOKEN` に入力
+      5. ボットをサーバーに招待
+
+      ### 2. Antigravity CLI の認証
+
+      デプロイ後、Zeabur Dashboard の **Terminal** タブを開いて以下を実行してください：
+
+      ```bash
+      agy auth
+      ```
+
+      ブラウザでデバイスフローを完了してください。認証トークンは `~/.gemini/` に永続化されます。
+
+      ### 3. チャンネル設定（オプション）
+
+      `DISCORD_ALLOWED_CHANNELS` を設定してボットが応答するチャンネルを制限できます。空欄にすると全チャンネルで応答します。
+
+      ## 制限事項
+
+      - ストリーミング非対応 — `agy -p` は完全なレスポンスを一度に返します
+      - キャンセルは無効 — `agy -p` は最後まで実行されます
+      - セッション継続は `--continue` を使用（コンテナごとに最新の会話のみ再開）
+
+      ## ライセンス
+
+      OpenAB はオープンソースです。詳細は [GitHub リポジトリ](https://github.com/openabdev/openab) をご覧ください。
+  es-ES:
+    description: |
+      Despliega OpenAB con Google Antigravity CLI (agy) como bot de Discord. Usa el adaptador Rust agy-acp para comunicación ACP stdio estable, con soporte para conversaciones multi-turno mediante --continue.
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token del Bot de Discord
+        description: Token del bot obtenido desde el Discord Developer Portal
+      - key: DISCORD_ALLOWED_CHANNELS
+        name: IDs de Canales Permitidos
+        description: IDs de canales de Discord separados por comas (dejar vacío para permitir todos)
+    readme: |
+      # OpenAB Antigravity
+
+      Despliegue con un clic de [OpenAB](https://github.com/openabdev/openab) con Google Antigravity CLI como backend de agente IA. Esta plantilla usa el adaptador Rust `agy-acp` para comunicación stdin/stdout estable.
+
+      ## Características
+
+      - Adaptador ACP ligero en Rust (`agy-acp`) que conecta OpenAB con Google Antigravity CLI
+      - Conversaciones multi-turno mediante continuidad de sesión `--continue`
+      - Tiempo de respuesta de ~5 segundos por prompt
+      - Bot de Discord con retroalimentación de estado mediante reacciones emoji
+
+      ## Configuración
+
+      ### 1. Crear un Bot de Discord
+
+      1. Ve al [Discord Developer Portal](https://discord.com/developers/applications)
+      2. Crea una nueva aplicación y añade un Bot
+      3. Habilita **Message Content Intent** en Privileged Gateway Intents
+      4. Copia el token del bot y pégalo como `DISCORD_BOT_TOKEN`
+      5. Invita al bot a tu servidor
+
+      ### 2. Autenticar Antigravity CLI
+
+      Después del despliegue, abre la pestaña **Terminal** en el Dashboard de Zeabur y ejecuta:
+
+      ```bash
+      agy auth
+      ```
+
+      Completa el flujo del dispositivo en tu navegador. Los tokens de autenticación persisten en el volumen en `~/.gemini/`.
+
+      ### 3. Configurar Canales (Opcional)
+
+      Establece `DISCORD_ALLOWED_CHANNELS` para restringir los canales donde el bot responde. Déjalo vacío para permitir todos los canales.
+
+      ## Limitaciones
+
+      - Sin streaming — `agy -p` devuelve la respuesta completa de una vez
+      - Cancelar es una operación nula — `agy -p` se ejecuta hasta completarse
+      - La continuidad de sesión usa `--continue` (reanuda la conversación más reciente por contenedor)
+
+      ## Licencia
+
+      OpenAB es código abierto. Consulta el [repositorio de GitHub](https://github.com/openabdev/openab) para detalles de licencia.
+  id-ID:
+    description: |
+      Deploy OpenAB dengan Google Antigravity CLI (agy) sebagai bot Discord. Menggunakan adapter Rust agy-acp untuk komunikasi ACP stdio yang stabil, mendukung percakapan multi-giliran melalui --continue.
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Token Bot Discord
+        description: Token bot dari Discord Developer Portal
+      - key: DISCORD_ALLOWED_CHANNELS
+        name: ID Channel yang Diizinkan
+        description: ID channel Discord dipisah koma (kosongkan untuk mengizinkan semua channel)
+    readme: |
+      # OpenAB Antigravity
+
+      Deploy satu klik [OpenAB](https://github.com/openabdev/openab) dengan Google Antigravity CLI sebagai backend agen AI. Template ini menggunakan adapter Rust `agy-acp` untuk komunikasi stdin/stdout pipe yang stabil.
+
+      ## Fitur
+
+      - Adapter ACP Rust ringan (`agy-acp`) menjembatani OpenAB ke Google Antigravity CLI
+      - Percakapan multi-giliran melalui kontinuitas sesi `--continue`
+      - Waktu respons ~5 detik per prompt
+      - Bot Discord dengan umpan balik status melalui reaksi emoji
+
+      ## Pengaturan
+
+      ### 1. Buat Bot Discord
+
+      1. Buka [Discord Developer Portal](https://discord.com/developers/applications)
+      2. Buat aplikasi baru dan tambahkan Bot
+      3. Aktifkan **Message Content Intent** di Privileged Gateway Intents
+      4. Salin token bot dan masukkan sebagai `DISCORD_BOT_TOKEN`
+      5. Undang bot ke server Anda
+
+      ### 2. Autentikasi Antigravity CLI
+
+      Setelah deploy, buka tab **Terminal** di Dashboard Zeabur dan jalankan:
+
+      ```bash
+      agy auth
+      ```
+
+      Selesaikan alur perangkat di browser Anda. Token autentikasi tersimpan permanen di volume `~/.gemini/`.
+
+      ### 3. Konfigurasi Channel (Opsional)
+
+      Atur `DISCORD_ALLOWED_CHANNELS` untuk membatasi channel tempat bot merespons. Kosongkan untuk mengizinkan semua channel.
+
+      ## Keterbatasan
+
+      - Tidak ada streaming — `agy -p` mengembalikan respons lengkap sekaligus
+      - Batalkan adalah no-op — `agy -p` berjalan sampai selesai
+      - Kontinuitas sesi menggunakan `--continue` (melanjutkan percakapan terbaru per kontainer)
+
+      ## Lisensi
+
+      OpenAB adalah open source. Lihat [repositori GitHub](https://github.com/openabdev/openab) untuk detail lisensi.

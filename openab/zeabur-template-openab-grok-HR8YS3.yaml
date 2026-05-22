@@ -158,11 +158,11 @@ spec:
       spec:
         source:
           image: ghcr.io/openabdev/openab-grok:stable
+          runAsUserID: 1000
           command:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
-        runAsUserID: 1000
         volumes:
           - id: agent-home
             dir: /home/agent

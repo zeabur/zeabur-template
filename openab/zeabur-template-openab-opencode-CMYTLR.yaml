@@ -52,7 +52,6 @@ spec:
 
     - **Image tag:** This template uses a floating `stable` tag. To pin a specific version, change the image tag in Zeabur Dashboard -> Service -> Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-opencode).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Settings, config, credentials, and `opencode.json` survive restarts.
-    - **Config ownership:** The container starts as root and switches to `node` user before running openab. If you encounter permission issues, restart the service -- ownership is fixed automatically on boot.
 
     ## Setup
 
@@ -88,8 +87,6 @@ spec:
     ```
     runuser -u node -- opencode auth login
     ```
-
-    > **Warning:** Must run as `node`. Running as `root` writes credentials to `/root/` which is not persisted; they will be lost on restart.
 
     > **Wiring API keys to the agent:** openab spawns the agent with `env_clear()`, so the env-var path requires an allowlist. After first boot edit `/home/node/.config/openab/config.toml` and add under `[agent]`:
     >
@@ -182,11 +179,11 @@ spec:
       spec:
         source:
           image: ghcr.io/openabdev/openab-opencode:stable
+          runAsUserID: 1000
           command:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
-        runAsUserID: 1000
         volumes:
           - id: node-home
             dir: /home/node
@@ -296,7 +293,6 @@ localization:
 
       - **映像標籤：** 此模板使用floating `stable` 標籤。若要 pin 至特定版本，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。
       - **持久化儲存：** `/home/node` 掛載為持久化磁碟。設定、config、認證資料和 `opencode.json` 會在重啟後保留。
-      - **檔案權限：** 容器以 root 啟動後切換為 `node` 用戶執行 openab。如遇權限問題，重啟服務即可。
 
       ## 設定步驟
 
@@ -332,8 +328,6 @@ localization:
       ```
       runuser -u node -- opencode auth login
       ```
-
-      > ⚠️ 必須以 `node` 身份執行。以 `root` 執行會把認證檔寫到 `/root/`，該路徑未持久化，重啟後會遺失。
 
       > **將 API key 傳給 agent：** openab 會以 `env_clear()` 隔離 agent 子程序，因此 env var 路徑需要 allowlist。首次啟動後編輯 `/home/node/.config/openab/config.toml`，在 `[agent]` 區塊加入：
       >
@@ -440,7 +434,6 @@ localization:
 
       - **镜像标签：** 此模板使用floating `stable` 標籤。若要 pin 至特定版本，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
       - **持久化存储：** `/home/node` 挂载为持久化磁盘。设置、config、认证数据和 `opencode.json` 会在重启后保留。
-      - **文件权限：** 容器以 root 启动后切换为 `node` 用户运行 openab。如遇权限问题，重启服务即可。
 
       ## 设置步骤
 
@@ -476,8 +469,6 @@ localization:
       ```
       runuser -u node -- opencode auth login
       ```
-
-      > ⚠️ 必须以 `node` 身份执行。以 `root` 执行会把认证文件写到 `/root/`，该路径未持久化，重启后会丢失。
 
       > **将 API key 传给 agent：** openab 会以 `env_clear()` 隔离 agent 子进程，因此 env var 路径需要 allowlist。首次启动后编辑 `/home/node/.config/openab/config.toml`，在 `[agent]` 区块加入：
       >
@@ -584,7 +575,6 @@ localization:
 
       - **イメージタグ：** このテンプレートはfloating `stable` タグを追跡しています（OpenAB の新しい安定版がリリースされると自動更新）。特定のバージョンに pin するには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。
       - **永続ストレージ：** `/home/node` が永続ボリュームです。設定、認証情報、`opencode.json` が再起動後も保持されます。
-      - **ファイル権限：** コンテナは root で起動後、`node` ユーザーに切り替えて openab を実行します。
 
       ## セットアップ
 
@@ -617,8 +607,6 @@ localization:
       ```
       runuser -u node -- opencode auth login
       ```
-
-      > ⚠️ 必ず `node` ユーザーで実行してください。
 
       > **API キーを agent に渡す：** openab は `env_clear()` で agent サブプロセスを分離するため、env var ルートには allowlist が必要です。初回起動後に `/home/node/.config/openab/config.toml` を編集し、`[agent]` セクションに追加：
       >
@@ -708,7 +696,6 @@ localization:
 
       - **Etiqueta de imagen:** Este template rastrea la etiqueta flotante `stable`. Para fijar una versión específica, cambie la etiqueta en Zeabur Dashboard → Servicio → Configuración.
       - **Almacenamiento persistente:** `/home/node` está montado como volumen persistente.
-      - **Permisos:** El contenedor inicia como root y cambia a `node` antes de ejecutar openab.
 
       ## Configuración
 
@@ -741,8 +728,6 @@ localization:
       ```
       runuser -u node -- opencode auth login
       ```
-
-      > ⚠️ Debe ejecutarse como `node`.
 
       > **Conectar las API keys al agente:** openab lanza el agente con `env_clear()`, así que la vía de env var requiere un allowlist. Tras el primer arranque edita `/home/node/.config/openab/config.toml` y añade bajo `[agent]`:
       >
@@ -828,7 +813,6 @@ localization:
 
       - **Tag image:** Template ini mengikuti tag floating `stable` dan otomatis ikut versi stable OpenAB terbaru. Untuk pin ke versi tertentu, ubah tag di Zeabur Dashboard → Layanan → Pengaturan.
       - **Penyimpanan persisten:** `/home/node` di-mount sebagai volume persisten.
-      - **Izin file:** Container dimulai sebagai root lalu beralih ke user `node` sebelum menjalankan openab.
 
       ## Pengaturan
 
@@ -861,8 +845,6 @@ localization:
       ```
       runuser -u node -- opencode auth login
       ```
-
-      > ⚠️ Harus dijalankan sebagai `node`.
 
       > **Menyambungkan API key ke agent:** openab menjalankan agent dengan `env_clear()`, jadi jalur env var memerlukan allowlist. Setelah boot pertama, edit `/home/node/.config/openab/config.toml` dan tambahkan di bawah `[agent]`:
       >

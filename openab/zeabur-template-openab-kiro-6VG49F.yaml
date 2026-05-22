@@ -69,7 +69,6 @@ spec:
 
     - **Image tag:** This template tracks the floating `stable` channel and auto-updates when a new OpenAB stable releases. To pin a specific version, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
     - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
-    - **Config ownership:** The container runs directly as `agent` user (uid 1000). If you encounter permission issues on the persistent volume, restart the service.
 
     ## Setup
 
@@ -163,11 +162,11 @@ spec:
       spec:
         source:
           image: ghcr.io/openabdev/openab:stable
+          runAsUserID: 1000
           command:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
-        runAsUserID: 1000
         volumes:
           - id: agent-home
             dir: /home/agent
@@ -303,7 +302,6 @@ localization:
 
       - **映像標籤：** 此模板追蹤 floating `stable` 標籤，OpenAB 推出新穩定版時自動更新。若要 pin 至特定版本，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
       - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Plugins、設定、config 和認證資料會在重啟後保留。
-      - **檔案權限：** 容器以 root 啟動後切換為 agent 用戶（uid 1000）執行 openab。如遇權限問題，重啟服務即可 — 啟動時會自動修正權限。
 
       ## 設定步驟
 
@@ -418,7 +416,6 @@ localization:
 
       - **镜像标签：** 此模板追踪 floating `stable` 标签，OpenAB 推出新稳定版时自动更新。若要 pin 至特定版本，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。可用标签：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
       - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Plugins、设置、config 和认证数据会在重启后保留。
-      - **文件权限：** 容器以 root 启动后切换为 agent 用户（uid 1000）运行 openab。如遇权限问题，重启服务即可 — 启动时会自动修正权限。
 
       ## 设置步骤
 
@@ -533,7 +530,6 @@ localization:
 
       - **イメージタグ：** このテンプレートは floating `stable` タグを追跡し、OpenAB の新しい安定版がリリースされると自動的に更新されます。特定のバージョンに pin するには、Zeabur Dashboard → サービス → 設定でイメージタグを変更してください。利用可能なタグ：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)。
       - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。プラグイン、設定、config、認証情報は再起動後も保持されます。
-      - **ファイル権限：** コンテナは root で起動し、openab 実行前に agent ユーザー（uid 1000）に切り替わります。権限の問題が発生した場合、サービスを再起動してください — 起動時に自動的に権限が修正されます。
 
       ## セットアップ
 
@@ -648,7 +644,6 @@ localization:
 
       - **Etiqueta de imagen:** Esta plantilla rastrea la etiqueta flotante `stable` y se actualiza automáticamente con cada nueva versión estable de OpenAB. Para fijar una versión específica, cambie la etiqueta de imagen en Zeabur Dashboard → Servicio → Configuración. Etiquetas disponibles: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
       - **Almacenamiento persistente:** `/home/agent` está montado como volumen persistente. Plugins, configuración y credenciales se conservan entre reinicios.
-      - **Permisos de archivos:** El contenedor inicia como root y cambia al usuario agent (uid 1000) antes de ejecutar openab. Si encuentra problemas de permisos, reinicie el servicio — los permisos se corrigen automáticamente al arrancar.
 
       ## Configuración
 
@@ -763,7 +758,6 @@ localization:
 
       - **Tag image:** Template ini mengikuti tag floating `stable` dan otomatis ikut versi stable OpenAB terbaru. Untuk pin ke versi tertentu, ubah tag image di Zeabur Dashboard → Layanan → Pengaturan. Tag yang tersedia: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab).
       - **Penyimpanan persisten:** `/home/agent` di-mount sebagai volume persisten. Plugin, pengaturan, config, dan kredensial dipertahankan antar restart.
-      - **Izin file:** Container dimulai sebagai root dan beralih ke pengguna agent (uid 1000) sebelum menjalankan openab. Jika mengalami masalah izin, restart layanan — izin diperbaiki secara otomatis saat boot.
 
       ## Pengaturan
 

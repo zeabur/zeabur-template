@@ -55,7 +55,6 @@ spec:
     - **Auth after deploy:** Unlike Claude/Codex, there is no API-key env var for Copilot. You must run `gh auth login` inside the container after the first deploy (see below).
     - **Image tag:** This template tracks the floating `stable` channel and auto-updates when a new OpenAB stable releases. To pin a specific version, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and GitHub OAuth credentials (`~/.config/gh/`) survive restarts.
-    - **Config ownership:** The container starts as root and switches to `node` user (uid 1000) before running openab. If you encounter permission issues, restart the service — ownership is fixed automatically on boot.
 
     ## Setup
 
@@ -155,11 +154,11 @@ spec:
       spec:
         source:
           image: ghcr.io/openabdev/openab-copilot:stable
+          runAsUserID: 1000
           command:
             - /bin/sh
             - -c
             - /opt/start-openab.sh
-        runAsUserID: 1000
         volumes:
           - id: node-home
             dir: /home/node
@@ -273,7 +272,6 @@ localization:
       - **部署後才認證：** 與 Claude/Codex 不同，Copilot 沒有 API key 環境變數。首次部署後需進入容器執行 `gh auth login`（見下方步驟）。
       - **映像標籤：** 此模板追蹤 floating `stable` 標籤，OpenAB 推出新穩定版時自動更新。若要 pin 至特定版本，請在 Zeabur Dashboard → 服務 → 設定中更改映像標籤。可用標籤：[GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-copilot)。
       - **持久化儲存：** `/home/node` 掛載為持久化磁碟，plugins、設定、config、GitHub OAuth 認證（`~/.config/gh/`）都會保留。
-      - **檔案權限：** 容器以 root 啟動後切換為 node 用戶（uid 1000）執行 openab。
 
       ## 設定步驟
 
@@ -391,7 +389,6 @@ localization:
       - **部署后才认证：** 与 Claude/Codex 不同，Copilot 没有 API key 环境变量。首次部署后需进入容器运行 `gh auth login`（见下方）。
       - **镜像标签：** 此模板使用floating `stable` 標籤。若要 pin 至特定版本，请在 Zeabur Dashboard → 服务 → 设置中更改镜像标签。
       - **持久化存储：** `/home/node` 挂载为持久化磁盘，包括 GitHub OAuth 凭证 `~/.config/gh/`。
-      - **文件权限：** 容器以 root 启动后切换为 node 用户运行 openab。
 
       ## 设置步骤
 
