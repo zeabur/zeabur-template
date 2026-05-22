@@ -236,15 +236,6 @@ localization:
         description: "選填。Slack App 的 Bot User OAuth Token（xoxb-...）。留空則停用 Slack。"
       - key: SLACK_APP_TOKEN
         name: Slack App Token（選填）
-      - key: OPENAB_ALLOW_BOT_MESSAGES
-        name: 允許 Bot 訊息（選填）
-        description: "選填。設為 'on' 或 'mentions' 以允許 bot 訊息觸發。留空則停用。"
-      - key: OPENAB_TRUSTED_BOT_IDS
-        name: 信任的 Bot ID（選填）
-        description: "選填。以逗號分隔的信任 Bot ID。留空則信任所有 bot。"
-      - key: OPENAB_MAX_SESSIONS
-        name: 最大並行 Session 數（選填）
-        description: "選填。最大並行 agent session 數量（預設：5）。"
         description: "選填。Socket Mode 用的 App-Level Token（xapp-...）。設定 Slack Bot Token 時必填。"
       - key: OPENAB_ALLOW_BOT_MESSAGES
         name: 允許 Bot 訊息（選填）
@@ -258,39 +249,24 @@ localization:
     readme: |
       # OpenAB Antigravity
 
-      一鍵部署 [OpenAB](https://github.com/openabdev/openab) 搭配 Google Antigravity CLI 作為 AI 代理後端。此模板使用 `agy-acp` Rust 適配器確保穩定的 stdin/stdout pipe 通訊。
+      一鍵部署 [OpenAB](https://github.com/openabdev/openab) 搭配 Google Antigravity CLI 作為 AI 代理後端。
 
       ## 注意事項
 
-      - **映像標籤：** 此模板追蹤 `beta` 標籤。若要 pin 至特定版本，請在 Zeabur Dashboard → 服務 → 設定中更改。
-      - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Config、認證 Token 和 session 資料會在重啟後保留。
-      - **Config 位置：** `config.toml` 在首次啟動時生成於 `/home/agent/.config/openab/config.toml`。之後請直接編輯，環境變數僅用於初始設定。
+      - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Config 和認證 Token 會在重啟後保留。
+      - **Config 位置：** 首次啟動時生成於 `/home/agent/.config/openab/config.toml`。之後直接編輯即可。
 
       ## 設定
 
-      ### 1. 建立 Discord 機器人
-
-      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)
-      2. 建立新的 Application 並新增 Bot
-      3. 在 Privileged Gateway Intents 中啟用 **Message Content Intent**
-      4. 複製 Bot Token 並填入 `DISCORD_BOT_TOKEN`
-      5. 邀請機器人加入你的伺服器
-
-      ### 2. 認證 Antigravity CLI
-
-      部署後，在 Zeabur Dashboard 的 **Exec** 分頁執行：
-
-      ```bash
-      agy auth
-      ```
-
-      在瀏覽器完成裝置驗證流程，認證 Token 會持久化於 `~/.gemini/` 目錄。
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications) 建立 Bot
+      2. 啟用 **Message Content Intent**
+      3. 部署後在 **Exec** 分頁執行 `agy auth`
 
       ## 限制
 
       - 不支援串流 — `agy -p` 一次回傳完整回應
       - 取消為空操作 — `agy -p` 會執行到完成
-      - 對話延續使用 `--continue`（每個容器僅恢復最近一次對話）
+      - 對話延續使用 `--continue`
   zh-CN:
     description: |
       部署 OpenAB 搭配 Google Antigravity CLI (agy) 作为 Discord 机器人。使用 agy-acp Rust 适配器进行稳定的 ACP stdio 通信，支持通过 --continue 延续多轮对话。
@@ -309,15 +285,6 @@ localization:
         description: "选填。Slack App 的 Bot User OAuth Token（xoxb-...）。留空则禁用 Slack。"
       - key: SLACK_APP_TOKEN
         name: Slack App Token（选填）
-      - key: OPENAB_ALLOW_BOT_MESSAGES
-        name: 允许 Bot 消息（选填）
-        description: "选填。设为 'on' 或 'mentions' 以允许 bot 消息触发。留空则禁用。"
-      - key: OPENAB_TRUSTED_BOT_IDS
-        name: 信任的 Bot ID（选填）
-        description: "选填。以逗号分隔的信任 Bot ID。留空则信任所有 bot。"
-      - key: OPENAB_MAX_SESSIONS
-        name: 最大并行 Session 数（选填）
-        description: "选填。最大并行 agent session 数量（默认：5）。"
         description: "选填。Socket Mode 用的 App-Level Token（xapp-...）。设置 Slack Bot Token 时必填。"
       - key: OPENAB_ALLOW_BOT_MESSAGES
         name: 允许 Bot 消息（选填）
@@ -331,42 +298,27 @@ localization:
     readme: |
       # OpenAB Antigravity
 
-      一键部署 [OpenAB](https://github.com/openabdev/openab) 搭配 Google Antigravity CLI 作为 AI 代理后端。此模板使用 `agy-acp` Rust 适配器确保稳定的 stdin/stdout pipe 通信。
+      一键部署 [OpenAB](https://github.com/openabdev/openab) 搭配 Google Antigravity CLI 作为 AI 代理后端。
 
       ## 注意事项
 
-      - **镜像标签：** 此模板追踪 `beta` 标签。若要 pin 至特定版本，请在 Zeabur Dashboard → 服务 → 设置中更改。
-      - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Config、认证 Token 和 session 数据会在重启后保留。
-      - **Config 位置：** `config.toml` 在首次启动时生成于 `/home/agent/.config/openab/config.toml`。之后请直接编辑，环境变量仅用于初始设置。
+      - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Config 和认证 Token 会在重启后保留。
+      - **Config 位置：** 首次启动时生成于 `/home/agent/.config/openab/config.toml`。之后直接编辑即可。
 
       ## 设置
 
-      ### 1. 创建 Discord 机器人
-
-      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications)
-      2. 创建新的 Application 并添加 Bot
-      3. 在 Privileged Gateway Intents 中启用 **Message Content Intent**
-      4. 复制 Bot Token 并填入 `DISCORD_BOT_TOKEN`
-      5. 邀请机器人加入你的服务器
-
-      ### 2. 认证 Antigravity CLI
-
-      部署后，在 Zeabur Dashboard 的 **Exec** 分页执行：
-
-      ```bash
-      agy auth
-      ```
-
-      在浏览器完成设备验证流程，认证 Token 会持久化于 `~/.gemini/` 目录。
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications) 创建 Bot
+      2. 启用 **Message Content Intent**
+      3. 部署后在 **Exec** 分页执行 `agy auth`
 
       ## 限制
 
       - 不支持流式传输 — `agy -p` 一次返回完整响应
       - 取消为空操作 — `agy -p` 会执行到完成
-      - 对话延续使用 `--continue`（每个容器仅恢复最近一次对话）
+      - 对话延续使用 `--continue`
   ja-JP:
     description: |
-      OpenAB と Google Antigravity CLI (agy) を Discord ボットとしてデプロイします。agy-acp Rust アダプターによる安定した ACP stdio 通信で、--continue によるマルチターン会話をサポートします。
+      OpenAB と Google Antigravity CLI (agy) を Discord ボットとしてデプロイします。agy-acp Rust アダプターによる安定した ACP stdio 通信をサポートします。
     variables:
       - key: DISCORD_BOT_TOKEN
         name: Discord ボットトークン（オプション）
@@ -382,15 +334,6 @@ localization:
         description: "オプション。Bot User OAuth Token（xoxb-...）。空の場合、Slack は無効。"
       - key: SLACK_APP_TOKEN
         name: Slack App トークン（オプション）
-      - key: OPENAB_ALLOW_BOT_MESSAGES
-        name: Bot メッセージ許可（オプション）
-        description: "オプション。'on' または 'mentions' に設定して bot メッセージを許可。空の場合は無効。"
-      - key: OPENAB_TRUSTED_BOT_IDS
-        name: 信頼する Bot ID（オプション）
-        description: "オプション。信頼する Bot ID（カンマ区切り）。空の場合は全 bot を信頼。"
-      - key: OPENAB_MAX_SESSIONS
-        name: 最大同時セッション数（オプション）
-        description: "オプション。最大同時 agent セッション数（デフォルト：5）。"
         description: "オプション。Socket Mode 用の App-Level Token（xapp-...）。Slack Bot Token 設定時は必須。"
       - key: OPENAB_ALLOW_BOT_MESSAGES
         name: Bot メッセージ許可（オプション）
@@ -404,27 +347,13 @@ localization:
     readme: |
       # OpenAB Antigravity
 
-      [OpenAB](https://github.com/openabdev/openab) と Google Antigravity CLI を AI エージェントバックエンドとしてワンクリックデプロイ。
-
-      ## 注意事項
-
-      - **イメージタグ：** `beta` タグを追跡します。特定バージョンに pin するには Dashboard で変更してください。
-      - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。
-      - **Config 場所：** 初回起動時に `/home/agent/.config/openab/config.toml` に生成されます。
+      [OpenAB](https://github.com/openabdev/openab) と Google Antigravity CLI をワンクリックデプロイ。
 
       ## セットアップ
 
-      ### 1. Discord ボットの作成
-
-      1. [Discord Developer Portal](https://discord.com/developers/applications) にアクセス
-      2. 新しいアプリケーションを作成し、Bot を追加
-      3. **Message Content Intent** を有効化
-      4. Bot Token をコピーし `DISCORD_BOT_TOKEN` に入力
-      5. ボットをサーバーに招待
-
-      ### 2. Antigravity CLI の認証
-
-      デプロイ後、**Exec** タブで `agy auth` を実行してください。
+      1. [Discord Developer Portal](https://discord.com/developers/applications) で Bot を作成
+      2. **Message Content Intent** を有効化
+      3. デプロイ後、**Exec** タブで `agy auth` を実行
 
       ## 制限事項
 
@@ -449,6 +378,7 @@ localization:
         description: "Opcional. Bot User OAuth Token (xoxb-...). Dejar vacío para deshabilitar Slack."
       - key: SLACK_APP_TOKEN
         name: Token de App de Slack (opcional)
+        description: "Opcional. App-Level Token (xapp-...) para Socket Mode. Requerido con Slack Bot Token."
       - key: OPENAB_ALLOW_BOT_MESSAGES
         name: Permitir Mensajes de Bot (opcional)
         description: "Opcional. Establecer 'on' o 'mentions' para permitir mensajes de bots. Dejar vacío para deshabilitar."
@@ -457,27 +387,17 @@ localization:
         description: "Opcional. IDs de bots confiables separados por comas. Dejar vacío para confiar en todos."
       - key: OPENAB_MAX_SESSIONS
         name: Sesiones Concurrentes Máximas (opcional)
-        description: "Opcional. Número máximo de sesiones de agente concurrentes (por defecto: 5)."
-        description: "Opcional. App-Level Token (xapp-...) para Socket Mode."
-      - key: OPENAB_ALLOW_BOT_MESSAGES
-        name: Permitir Mensajes de Bot (opcional)
-        description: "Opcional. Establecer 'on' o 'mentions' para permitir mensajes de bots. Dejar vacío para deshabilitar."
-      - key: OPENAB_TRUSTED_BOT_IDS
-        name: IDs de Bots Confiables (opcional)
-        description: "Opcional. IDs de bots confiables separados por comas. Dejar vacío para confiar en todos."
-      - key: OPENAB_MAX_SESSIONS
-        name: Sesiones Concurrentes Máximas (opcional)
-        description: "Opcional. Número máximo de sesiones de agente concurrentes (por defecto: 5)."
+        description: "Opcional. Número máximo de sesiones concurrentes (por defecto: 5)."
     readme: |
       # OpenAB Antigravity
 
-      Despliegue con un clic de OpenAB con Google Antigravity CLI como backend de agente IA.
+      Despliegue con un clic de OpenAB con Google Antigravity CLI.
 
       ## Configuración
 
       1. Crear bot en Discord Developer Portal
-      2. Después del despliegue, ejecutar `agy auth` en la pestaña Exec
-      3. Configurar canales opcionalmente
+      2. Habilitar **Message Content Intent**
+      3. Después del despliegue, ejecutar `agy auth` en la pestaña Exec
 
       ## Limitaciones
 
@@ -502,16 +422,7 @@ localization:
         description: "Opsional. Bot User OAuth Token (xoxb-...). Kosongkan untuk menonaktifkan Slack."
       - key: SLACK_APP_TOKEN
         name: Token App Slack (opsional)
-      - key: OPENAB_ALLOW_BOT_MESSAGES
-        name: Izinkan Pesan Bot (opsional)
-        description: "Opsional. Atur 'on' atau 'mentions' untuk mengizinkan pesan bot. Kosongkan untuk menonaktifkan."
-      - key: OPENAB_TRUSTED_BOT_IDS
-        name: ID Bot Terpercaya (opsional)
-        description: "Opsional. ID bot terpercaya dipisah koma. Kosongkan untuk mempercayai semua bot."
-      - key: OPENAB_MAX_SESSIONS
-        name: Sesi Bersamaan Maksimum (opsional)
-        description: "Opsional. Jumlah maksimum sesi agen bersamaan (default: 5)."
-        description: "Opsional. App-Level Token (xapp-...) untuk Socket Mode."
+        description: "Opsional. App-Level Token (xapp-...) untuk Socket Mode. Diperlukan saat Slack Bot Token diatur."
       - key: OPENAB_ALLOW_BOT_MESSAGES
         name: Izinkan Pesan Bot (opsional)
         description: "Opsional. Atur 'on' atau 'mentions' untuk mengizinkan pesan bot. Kosongkan untuk menonaktifkan."
@@ -524,13 +435,13 @@ localization:
     readme: |
       # OpenAB Antigravity
 
-      Deploy satu klik OpenAB dengan Google Antigravity CLI sebagai backend agen AI.
+      Deploy satu klik OpenAB dengan Google Antigravity CLI.
 
       ## Pengaturan
 
       1. Buat bot di Discord Developer Portal
-      2. Setelah deploy, jalankan `agy auth` di tab Exec
-      3. Konfigurasi channel (opsional)
+      2. Aktifkan **Message Content Intent**
+      3. Setelah deploy, jalankan `agy auth` di tab Exec
 
       ## Keterbatasan
 
