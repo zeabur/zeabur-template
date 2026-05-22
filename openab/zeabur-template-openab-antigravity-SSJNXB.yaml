@@ -15,16 +15,46 @@ spec:
   variables:
     - key: DISCORD_BOT_TOKEN
       type: STRING
-      name: Discord Bot Token
-      description: Your Discord bot token from the Discord Developer Portal
-    - key: DISCORD_ALLOWED_CHANNELS
+      name: Discord Bot Token (optional)
+      description: "Optional. Token from https://discord.com/developers/applications. Leave empty if using Slack only."
+    - key: OPENAB_ALLOWED_CHANNELS
       type: STRING
-      name: Allowed Channel IDs
-      description: Comma-separated Discord channel IDs to restrict the bot (leave empty to allow all channels)
+      name: Discord Channel IDs (optional)
+      description: "Optional. Comma-separated Discord channel IDs where the bot listens. Leave empty to allow all channels."
+    - key: OPENAB_ALLOWED_USERS
+      type: STRING
+      name: Discord User IDs (optional)
+      description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone."
+    - key: SLACK_BOT_TOKEN
+      type: STRING
+      name: Slack Bot Token (optional)
+      description: "Optional. Bot User OAuth Token (xoxb-...) from Slack App settings. Leave empty to disable Slack."
+    - key: SLACK_APP_TOKEN
+      type: STRING
+      name: Slack App Token (optional)
+      description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
+    - key: OPENAB_ALLOW_BOT_MESSAGES
+      type: STRING
+      name: Allow Bot Messages (optional)
+      description: "Optional. Set to 'on' or 'mentions' to allow messages from bots/webhooks. Leave empty to disable."
+    - key: OPENAB_TRUSTED_BOT_IDS
+      type: STRING
+      name: Trusted Bot IDs (optional)
+      description: "Optional. Comma-separated Discord bot IDs trusted to send messages. Leave empty to trust all bots."
+    - key: OPENAB_MAX_SESSIONS
+      type: STRING
+      name: Max Concurrent Sessions (optional)
+      description: "Optional. Maximum number of concurrent agent sessions (default: 5)."
   readme: |
     # OpenAB Antigravity
 
     One-click deployment of [OpenAB](https://github.com/openabdev/openab) with Google Antigravity CLI as the AI agent backend. This template uses the `agy-acp` Rust adapter for stable stdin/stdout pipe communication.
+
+    ## Important Notes
+
+    - **Image tag:** This template tracks the `beta` tag. To pin a specific version, change the image tag in Zeabur Dashboard → Service → Settings.
+    - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Config, auth tokens, and session data survive restarts.
+    - **Config location:** `config.toml` is generated at `/home/agent/.config/openab/config.toml` on first boot. Edit it directly after that — env vars are only used for initial setup.
 
     ## Features
 
@@ -32,6 +62,7 @@ spec:
     - Multi-turn conversations via `--continue` session continuity
     - ~5 second response time per prompt
     - Discord bot with emoji reaction status feedback
+    - Slack support via Socket Mode
 
     ## Setup
 
@@ -41,11 +72,12 @@ spec:
     2. Create a new application and add a Bot
     3. Enable **Message Content Intent** under Privileged Gateway Intents
     4. Copy the bot token and paste it as `DISCORD_BOT_TOKEN`
-    5. Invite the bot to your server with appropriate permissions
+    5. Go to **OAuth2 → URL Generator** → check scope `bot` → check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+    6. Invite the bot to your server with the generated URL
 
     ### 2. Authenticate Antigravity CLI
 
-    After deployment, open the **Terminal** tab in Zeabur Dashboard and run:
+    After deployment, open the **Exec** tab in Zeabur Dashboard and run:
 
     ```bash
     agy auth
@@ -55,7 +87,23 @@ spec:
 
     ### 3. Configure Channels (Optional)
 
-    Set `DISCORD_ALLOWED_CHANNELS` to restrict which channels the bot responds in. Leave empty to allow all channels.
+    Set `OPENAB_ALLOWED_CHANNELS` to restrict which channels the bot responds in. Leave empty to allow all channels.
+
+    ## Slack Setup (Optional)
+
+    1. Go to https://api.slack.com/apps → Create New App → From scratch
+    2. Enable Socket Mode → generate App-Level Token with scope `connections:write`
+    3. Enable Event Subscriptions → add bot events: `app_mention`, `message.channels`, `message.groups`
+    4. OAuth & Permissions → add scopes: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+    5. Install App → copy `xoxb-...` token and `xapp-...` token
+
+    ## Customization
+
+    | File | Description |
+    |------|-------------|
+    | `/home/agent/.config/openab/config.toml` | OpenAB config (sessions, reactions, etc.) |
+
+    To reset config to defaults: `rm /home/agent/.config/openab/config.toml` and restart.
 
     ## Limitations
 
@@ -63,9 +111,10 @@ spec:
     - Cancel is a no-op — `agy -p` runs to completion
     - Session continuity uses `--continue` (resumes most recent conversation per container)
 
-    ## License
+    ## Links
 
-    OpenAB is open source. See [GitHub repository](https://github.com/openabdev/openab) for license details.
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
   services:
     - name: openab-antigravity
       icon: https://avatars.githubusercontent.com/u/274127192?v=4
@@ -75,62 +124,125 @@ spec:
           image: ghcr.io/openabdev/openab-antigravity:beta
           runAsUserID: 1000
           command:
-            - tini
-            - --
-            - openab
-            - run
+            - /bin/sh
             - -c
-            - /etc/openab/config.toml
+            - /opt/start-openab.sh
         volumes:
           - id: agent-home
             dir: /home/agent
         configs:
-          - path: /etc/openab/config.toml
-            permission: 420
+          - path: /opt/start-openab.sh
+            permission: 493
             template: |
-              [discord]
-              bot_token = "${DISCORD_BOT_TOKEN}"
-              allow_all_channels = true
+              #!/bin/sh
+              set -e
 
+              if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ] && [ -z "$GATEWAY_URL" ]; then
+                echo "openab: no adapter configured (set DISCORD_BOT_TOKEN, SLACK_BOT_TOKEN, or GATEWAY_URL) — sleeping"
+                exec sleep infinity
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                if [ -n "$DISCORD_BOT_TOKEN" ]; then
+                  printf '\n[discord]\nbot_token = "${DISCORD_BOT_TOKEN}"\n' >> "$CONFIG_FILE"
+                  if [ -n "$OPENAB_ALLOW_BOT_MESSAGES" ]; then
+                    printf 'allow_bot_messages = "%s"\n' "$OPENAB_ALLOW_BOT_MESSAGES" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_TRUSTED_BOT_IDS" ]; then
+                    IFS=','; bots=""; for id in $OPENAB_TRUSTED_BOT_IDS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && bots="${bots}\"${id}\","; done; unset IFS
+                    printf 'trusted_bot_ids = [%s]\n' "$(echo "$bots" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
+                    IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
+                    printf 'allowed_channels = [%s]\n' "$(echo "$channels" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_USERS" ]; then
+                    IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
+                    printf 'allowed_users = [%s]\n' "$(echo "$users" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                fi
+
+                if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
+                  printf '\n[slack]\nbot_token = "${SLACK_BOT_TOKEN}"\napp_token = "${SLACK_APP_TOKEN}"\n' >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$GATEWAY_URL" ]; then
+                  printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\nallow_all_channels = true\nallow_all_users = true\n' "$GATEWAY_URL" "${GATEWAY_PLATFORM:-telegram}" >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated at $CONFIG_FILE"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
               [agent]
               command = "agy-acp"
               args = []
               working_dir = "/home/agent"
               env = { AGY_WORKING_DIR = "/home/agent" }
 
-              [pool]
-              max_sessions = 5
-              session_ttl_hours = 24
-
               [reactions]
               enabled = true
         env:
           DISCORD_BOT_TOKEN:
             default: ${DISCORD_BOT_TOKEN}
-          DISCORD_ALLOWED_CHANNELS:
-            default: ${DISCORD_ALLOWED_CHANNELS}
+          OPENAB_ALLOWED_CHANNELS:
+            default: ""
+          OPENAB_ALLOWED_USERS:
+            default: ""
+          SLACK_BOT_TOKEN:
+            default: ""
+          SLACK_APP_TOKEN:
+            default: ""
+          OPENAB_ALLOW_BOT_MESSAGES:
+            default: ""
+          OPENAB_TRUSTED_BOT_IDS:
+            default: ""
+          OPENAB_MAX_SESSIONS:
+            default: ""
 localization:
   zh-TW:
     description: |
       部署 OpenAB 搭配 Google Antigravity CLI (agy) 作為 Discord 機器人。使用 agy-acp Rust 適配器進行穩定的 ACP stdio 通訊，支援透過 --continue 延續多輪對話。
     variables:
       - key: DISCORD_BOT_TOKEN
-        name: Discord 機器人 Token
-        description: 從 Discord Developer Portal 取得的機器人 Token
-      - key: DISCORD_ALLOWED_CHANNELS
-        name: 允許的頻道 ID
-        description: 限制機器人回應的 Discord 頻道 ID（逗號分隔，留空則允許所有頻道）
+        name: Discord 機器人 Token（選填）
+        description: "選填。從 Discord Developer Portal 取得的 Token。僅使用 Slack 時可留空。"
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 頻道 ID（選填）
+        description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用戶 ID（選填）
+        description: "選填。以逗號分隔的 Discord 用戶 ID。留空則允許所有人。"
+      - key: SLACK_BOT_TOKEN
+        name: Slack Bot Token（選填）
+        description: "選填。Slack App 的 Bot User OAuth Token（xoxb-...）。留空則停用 Slack。"
+      - key: SLACK_APP_TOKEN
+        name: Slack App Token（選填）
+        description: "選填。Socket Mode 用的 App-Level Token（xapp-...）。設定 Slack Bot Token 時必填。"
     readme: |
       # OpenAB Antigravity
 
       一鍵部署 [OpenAB](https://github.com/openabdev/openab) 搭配 Google Antigravity CLI 作為 AI 代理後端。此模板使用 `agy-acp` Rust 適配器確保穩定的 stdin/stdout pipe 通訊。
 
-      ## 特色
+      ## 注意事項
 
-      - 輕量 Rust ACP 適配器 (`agy-acp`) 橋接 OpenAB 至 Google Antigravity CLI
-      - 透過 `--continue` 支援多輪對話延續
-      - 每次回應約 5 秒
-      - Discord 機器人附帶 emoji 反應狀態回饋
+      - **映像標籤：** 此模板追蹤 `beta` 標籤。若要 pin 至特定版本，請在 Zeabur Dashboard → 服務 → 設定中更改。
+      - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Config、認證 Token 和 session 資料會在重啟後保留。
+      - **Config 位置：** `config.toml` 在首次啟動時生成於 `/home/agent/.config/openab/config.toml`。之後請直接編輯，環境變數僅用於初始設定。
 
       ## 設定
 
@@ -144,7 +256,7 @@ localization:
 
       ### 2. 認證 Antigravity CLI
 
-      部署後，在 Zeabur Dashboard 的 **Terminal** 分頁執行：
+      部署後，在 Zeabur Dashboard 的 **Exec** 分頁執行：
 
       ```bash
       agy auth
@@ -152,40 +264,40 @@ localization:
 
       在瀏覽器完成裝置驗證流程，認證 Token 會持久化於 `~/.gemini/` 目錄。
 
-      ### 3. 設定頻道（選填）
-
-      設定 `DISCORD_ALLOWED_CHANNELS` 以限制機器人回應的頻道，留空則回應所有頻道。
-
       ## 限制
 
       - 不支援串流 — `agy -p` 一次回傳完整回應
       - 取消為空操作 — `agy -p` 會執行到完成
       - 對話延續使用 `--continue`（每個容器僅恢復最近一次對話）
-
-      ## 授權
-
-      OpenAB 為開源專案，詳見 [GitHub 儲存庫](https://github.com/openabdev/openab)。
   zh-CN:
     description: |
       部署 OpenAB 搭配 Google Antigravity CLI (agy) 作为 Discord 机器人。使用 agy-acp Rust 适配器进行稳定的 ACP stdio 通信，支持通过 --continue 延续多轮对话。
     variables:
       - key: DISCORD_BOT_TOKEN
-        name: Discord 机器人 Token
-        description: 从 Discord Developer Portal 获取的机器人 Token
-      - key: DISCORD_ALLOWED_CHANNELS
-        name: 允许的频道 ID
-        description: 限制机器人响应的 Discord 频道 ID（逗号分隔，留空则允许所有频道）
+        name: Discord 机器人 Token（选填）
+        description: "选填。从 Discord Developer Portal 获取的 Token。仅使用 Slack 时可留空。"
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 频道 ID（选填）
+        description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用户 ID（选填）
+        description: "选填。以逗号分隔的 Discord 用户 ID。留空则允许所有人。"
+      - key: SLACK_BOT_TOKEN
+        name: Slack Bot Token（选填）
+        description: "选填。Slack App 的 Bot User OAuth Token（xoxb-...）。留空则禁用 Slack。"
+      - key: SLACK_APP_TOKEN
+        name: Slack App Token（选填）
+        description: "选填。Socket Mode 用的 App-Level Token（xapp-...）。设置 Slack Bot Token 时必填。"
     readme: |
       # OpenAB Antigravity
 
       一键部署 [OpenAB](https://github.com/openabdev/openab) 搭配 Google Antigravity CLI 作为 AI 代理后端。此模板使用 `agy-acp` Rust 适配器确保稳定的 stdin/stdout pipe 通信。
 
-      ## 特色
+      ## 注意事项
 
-      - 轻量 Rust ACP 适配器 (`agy-acp`) 桥接 OpenAB 至 Google Antigravity CLI
-      - 通过 `--continue` 支持多轮对话延续
-      - 每次响应约 5 秒
-      - Discord 机器人附带 emoji 反应状态反馈
+      - **镜像标签：** 此模板追踪 `beta` 标签。若要 pin 至特定版本，请在 Zeabur Dashboard → 服务 → 设置中更改。
+      - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Config、认证 Token 和 session 数据会在重启后保留。
+      - **Config 位置：** `config.toml` 在首次启动时生成于 `/home/agent/.config/openab/config.toml`。之后请直接编辑，环境变量仅用于初始设置。
 
       ## 设置
 
@@ -199,7 +311,7 @@ localization:
 
       ### 2. 认证 Antigravity CLI
 
-      部署后，在 Zeabur Dashboard 的 **Terminal** 分页执行：
+      部署后，在 Zeabur Dashboard 的 **Exec** 分页执行：
 
       ```bash
       agy auth
@@ -207,40 +319,40 @@ localization:
 
       在浏览器完成设备验证流程，认证 Token 会持久化于 `~/.gemini/` 目录。
 
-      ### 3. 设置频道（可选）
-
-      设置 `DISCORD_ALLOWED_CHANNELS` 以限制机器人响应的频道，留空则响应所有频道。
-
       ## 限制
 
       - 不支持流式传输 — `agy -p` 一次返回完整响应
       - 取消为空操作 — `agy -p` 会执行到完成
       - 对话延续使用 `--continue`（每个容器仅恢复最近一次对话）
-
-      ## 许可
-
-      OpenAB 为开源项目，详见 [GitHub 仓库](https://github.com/openabdev/openab)。
   ja-JP:
     description: |
       OpenAB と Google Antigravity CLI (agy) を Discord ボットとしてデプロイします。agy-acp Rust アダプターによる安定した ACP stdio 通信で、--continue によるマルチターン会話をサポートします。
     variables:
       - key: DISCORD_BOT_TOKEN
-        name: Discord ボットトークン
-        description: Discord Developer Portal から取得したボットトークン
-      - key: DISCORD_ALLOWED_CHANNELS
-        name: 許可チャンネル ID
-        description: ボットが応答する Discord チャンネル ID（カンマ区切り、空欄で全チャンネル許可）
+        name: Discord ボットトークン（オプション）
+        description: "オプション。Discord Developer Portal から取得したトークン。Slack のみ使用する場合は空欄でも可。"
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord チャンネル ID（オプション）
+        description: "オプション。Bot が監視する Discord チャンネル ID（カンマ区切り）。空の場合、全チャンネルで応答。"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord ユーザー ID（オプション）
+        description: "オプション。Bot と対話できるユーザー ID（カンマ区切り）。空の場合、全員が利用可能。"
+      - key: SLACK_BOT_TOKEN
+        name: Slack Bot トークン（オプション）
+        description: "オプション。Bot User OAuth Token（xoxb-...）。空の場合、Slack は無効。"
+      - key: SLACK_APP_TOKEN
+        name: Slack App トークン（オプション）
+        description: "オプション。Socket Mode 用の App-Level Token（xapp-...）。Slack Bot Token 設定時は必須。"
     readme: |
       # OpenAB Antigravity
 
-      [OpenAB](https://github.com/openabdev/openab) と Google Antigravity CLI を AI エージェントバックエンドとしてワンクリックデプロイ。`agy-acp` Rust アダプターで安定した stdin/stdout パイプ通信を実現します。
+      [OpenAB](https://github.com/openabdev/openab) と Google Antigravity CLI を AI エージェントバックエンドとしてワンクリックデプロイ。
 
-      ## 特徴
+      ## 注意事項
 
-      - 軽量 Rust ACP アダプター (`agy-acp`) が OpenAB と Google Antigravity CLI を橋渡し
-      - `--continue` によるマルチターン会話の継続
-      - レスポンス時間は約 5 秒
-      - Discord ボットの絵文字リアクションによるステータスフィードバック
+      - **イメージタグ：** `beta` タグを追跡します。特定バージョンに pin するには Dashboard で変更してください。
+      - **永続ストレージ：** `/home/agent` が永続ボリュームとしてマウントされます。
+      - **Config 場所：** 初回起動時に `/home/agent/.config/openab/config.toml` に生成されます。
 
       ## セットアップ
 
@@ -248,140 +360,86 @@ localization:
 
       1. [Discord Developer Portal](https://discord.com/developers/applications) にアクセス
       2. 新しいアプリケーションを作成し、Bot を追加
-      3. Privileged Gateway Intents で **Message Content Intent** を有効化
+      3. **Message Content Intent** を有効化
       4. Bot Token をコピーし `DISCORD_BOT_TOKEN` に入力
       5. ボットをサーバーに招待
 
       ### 2. Antigravity CLI の認証
 
-      デプロイ後、Zeabur Dashboard の **Terminal** タブを開いて以下を実行してください：
-
-      ```bash
-      agy auth
-      ```
-
-      ブラウザでデバイスフローを完了してください。認証トークンは `~/.gemini/` に永続化されます。
-
-      ### 3. チャンネル設定（オプション）
-
-      `DISCORD_ALLOWED_CHANNELS` を設定してボットが応答するチャンネルを制限できます。空欄にすると全チャンネルで応答します。
+      デプロイ後、**Exec** タブで `agy auth` を実行してください。
 
       ## 制限事項
 
-      - ストリーミング非対応 — `agy -p` は完全なレスポンスを一度に返します
-      - キャンセルは無効 — `agy -p` は最後まで実行されます
-      - セッション継続は `--continue` を使用（コンテナごとに最新の会話のみ再開）
-
-      ## ライセンス
-
-      OpenAB はオープンソースです。詳細は [GitHub リポジトリ](https://github.com/openabdev/openab) をご覧ください。
+      - ストリーミング非対応
+      - キャンセルは無効
+      - セッション継続は `--continue` を使用
   es-ES:
     description: |
-      Despliega OpenAB con Google Antigravity CLI (agy) como bot de Discord. Usa el adaptador Rust agy-acp para comunicación ACP stdio estable, con soporte para conversaciones multi-turno mediante --continue.
+      Despliega OpenAB con Google Antigravity CLI (agy) como bot de Discord. Usa el adaptador Rust agy-acp para comunicación ACP stdio estable.
     variables:
       - key: DISCORD_BOT_TOKEN
-        name: Token del Bot de Discord
-        description: Token del bot obtenido desde el Discord Developer Portal
-      - key: DISCORD_ALLOWED_CHANNELS
-        name: IDs de Canales Permitidos
-        description: IDs de canales de Discord separados por comas (dejar vacío para permitir todos)
+        name: Token del Bot de Discord (opcional)
+        description: "Opcional. Token desde Discord Developer Portal. Dejar vacío si solo usa Slack."
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: IDs de Canales (opcional)
+        description: "Opcional. IDs de canales separados por comas. Dejar vacío para permitir todos."
+      - key: OPENAB_ALLOWED_USERS
+        name: IDs de Usuarios (opcional)
+        description: "Opcional. IDs de usuarios separados por comas. Dejar vacío para permitir todos."
+      - key: SLACK_BOT_TOKEN
+        name: Token de Bot de Slack (opcional)
+        description: "Opcional. Bot User OAuth Token (xoxb-...). Dejar vacío para deshabilitar Slack."
+      - key: SLACK_APP_TOKEN
+        name: Token de App de Slack (opcional)
+        description: "Opcional. App-Level Token (xapp-...) para Socket Mode."
     readme: |
       # OpenAB Antigravity
 
-      Despliegue con un clic de [OpenAB](https://github.com/openabdev/openab) con Google Antigravity CLI como backend de agente IA. Esta plantilla usa el adaptador Rust `agy-acp` para comunicación stdin/stdout estable.
-
-      ## Características
-
-      - Adaptador ACP ligero en Rust (`agy-acp`) que conecta OpenAB con Google Antigravity CLI
-      - Conversaciones multi-turno mediante continuidad de sesión `--continue`
-      - Tiempo de respuesta de ~5 segundos por prompt
-      - Bot de Discord con retroalimentación de estado mediante reacciones emoji
+      Despliegue con un clic de OpenAB con Google Antigravity CLI como backend de agente IA.
 
       ## Configuración
 
-      ### 1. Crear un Bot de Discord
-
-      1. Ve al [Discord Developer Portal](https://discord.com/developers/applications)
-      2. Crea una nueva aplicación y añade un Bot
-      3. Habilita **Message Content Intent** en Privileged Gateway Intents
-      4. Copia el token del bot y pégalo como `DISCORD_BOT_TOKEN`
-      5. Invita al bot a tu servidor
-
-      ### 2. Autenticar Antigravity CLI
-
-      Después del despliegue, abre la pestaña **Terminal** en el Dashboard de Zeabur y ejecuta:
-
-      ```bash
-      agy auth
-      ```
-
-      Completa el flujo del dispositivo en tu navegador. Los tokens de autenticación persisten en el volumen en `~/.gemini/`.
-
-      ### 3. Configurar Canales (Opcional)
-
-      Establece `DISCORD_ALLOWED_CHANNELS` para restringir los canales donde el bot responde. Déjalo vacío para permitir todos los canales.
+      1. Crear bot en Discord Developer Portal
+      2. Después del despliegue, ejecutar `agy auth` en la pestaña Exec
+      3. Configurar canales opcionalmente
 
       ## Limitaciones
 
-      - Sin streaming — `agy -p` devuelve la respuesta completa de una vez
-      - Cancelar es una operación nula — `agy -p` se ejecuta hasta completarse
-      - La continuidad de sesión usa `--continue` (reanuda la conversación más reciente por contenedor)
-
-      ## Licencia
-
-      OpenAB es código abierto. Consulta el [repositorio de GitHub](https://github.com/openabdev/openab) para detalles de licencia.
+      - Sin streaming
+      - Cancelar es no-op
+      - Continuidad de sesión usa `--continue`
   id-ID:
     description: |
-      Deploy OpenAB dengan Google Antigravity CLI (agy) sebagai bot Discord. Menggunakan adapter Rust agy-acp untuk komunikasi ACP stdio yang stabil, mendukung percakapan multi-giliran melalui --continue.
+      Deploy OpenAB dengan Google Antigravity CLI (agy) sebagai bot Discord. Menggunakan adapter Rust agy-acp untuk komunikasi ACP stdio yang stabil.
     variables:
       - key: DISCORD_BOT_TOKEN
-        name: Token Bot Discord
-        description: Token bot dari Discord Developer Portal
-      - key: DISCORD_ALLOWED_CHANNELS
-        name: ID Channel yang Diizinkan
-        description: ID channel Discord dipisah koma (kosongkan untuk mengizinkan semua channel)
+        name: Token Bot Discord (opsional)
+        description: "Opsional. Token dari Discord Developer Portal. Kosongkan jika hanya menggunakan Slack."
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: ID Channel (opsional)
+        description: "Opsional. ID channel dipisah koma. Kosongkan untuk mengizinkan semua."
+      - key: OPENAB_ALLOWED_USERS
+        name: ID Pengguna (opsional)
+        description: "Opsional. ID pengguna dipisah koma. Kosongkan untuk mengizinkan semua."
+      - key: SLACK_BOT_TOKEN
+        name: Token Bot Slack (opsional)
+        description: "Opsional. Bot User OAuth Token (xoxb-...). Kosongkan untuk menonaktifkan Slack."
+      - key: SLACK_APP_TOKEN
+        name: Token App Slack (opsional)
+        description: "Opsional. App-Level Token (xapp-...) untuk Socket Mode."
     readme: |
       # OpenAB Antigravity
 
-      Deploy satu klik [OpenAB](https://github.com/openabdev/openab) dengan Google Antigravity CLI sebagai backend agen AI. Template ini menggunakan adapter Rust `agy-acp` untuk komunikasi stdin/stdout pipe yang stabil.
-
-      ## Fitur
-
-      - Adapter ACP Rust ringan (`agy-acp`) menjembatani OpenAB ke Google Antigravity CLI
-      - Percakapan multi-giliran melalui kontinuitas sesi `--continue`
-      - Waktu respons ~5 detik per prompt
-      - Bot Discord dengan umpan balik status melalui reaksi emoji
+      Deploy satu klik OpenAB dengan Google Antigravity CLI sebagai backend agen AI.
 
       ## Pengaturan
 
-      ### 1. Buat Bot Discord
-
-      1. Buka [Discord Developer Portal](https://discord.com/developers/applications)
-      2. Buat aplikasi baru dan tambahkan Bot
-      3. Aktifkan **Message Content Intent** di Privileged Gateway Intents
-      4. Salin token bot dan masukkan sebagai `DISCORD_BOT_TOKEN`
-      5. Undang bot ke server Anda
-
-      ### 2. Autentikasi Antigravity CLI
-
-      Setelah deploy, buka tab **Terminal** di Dashboard Zeabur dan jalankan:
-
-      ```bash
-      agy auth
-      ```
-
-      Selesaikan alur perangkat di browser Anda. Token autentikasi tersimpan permanen di volume `~/.gemini/`.
-
-      ### 3. Konfigurasi Channel (Opsional)
-
-      Atur `DISCORD_ALLOWED_CHANNELS` untuk membatasi channel tempat bot merespons. Kosongkan untuk mengizinkan semua channel.
+      1. Buat bot di Discord Developer Portal
+      2. Setelah deploy, jalankan `agy auth` di tab Exec
+      3. Konfigurasi channel (opsional)
 
       ## Keterbatasan
 
-      - Tidak ada streaming — `agy -p` mengembalikan respons lengkap sekaligus
-      - Batalkan adalah no-op — `agy -p` berjalan sampai selesai
-      - Kontinuitas sesi menggunakan `--continue` (melanjutkan percakapan terbaru per kontainer)
-
-      ## Lisensi
-
-      OpenAB adalah open source. Lihat [repositori GitHub](https://github.com/openabdev/openab) untuk detail lisensi.
+      - Tidak ada streaming
+      - Batalkan adalah no-op
+      - Kontinuitas sesi menggunakan `--continue`
