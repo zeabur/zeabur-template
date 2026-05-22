@@ -72,7 +72,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-antigravity:pr896
+          image: ghcr.io/openabdev/openab-antigravity:beta
           runAsUserID: 1000
           command:
             - tini
