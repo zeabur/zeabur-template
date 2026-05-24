@@ -160,6 +160,8 @@ spec:
           image: ghcr.io/openabdev/openab-grok:stable
           runAsUserID: 1000
           command:
+            - tini
+            - --
             - /bin/sh
             - -c
             - /opt/start-openab.sh

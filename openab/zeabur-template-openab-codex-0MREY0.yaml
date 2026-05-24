@@ -163,6 +163,8 @@ spec:
           image: ghcr.io/openabdev/openab-codex:stable
           runAsUserID: 1000
           command:
+            - tini
+            - --
             - /bin/sh
             - -c
             - /opt/start-openab.sh

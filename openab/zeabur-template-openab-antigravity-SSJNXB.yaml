@@ -124,6 +124,8 @@ spec:
           image: ghcr.io/openabdev/openab-antigravity:beta
           runAsUserID: 1000
           command:
+            - tini
+            - --
             - /bin/sh
             - -c
             - /opt/start-openab.sh

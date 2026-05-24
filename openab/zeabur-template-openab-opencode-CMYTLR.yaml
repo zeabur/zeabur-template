@@ -181,6 +181,8 @@ spec:
           image: ghcr.io/openabdev/openab-opencode:stable
           runAsUserID: 1000
           command:
+            - tini
+            - --
             - /bin/sh
             - -c
             - /opt/start-openab.sh
