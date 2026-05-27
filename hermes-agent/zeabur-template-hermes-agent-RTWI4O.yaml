@@ -96,7 +96,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: nousresearch/hermes-agent:v2026.4.30
+          image: nousresearch/hermes-agent:v2026.5.16
           runAsUserID: 10000
           command:
             - /bin/bash
