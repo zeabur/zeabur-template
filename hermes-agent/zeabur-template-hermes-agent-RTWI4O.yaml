@@ -81,6 +81,25 @@ spec:
       - `.env` — all environment variables
     - After editing, restart the service to apply changes.
 
+    ## CLI Access
+
+    You can use the Hermes CLI directly via the Zeabur **Exec** tab (or `zeabur service exec`). The `hermes` command is available out of the box:
+
+    | Command | Description |
+    |---------|-------------|
+    | `hermes` | Interactive chat (REPL) |
+    | `hermes --tui` | Modern terminal UI |
+    | `hermes -z "prompt"` | One-shot query (for scripting) |
+    | `hermes status` | Show status of all components |
+    | `hermes model` | Switch model / provider |
+    | `hermes config` | View or edit configuration |
+    | `hermes sessions list` | List past conversations |
+    | `hermes -c` | Resume last conversation |
+    | `hermes cron` | Manage scheduled jobs |
+    | `hermes skills` | Browse and install skills |
+
+    Run `hermes --help` for the full command list.
+
     ## Notes
 
     - The Docker image is ~4.5 GB (includes Playwright + Chromium for browser automation). First deployment may take several minutes to pull the image.
@@ -218,6 +237,25 @@ localization:
         - `.env` — 所有環境變數
       - 編輯後需重啟服務以套用變更。
 
+      ## CLI 操作
+
+      透過 Zeabur **Exec** 分頁（或 `zeabur service exec`）可直接使用 Hermes CLI：
+
+      | 指令 | 說明 |
+      |------|------|
+      | `hermes` | 互動式聊天（REPL） |
+      | `hermes --tui` | 現代終端 UI |
+      | `hermes -z "prompt"` | 單次查詢（適合腳本） |
+      | `hermes status` | 查看所有元件狀態 |
+      | `hermes model` | 切換模型／供應商 |
+      | `hermes config` | 查看或編輯設定 |
+      | `hermes sessions list` | 列出對話記錄 |
+      | `hermes -c` | 繼續上次對話 |
+      | `hermes cron` | 管理排程任務 |
+      | `hermes skills` | 瀏覽與安裝技能 |
+
+      執行 `hermes --help` 查看完整指令列表。
+
       ## 注意事項
 
       - Docker 映像檔約 4.5 GB（含 Playwright + Chromium 瀏覽器自動化工具）。首次部署拉取映像檔可能需要數分鐘。
@@ -287,6 +325,25 @@ localization:
         - `SOUL.md` — 代理人设与系统提示词
         - `.env` — 所有环境变量
       - 编辑后需重启服务以应用更改。
+
+      ## CLI 操作
+
+      通过 Zeabur **Exec** 标签页（或 `zeabur service exec`）可直接使用 Hermes CLI：
+
+      | 命令 | 说明 |
+      |------|------|
+      | `hermes` | 交互式聊天（REPL） |
+      | `hermes --tui` | 现代终端 UI |
+      | `hermes -z "prompt"` | 单次查询（适合脚本） |
+      | `hermes status` | 查看所有组件状态 |
+      | `hermes model` | 切换模型／供应商 |
+      | `hermes config` | 查看或编辑配置 |
+      | `hermes sessions list` | 列出对话记录 |
+      | `hermes -c` | 继续上次对话 |
+      | `hermes cron` | 管理定时任务 |
+      | `hermes skills` | 浏览与安装技能 |
+
+      执行 `hermes --help` 查看完整命令列表。
 
       ## 注意事项
 
@@ -358,6 +415,25 @@ localization:
         - `.env` — すべての環境変数
       - 編集後、サービスを再起動して変更を適用してください。
 
+      ## CLI 操作
+
+      Zeabur の **Exec** タブ（または `zeabur service exec`）から Hermes CLI を直接使用できます：
+
+      | コマンド | 説明 |
+      |----------|------|
+      | `hermes` | 対話型チャット（REPL） |
+      | `hermes --tui` | モダンターミナル UI |
+      | `hermes -z "prompt"` | ワンショットクエリ（スクリプト向け） |
+      | `hermes status` | 全コンポーネントのステータス表示 |
+      | `hermes model` | モデル／プロバイダーの切り替え |
+      | `hermes config` | 設定の表示・編集 |
+      | `hermes sessions list` | 会話履歴の一覧 |
+      | `hermes -c` | 前回の会話を再開 |
+      | `hermes cron` | スケジュールジョブの管理 |
+      | `hermes skills` | スキルの閲覧・インストール |
+
+      `hermes --help` で全コマンド一覧を表示できます。
+
       ## 注意事項
 
       - Docker イメージは約 4.5 GB（Playwright + Chromium ブラウザ自動化ツール含む）。初回デプロイ時のイメージ取得に数分かかる場合があります。
@@ -428,6 +504,25 @@ localization:
         - `.env` — todas las variables de entorno
       - Después de editar, reinicie el servicio para aplicar los cambios.
 
+      ## Acceso CLI
+
+      Puede usar la CLI de Hermes directamente desde la pestaña **Exec** de Zeabur (o `zeabur service exec`):
+
+      | Comando | Descripción |
+      |---------|-------------|
+      | `hermes` | Chat interactivo (REPL) |
+      | `hermes --tui` | Interfaz de terminal moderna |
+      | `hermes -z "prompt"` | Consulta única (para scripts) |
+      | `hermes status` | Estado de todos los componentes |
+      | `hermes model` | Cambiar modelo / proveedor |
+      | `hermes config` | Ver o editar configuración |
+      | `hermes sessions list` | Listar conversaciones |
+      | `hermes -c` | Reanudar última conversación |
+      | `hermes cron` | Gestionar tareas programadas |
+      | `hermes skills` | Explorar e instalar habilidades |
+
+      Ejecute `hermes --help` para ver la lista completa de comandos.
+
       ## Notas
 
       - La imagen Docker es de ~4.5 GB (incluye Playwright + Chromium para automatización del navegador). El primer despliegue puede tardar varios minutos en descargar la imagen.
@@ -497,6 +592,25 @@ localization:
         - `SOUL.md` — kepribadian agen dan system prompt
         - `.env` — semua variabel lingkungan
       - Setelah mengedit, restart layanan untuk menerapkan perubahan.
+
+      ## Akses CLI
+
+      Anda dapat menggunakan CLI Hermes langsung melalui tab **Exec** Zeabur (atau `zeabur service exec`):
+
+      | Perintah | Deskripsi |
+      |----------|-----------|
+      | `hermes` | Chat interaktif (REPL) |
+      | `hermes --tui` | UI terminal modern |
+      | `hermes -z "prompt"` | Kueri sekali jalan (untuk skrip) |
+      | `hermes status` | Tampilkan status semua komponen |
+      | `hermes model` | Ganti model / penyedia |
+      | `hermes config` | Lihat atau edit konfigurasi |
+      | `hermes sessions list` | Daftar riwayat percakapan |
+      | `hermes -c` | Lanjutkan percakapan terakhir |
+      | `hermes cron` | Kelola tugas terjadwal |
+      | `hermes skills` | Jelajahi dan instal skill |
+
+      Jalankan `hermes --help` untuk daftar perintah lengkap.
 
       ## Catatan
 
