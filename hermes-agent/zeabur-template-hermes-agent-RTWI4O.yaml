@@ -97,6 +97,7 @@ spec:
       spec:
         source:
           image: nousresearch/hermes-agent:v2026.4.30
+          runAsUserID: 10000
           command:
             - /bin/bash
             - -c
@@ -116,12 +117,23 @@ spec:
               #!/bin/bash
               set -e
 
-              # Fix volume permissions before entrypoint runs —
-              # the upstream entrypoint only chowns when the directory owner
-              # differs, but individual files inside may still be root-owned.
-              chown -R hermes:hermes /opt/data 2>/dev/null || true
+              HERMES_HOME="/opt/data"
+              INSTALL_DIR="/opt/hermes"
 
-              exec /opt/hermes/docker/entrypoint.sh gateway
+              source "${INSTALL_DIR}/.venv/bin/activate"
+
+              mkdir -p "$HERMES_HOME"/{cron,sessions,logs,hooks,memories,skills,skins,plans,workspace,home,.local/bin}
+              ln -sf "${INSTALL_DIR}/.venv/bin/hermes" "$HERMES_HOME/.local/bin/hermes"
+
+              [ -f "$HERMES_HOME/.env" ]        || cp "$INSTALL_DIR/.env.example"          "$HERMES_HOME/.env"
+              [ -f "$HERMES_HOME/config.yaml" ]  || cp "$INSTALL_DIR/cli-config.yaml.example" "$HERMES_HOME/config.yaml"
+              [ -f "$HERMES_HOME/SOUL.md" ]      || cp "$INSTALL_DIR/docker/SOUL.md"        "$HERMES_HOME/SOUL.md"
+
+              if [ -d "$INSTALL_DIR/skills" ]; then
+                  python3 "$INSTALL_DIR/tools/skills_sync.py"
+              fi
+
+              exec hermes gateway
         instructions:
           - title: API Server URL
             content: ${ZEABUR_WEB_URL}/v1/chat/completions
@@ -136,17 +148,13 @@ spec:
             default: ${TELEGRAM_ALLOWED_USERS}
           API_SERVER_ENABLED:
             default: "true"
-            readonly: true
           API_SERVER_PORT:
             default: "5000"
-            readonly: true
           API_SERVER_HOST:
             default: "0.0.0.0"
-            readonly: true
           API_SERVER_KEY:
             default: ${PASSWORD}
             expose: true
-            readonly: true
       domainKey: PUBLIC_DOMAIN
 localization:
   zh-TW:
