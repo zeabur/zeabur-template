@@ -1,0 +1,533 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: ghpool
+spec:
+  description: |
+    GitHub API proxy that pools multiple PATs for shared rate-limit budget, caches read responses in memory, and passes mutations through with the client's own auth — built for multi-agent setups (OpenAB, OpenClaw, custom coding agents) sharing the same repos.
+  icon: https://avatars.githubusercontent.com/u/274127192?v=4
+  coverImage: https://raw.githubusercontent.com/openabdev/openab/main/images/banner.jpg
+  tags:
+    - Developer Tools
+    - GitHub
+    - AI
+  variables:
+    - key: GHPOOL_ALLOWED_OWNERS
+      type: STRING
+      name: Allowed GitHub Owners
+      description: "Required. Comma-separated list of GitHub org/user names whose repos this proxy is allowed to access (e.g. openabdev,openclaw). Requests to other owners return 403."
+    - key: GHPOOL_PAT_DEFAULT
+      type: STRING
+      name: First GitHub PAT
+      description: "Required. A GitHub Personal Access Token to seed the pool. Add more PATs after deploy by creating extra environment variables named GHPOOL_PAT_<ID> in the dashboard."
+  readme: |
+    # ghpool
+
+    [ghpool](https://github.com/openabdev/ghpool) is a GitHub API proxy designed for multi-agent setups where several coding agents (OpenAB bots, OpenClaw workers, custom agents) share the same repos and burn through GitHub's per-token rate limits.
+
+    It does three things:
+
+    - **Pools PATs for reads** — every GET request is routed through the identity with the most remaining rate-limit budget, so multiple agents share a combined budget instead of each hitting their own ceiling
+    - **Caches read responses** — REST GET and GraphQL query results are cached in memory with per-resource TTLs (PR view 30s, run list 15s, repo view 5min, etc.)
+    - **Passes mutations through** — POST/PATCH/DELETE and GraphQL mutations require the client's own `Authorization` header and are forwarded with that token, so GitHub's audit log still shows which agent did the write
+
+    ## Architecture
+
+    This template deploys ghpool as an **internal-only** service:
+
+    - No public domain is bound — ghpool is accessed by sibling services in the same Zeabur project via the container network
+    - Port 8080 is exposed as TCP (no Ingress, no TLS termination)
+    - Port forwarding is disabled by default; enable it in the **Networking** tab if you need to test from outside the project
+
+    Sibling services connect using these environment variables (auto-exposed):
+
+    | Variable | Value |
+    |----------|-------|
+    | `GHPOOL_HOSTNAME` | container hostname (e.g. `ghpool.zeabur.internal`) |
+    | `GHPOOL_BASE_URL` | full base URL (e.g. `http://ghpool.zeabur.internal:8080`) |
+
+    ## Configuring agents to use ghpool
+
+    Point your coding agent or `gh` CLI at ghpool by setting the GitHub API base URL:
+
+    ```sh
+    export GITHUB_API_URL=${GHPOOL_BASE_URL}
+    export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+    ```
+
+    For writes that need auth attribution, the agent still uses its own `GH_TOKEN` / `GITHUB_TOKEN` as normal — ghpool only intercepts the network path, not the credentials.
+
+    ## Adding more PATs
+
+    The template seeds the pool with one PAT (`GHPOOL_PAT_DEFAULT`). To add more:
+
+    1. Open the **Variables** tab of the ghpool service
+    2. Add a new environment variable named `GHPOOL_PAT_<ID>` (e.g. `GHPOOL_PAT_BOT_CLAUDE`, `GHPOOL_PAT_BOT_CODEX`) with the PAT as the value — the `<ID>` becomes the identity name reported by `/stats`
+    3. Restart the service for the new identity to be picked up
+
+    Any environment variable matching the `GHPOOL_PAT_*` prefix is auto-discovered.
+
+    ## Endpoints
+
+    | Path | Purpose |
+    |------|---------|
+    | `GET /<github-api-path>` | Proxied GitHub REST API GET (pooled + cached) |
+    | `POST /graphql` | GraphQL — queries pooled+cached, mutations passthrough with client auth |
+    | `GET /healthz` | Health check |
+    | `GET /stats` | Pool budgets, cache hit rates, per-identity stats |
+
+    ## Security notes
+
+    - PATs are kept in environment variables only — never written to disk inside the container
+    - `GHPOOL_ALLOWED_OWNERS` is enforced: requests to any org/user not in this list return 403, so a leaked PAT only exposes the repos you explicitly listed
+    - Mutations always require an `Authorization` header from the client (no auth = 401), so the proxy can't be used as an anonymous write gateway
+
+    ## Resources
+
+    ghpool is a single Rust binary (distroless image) — extremely lightweight. Memory is dominated by the in-memory cache (max 10000 entries by default). If you proxy a very high request volume, increase RAM accordingly.
+
+    ## Links & license
+
+    - Source: <https://github.com/openabdev/ghpool>
+    - License: MIT
+    - Issues: <https://github.com/openabdev/ghpool/issues>
+  services:
+    - name: ghpool
+      icon: https://avatars.githubusercontent.com/u/274127192?v=4
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/ghpool:0.2.1
+        ports:
+          - id: api
+            port: 8080
+            type: TCP
+        portForwarding:
+          enabled: false
+        healthCheck:
+          type: TCP
+          port: api
+        env:
+          GHPOOL_PORT:
+            default: "8080"
+            readonly: true
+          GHPOOL_ALLOWED_OWNERS:
+            default: ${GHPOOL_ALLOWED_OWNERS}
+            expose: true
+          GHPOOL_PAT_DEFAULT:
+            default: ${GHPOOL_PAT_DEFAULT}
+          GHPOOL_HOSTNAME:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+          GHPOOL_BASE_URL:
+            default: http://${CONTAINER_HOSTNAME}:8080
+            expose: true
+            readonly: true
+localization:
+  zh-TW:
+    description: |
+      GitHub API 代理伺服器，將多個 PAT 集中成共享 rate-limit 配額、在記憶體快取讀取結果、寫入操作透傳 client 自己的 token — 為多 agent 場景（OpenAB、OpenClaw、自訂 coding agent）共用同一批 repo 設計。
+    variables:
+      - key: GHPOOL_ALLOWED_OWNERS
+        name: 允許的 GitHub Owner
+        description: "必填。允許此代理存取的 GitHub 組織/使用者名稱清單（逗號分隔，例如 openabdev,openclaw）。其他 owner 的請求會回傳 403。"
+      - key: GHPOOL_PAT_DEFAULT
+        name: 首個 GitHub PAT
+        description: "必填。用來初始化 PAT 池的 GitHub Personal Access Token。部署後可在 Dashboard 新增 GHPOOL_PAT_<ID> 環境變數來加入更多 PAT。"
+    readme: |
+      # ghpool
+
+      [ghpool](https://github.com/openabdev/ghpool) 是一個 GitHub API 代理伺服器，專為多 agent 場景設計 — 當多個 coding agent（OpenAB bots、OpenClaw workers、自訂 agent）共用同一批 repo 時，會各自撞到 GitHub 的 per-token rate limit。
+
+      它做三件事：
+
+      - **讀取請求合池** — 每個 GET 請求都會路由到剩餘 rate-limit 配額最多的身份，多個 agent 共用合併後的配額，而不是各自打到上限
+      - **快取讀取結果** — REST GET 與 GraphQL query 結果會用各資源不同的 TTL 在記憶體快取（PR view 30 秒、run list 15 秒、repo view 5 分鐘…）
+      - **寫入請求透傳** — POST/PATCH/DELETE 與 GraphQL mutation 必須帶 client 自己的 `Authorization` header，並用那個 token 轉發，GitHub audit log 才能記錄是哪個 agent 寫的
+
+      ## 架構
+
+      此模板將 ghpool 部署為**內部專用**服務：
+
+      - 不綁公開 domain — ghpool 由同專案的其他服務透過容器網路存取
+      - Port 8080 以 TCP 暴露（不過 Ingress、不終止 TLS）
+      - 預設關閉 port forwarding；若需從外部測試，請至 **網路** 分頁開啟
+
+      其他服務透過以下自動暴露的環境變數連線：
+
+      | 變數 | 值 |
+      |------|-----|
+      | `GHPOOL_HOSTNAME` | 容器主機名稱（例如 `ghpool.zeabur.internal`） |
+      | `GHPOOL_BASE_URL` | 完整 base URL（例如 `http://ghpool.zeabur.internal:8080`） |
+
+      ## 設定 agent 透過 ghpool 連線
+
+      將 coding agent 或 `gh` CLI 的 GitHub API base URL 指向 ghpool：
+
+      ```sh
+      export GITHUB_API_URL=${GHPOOL_BASE_URL}
+      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      ```
+
+      需要身份歸屬的寫入操作，agent 依然使用自己的 `GH_TOKEN` / `GITHUB_TOKEN` — ghpool 只攔截網路路徑,不接管憑證。
+
+      ## 新增更多 PAT
+
+      模板僅初始化一個 PAT（`GHPOOL_PAT_DEFAULT`）。新增方式：
+
+      1. 開啟 ghpool 服務的**環境變數**分頁
+      2. 新增名為 `GHPOOL_PAT_<ID>` 的環境變數（例如 `GHPOOL_PAT_BOT_CLAUDE`、`GHPOOL_PAT_BOT_CODEX`），值填入該 PAT — `<ID>` 會成為 `/stats` 顯示的身份名稱
+      3. 重新啟動服務使新身份生效
+
+      任何符合 `GHPOOL_PAT_*` 前綴的環境變數都會被自動識別。
+
+      ## 端點
+
+      | 路徑 | 用途 |
+      |------|------|
+      | `GET /<github-api-path>` | 代理 GitHub REST API GET（合池+快取） |
+      | `POST /graphql` | GraphQL — query 合池+快取、mutation 帶 client 自己的 auth 透傳 |
+      | `GET /healthz` | 健康檢查 |
+      | `GET /stats` | 池子的剩餘配額、快取命中率、各身份統計 |
+
+      ## 安全注意事項
+
+      - PAT 僅保存在環境變數中,不會寫入容器內檔案
+      - `GHPOOL_ALLOWED_OWNERS` 嚴格生效:不在清單中的 org/user 請求一律 403,即使 PAT 外洩也只暴露明確列出的 repo
+      - Mutation 必須帶 `Authorization` header（沒帶就 401），代理不能被當匿名寫入閘道濫用
+
+      ## 資源
+
+      ghpool 是單一 Rust binary（distroless image）— 極為輕量。記憶體主要消耗在 in-memory 快取（預設上限 10000 entries）。若代理流量很大，請相應提高 RAM。
+
+      ## 連結與授權
+
+      - 原始碼: <https://github.com/openabdev/ghpool>
+      - 授權: MIT
+      - Issues: <https://github.com/openabdev/ghpool/issues>
+  zh-CN:
+    description: |
+      GitHub API 代理服务器,将多个 PAT 集中成共享 rate-limit 配额、在内存缓存读取结果、写入操作透传 client 自己的 token — 为多 agent 场景（OpenAB、OpenClaw、自定义 coding agent）共用同一批 repo 设计。
+    variables:
+      - key: GHPOOL_ALLOWED_OWNERS
+        name: 允许的 GitHub Owner
+        description: "必填。允许此代理访问的 GitHub 组织/用户名称列表（逗号分隔,例如 openabdev,openclaw）。其他 owner 的请求会返回 403。"
+      - key: GHPOOL_PAT_DEFAULT
+        name: 首个 GitHub PAT
+        description: "必填。用来初始化 PAT 池的 GitHub Personal Access Token。部署后可在 Dashboard 新增 GHPOOL_PAT_<ID> 环境变量来加入更多 PAT。"
+    readme: |
+      # ghpool
+
+      [ghpool](https://github.com/openabdev/ghpool) 是一个 GitHub API 代理服务器,专为多 agent 场景设计 — 当多个 coding agent（OpenAB bots、OpenClaw workers、自定义 agent）共用同一批 repo 时,会各自撞到 GitHub 的 per-token rate limit。
+
+      它做三件事：
+
+      - **读取请求合池** — 每个 GET 请求都会路由到剩余 rate-limit 配额最多的身份,多个 agent 共用合并后的配额,而不是各自打到上限
+      - **缓存读取结果** — REST GET 与 GraphQL query 结果会用各资源不同的 TTL 在内存缓存（PR view 30 秒、run list 15 秒、repo view 5 分钟…）
+      - **写入请求透传** — POST/PATCH/DELETE 与 GraphQL mutation 必须带 client 自己的 `Authorization` header,并用那个 token 转发,GitHub audit log 才能记录是哪个 agent 写的
+
+      ## 架构
+
+      此模板将 ghpool 部署为**内部专用**服务：
+
+      - 不绑公开 domain — ghpool 由同项目的其他服务通过容器网络访问
+      - Port 8080 以 TCP 暴露（不过 Ingress、不终止 TLS）
+      - 默认关闭 port forwarding；若需从外部测试,请至 **网络** 标签开启
+
+      其他服务通过以下自动暴露的环境变量连接：
+
+      | 变量 | 值 |
+      |------|-----|
+      | `GHPOOL_HOSTNAME` | 容器主机名（例如 `ghpool.zeabur.internal`） |
+      | `GHPOOL_BASE_URL` | 完整 base URL（例如 `http://ghpool.zeabur.internal:8080`） |
+
+      ## 配置 agent 通过 ghpool 连接
+
+      将 coding agent 或 `gh` CLI 的 GitHub API base URL 指向 ghpool：
+
+      ```sh
+      export GITHUB_API_URL=${GHPOOL_BASE_URL}
+      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      ```
+
+      需要身份归属的写入操作,agent 依然使用自己的 `GH_TOKEN` / `GITHUB_TOKEN` — ghpool 只拦截网络路径,不接管凭证。
+
+      ## 新增更多 PAT
+
+      模板仅初始化一个 PAT（`GHPOOL_PAT_DEFAULT`）。新增方式：
+
+      1. 打开 ghpool 服务的**环境变量**标签
+      2. 新增名为 `GHPOOL_PAT_<ID>` 的环境变量（例如 `GHPOOL_PAT_BOT_CLAUDE`、`GHPOOL_PAT_BOT_CODEX`）,值填入该 PAT — `<ID>` 会成为 `/stats` 显示的身份名称
+      3. 重启服务使新身份生效
+
+      任何符合 `GHPOOL_PAT_*` 前缀的环境变量都会被自动识别。
+
+      ## 端点
+
+      | 路径 | 用途 |
+      |------|------|
+      | `GET /<github-api-path>` | 代理 GitHub REST API GET（合池+缓存） |
+      | `POST /graphql` | GraphQL — query 合池+缓存、mutation 带 client 自己的 auth 透传 |
+      | `GET /healthz` | 健康检查 |
+      | `GET /stats` | 池子的剩余配额、缓存命中率、各身份统计 |
+
+      ## 安全注意事项
+
+      - PAT 仅保存在环境变量中,不会写入容器内文件
+      - `GHPOOL_ALLOWED_OWNERS` 严格生效：不在列表中的 org/user 请求一律 403,即使 PAT 泄漏也只暴露明确列出的 repo
+      - Mutation 必须带 `Authorization` header（没带就 401）,代理不能被当匿名写入网关滥用
+
+      ## 资源
+
+      ghpool 是单一 Rust binary（distroless image）— 极为轻量。内存主要消耗在内存缓存（默认上限 10000 entries）。若代理流量很大，请相应提高 RAM。
+
+      ## 链接与许可
+
+      - 源代码: <https://github.com/openabdev/ghpool>
+      - 许可: MIT
+      - Issues: <https://github.com/openabdev/ghpool/issues>
+  ja-JP:
+    description: |
+      複数の PAT をプールして rate-limit 予算を共有し、読み取りレスポンスをメモリにキャッシュし、書き込み操作はクライアント自身のトークンでパススルーする GitHub API プロキシ。マルチエージェント環境（OpenAB、OpenClaw、カスタム coding agent）が同じリポジトリを共有する場合のために設計。
+    variables:
+      - key: GHPOOL_ALLOWED_OWNERS
+        name: 許可される GitHub Owner
+        description: "必須。このプロキシが GitHub リポジトリへのアクセスを許可される組織/ユーザー名のコンマ区切りリスト（例: openabdev,openclaw）。他の owner へのリクエストは 403 を返します。"
+      - key: GHPOOL_PAT_DEFAULT
+        name: 最初の GitHub PAT
+        description: "必須。プールをシードする GitHub Personal Access Token。デプロイ後、ダッシュボードで GHPOOL_PAT_<ID> 環境変数を追加することでさらに PAT を追加できます。"
+    readme: |
+      # ghpool
+
+      [ghpool](https://github.com/openabdev/ghpool) は、複数の coding agent（OpenAB bots、OpenClaw workers、カスタム agent）が同じリポジトリを共有して GitHub のトークン毎の rate limit を消費する状況のために設計された GitHub API プロキシです。
+
+      3 つのことをします：
+
+      - **読み取り用 PAT プール** — すべての GET リクエストは残り rate-limit 予算が最も多いアイデンティティ経由でルーティングされ、複数の agent が各自の上限に達する代わりに合算予算を共有します
+      - **読み取りレスポンスのキャッシュ** — REST GET と GraphQL query 結果はリソース別 TTL でメモリにキャッシュされます（PR view 30 秒、run list 15 秒、repo view 5 分など）
+      - **書き込みのパススルー** — POST/PATCH/DELETE と GraphQL mutation はクライアント自身の `Authorization` ヘッダーが必要で、そのトークンで転送されるため、GitHub の監査ログには誰が書き込んだか記録されます
+
+      ## アーキテクチャ
+
+      このテンプレートは ghpool を**内部専用**サービスとしてデプロイします：
+
+      - パブリックドメインは紐付けません — 同じ Zeabur プロジェクト内の他サービスがコンテナネットワーク経由でアクセスします
+      - ポート 8080 は TCP として公開（Ingress なし、TLS 終端なし）
+      - ポートフォワーディングはデフォルトで無効、外部からテストする場合は **ネットワーク** タブで有効化してください
+
+      他のサービスは以下の自動公開される環境変数で接続できます：
+
+      | 変数 | 値 |
+      |------|-----|
+      | `GHPOOL_HOSTNAME` | コンテナホスト名（例: `ghpool.zeabur.internal`） |
+      | `GHPOOL_BASE_URL` | フルベース URL（例: `http://ghpool.zeabur.internal:8080`） |
+
+      ## エージェントを ghpool 経由で接続させる
+
+      coding agent または `gh` CLI の GitHub API base URL を ghpool に向けます：
+
+      ```sh
+      export GITHUB_API_URL=${GHPOOL_BASE_URL}
+      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      ```
+
+      認証帰属が必要な書き込み操作については、agent は引き続き自身の `GH_TOKEN` / `GITHUB_TOKEN` を使用します — ghpool はネットワークパスのみを傍受し、認証情報を引き継ぎません。
+
+      ## PAT の追加
+
+      テンプレートは 1 つの PAT（`GHPOOL_PAT_DEFAULT`）でプールをシードします。追加方法：
+
+      1. ghpool サービスの**環境変数**タブを開く
+      2. `GHPOOL_PAT_<ID>` という名前の環境変数（例: `GHPOOL_PAT_BOT_CLAUDE`、`GHPOOL_PAT_BOT_CODEX`）を PAT 値で追加 — `<ID>` は `/stats` に表示されるアイデンティティ名になります
+      3. サービスを再起動して新しいアイデンティティを反映
+
+      `GHPOOL_PAT_*` プレフィックスに一致する環境変数はすべて自動検出されます。
+
+      ## エンドポイント
+
+      | パス | 用途 |
+      |------|------|
+      | `GET /<github-api-path>` | GitHub REST API GET をプロキシ（プール+キャッシュ） |
+      | `POST /graphql` | GraphQL — query はプール+キャッシュ、mutation はクライアント認証でパススルー |
+      | `GET /healthz` | ヘルスチェック |
+      | `GET /stats` | プール予算、キャッシュヒット率、アイデンティティ別統計 |
+
+      ## セキュリティに関する注意
+
+      - PAT は環境変数のみに保持され、コンテナ内のファイルには書き込まれません
+      - `GHPOOL_ALLOWED_OWNERS` は厳格に適用：リストにない org/user へのリクエストは一律 403、PAT が漏洩しても明示的にリストされたリポジトリのみ露出します
+      - Mutation には `Authorization` ヘッダーが必須（なければ 401）、匿名書き込みゲートウェイとして悪用されません
+
+      ## リソース
+
+      ghpool は単一の Rust バイナリ（distroless image）です — 非常に軽量です。メモリは主にメモリ内キャッシュ（デフォルト上限 10000 エントリ）で消費されます。プロキシトラフィックが大きい場合は RAM を増やしてください。
+
+      ## リンクとライセンス
+
+      - ソースコード: <https://github.com/openabdev/ghpool>
+      - ライセンス: MIT
+      - Issues: <https://github.com/openabdev/ghpool/issues>
+  es-ES:
+    description: |
+      Proxy de la API de GitHub que agrupa múltiples PAT para compartir el presupuesto de límite de tasa, almacena en caché las respuestas de lectura en memoria y pasa las mutaciones con la autenticación del propio cliente. Diseñado para configuraciones multi-agente (OpenAB, OpenClaw, coding agents personalizados) que comparten los mismos repos.
+    variables:
+      - key: GHPOOL_ALLOWED_OWNERS
+        name: Owners de GitHub permitidos
+        description: "Requerido. Lista separada por comas de organizaciones/usuarios de GitHub cuyos repos puede acceder este proxy (p. ej. openabdev,openclaw). Solicitudes a otros owners devuelven 403."
+      - key: GHPOOL_PAT_DEFAULT
+        name: Primer PAT de GitHub
+        description: "Requerido. Un Personal Access Token de GitHub para inicializar el pool. Añade más PATs después del despliegue creando variables de entorno extra GHPOOL_PAT_<ID> en el dashboard."
+    readme: |
+      # ghpool
+
+      [ghpool](https://github.com/openabdev/ghpool) es un proxy de la API de GitHub diseñado para configuraciones multi-agente donde varios coding agents (bots de OpenAB, workers de OpenClaw, agents personalizados) comparten los mismos repos y agotan los límites de tasa por token de GitHub.
+
+      Hace tres cosas:
+
+      - **Agrupa PATs para lecturas** — cada solicitud GET se enruta a través de la identidad con más presupuesto de límite de tasa restante, así múltiples agents comparten un presupuesto combinado en lugar de cada uno alcanzar su propio techo
+      - **Cachea respuestas de lectura** — los resultados de REST GET y GraphQL query se almacenan en caché en memoria con TTLs por recurso (PR view 30s, run list 15s, repo view 5min, etc.)
+      - **Pasa mutaciones a través** — POST/PATCH/DELETE y mutaciones GraphQL requieren el header `Authorization` del cliente y se reenvían con ese token, así el log de auditoría de GitHub aún muestra qué agent hizo la escritura
+
+      ## Arquitectura
+
+      Esta plantilla despliega ghpool como un servicio **solo interno**:
+
+      - No se enlaza dominio público — ghpool es accedido por servicios hermanos en el mismo proyecto Zeabur a través de la red de contenedores
+      - El puerto 8080 se expone como TCP (sin Ingress, sin terminación TLS)
+      - El reenvío de puertos está deshabilitado por defecto; habilítalo en la pestaña **Networking** si necesitas probar desde fuera
+
+      Los servicios hermanos se conectan usando estas variables de entorno (auto-expuestas):
+
+      | Variable | Valor |
+      |----------|-------|
+      | `GHPOOL_HOSTNAME` | hostname del contenedor (p. ej. `ghpool.zeabur.internal`) |
+      | `GHPOOL_BASE_URL` | URL base completa (p. ej. `http://ghpool.zeabur.internal:8080`) |
+
+      ## Configurar agents para usar ghpool
+
+      Apunta tu coding agent o `gh` CLI a ghpool configurando la URL base de la API de GitHub:
+
+      ```sh
+      export GITHUB_API_URL=${GHPOOL_BASE_URL}
+      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      ```
+
+      Para escrituras que necesitan atribución de autenticación, el agent sigue usando su propio `GH_TOKEN` / `GITHUB_TOKEN` como normal — ghpool solo intercepta la ruta de red, no las credenciales.
+
+      ## Añadir más PATs
+
+      La plantilla inicializa el pool con un PAT (`GHPOOL_PAT_DEFAULT`). Para añadir más:
+
+      1. Abre la pestaña **Variables** del servicio ghpool
+      2. Añade una nueva variable de entorno nombrada `GHPOOL_PAT_<ID>` (p. ej. `GHPOOL_PAT_BOT_CLAUDE`, `GHPOOL_PAT_BOT_CODEX`) con el PAT como valor — el `<ID>` se convierte en el nombre de la identidad reportado por `/stats`
+      3. Reinicia el servicio para que la nueva identidad sea detectada
+
+      Cualquier variable de entorno que coincida con el prefijo `GHPOOL_PAT_*` se descubre automáticamente.
+
+      ## Endpoints
+
+      | Path | Propósito |
+      |------|-----------|
+      | `GET /<github-api-path>` | GET proxy de la API REST de GitHub (agrupado + cacheado) |
+      | `POST /graphql` | GraphQL — queries agrupadas+cacheadas, mutaciones pasan con autenticación del cliente |
+      | `GET /healthz` | Verificación de salud |
+      | `GET /stats` | Presupuestos del pool, ratios de aciertos de caché, estadísticas por identidad |
+
+      ## Notas de seguridad
+
+      - Los PATs se mantienen solo en variables de entorno — nunca se escriben al disco dentro del contenedor
+      - `GHPOOL_ALLOWED_OWNERS` se aplica: solicitudes a cualquier org/usuario no en esta lista devuelven 403, así un PAT filtrado solo expone los repos que listaste explícitamente
+      - Las mutaciones siempre requieren un header `Authorization` del cliente (sin autenticación = 401), así el proxy no se puede usar como puerta de escritura anónima
+
+      ## Recursos
+
+      ghpool es un binario Rust único (imagen distroless) — extremadamente ligero. La memoria está dominada por la caché en memoria (max 10000 entradas por defecto). Si haces proxy de un volumen de solicitudes muy alto, aumenta la RAM proporcionalmente.
+
+      ## Enlaces y licencia
+
+      - Fuente: <https://github.com/openabdev/ghpool>
+      - Licencia: MIT
+      - Issues: <https://github.com/openabdev/ghpool/issues>
+  id-ID:
+    description: |
+      Proxy GitHub API yang menggabungkan beberapa PAT untuk berbagi anggaran rate-limit, menyimpan respons baca dalam memori, dan meneruskan mutasi dengan autentikasi klien sendiri. Dirancang untuk setup multi-agen (OpenAB, OpenClaw, coding agent kustom) yang berbagi repo yang sama.
+    variables:
+      - key: GHPOOL_ALLOWED_OWNERS
+        name: GitHub Owner yang Diizinkan
+        description: "Wajib. Daftar nama organisasi/pengguna GitHub yang repo-nya boleh diakses proxy ini (dipisahkan koma, mis. openabdev,openclaw). Permintaan ke owner lain mengembalikan 403."
+      - key: GHPOOL_PAT_DEFAULT
+        name: PAT GitHub Pertama
+        description: "Wajib. Personal Access Token GitHub untuk menginisialisasi pool. Tambahkan lebih banyak PAT setelah deploy dengan membuat variabel lingkungan tambahan GHPOOL_PAT_<ID> di dashboard."
+    readme: |
+      # ghpool
+
+      [ghpool](https://github.com/openabdev/ghpool) adalah proxy GitHub API yang dirancang untuk setup multi-agen di mana beberapa coding agent (bot OpenAB, worker OpenClaw, agent kustom) berbagi repo yang sama dan menghabiskan rate limit per-token GitHub.
+
+      Ia melakukan tiga hal:
+
+      - **Menggabungkan PAT untuk baca** — setiap permintaan GET dirutekan melalui identitas dengan anggaran rate-limit tersisa paling banyak, sehingga beberapa agen berbagi anggaran gabungan alih-alih masing-masing mencapai batasnya sendiri
+      - **Cache respons baca** — hasil REST GET dan GraphQL query di-cache di memori dengan TTL per-resource (PR view 30 detik, run list 15 detik, repo view 5 menit, dll.)
+      - **Meneruskan mutasi** — POST/PATCH/DELETE dan mutasi GraphQL memerlukan header `Authorization` klien sendiri dan diteruskan dengan token tersebut, sehingga log audit GitHub tetap menunjukkan agen mana yang melakukan tulis
+
+      ## Arsitektur
+
+      Template ini mendeploy ghpool sebagai layanan **internal-only**:
+
+      - Tidak ada domain publik yang diikat — ghpool diakses oleh layanan saudara di proyek Zeabur yang sama melalui jaringan kontainer
+      - Port 8080 diekspos sebagai TCP (tanpa Ingress, tanpa terminasi TLS)
+      - Port forwarding dinonaktifkan secara default; aktifkan di tab **Networking** jika perlu menguji dari luar proyek
+
+      Layanan saudara terhubung menggunakan variabel lingkungan ini (auto-ekspos):
+
+      | Variabel | Nilai |
+      |----------|-------|
+      | `GHPOOL_HOSTNAME` | hostname kontainer (mis. `ghpool.zeabur.internal`) |
+      | `GHPOOL_BASE_URL` | URL dasar lengkap (mis. `http://ghpool.zeabur.internal:8080`) |
+
+      ## Mengkonfigurasi agen menggunakan ghpool
+
+      Arahkan coding agent atau `gh` CLI Anda ke ghpool dengan mengatur URL dasar GitHub API:
+
+      ```sh
+      export GITHUB_API_URL=${GHPOOL_BASE_URL}
+      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      ```
+
+      Untuk tulis yang membutuhkan atribusi autentikasi, agen tetap menggunakan `GH_TOKEN` / `GITHUB_TOKEN` sendiri seperti biasa — ghpool hanya mencegat jalur jaringan, bukan kredensial.
+
+      ## Menambahkan lebih banyak PAT
+
+      Template menginisialisasi pool dengan satu PAT (`GHPOOL_PAT_DEFAULT`). Untuk menambah lebih:
+
+      1. Buka tab **Variables** layanan ghpool
+      2. Tambahkan variabel lingkungan baru bernama `GHPOOL_PAT_<ID>` (mis. `GHPOOL_PAT_BOT_CLAUDE`, `GHPOOL_PAT_BOT_CODEX`) dengan PAT sebagai nilainya — `<ID>` menjadi nama identitas yang dilaporkan oleh `/stats`
+      3. Restart layanan agar identitas baru terdeteksi
+
+      Variabel lingkungan apa pun yang cocok dengan awalan `GHPOOL_PAT_*` ditemukan secara otomatis.
+
+      ## Endpoint
+
+      | Path | Tujuan |
+      |------|--------|
+      | `GET /<github-api-path>` | GET proxy GitHub REST API (digabungkan + di-cache) |
+      | `POST /graphql` | GraphQL — query digabungkan+di-cache, mutasi diteruskan dengan auth klien |
+      | `GET /healthz` | Pemeriksaan kesehatan |
+      | `GET /stats` | Anggaran pool, rasio hit cache, statistik per-identitas |
+
+      ## Catatan keamanan
+
+      - PAT disimpan hanya di variabel lingkungan — tidak pernah ditulis ke disk dalam kontainer
+      - `GHPOOL_ALLOWED_OWNERS` ditegakkan: permintaan ke org/pengguna mana pun yang tidak ada di daftar ini mengembalikan 403, sehingga PAT yang bocor hanya mengekspos repo yang Anda daftarkan secara eksplisit
+      - Mutasi selalu memerlukan header `Authorization` dari klien (tanpa auth = 401), sehingga proxy tidak dapat digunakan sebagai gateway tulis anonim
+
+      ## Sumber Daya
+
+      ghpool adalah binary Rust tunggal (image distroless) — sangat ringan. Memori didominasi oleh cache dalam-memori (maks 10000 entri secara default). Jika Anda mem-proxy volume permintaan yang sangat tinggi, tingkatkan RAM sesuai.
+
+      ## Tautan & lisensi
+
+      - Sumber: <https://github.com/openabdev/ghpool>
+      - Lisensi: MIT
+      - Issues: <https://github.com/openabdev/ghpool/issues>
