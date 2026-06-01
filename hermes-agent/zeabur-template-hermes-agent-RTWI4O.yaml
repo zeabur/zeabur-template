@@ -32,10 +32,6 @@ spec:
       type: STRING
       name: Telegram Allowed Users
       description: "Comma-separated Telegram user IDs (required if bot token is set). Get your ID from @userinfobot on Telegram."
-    - key: PUBLIC_DOMAIN
-      type: DOMAIN
-      name: API Server Domain
-      description: "Domain for the OpenAI-compatible API server."
   readme: |
     # Hermes Agent
 
@@ -44,8 +40,23 @@ spec:
     ## Quick Start
 
     1. **Deploy this template** — fill in your OpenRouter API key (required) and optionally a Telegram bot token.
-    2. **Access the API server** — after deployment, your instance exposes an OpenAI-compatible endpoint at your domain.
-    3. **Use the API** — send requests with your auto-generated API key (shown in the service instructions):
+    2. **Bind a domain** — go to the **Networking** tab and bind a domain to the port you need (see **Ports & Domains** below).
+    3. **Start using your agent** — via the web dashboard, Telegram, or the OpenAI-compatible API.
+
+    ## Ports & Domains
+
+    This service exposes two independent ports. Bind a domain only to the ports you actually use:
+
+    | Port | Purpose | When to bind a domain |
+    |------|---------|----------------------|
+    | **5000** | OpenAI-compatible API server | Only if you need external API access (curl, SDK, etc.) |
+    | **9119** | Web dashboard (requires `HERMES_DASHBOARD=true`) | Only if you want the browser UI |
+
+    **Messaging platforms (Telegram, Discord, Slack, etc.) use outbound connections — they do not require any public URL or open port.**
+
+    ### Using the OpenAI-compatible API
+
+    Bind a domain to **port 5000**, then send requests with your auto-generated API key (shown in the service instructions):
 
     ```bash
     curl https://YOUR_DOMAIN/v1/chat/completions \
@@ -53,6 +64,14 @@ spec:
       -H "Content-Type: application/json" \
       -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
     ```
+
+    ### Using the Web Dashboard
+
+    1. Set `HERMES_DASHBOARD=true` in the **Variables** tab and restart the service.
+    2. Bind a domain to **port 9119** in the **Networking** tab.
+    3. Access the dashboard at that domain.
+
+    > **Security note:** The dashboard will be publicly accessible from the internet. Do not enable it without understanding the risk — anyone with the URL can access and control your agent. OAuth authentication can be configured via `HERMES_DASHBOARD_OAUTH_CLIENT_ID` (see the [environment variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)).
 
     ## Messaging Platforms
 
@@ -115,7 +134,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: nousresearch/hermes-agent:v2026.5.16
+          image: nousresearch/hermes-agent:v2026.5.29.2
           runAsUserID: 10000
           command:
             - /bin/bash
@@ -124,6 +143,9 @@ spec:
         ports:
           - id: web
             port: 5000
+            type: HTTP
+          - id: port-9119
+            port: 9119
             type: HTTP
         volumes:
           - id: data
@@ -152,6 +174,12 @@ spec:
                   python3 "$INSTALL_DIR/tools/skills_sync.py"
               fi
 
+              case "${HERMES_DASHBOARD:-}" in
+                  1|true|TRUE|True|yes|YES|Yes)
+                      hermes dashboard --host 0.0.0.0 --port 9119 --no-open --insecure &
+                      ;;
+              esac
+
               exec hermes gateway
         instructions:
           - title: API Server URL
@@ -174,7 +202,8 @@ spec:
           API_SERVER_KEY:
             default: ${PASSWORD}
             expose: true
-      domainKey: PUBLIC_DOMAIN
+          HERMES_DASHBOARD:
+            default: "false"
 localization:
   zh-TW:
     description: |
@@ -189,9 +218,6 @@ localization:
       - key: TELEGRAM_ALLOWED_USERS
         name: Telegram 允許的使用者
         description: "以逗號分隔的 Telegram 使用者 ID（設定了 Bot Token 則為必填）。可透過 @userinfobot 取得 ID。"
-      - key: PUBLIC_DOMAIN
-        name: API 伺服器網域
-        description: "OpenAI 相容 API 伺服器的網域。"
     readme: |
       # Hermes Agent
 
@@ -200,8 +226,23 @@ localization:
       ## 快速開始
 
       1. **部署此模板** — 填入 OpenRouter API 金鑰（必填），以及選填的 Telegram Bot Token。
-      2. **存取 API 伺服器** — 部署完成後，您的實例會在網域上提供 OpenAI 相容端點。
-      3. **使用 API** — 使用自動產生的 API 金鑰（顯示於服務說明中）發送請求：
+      2. **綁定網域** — 前往「網路」分頁，依需求將網域綁定到對應的 port（詳見下方「Port 與網域」）。
+      3. **開始使用** — 透過網頁 Dashboard、Telegram 或 OpenAI 相容 API 操作您的 Agent。
+
+      ## Port 與網域
+
+      此服務提供兩個獨立的 HTTP port，請只為實際需要的 port 綁定網域：
+
+      | Port | 用途 | 何時需要綁定網域 |
+      |------|------|----------------|
+      | **5000** | OpenAI 相容 API 伺服器 | 僅在需要外部 API 存取時（curl、SDK 等） |
+      | **9119** | 網頁 Dashboard（需設定 `HERMES_DASHBOARD=true`） | 僅在需要瀏覽器介面時 |
+
+      **訊息平台（Telegram、Discord、Slack 等）使用對外連線，不需要公開網址或開放任何 port。**
+
+      ### 使用 OpenAI 相容 API
+
+      將網域綁定到 **port 5000**，再使用自動產生的 API 金鑰（顯示於服務說明中）發送請求：
 
       ```bash
       curl https://YOUR_DOMAIN/v1/chat/completions \
@@ -209,6 +250,14 @@ localization:
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
+
+      ### 使用網頁 Dashboard
+
+      1. 在「變數」分頁設定 `HERMES_DASHBOARD=true` 並重啟服務。
+      2. 在「網路」分頁將網域綁定到 **port 9119**。
+      3. 透過該網域存取 Dashboard。
+
+      > **安全提醒：** Dashboard 將可從網際網路公開存取。請在了解風險後再啟用——任何知道網址的人都能存取並控制您的 Agent。可透過 `HERMES_DASHBOARD_OAUTH_CLIENT_ID` 設定 OAuth 驗證（詳見[環境變數參考文件](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)）。
 
       ## 訊息平台
 
@@ -278,9 +327,6 @@ localization:
       - key: TELEGRAM_ALLOWED_USERS
         name: Telegram 允许的用户
         description: "以逗号分隔的 Telegram 用户 ID（设置了 Bot Token 则为必填）。可通过 @userinfobot 获取 ID。"
-      - key: PUBLIC_DOMAIN
-        name: API 服务器域名
-        description: "OpenAI 兼容 API 服务器的域名。"
     readme: |
       # Hermes Agent
 
@@ -289,8 +335,23 @@ localization:
       ## 快速开始
 
       1. **部署此模板** — 填入 OpenRouter API 密钥（必填），以及可选的 Telegram Bot Token。
-      2. **访问 API 服务器** — 部署完成后，您的实例会在域名上提供 OpenAI 兼容端点。
-      3. **使用 API** — 使用自动生成的 API 密钥（显示在服务说明中）发送请求：
+      2. **绑定域名** — 前往「网络」标签页，根据需求将域名绑定到对应的端口（详见下方「端口与域名」）。
+      3. **开始使用** — 通过网页 Dashboard、Telegram 或 OpenAI 兼容 API 操作您的 Agent。
+
+      ## 端口与域名
+
+      此服务提供两个独立的 HTTP 端口，请只为实际需要的端口绑定域名：
+
+      | 端口 | 用途 | 何时需要绑定域名 |
+      |------|------|----------------|
+      | **5000** | OpenAI 兼容 API 服务器 | 仅在需要外部 API 访问时（curl、SDK 等） |
+      | **9119** | 网页 Dashboard（需设置 `HERMES_DASHBOARD=true`） | 仅在需要浏览器界面时 |
+
+      **消息平台（Telegram、Discord、Slack 等）使用出站连接，不需要公开 URL 或开放任何端口。**
+
+      ### 使用 OpenAI 兼容 API
+
+      将域名绑定到 **端口 5000**，再使用自动生成的 API 密钥（显示在服务说明中）发送请求：
 
       ```bash
       curl https://YOUR_DOMAIN/v1/chat/completions \
@@ -298,6 +359,14 @@ localization:
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
+
+      ### 使用网页 Dashboard
+
+      1. 在「变量」标签页设置 `HERMES_DASHBOARD=true` 并重启服务。
+      2. 在「网络」标签页将域名绑定到 **端口 9119**。
+      3. 通过该域名访问 Dashboard。
+
+      > **安全提示：** Dashboard 将可从互联网公开访问。请在了解风险后再启用——任何知道网址的人都能访问并控制您的 Agent。可通过 `HERMES_DASHBOARD_OAUTH_CLIENT_ID` 配置 OAuth 验证（详见[环境变量参考文档](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)）。
 
       ## 消息平台
 
@@ -367,9 +436,6 @@ localization:
       - key: TELEGRAM_ALLOWED_USERS
         name: Telegram 許可ユーザー
         description: "カンマ区切りの Telegram ユーザー ID（Bot トークンを設定した場合は必須）。@userinfobot で ID を確認できます。"
-      - key: PUBLIC_DOMAIN
-        name: API サーバードメイン
-        description: "OpenAI 互換 API サーバーのドメイン。"
     readme: |
       # Hermes Agent
 
@@ -378,8 +444,23 @@ localization:
       ## クイックスタート
 
       1. **このテンプレートをデプロイ** — OpenRouter API キー（必須）と、任意で Telegram Bot トークンを入力します。
-      2. **API サーバーにアクセス** — デプロイ後、ドメインに OpenAI 互換エンドポイントが公開されます。
-      3. **API を使用** — 自動生成された API キー（サービス説明に表示）でリクエストを送信：
+      2. **ドメインをバインド** — **ネットワーク**タブでポートに応じたドメインをバインドします（下記「ポートとドメイン」を参照）。
+      3. **使用開始** — ウェブ Dashboard、Telegram、または OpenAI 互換 API でエージェントを操作します。
+
+      ## ポートとドメイン
+
+      このサービスは独立した 2 つの HTTP ポートを提供します。実際に使用するポートにのみドメインをバインドしてください：
+
+      | ポート | 用途 | ドメインが必要な場合 |
+      |--------|------|------------------|
+      | **5000** | OpenAI 互換 API サーバー | 外部 API アクセスが必要な場合のみ（curl、SDK など） |
+      | **9119** | ウェブ Dashboard（`HERMES_DASHBOARD=true` が必要） | ブラウザ UI が必要な場合のみ |
+
+      **メッセージングプラットフォーム（Telegram、Discord、Slack など）はアウトバウンド接続を使用するため、公開 URL やポートの開放は不要です。**
+
+      ### OpenAI 互換 API を使用する
+
+      **ポート 5000** にドメインをバインドし、自動生成された API キー（サービス説明に表示）でリクエストを送信：
 
       ```bash
       curl https://YOUR_DOMAIN/v1/chat/completions \
@@ -387,6 +468,14 @@ localization:
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
+
+      ### ウェブ Dashboard を使用する
+
+      1. **変数**タブで `HERMES_DASHBOARD=true` を設定してサービスを再起動します。
+      2. **ネットワーク**タブで **ポート 9119** にドメインをバインドします。
+      3. そのドメインから Dashboard にアクセスします。
+
+      > **セキュリティに関する注意：** Dashboard はインターネットから公開アクセス可能になります。リスクを理解した上で有効にしてください — URL を知っている人なら誰でもエージェントにアクセスして操作できます。`HERMES_DASHBOARD_OAUTH_CLIENT_ID` で OAuth 認証を設定できます（[環境変数リファレンス](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)を参照）。
 
       ## メッセージプラットフォーム
 
@@ -456,9 +545,6 @@ localization:
       - key: TELEGRAM_ALLOWED_USERS
         name: Usuarios permitidos en Telegram
         description: "IDs de usuario de Telegram separados por comas (obligatorio si se configura el token del bot). Obtenga su ID en @userinfobot."
-      - key: PUBLIC_DOMAIN
-        name: Dominio del servidor API
-        description: "Dominio para el servidor API compatible con OpenAI."
     readme: |
       # Hermes Agent
 
@@ -467,8 +553,23 @@ localization:
       ## Inicio rápido
 
       1. **Despliegue esta plantilla** — introduzca su clave API de OpenRouter (obligatoria) y opcionalmente un token de bot de Telegram.
-      2. **Acceda al servidor API** — tras el despliegue, su instancia expone un endpoint compatible con OpenAI en su dominio.
-      3. **Use la API** — envíe solicitudes con su clave API generada automáticamente (mostrada en las instrucciones del servicio):
+      2. **Vincule un dominio** — vaya a la pestaña **Redes** y vincule un dominio al puerto que necesite (consulte «Puertos y dominios» más abajo).
+      3. **Comience a usar** — a través del Dashboard web, Telegram o la API compatible con OpenAI.
+
+      ## Puertos y dominios
+
+      Este servicio expone dos puertos HTTP independientes. Vincule un dominio solo a los puertos que realmente necesite:
+
+      | Puerto | Propósito | Cuándo vincular un dominio |
+      |--------|-----------|--------------------------|
+      | **5000** | Servidor API compatible con OpenAI | Solo si necesita acceso externo a la API (curl, SDK, etc.) |
+      | **9119** | Dashboard web (requiere `HERMES_DASHBOARD=true`) | Solo si quiere la interfaz de navegador |
+
+      **Las plataformas de mensajería (Telegram, Discord, Slack, etc.) usan conexiones salientes — no requieren URL pública ni puertos abiertos.**
+
+      ### Usar la API compatible con OpenAI
+
+      Vincule un dominio al **puerto 5000** y envíe solicitudes con su clave API generada automáticamente:
 
       ```bash
       curl https://YOUR_DOMAIN/v1/chat/completions \
@@ -476,6 +577,14 @@ localization:
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
+
+      ### Usar el Dashboard web
+
+      1. Configure `HERMES_DASHBOARD=true` en la pestaña **Variables** y reinicie el servicio.
+      2. Vincule un dominio al **puerto 9119** en la pestaña **Redes**.
+      3. Acceda al Dashboard mediante ese dominio.
+
+      > **Nota de seguridad:** El Dashboard será públicamente accesible desde internet. No lo active sin entender los riesgos — cualquier persona con la URL puede acceder y controlar su agente. Puede configurar autenticación OAuth mediante `HERMES_DASHBOARD_OAUTH_CLIENT_ID` (consulte la [referencia de variables de entorno](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)).
 
       ## Plataformas de mensajería
 
@@ -545,9 +654,6 @@ localization:
       - key: TELEGRAM_ALLOWED_USERS
         name: Pengguna Telegram yang Diizinkan
         description: "ID pengguna Telegram dipisahkan koma (wajib jika token bot diisi). Dapatkan ID Anda dari @userinfobot."
-      - key: PUBLIC_DOMAIN
-        name: Domain Server API
-        description: "Domain untuk server API yang kompatibel dengan OpenAI."
     readme: |
       # Hermes Agent
 
@@ -556,8 +662,23 @@ localization:
       ## Mulai Cepat
 
       1. **Deploy template ini** — masukkan kunci API OpenRouter (wajib) dan opsional token bot Telegram.
-      2. **Akses server API** — setelah deployment, instance Anda menyediakan endpoint yang kompatibel dengan OpenAI di domain Anda.
-      3. **Gunakan API** — kirim permintaan dengan kunci API yang dibuat secara otomatis (ditampilkan di instruksi layanan):
+      2. **Bind domain** — buka tab **Networking** dan bind domain ke port yang Anda butuhkan (lihat «Port & Domain» di bawah).
+      3. **Mulai gunakan** — melalui Dashboard web, Telegram, atau OpenAI-compatible API.
+
+      ## Port & Domain
+
+      Layanan ini menyediakan dua port HTTP independen. Bind domain hanya ke port yang benar-benar Anda gunakan:
+
+      | Port | Tujuan | Kapan perlu bind domain |
+      |------|--------|------------------------|
+      | **5000** | Server API kompatibel OpenAI | Hanya jika perlu akses API eksternal (curl, SDK, dll.) |
+      | **9119** | Dashboard web (perlu `HERMES_DASHBOARD=true`) | Hanya jika ingin antarmuka browser |
+
+      **Platform pesan (Telegram, Discord, Slack, dll.) menggunakan koneksi keluar — tidak memerlukan URL publik atau port yang dibuka.**
+
+      ### Menggunakan OpenAI-compatible API
+
+      Bind domain ke **port 5000**, lalu kirim permintaan dengan kunci API yang dibuat otomatis:
 
       ```bash
       curl https://YOUR_DOMAIN/v1/chat/completions \
@@ -565,6 +686,14 @@ localization:
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
+
+      ### Menggunakan Dashboard web
+
+      1. Atur `HERMES_DASHBOARD=true` di tab **Variables** dan restart layanan.
+      2. Bind domain ke **port 9119** di tab **Networking**.
+      3. Akses Dashboard melalui domain tersebut.
+
+      > **Catatan keamanan:** Dashboard akan dapat diakses secara publik dari internet. Jangan aktifkan tanpa memahami risikonya — siapa pun yang mengetahui URL dapat mengakses dan mengontrol agen Anda. Autentikasi OAuth dapat dikonfigurasi melalui `HERMES_DASHBOARD_OAUTH_CLIENT_ID` (lihat [referensi variabel lingkungan](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)).
 
       ## Platform Pesan
 
