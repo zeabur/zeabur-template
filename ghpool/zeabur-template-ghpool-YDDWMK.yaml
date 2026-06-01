@@ -47,16 +47,25 @@ spec:
     | `GHPOOL_HOSTNAME` | container hostname (e.g. `ghpool.zeabur.internal`) |
     | `GHPOOL_BASE_URL` | full base URL (e.g. `http://ghpool.zeabur.internal:8080`) |
 
-    ## Configuring agents to use ghpool
+    ## Pointing clients at ghpool
 
-    Point your coding agent or `gh` CLI at ghpool by setting the GitHub API base URL:
+    How to route a client through ghpool depends on what it is:
+
+    **Coding agents** (Claude Code, Codex, custom agents): most honor `GITHUB_API_BASE` to override the GitHub API endpoint.
 
     ```sh
-    export GITHUB_API_URL=${GHPOOL_BASE_URL}
-    export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+    export GITHUB_API_BASE=${GHPOOL_BASE_URL}
     ```
 
-    For writes that need auth attribution, the agent still uses its own `GH_TOKEN` / `GITHUB_TOKEN` as normal — ghpool only intercepts the network path, not the credentials.
+    **`gh` CLI**: use the `ghp` shim that ships with ghpool — a drop-in replacement that routes reads through ghpool and writes through real `gh`. Plain `gh` does not fully honor base-URL overrides (built-ins like `gh issue list` use GraphQL internally and bypass them); `ghp` is the reliable path.
+
+    **Direct HTTP**:
+
+    ```sh
+    curl ${GHPOOL_BASE_URL}/repos/owner/repo
+    ```
+
+    Writes always require the client's own `Authorization` header — ghpool never injects one for mutations, so the GitHub audit log still shows which agent did the write.
 
     ## Adding more PATs
 
@@ -162,16 +171,25 @@ localization:
       | `GHPOOL_HOSTNAME` | 容器主機名稱（例如 `ghpool.zeabur.internal`） |
       | `GHPOOL_BASE_URL` | 完整 base URL（例如 `http://ghpool.zeabur.internal:8080`） |
 
-      ## 設定 agent 透過 ghpool 連線
+      ## 將 client 指向 ghpool
 
-      將 coding agent 或 `gh` CLI 的 GitHub API base URL 指向 ghpool：
+      要怎麼把 client 走 ghpool 取決於它是什麼：
+
+      **Coding agents**（Claude Code、Codex、自訂 agent）：多數會看 `GITHUB_API_BASE` 來覆寫 GitHub API endpoint。
 
       ```sh
-      export GITHUB_API_URL=${GHPOOL_BASE_URL}
-      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      export GITHUB_API_BASE=${GHPOOL_BASE_URL}
       ```
 
-      需要身份歸屬的寫入操作，agent 依然使用自己的 `GH_TOKEN` / `GITHUB_TOKEN` — ghpool 只攔截網路路徑,不接管憑證。
+      **`gh` CLI**：使用 ghpool 附帶的 `ghp` shim —— 一個 drop-in 替代品，讀取走 ghpool、寫入走真正的 `gh`。普通的 `gh` 不完整支援 base URL 覆寫（內建命令如 `gh issue list` 內部走 GraphQL 會繞過去），`ghp` 才是可靠的方式。
+
+      **直接 HTTP**：
+
+      ```sh
+      curl ${GHPOOL_BASE_URL}/repos/owner/repo
+      ```
+
+      寫入操作一定需要 client 自己帶 `Authorization` header —— ghpool 不會替 mutation 注入認證，所以 GitHub audit log 依然會記錄是哪個 agent 寫的。
 
       ## 新增更多 PAT
 
@@ -243,16 +261,25 @@ localization:
       | `GHPOOL_HOSTNAME` | 容器主机名（例如 `ghpool.zeabur.internal`） |
       | `GHPOOL_BASE_URL` | 完整 base URL（例如 `http://ghpool.zeabur.internal:8080`） |
 
-      ## 配置 agent 通过 ghpool 连接
+      ## 将 client 指向 ghpool
 
-      将 coding agent 或 `gh` CLI 的 GitHub API base URL 指向 ghpool：
+      要怎么把 client 走 ghpool 取决于它是什么：
+
+      **Coding agents**（Claude Code、Codex、自定义 agent）：多数会看 `GITHUB_API_BASE` 来覆盖 GitHub API endpoint。
 
       ```sh
-      export GITHUB_API_URL=${GHPOOL_BASE_URL}
-      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      export GITHUB_API_BASE=${GHPOOL_BASE_URL}
       ```
 
-      需要身份归属的写入操作,agent 依然使用自己的 `GH_TOKEN` / `GITHUB_TOKEN` — ghpool 只拦截网络路径,不接管凭证。
+      **`gh` CLI**：使用 ghpool 附带的 `ghp` shim —— 一个 drop-in 替代品,读取走 ghpool、写入走真正的 `gh`。普通的 `gh` 不完整支持 base URL 覆盖（内建命令如 `gh issue list` 内部走 GraphQL 会绕过去）,`ghp` 才是可靠的方式。
+
+      **直接 HTTP**：
+
+      ```sh
+      curl ${GHPOOL_BASE_URL}/repos/owner/repo
+      ```
+
+      写入操作一定需要 client 自己带 `Authorization` header —— ghpool 不会替 mutation 注入认证,所以 GitHub audit log 依然会记录是哪个 agent 写的。
 
       ## 新增更多 PAT
 
@@ -324,16 +351,25 @@ localization:
       | `GHPOOL_HOSTNAME` | コンテナホスト名（例: `ghpool.zeabur.internal`） |
       | `GHPOOL_BASE_URL` | フルベース URL（例: `http://ghpool.zeabur.internal:8080`） |
 
-      ## エージェントを ghpool 経由で接続させる
+      ## クライアントを ghpool に向ける
 
-      coding agent または `gh` CLI の GitHub API base URL を ghpool に向けます：
+      クライアントを ghpool 経由にする方法はクライアントの種類によります：
+
+      **Coding agents**（Claude Code、Codex、カスタムエージェント）：ほとんどは `GITHUB_API_BASE` で GitHub API エンドポイントを上書きできます。
 
       ```sh
-      export GITHUB_API_URL=${GHPOOL_BASE_URL}
-      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      export GITHUB_API_BASE=${GHPOOL_BASE_URL}
       ```
 
-      認証帰属が必要な書き込み操作については、agent は引き続き自身の `GH_TOKEN` / `GITHUB_TOKEN` を使用します — ghpool はネットワークパスのみを傍受し、認証情報を引き継ぎません。
+      **`gh` CLI**：ghpool に同梱される `ghp` シムを使います — 読み取りを ghpool 経由、書き込みを実際の `gh` 経由にルーティングするドロップイン代替品です。素の `gh` はベース URL 上書きを完全にはサポートしません（`gh issue list` のような組み込みコマンドは内部で GraphQL を使い迂回します）。`ghp` が信頼できる方法です。
+
+      **直接 HTTP**：
+
+      ```sh
+      curl ${GHPOOL_BASE_URL}/repos/owner/repo
+      ```
+
+      書き込み操作は常にクライアント自身の `Authorization` ヘッダーが必要です — ghpool は mutation に認証を注入しないため、GitHub の監査ログにはどのエージェントが書き込んだかが記録されたままになります。
 
       ## PAT の追加
 
@@ -405,16 +441,25 @@ localization:
       | `GHPOOL_HOSTNAME` | hostname del contenedor (p. ej. `ghpool.zeabur.internal`) |
       | `GHPOOL_BASE_URL` | URL base completa (p. ej. `http://ghpool.zeabur.internal:8080`) |
 
-      ## Configurar agents para usar ghpool
+      ## Apuntar clientes a ghpool
 
-      Apunta tu coding agent o `gh` CLI a ghpool configurando la URL base de la API de GitHub:
+      Cómo enrutar un cliente a través de ghpool depende de qué sea:
+
+      **Coding agents** (Claude Code, Codex, agents personalizados): la mayoría honra `GITHUB_API_BASE` para sobrescribir el endpoint de la API de GitHub.
 
       ```sh
-      export GITHUB_API_URL=${GHPOOL_BASE_URL}
-      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      export GITHUB_API_BASE=${GHPOOL_BASE_URL}
       ```
 
-      Para escrituras que necesitan atribución de autenticación, el agent sigue usando su propio `GH_TOKEN` / `GITHUB_TOKEN` como normal — ghpool solo intercepta la ruta de red, no las credenciales.
+      **`gh` CLI**: usa el shim `ghp` que viene con ghpool — un reemplazo drop-in que enruta lecturas a través de ghpool y escrituras a través del `gh` real. El `gh` plano no soporta completamente las sobrescrituras de URL base (comandos integrados como `gh issue list` usan GraphQL internamente y la evitan); `ghp` es la ruta confiable.
+
+      **HTTP directo**:
+
+      ```sh
+      curl ${GHPOOL_BASE_URL}/repos/owner/repo
+      ```
+
+      Las escrituras siempre requieren el header `Authorization` del propio cliente — ghpool nunca inyecta uno para mutaciones, así que el log de auditoría de GitHub aún muestra qué agent hizo la escritura.
 
       ## Añadir más PATs
 
@@ -486,16 +531,25 @@ localization:
       | `GHPOOL_HOSTNAME` | hostname kontainer (mis. `ghpool.zeabur.internal`) |
       | `GHPOOL_BASE_URL` | URL dasar lengkap (mis. `http://ghpool.zeabur.internal:8080`) |
 
-      ## Mengkonfigurasi agen menggunakan ghpool
+      ## Mengarahkan klien ke ghpool
 
-      Arahkan coding agent atau `gh` CLI Anda ke ghpool dengan mengatur URL dasar GitHub API:
+      Cara merutekan klien melalui ghpool bergantung pada jenis klien:
+
+      **Coding agents** (Claude Code, Codex, agen kustom): kebanyakan menghormati `GITHUB_API_BASE` untuk menimpa endpoint GitHub API.
 
       ```sh
-      export GITHUB_API_URL=${GHPOOL_BASE_URL}
-      export GITHUB_GRAPHQL_URL=${GHPOOL_BASE_URL}/graphql
+      export GITHUB_API_BASE=${GHPOOL_BASE_URL}
       ```
 
-      Untuk tulis yang membutuhkan atribusi autentikasi, agen tetap menggunakan `GH_TOKEN` / `GITHUB_TOKEN` sendiri seperti biasa — ghpool hanya mencegat jalur jaringan, bukan kredensial.
+      **`gh` CLI**: gunakan shim `ghp` yang disertakan dengan ghpool — pengganti drop-in yang merutekan baca melalui ghpool dan tulis melalui `gh` asli. `gh` biasa tidak sepenuhnya mendukung penimpaan URL dasar (perintah bawaan seperti `gh issue list` menggunakan GraphQL secara internal dan melewatinya); `ghp` adalah jalur yang andal.
+
+      **HTTP langsung**:
+
+      ```sh
+      curl ${GHPOOL_BASE_URL}/repos/owner/repo
+      ```
+
+      Operasi tulis selalu memerlukan header `Authorization` klien sendiri — ghpool tidak pernah menyuntikkan satu untuk mutasi, sehingga log audit GitHub tetap menunjukkan agen mana yang melakukan tulis.
 
       ## Menambahkan lebih banyak PAT
 
