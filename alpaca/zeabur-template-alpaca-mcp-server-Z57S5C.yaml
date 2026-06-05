@@ -1,0 +1,405 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Alpaca MCP Server
+spec:
+    description: Remote Model Context Protocol server for Alpaca's Trading API — trade stocks, options, and crypto from Claude, ChatGPT, or any MCP-compatible AI client over HTTPS.
+    coverImage: https://alpaca.markets/learn-api/content/images/2024/10/how-to-start-paper-trading-with-alpacas-trading-api-1--1-.png
+    icon: https://avatars.githubusercontent.com/u/30398729?v=4&s=400
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Public Domain
+          description: The public domain for connecting your AI client to the MCP server. Append /mcp to this URL when adding it to Claude or ChatGPT.
+    tags:
+        - AI
+        - Developer Tool
+    readme: |
+        # Alpaca MCP Server on Zeabur
+
+        A remote [Model Context Protocol](https://modelcontextprotocol.io/) server for [Alpaca](https://alpaca.markets/)'s Trading API. Once deployed, you can add this server as a custom connector in Claude (web/desktop/mobile) or ChatGPT to trade stocks, options, and crypto and run market analysis through plain-English chat.
+
+        Original project: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — MIT License.
+
+        ## 1. Get your Alpaca API keys
+
+        1. Sign up at [alpaca.markets](https://alpaca.markets/)
+        2. Open the [Paper Trading dashboard](https://app.alpaca.markets/paper/dashboard/overview) (recommended for testing)
+        3. Generate an API key pair under *API Keys* → *Generate New Key*
+        4. Copy the `API Key ID` into `ALPACA_API_KEY` and the `Secret Key` into `ALPACA_SECRET_KEY` when deploying this template
+
+        > To trade with real money, switch the dashboard to *Live*, generate live keys, and set `ALPACA_PAPER_TRADE=false` after deployment.
+
+        ## 2. Deploy
+
+        Click *Deploy* and fill in `ALPACA_API_KEY` and `ALPACA_SECRET_KEY`. Pick a public domain — Zeabur gives you a free `.zeabur.app` subdomain or you can bind your own.
+
+        ## 3. Connect your AI client
+
+        Your MCP endpoint is `https://<your-domain>/mcp`.
+
+        **Claude (web, desktop, mobile):**
+        1. Settings → Connectors → *Add custom connector*
+        2. Name: `Alpaca`, URL: `https://<your-domain>/mcp`
+        3. Save and toggle the connector on in any chat
+
+        **ChatGPT:**
+        1. Settings → Connectors → *New connector*
+        2. URL: `https://<your-domain>/mcp`, transport: `Streamable HTTP`
+
+        ## Configuration
+
+        | Variable | Default | Purpose |
+        |---|---|---|
+        | `ALPACA_API_KEY` | — | Required. Alpaca API key ID |
+        | `ALPACA_SECRET_KEY` | — | Required. Alpaca API secret |
+        | `ALPACA_PAPER_TRADE` | `true` | Set to `false` to enable live (real-money) trading |
+
+        Advanced: you can also set `ALPACA_TOOLSETS` post-deploy under *Variables* — a comma-separated list (e.g. `account,positions,orders`) that restricts which tool families the MCP server exposes to the AI client.
+
+        ## Security warning
+
+        This deployment exposes your Alpaca trading credentials behind an HTTPS endpoint with no built-in auth — anyone with the URL can issue trades on your account. For production use:
+
+        - Keep `ALPACA_PAPER_TRADE=true` until you've verified the setup
+        - Treat the public URL as a secret; do not share it
+        - Consider putting the service behind an authenticating proxy
+
+        ## License & attribution
+
+        The Alpaca MCP Server is licensed under the [MIT License](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) by Alpaca Securities LLC. This Zeabur template repackages the upstream Docker build and is not an official Alpaca product.
+    services:
+        - name: alpaca-mcp-server
+          icon: https://avatars.githubusercontent.com/u/30398729?v=4&s=400
+          template: PREBUILT_V2
+          spec:
+            id: alpaca-mcp-server
+            source:
+                image: docker.io/zeabur/alpaca-mcp-server:2.0.1
+            ports:
+                - id: web
+                  port: 8000
+                  type: HTTP
+            env:
+                ALPACA_API_KEY:
+                    default: ""
+                    expose: true
+                ALPACA_PAPER_TRADE:
+                    default: "true"
+                    expose: true
+                ALPACA_SECRET_KEY:
+                    default: ""
+                    expose: true
+                PORT:
+                    default: "8000"
+            healthCheck:
+                type: TCP
+                port: web
+          domainKey: PUBLIC_DOMAIN
+localization:
+    es-ES:
+        description: Servidor remoto MCP (Model Context Protocol) para la API de Trading de Alpaca — opera acciones, opciones y cripto desde Claude, ChatGPT o cualquier cliente de IA compatible con MCP a través de HTTPS.
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: Dominio público
+              description: Dominio público para conectar tu cliente de IA al servidor MCP. Añade /mcp al final de esta URL al añadirla a Claude o ChatGPT.
+        readme: |
+            # Alpaca MCP Server en Zeabur
+
+            Un servidor remoto [Model Context Protocol](https://modelcontextprotocol.io/) para la [API de Trading de Alpaca](https://alpaca.markets/). Una vez desplegado, puedes añadir este servidor como conector personalizado en Claude (web/escritorio/móvil) o ChatGPT para operar acciones, opciones y cripto y hacer análisis de mercado mediante chat en lenguaje natural.
+
+            Proyecto original: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — Licencia MIT.
+
+            ## 1. Obtén tus claves de API de Alpaca
+
+            1. Regístrate en [alpaca.markets](https://alpaca.markets/)
+            2. Abre el [panel de Paper Trading](https://app.alpaca.markets/paper/dashboard/overview) (recomendado para pruebas)
+            3. Genera un par de claves en *API Keys* → *Generate New Key*
+            4. Al desplegar la plantilla, copia `API Key ID` en `ALPACA_API_KEY` y `Secret Key` en `ALPACA_SECRET_KEY`
+
+            > Para operar con dinero real: cambia a *Live*, genera claves live y, tras el despliegue, ajusta `ALPACA_PAPER_TRADE=false`.
+
+            ## 2. Despliega
+
+            Pulsa *Deploy*, rellena `ALPACA_API_KEY` y `ALPACA_SECRET_KEY` y elige un dominio público. Zeabur ofrece un subdominio gratuito `.zeabur.app`, o puedes vincular el tuyo.
+
+            ## 3. Conecta tu cliente de IA
+
+            Tu endpoint MCP es `https://<tu-dominio>/mcp`.
+
+            **Claude (web, escritorio, móvil):**
+            1. Ajustes → Connectors → *Add custom connector*
+            2. Nombre: `Alpaca`, URL: `https://<tu-dominio>/mcp`
+            3. Guarda y activa el conector en cualquier chat
+
+            **ChatGPT:**
+            1. Ajustes → Connectors → *New connector*
+            2. URL: `https://<tu-dominio>/mcp`, transporte: `Streamable HTTP`
+
+            ## Configuración
+
+            | Variable | Por defecto | Propósito |
+            |---|---|---|
+            | `ALPACA_API_KEY` | — | Obligatoria. ID de la clave API de Alpaca |
+            | `ALPACA_SECRET_KEY` | — | Obligatoria. Secreto API de Alpaca |
+            | `ALPACA_PAPER_TRADE` | `true` | Pon `false` para trading real (con dinero) |
+
+            Avanzado: tras el despliegue puedes añadir `ALPACA_TOOLSETS` en *Variables* — una lista separada por comas (p. ej. `account,positions,orders`) que limita las familias de herramientas que el servidor MCP expone al cliente de IA.
+
+            ## Aviso de seguridad
+
+            Este despliegue expone tus credenciales de trading de Alpaca tras un endpoint HTTPS sin autenticación incorporada — cualquiera con la URL puede ejecutar operaciones en tu cuenta. Para producción:
+
+            - Mantén `ALPACA_PAPER_TRADE=true` hasta verificar la configuración
+            - Trata la URL pública como un secreto; no la compartas
+            - Considera poner el servicio detrás de un proxy con autenticación
+
+            ## Licencia y atribución
+
+            Alpaca MCP Server se publica bajo [Licencia MIT](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) por Alpaca Securities LLC. Esta plantilla de Zeabur reempaqueta la imagen Docker original y no es un producto oficial de Alpaca.
+    id-ID:
+        description: Server MCP (Model Context Protocol) remote untuk Alpaca Trading API — perdagangkan saham, opsi, dan kripto dari Claude, ChatGPT, atau klien AI apa pun yang mendukung MCP melalui HTTPS.
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: Domain Publik
+              description: Domain publik untuk menghubungkan klien AI ke server MCP. Tambahkan /mcp di akhir URL saat ditambahkan ke Claude atau ChatGPT.
+        readme: |
+            # Alpaca MCP Server di Zeabur
+
+            Server [Model Context Protocol](https://modelcontextprotocol.io/) remote untuk [Alpaca](https://alpaca.markets/) Trading API. Setelah di-deploy, Anda bisa menambahkan server ini sebagai custom connector di Claude (web/desktop/mobile) atau ChatGPT untuk memperdagangkan saham, opsi, dan kripto serta melakukan analisis pasar via chat bahasa natural.
+
+            Proyek asal: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — Lisensi MIT.
+
+            ## 1. Dapatkan API key Alpaca
+
+            1. Daftar di [alpaca.markets](https://alpaca.markets/)
+            2. Buka [Paper Trading dashboard](https://app.alpaca.markets/paper/dashboard/overview) (disarankan untuk pengujian)
+            3. Buat pasangan key di *API Keys* → *Generate New Key*
+            4. Saat deploy template, salin `API Key ID` ke `ALPACA_API_KEY` dan `Secret Key` ke `ALPACA_SECRET_KEY`
+
+            > Untuk trading dengan uang sungguhan: ganti ke *Live*, buat key live, lalu setelah deploy ubah `ALPACA_PAPER_TRADE=false`.
+
+            ## 2. Deploy
+
+            Klik *Deploy*, isi `ALPACA_API_KEY` dan `ALPACA_SECRET_KEY`, lalu pilih domain publik. Zeabur menyediakan subdomain `.zeabur.app` gratis atau Anda bisa menggunakan domain sendiri.
+
+            ## 3. Hubungkan klien AI
+
+            Endpoint MCP Anda adalah `https://<domain-anda>/mcp`.
+
+            **Claude (web, desktop, mobile):**
+            1. Settings → Connectors → *Add custom connector*
+            2. Name: `Alpaca`, URL: `https://<domain-anda>/mcp`
+            3. Simpan dan aktifkan connector di chat
+
+            **ChatGPT:**
+            1. Settings → Connectors → *New connector*
+            2. URL: `https://<domain-anda>/mcp`, transport: `Streamable HTTP`
+
+            ## Konfigurasi
+
+            | Variabel | Default | Kegunaan |
+            |---|---|---|
+            | `ALPACA_API_KEY` | — | Wajib. ID API key Alpaca |
+            | `ALPACA_SECRET_KEY` | — | Wajib. Secret API Alpaca |
+            | `ALPACA_PAPER_TRADE` | `true` | Set `false` untuk trading uang sungguhan |
+
+            Lanjutan: setelah deploy, Anda dapat menambahkan `ALPACA_TOOLSETS` di tab *Variables* — daftar dipisah koma (mis. `account,positions,orders`) yang membatasi keluarga tool yang server MCP ekspos ke klien AI.
+
+            ## Peringatan keamanan
+
+            Deployment ini menempatkan kredensial trading Alpaca di belakang endpoint HTTPS tanpa autentikasi bawaan — siapa pun yang punya URL bisa melakukan trading di akun Anda. Untuk produksi:
+
+            - Pertahankan `ALPACA_PAPER_TRADE=true` sampai konfigurasi terverifikasi
+            - Perlakukan URL publik sebagai rahasia; jangan dibagikan
+            - Pertimbangkan menempatkan service di belakang reverse proxy berautentikasi
+
+            ## Lisensi & atribusi
+
+            Alpaca MCP Server dilisensikan di bawah [MIT License](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) oleh Alpaca Securities LLC. Template Zeabur ini mengemas ulang build Docker hulu dan bukan produk resmi Alpaca.
+    ja-JP:
+        description: Alpaca Trading API のリモート MCP（Model Context Protocol）サーバー — Claude、ChatGPT などの MCP 対応 AI クライアントから HTTPS 経由で株式・オプション・暗号資産を取引できます。
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: 公開ドメイン
+              description: AI クライアントから接続する公開ドメイン。Claude や ChatGPT に追加するときは末尾に /mcp を付けてください。
+        readme: |
+            # Zeabur で Alpaca MCP Server をデプロイ
+
+            [Alpaca](https://alpaca.markets/) Trading API のリモート [Model Context Protocol](https://modelcontextprotocol.io/) サーバーです。デプロイ後、Claude（Web/デスクトップ/モバイル）や ChatGPT にカスタムコネクタとして追加し、自然言語で米国株・オプション・暗号資産の取引や市場分析が行えます。
+
+            元プロジェクト：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT ライセンス）。
+
+            ## 1. Alpaca API キーを取得
+
+            1. [alpaca.markets](https://alpaca.markets/) でサインアップ
+            2. [Paper Trading ダッシュボード](https://app.alpaca.markets/paper/dashboard/overview)を開く（まずはペーパー口座での検証を推奨）
+            3. *API Keys* → *Generate New Key* でキーペアを発行
+            4. テンプレートをデプロイする際に、`API Key ID` を `ALPACA_API_KEY` に、`Secret Key` を `ALPACA_SECRET_KEY` に入力
+
+            > 実資金で取引する場合：*Live* に切り替えて live キーを発行し、デプロイ後に `ALPACA_PAPER_TRADE=false` に変更してください。
+
+            ## 2. デプロイ
+
+            *Deploy* をクリックし、`ALPACA_API_KEY` と `ALPACA_SECRET_KEY` を入力して公開ドメインを選びます。Zeabur が無料の `.zeabur.app` サブドメインを提供しますが、独自ドメインも利用できます。
+
+            ## 3. AI クライアントと接続
+
+            MCP エンドポイントは `https://<your-domain>/mcp` です。
+
+            **Claude（Web、デスクトップ、モバイル）：**
+            1. 設定 → Connectors → *Add custom connector*
+            2. 名前：`Alpaca`、URL：`https://<your-domain>/mcp`
+            3. 保存し、チャット内でコネクタを有効化
+
+            **ChatGPT：**
+            1. 設定 → Connectors → *New connector*
+            2. URL：`https://<your-domain>/mcp`、トランスポート：`Streamable HTTP`
+
+            ## 設定
+
+            | 変数 | デフォルト | 用途 |
+            |---|---|---|
+            | `ALPACA_API_KEY` | — | 必須。Alpaca API key ID |
+            | `ALPACA_SECRET_KEY` | — | 必須。Alpaca API secret |
+            | `ALPACA_PAPER_TRADE` | `true` | `false` にするとライブ（実資金）取引が有効 |
+
+            応用：デプロイ後に *Variables* で `ALPACA_TOOLSETS` を追加できます。カンマ区切り（例：`account,positions,orders`）で、MCP サーバーが AI クライアントに公開するツールファミリを制限します。
+
+            ## セキュリティ警告
+
+            このデプロイは Alpaca のトレーディング認証情報を、組み込み認証のない HTTPS エンドポイントの背後に配置します。URL を知っている人は誰でもあなたの口座で取引を発注できます。本番利用では：
+
+            - 動作確認が完了するまで `ALPACA_PAPER_TRADE=true` を維持
+            - 公開 URL は秘密として扱い、共有しない
+            - 認証付きのリバースプロキシを前段に置く検討を
+
+            ## ライセンスとクレジット
+
+            Alpaca MCP Server は Alpaca Securities LLC が公開する [MIT ライセンス](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)です。この Zeabur テンプレートは上流の Docker イメージを再パッケージしたもので、Alpaca 公式製品ではありません。
+    zh-CN:
+        description: Alpaca 交易 API 的远程 MCP（Model Context Protocol）服务器 — 从 Claude、ChatGPT 或任何支持 MCP 的 AI 客户端，通过 HTTPS 交易股票、期权与加密货币。
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: 公开域名
+              description: 连接 AI 客户端用的公开域名。加入 Claude 或 ChatGPT 时记得在网址后面加上 /mcp。
+        readme: |
+            # 在 Zeabur 部署 Alpaca MCP Server
+
+            [Alpaca](https://alpaca.markets/) 交易 API 的远程 [Model Context Protocol](https://modelcontextprotocol.io/) 服务器。部署完成后，可以在 Claude（网页/桌面/手机）或 ChatGPT 添加自定义连接器，用自然语言交易美股、期权、加密货币与进行市场分析。
+
+            原始项目：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT 许可）。
+
+            ## 1. 获取 Alpaca API 密钥
+
+            1. 在 [alpaca.markets](https://alpaca.markets/) 注册
+            2. 打开 [Paper Trading 控制台](https://app.alpaca.markets/paper/dashboard/overview)（建议先用模拟账户测试)
+            3. 在 *API Keys* → *Generate New Key* 生成密钥
+            4. 部署模板时，把 `API Key ID` 填进 `ALPACA_API_KEY`、`Secret Key` 填进 `ALPACA_SECRET_KEY`
+
+            > 想用真钱交易：切到 *Live* 界面、生成 live 密钥，部署后再把 `ALPACA_PAPER_TRADE` 改成 `false`。
+
+            ## 2. 部署
+
+            点 *Deploy*，填入 `ALPACA_API_KEY` 和 `ALPACA_SECRET_KEY`，选一个公开域名。Zeabur 会提供免费的 `.zeabur.app` 子域名，也可以绑自己的域名。
+
+            ## 3. 接入 AI 客户端
+
+            MCP 端点是 `https://<你的域名>/mcp`。
+
+            **Claude（网页、桌面、手机）：**
+            1. 设置 → Connectors → *Add custom connector*
+            2. 名称填 `Alpaca`、URL 填 `https://<你的域名>/mcp`
+            3. 保存后在对话中打开此连接器
+
+            **ChatGPT：**
+            1. 设置 → Connectors → *New connector*
+            2. URL 填 `https://<你的域名>/mcp`，传输方式选 `Streamable HTTP`
+
+            ## 配置
+
+            | 变量 | 默认值 | 用途 |
+            |---|---|---|
+            | `ALPACA_API_KEY` | — | 必填。Alpaca API key ID |
+            | `ALPACA_SECRET_KEY` | — | 必填。Alpaca API secret |
+            | `ALPACA_PAPER_TRADE` | `true` | 设成 `false` 启用真钱交易 |
+
+            进阶：部署后可在 *Variables* 添加 `ALPACA_TOOLSETS`，逗号分隔（如 `account,positions,orders`），限制 MCP 服务器暴露给 AI 客户端的工具家族。
+
+            ## 安全警告
+
+            这个部署会把你的 Alpaca 交易密钥放在一个没有内置验证的 HTTPS 端点后面 —— 任何拿到 URL 的人都能对你的账户下单。实际使用时：
+
+            - 在验证部署配置前，保持 `ALPACA_PAPER_TRADE=true`
+            - 把这个公开 URL 当成机密处理，不要分享
+            - 考虑在前面加一层有验证的反向代理
+
+            ## 许可与致谢
+
+            Alpaca MCP Server 采用 [MIT 许可](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)，由 Alpaca Securities LLC 发布。此 Zeabur 模板只是把上游的 Docker 镜像重新打包，并非 Alpaca 官方产品。
+    zh-TW:
+        description: Alpaca 交易 API 的遠端 MCP（Model Context Protocol）伺服器 — 從 Claude、ChatGPT 或任何支援 MCP 的 AI 客戶端，透過 HTTPS 交易股票、選擇權與加密貨幣。
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: 公開網域
+              description: 連線 AI 客戶端用的公開網域。加入 Claude 或 ChatGPT 時記得在網址後面加上 /mcp。
+        readme: |
+            # 在 Zeabur 部署 Alpaca MCP Server
+
+            [Alpaca](https://alpaca.markets/) 交易 API 的遠端 [Model Context Protocol](https://modelcontextprotocol.io/) 伺服器。部署完成後，可以在 Claude（網頁/桌面/手機）或 ChatGPT 加入自訂連接器，用自然語言交易美股、選擇權、加密貨幣與進行市場分析。
+
+            原始專案：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT 授權）。
+
+            ## 1. 取得 Alpaca API 金鑰
+
+            1. 在 [alpaca.markets](https://alpaca.markets/) 註冊
+            2. 開啟 [Paper Trading 儀表板](https://app.alpaca.markets/paper/dashboard/overview)（建議先用模擬帳戶測試)
+            3. 在 *API Keys* → *Generate New Key* 產生金鑰
+            4. 部署這個模板時，把 `API Key ID` 填進 `ALPACA_API_KEY`、`Secret Key` 填進 `ALPACA_SECRET_KEY`
+
+            > 想用真錢交易：切到 *Live* 介面、產生 live 金鑰，部署後再把 `ALPACA_PAPER_TRADE` 改成 `false`。
+
+            ## 2. 部署
+
+            點 *Deploy*，填入 `ALPACA_API_KEY` 和 `ALPACA_SECRET_KEY`，選一個公開網域。Zeabur 會提供免費的 `.zeabur.app` 子網域，也可以綁自己的網域。
+
+            ## 3. 串接 AI 客戶端
+
+            MCP 端點是 `https://<你的網域>/mcp`。
+
+            **Claude（網頁、桌面、手機）：**
+            1. 設定 → Connectors → *Add custom connector*
+            2. 名稱填 `Alpaca`、URL 填 `https://<你的網域>/mcp`
+            3. 存檔後在對話中開啟此連接器
+
+            **ChatGPT：**
+            1. 設定 → Connectors → *New connector*
+            2. URL 填 `https://<你的網域>/mcp`，傳輸方式選 `Streamable HTTP`
+
+            ## 設定
+
+            | 變數 | 預設值 | 用途 |
+            |---|---|---|
+            | `ALPACA_API_KEY` | — | 必填。Alpaca API key ID |
+            | `ALPACA_SECRET_KEY` | — | 必填。Alpaca API secret |
+            | `ALPACA_PAPER_TRADE` | `true` | 設成 `false` 啟用真錢交易 |
+
+            進階：部署後可在 *Variables* 加上 `ALPACA_TOOLSETS`，逗號分隔（例如 `account,positions,orders`），限制 MCP 伺服器暴露給 AI 客戶端的工具家族。
+
+            ## 安全警告
+
+            這個部署會把你的 Alpaca 交易金鑰擺在一個沒有內建驗證的 HTTPS 端點後面 —— 任何拿到網址的人都能對你的帳戶下單。實際使用時：
+
+            - 在驗證部署設定前，保持 `ALPACA_PAPER_TRADE=true`
+            - 把這個公開網址當成機密處理，不要分享
+            - 考慮在前面加一層有驗證的反向代理
+
+            ## 授權與致謝
+
+            Alpaca MCP Server 採用 [MIT 授權](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)，由 Alpaca Securities LLC 釋出。這個 Zeabur 模板只是把上游的 Docker 映像檔重新打包，並非 Alpaca 官方產品。
