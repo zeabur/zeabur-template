@@ -31,9 +31,16 @@ spec:
 
         > To trade with real money, switch the dashboard to *Live*, generate live keys, and set `ALPACA_PAPER_TRADE=false` after deployment.
 
-        ## 2. Deploy
+        ## 2. Deploy and configure
 
-        Click *Deploy* and fill in `ALPACA_API_KEY` and `ALPACA_SECRET_KEY`. Pick a public domain — Zeabur gives you a free `.zeabur.app` subdomain or you can bind your own.
+        Click *Deploy* and pick a public domain — Zeabur gives you a free `.zeabur.app` subdomain or you can bind your own.
+
+        After the service starts, open the service URL in your browser and log in with the launcher password from the **Instructions** tab. The web launcher lets you:
+
+        - Set or update `ALPACA_API_KEY` and `ALPACA_SECRET_KEY`
+        - Toggle `ALPACA_PAPER_TRADE`
+        - Restart the internal MCP server
+        - Copy the MCP endpoint or a ready-to-paste setup prompt for Claude Code / Codex
 
         ## 3. Connect your AI client
 
@@ -52,9 +59,10 @@ spec:
 
         | Variable | Default | Purpose |
         |---|---|---|
-        | `ALPACA_API_KEY` | — | Required. Alpaca API key ID |
-        | `ALPACA_SECRET_KEY` | — | Required. Alpaca API secret |
+        | `ALPACA_API_KEY` | — | Optional at deploy time. Alpaca API key ID, configurable in the launcher |
+        | `ALPACA_SECRET_KEY` | — | Optional at deploy time. Alpaca API secret, configurable in the launcher |
         | `ALPACA_PAPER_TRADE` | `true` | Set to `false` to enable live (real-money) trading |
+        | `WEB_LAUNCHER_PASSWORD` | Auto | Password for the web launcher login |
 
         Advanced: you can also set `ALPACA_TOOLSETS` post-deploy under *Variables* — a comma-separated list (e.g. `account,positions,orders`) that restricts which tool families the MCP server exposes to the AI client.
 
@@ -77,10 +85,529 @@ spec:
             id: alpaca-mcp-server
             source:
                 image: docker.io/zeabur/alpaca-mcp-server:2.0.1
+                command:
+                    - /bin/sh
+                    - -c
+                    - /opt/startup.sh
             ports:
                 - id: web
                   port: 8000
                   type: HTTP
+            volumes:
+                - id: data
+                  dir: /data
+            configs:
+                - path: /opt/startup.sh
+                  permission: 493
+                  template: |
+                    #!/bin/sh
+                    mkdir -p /data
+                    exec python /opt/launcher.py
+                - path: /opt/launcher.py
+                  template: |
+                    import hashlib
+                    import hmac
+                    import http.client
+                    import http.cookies
+                    import json
+                    import os
+                    import secrets
+                    import signal
+                    import subprocess
+                    import threading
+                    import time
+                    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+                    from pathlib import Path
+                    from urllib.parse import parse_qs, urlsplit
+
+                    PUBLIC_PORT = int(os.environ.get("PORT", "8000"))
+                    MCP_PORT = int(os.environ.get("MCP_INTERNAL_PORT", "8001"))
+                    CONFIG_PATH = Path("/data/alpaca-launcher.json")
+                    LANDING_PATH = Path("/opt/landing.html")
+                    TOKEN = os.environ.get("WEB_LAUNCHER_TOKEN", "")
+                    SECRET = secrets.token_hex(32)
+                    mcp_process = None
+                    process_lock = threading.Lock()
+
+                    def load_config():
+                        config = {
+                            "ALPACA_API_KEY": os.environ.get("ALPACA_API_KEY", ""),
+                            "ALPACA_SECRET_KEY": os.environ.get("ALPACA_SECRET_KEY", ""),
+                            "ALPACA_PAPER_TRADE": os.environ.get("ALPACA_PAPER_TRADE", "true"),
+                        }
+                        if CONFIG_PATH.exists():
+                            try:
+                                saved = json.loads(CONFIG_PATH.read_text())
+                                for key in config:
+                                    if saved.get(key) not in (None, ""):
+                                        config[key] = str(saved[key])
+                            except Exception:
+                                pass
+                        config["ALPACA_PAPER_TRADE"] = "true" if str(config.get("ALPACA_PAPER_TRADE", "true")).lower() == "true" else "false"
+                        return config
+
+                    def save_config(config):
+                        CONFIG_PATH.write_text(json.dumps(config, indent=2))
+                        CONFIG_PATH.chmod(0o600)
+
+                    def public_domain(headers):
+                        configured = os.environ.get("PUBLIC_DOMAIN", "").strip()
+                        if configured:
+                            if "://" in configured:
+                                configured = configured.split("://", 1)[1]
+                            configured = configured.strip("/")
+                            if "." not in configured and ":" not in configured:
+                                configured = configured + ".zeabur.app"
+                            return configured
+                        return headers.get("x-forwarded-host") or headers.get("host") or ""
+
+                    def mask(value):
+                        if not value:
+                            return ""
+                        if len(value) <= 8:
+                            return "*" * len(value)
+                        return value[:4] + "*" * (len(value) - 8) + value[-4:]
+
+                    def session_value():
+                        return hmac.new(SECRET.encode(), TOKEN.encode(), hashlib.sha256).hexdigest()
+
+                    def parse_cookies(header):
+                        cookie = http.cookies.SimpleCookie()
+                        try:
+                            cookie.load(header or "")
+                        except Exception:
+                            return {}
+                        return {key: morsel.value for key, morsel in cookie.items()}
+
+                    def authorized(handler):
+                        if not TOKEN:
+                            return True
+                        return parse_cookies(handler.headers.get("cookie")).get("session") == session_value()
+
+                    def start_mcp():
+                        global mcp_process
+                        with process_lock:
+                            if mcp_process and mcp_process.poll() is None:
+                                return
+                            config = load_config()
+                            env = os.environ.copy()
+                            env.update(config)
+                            env["PORT"] = str(MCP_PORT)
+                            cmd = [
+                                "alpaca-mcp-server",
+                                "--transport",
+                                "streamable-http",
+                                "--host",
+                                "127.0.0.1",
+                                "--port",
+                                str(MCP_PORT),
+                            ]
+                            mcp_process = subprocess.Popen(cmd, env=env)
+                            print("[launcher] started Alpaca MCP server on 127.0.0.1:%s" % MCP_PORT, flush=True)
+
+                    def restart_mcp():
+                        global mcp_process
+                        with process_lock:
+                            if mcp_process and mcp_process.poll() is None:
+                                mcp_process.terminate()
+                                try:
+                                    mcp_process.wait(timeout=8)
+                                except subprocess.TimeoutExpired:
+                                    mcp_process.kill()
+                                    mcp_process.wait(timeout=3)
+                            mcp_process = None
+                        start_mcp()
+
+                    def monitor_mcp():
+                        while True:
+                            time.sleep(3)
+                            if mcp_process is None or mcp_process.poll() is not None:
+                                start_mcp()
+
+                    class Handler(BaseHTTPRequestHandler):
+                        protocol_version = "HTTP/1.1"
+
+                        def send_json(self, status, payload, headers=None):
+                            body = json.dumps(payload).encode()
+                            self.send_response(status)
+                            self.send_header("Content-Type", "application/json")
+                            self.send_header("Content-Length", str(len(body)))
+                            for key, value in (headers or {}).items():
+                                self.send_header(key, value)
+                            self.end_headers()
+                            self.wfile.write(body)
+
+                        def read_json(self):
+                            length = int(self.headers.get("content-length", "0"))
+                            if length <= 0:
+                                return {}
+                            return json.loads(self.rfile.read(length))
+
+                        def do_GET(self):
+                            parsed = urlsplit(self.path)
+                            path = parsed.path
+                            if path == "/":
+                                query_token = parse_qs(parsed.query).get("token", [""])[0]
+                                if query_token and query_token == TOKEN:
+                                    self.send_response(302)
+                                    self.send_header("Location", "/")
+                                    self.send_header("Set-Cookie", "session=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400" % session_value())
+                                    self.send_header("Connection", "close")
+                                    self.end_headers()
+                                    self.close_connection = True
+                                    return
+                                html = LANDING_PATH.read_text()
+                                body = html.encode()
+                                self.send_response(200)
+                                self.send_header("Content-Type", "text/html; charset=utf-8")
+                                self.send_header("Content-Length", str(len(body)))
+                                self.end_headers()
+                                self.wfile.write(body)
+                                return
+                            if path == "/status":
+                                if not authorized(self):
+                                    self.send_json(401, {"ok": False})
+                                    return
+                                config = load_config()
+                                domain = public_domain(self.headers)
+                                scheme = self.headers.get("x-forwarded-proto", "https")
+                                endpoint = ("%s://%s/mcp" % (scheme, domain)) if domain else "/mcp"
+                                running = bool(mcp_process and mcp_process.poll() is None)
+                                self.send_json(200, {
+                                    "ok": True,
+                                    "running": running,
+                                    "domain": domain,
+                                    "endpoint": endpoint,
+                                    "apiKeyMasked": mask(config.get("ALPACA_API_KEY", "")),
+                                    "hasSecret": bool(config.get("ALPACA_SECRET_KEY", "")),
+                                    "paperTrade": config.get("ALPACA_PAPER_TRADE", "true"),
+                                })
+                                return
+                            self.proxy_to_mcp()
+
+                        def do_HEAD(self):
+                            path = urlsplit(self.path).path
+                            if path == "/":
+                                self.send_response(200)
+                                self.send_header("Content-Type", "text/html; charset=utf-8")
+                                self.send_header("Connection", "close")
+                                self.end_headers()
+                                self.close_connection = True
+                                return
+                            self.proxy_to_mcp()
+
+                        def do_POST(self):
+                            path = urlsplit(self.path).path
+                            if path == "/auth":
+                                payload = self.read_json()
+                                if payload.get("token") == TOKEN:
+                                    self.send_json(200, {"ok": True}, {
+                                        "Set-Cookie": "session=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400" % session_value()
+                                    })
+                                else:
+                                    self.send_json(200, {"ok": False})
+                                return
+                            if path == "/config":
+                                if not authorized(self):
+                                    self.send_json(401, {"ok": False})
+                                    return
+                                payload = self.read_json()
+                                current = load_config()
+                                if payload.get("apiKey"):
+                                    current["ALPACA_API_KEY"] = str(payload["apiKey"]).strip()
+                                if payload.get("secretKey"):
+                                    current["ALPACA_SECRET_KEY"] = str(payload["secretKey"]).strip()
+                                current["ALPACA_PAPER_TRADE"] = "true" if payload.get("paperTrade") in (True, "true", "1", 1) else "false"
+                                save_config(current)
+                                restart_mcp()
+                                self.send_json(200, {"ok": True})
+                                return
+                            self.proxy_to_mcp()
+
+                        def do_DELETE(self):
+                            self.proxy_to_mcp()
+
+                        def do_OPTIONS(self):
+                            self.proxy_to_mcp()
+
+                        def proxy_to_mcp(self):
+                            start_mcp()
+                            body = None
+                            if self.command in ("POST", "PUT", "PATCH"):
+                                length = int(self.headers.get("content-length", "0"))
+                                body = self.rfile.read(length) if length else None
+                            headers = {key: value for key, value in self.headers.items() if key.lower() not in ("host", "content-length")}
+                            conn = http.client.HTTPConnection("127.0.0.1", MCP_PORT, timeout=300)
+                            try:
+                                conn.request(self.command, self.path, body=body, headers=headers)
+                                resp = conn.getresponse()
+                                self.send_response(resp.status, resp.reason)
+                                excluded = {"transfer-encoding", "connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers", "upgrade"}
+                                for key, value in resp.getheaders():
+                                    if key.lower() not in excluded:
+                                        self.send_header(key, value)
+                                self.send_header("Connection", "close")
+                                self.end_headers()
+                                self.close_connection = True
+                                while True:
+                                    chunk = resp.read(8192)
+                                    if not chunk:
+                                        break
+                                    self.wfile.write(chunk)
+                                    self.wfile.flush()
+                            except Exception as exc:
+                                message = ("MCP server starting: %s" % exc).encode()
+                                self.send_response(502)
+                                self.send_header("Content-Type", "text/plain")
+                                self.send_header("Content-Length", str(len(message)))
+                                self.end_headers()
+                                self.wfile.write(message)
+                            finally:
+                                conn.close()
+
+                        def log_message(self, fmt, *args):
+                            print("[launcher] " + fmt % args, flush=True)
+
+                    def shutdown(signum, frame):
+                        if mcp_process and mcp_process.poll() is None:
+                            mcp_process.terminate()
+                        raise SystemExit(0)
+
+                    signal.signal(signal.SIGTERM, shutdown)
+                    signal.signal(signal.SIGINT, shutdown)
+                    start_mcp()
+                    threading.Thread(target=monitor_mcp, daemon=True).start()
+                    server = ThreadingHTTPServer(("0.0.0.0", PUBLIC_PORT), Handler)
+                    print("[launcher] ready on 0.0.0.0:%s" % PUBLIC_PORT, flush=True)
+                    server.serve_forever()
+                - path: /opt/landing.html
+                  template: |
+                    <!doctype html>
+                    <html lang="en">
+                    <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <title>Alpaca MCP Server</title>
+                    <link rel="icon" href="https://avatars.githubusercontent.com/u/30398729?v=4&s=64">
+                    <link rel="apple-touch-icon" href="https://avatars.githubusercontent.com/u/30398729?v=4&s=180">
+                    <style>
+                      * { box-sizing: border-box; }
+                      body { margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #101418; color: #eef3f2; }
+                      main { width: min(960px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0; }
+                      header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+                      .logo { width: 56px; height: 56px; border-radius: 12px; }
+                      h1 { margin: 0; font-size: 28px; line-height: 1.15; }
+                      .sub { margin: 6px 0 0; color: #9fb0ad; font-size: 14px; }
+                      .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 18px; align-items: start; }
+                      .panel { background: #171d22; border: 1px solid #2b363b; border-radius: 8px; padding: 20px; }
+                      .panel h2 { margin: 0 0 14px; font-size: 16px; }
+                      label { display: block; margin: 14px 0 6px; color: #c8d3d0; font-size: 13px; font-weight: 600; }
+                      input { width: 100%; height: 42px; border: 1px solid #344147; border-radius: 6px; background: #0f1418; color: #fff; padding: 0 12px; font-size: 14px; outline: none; }
+                      input:focus { border-color: #53c58b; }
+                      .hint { margin: 6px 0 0; color: #7f8d8a; font-size: 12px; line-height: 1.45; }
+                      .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
+                      .switch { display: inline-flex; align-items: center; gap: 10px; color: #c8d3d0; font-size: 13px; cursor: pointer; }
+                      .switch input { width: 18px; height: 18px; accent-color: #53c58b; }
+                      button, .button { border: 0; border-radius: 6px; background: #53c58b; color: #07110c; font-weight: 700; height: 42px; padding: 0 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+                      button.secondary { background: #263238; color: #e7efed; border: 1px solid #344147; }
+                      button:disabled { opacity: .55; cursor: not-allowed; }
+                      .copy { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+                      .copy input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+                      .split { position: relative; display: flex; height: 42px; width: 100%; }
+                      .split button { height: 42px; }
+                      .split-main { flex: 1; border-radius: 6px 0 0 6px; }
+                      .split-toggle { width: 40px; border-left: 1px solid rgba(7, 17, 12, .25); border-radius: 0 6px 6px 0; padding: 0; }
+                      .split-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 190px; padding: 6px; border: 1px solid #344147; border-radius: 6px; background: #171d22; box-shadow: 0 12px 28px rgba(0,0,0,.28); }
+                      .split-menu button { width: 100%; height: 36px; justify-content: flex-start; background: transparent; color: #e7efed; font-weight: 600; }
+                      .split-menu button:hover { background: #263238; }
+                      .status { display: inline-flex; align-items: center; gap: 8px; color: #9fb0ad; font-size: 13px; }
+                      .dot { width: 8px; height: 8px; border-radius: 50%; background: #8b9490; }
+                      .dot.on { background: #53c58b; }
+                      .warn { margin-top: 14px; background: #2b2113; color: #f3d49f; border: 1px solid #6f5325; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.45; }
+                      .steps { margin: 0; padding-left: 20px; color: #c8d3d0; font-size: 13px; line-height: 1.7; }
+                      .hidden { display: none; }
+                      .toast { min-height: 20px; margin-top: 12px; color: #80e1ad; font-size: 13px; }
+                      @media (max-width: 760px) { main { padding: 24px 0; } .grid { grid-template-columns: 1fr; } .row { align-items: stretch; flex-direction: column; } }
+                    </style>
+                    </head>
+                    <body>
+                    <main>
+                      <header>
+                        <img class="logo" src="https://avatars.githubusercontent.com/u/30398729?v=4&s=400" alt="Alpaca">
+                        <div>
+                          <h1>Alpaca MCP Server</h1>
+                          <p class="sub">Configure credentials, trading mode, and copy your MCP connector URL.</p>
+                        </div>
+                      </header>
+
+                      <section id="login" class="panel">
+                        <h2>Launcher Login</h2>
+                        <label for="token">Access Token</label>
+                        <input id="token" type="password" autocomplete="current-password" placeholder="Use the Open Alpaca Launcher link from Zeabur Instructions">
+                        <div class="row">
+                          <p id="login-error" class="hint"></p>
+                          <button onclick="login()">Login</button>
+                        </div>
+                      </section>
+
+                      <section id="app" class="grid hidden">
+                        <div class="panel">
+                          <div class="row" style="margin-top:0">
+                            <h2>Alpaca Settings</h2>
+                            <span class="status"><span id="dot" class="dot"></span><span id="runtime">Checking...</span></span>
+                          </div>
+                          <label for="apiKey">Alpaca API Key</label>
+                          <input id="apiKey" placeholder="AKXXXXXXXXXXXXXXXXXX" autocomplete="off">
+                          <p class="hint">Leave blank to keep the current key. Current: <span id="apiMasked">not set</span></p>
+
+                          <label for="secretKey">Alpaca Secret Key</label>
+                          <input id="secretKey" type="password" placeholder="Leave blank to keep current secret" autocomplete="off">
+                          <p class="hint">Current secret: <span id="secretState">not set</span></p>
+
+                          <div class="row">
+                            <label class="switch" for="paperTrade">
+                              <input id="paperTrade" type="checkbox" checked>
+                              Paper trading
+                            </label>
+                            <button id="saveBtn" onclick="saveConfig()">Save & Restart MCP Server</button>
+                          </div>
+                          <p class="hint">Disable paper trading only after switching Alpaca to live keys. Live mode can place real orders.</p>
+                          <div class="warn">Anyone with the MCP URL can send trading requests. Keep this service URL private or put an authenticating proxy in front of it for production use.</div>
+                          <p id="toast" class="toast"></p>
+                        </div>
+
+                        <aside class="panel">
+                          <h2>Connect Client</h2>
+                          <label>MCP Endpoint</label>
+                          <div class="copy">
+                            <input id="endpoint" readonly value="/mcp">
+                            <div class="split">
+                              <button class="split-main" onclick="copySetupPrompt()">Copy Setup Prompt</button>
+                              <button class="split-toggle" onclick="toggleCopyMenu()" aria-label="More copy options">▾</button>
+                              <div id="copyMenu" class="split-menu hidden">
+                                <button onclick="copyEndpoint()">Copy MCP Endpoint</button>
+                              </div>
+                            </div>
+                          </div>
+                          <p class="hint">Paste the setup prompt into Claude Code, Codex, or another coding agent to configure the connector. Use the menu to copy only the raw endpoint.</p>
+                          <p id="copyToast" class="toast"></p>
+
+                          <h2 style="margin-top:22px">Claude</h2>
+                          <ol class="steps">
+                            <li>Open Settings, then Connectors.</li>
+                            <li>Add a custom connector named Alpaca.</li>
+                            <li>Paste the MCP endpoint and enable it in a chat.</li>
+                          </ol>
+
+                          <h2 style="margin-top:22px">ChatGPT</h2>
+                          <ol class="steps">
+                            <li>Open Settings, then Connectors.</li>
+                            <li>Create a connector with Streamable HTTP transport.</li>
+                            <li>Paste the MCP endpoint.</li>
+                          </ol>
+                        </aside>
+                      </section>
+                    </main>
+                    <script>
+                      async function login() {
+                        const token = document.getElementById('token').value;
+                        const res = await fetch('/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+                        const data = await res.json();
+                        if (!data.ok) {
+                          document.getElementById('login-error').textContent = 'Incorrect token';
+                          return;
+                        }
+                        showApp();
+                      }
+                      function showApp() {
+                        document.getElementById('login').classList.add('hidden');
+                        document.getElementById('app').classList.remove('hidden');
+                        refreshStatus();
+                      }
+                      async function bootstrap() {
+                        const res = await fetch('/status');
+                        if (res.status === 200) showApp();
+                      }
+                      async function refreshStatus() {
+                        const res = await fetch('/status');
+                        if (res.status === 401) return;
+                        const data = await res.json();
+                        document.getElementById('dot').classList.toggle('on', data.running);
+                        document.getElementById('runtime').textContent = data.running ? 'Running' : 'Restarting';
+                        document.getElementById('endpoint').value = data.endpoint || '/mcp';
+                        document.getElementById('apiMasked').textContent = data.apiKeyMasked || 'not set';
+                        document.getElementById('secretState').textContent = data.hasSecret ? 'set' : 'not set';
+                        document.getElementById('paperTrade').checked = data.paperTrade !== 'false';
+                      }
+                      function buildSetupPrompt(endpoint) {
+                        return [
+                          'Configure an MCP connector for this workspace.',
+                          '',
+                          'Name: Alpaca',
+                          'Transport: Streamable HTTP',
+                          'URL: ' + endpoint,
+                          '',
+                          'After configuring it, verify that the Alpaca MCP tools are available.',
+                          'Treat this URL as sensitive because anyone with access to it can send trading requests through the connected Alpaca account.'
+                        ].join('\\n');
+                      }
+                      async function saveConfig() {
+                        const btn = document.getElementById('saveBtn');
+                        btn.disabled = true;
+                        document.getElementById('toast').textContent = 'Saving...';
+                        const payload = {
+                          apiKey: document.getElementById('apiKey').value.trim(),
+                          secretKey: document.getElementById('secretKey').value.trim(),
+                          paperTrade: document.getElementById('paperTrade').checked
+                        };
+                        const res = await fetch('/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        btn.disabled = false;
+                        if (!res.ok) {
+                          document.getElementById('toast').textContent = 'Failed to save settings.';
+                          return;
+                        }
+                        document.getElementById('apiKey').value = '';
+                        document.getElementById('secretKey').value = '';
+                        document.getElementById('toast').textContent = 'Settings saved. MCP server restarted.';
+                        refreshStatus();
+                      }
+                      function copyValue(id) {
+                        const input = document.getElementById(id);
+                        navigator.clipboard.writeText(input.value);
+                      }
+                      function copyText(text) {
+                        navigator.clipboard.writeText(text);
+                      }
+                      function copied(label) {
+                        const el = document.getElementById('copyToast');
+                        el.textContent = label + ' copied.';
+                        setTimeout(() => {
+                          if (el.textContent === label + ' copied.') el.textContent = '';
+                        }, 1600);
+                      }
+                      function copySetupPrompt() {
+                        copyText(buildSetupPrompt(document.getElementById('endpoint').value));
+                        copied('Setup prompt');
+                      }
+                      function copyEndpoint() {
+                        copyValue('endpoint');
+                        document.getElementById('copyMenu').classList.add('hidden');
+                        copied('MCP endpoint');
+                      }
+                      function toggleCopyMenu() {
+                        document.getElementById('copyMenu').classList.toggle('hidden');
+                      }
+                      document.addEventListener('click', e => {
+                        const split = document.querySelector('.split');
+                        if (split && !split.contains(e.target)) {
+                          document.getElementById('copyMenu').classList.add('hidden');
+                        }
+                      });
+                      document.getElementById('token').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+                      bootstrap();
+                    </script>
+                    </body>
+                    </html>
             env:
                 ALPACA_API_KEY:
                     default: ""
@@ -91,11 +618,18 @@ spec:
                 ALPACA_SECRET_KEY:
                     default: ""
                     expose: true
+                WEB_LAUNCHER_TOKEN:
+                    default: ${PASSWORD}
+                    expose: true
                 PORT:
                     default: "8000"
             healthCheck:
                 type: TCP
                 port: web
+            instructions:
+                - type: URL
+                  title: Open Alpaca Launcher
+                  content: ${ZEABUR_WEB_URL}?token=${WEB_LAUNCHER_TOKEN}
           domainKey: PUBLIC_DOMAIN
 localization:
     es-ES:
