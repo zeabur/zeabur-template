@@ -79,9 +79,9 @@ spec:
 
       The 6 env vars above cover the common settings. For anything else — character switch, MCP tools, ASR/TTS provider swap, voice style, etc. — edit `/app/conf/conf.yaml` directly:
 
-      1. Open the service in Zeabur dashboard → **Console** tab
-      2. Run `vi /app/conf/conf.yaml` (or `nano`)
-      3. Save and restart the service
+      1. Open the service in Zeabur dashboard → **Files** tab
+      2. Navigate to `/app/conf/conf.yaml`, click to open it in the in-browser editor, make your changes, and save
+      3. Restart the service
 
       `/app/conf` is a persistent volume — your edits survive restarts. Env vars listed above are re-applied on each boot and **override** the corresponding yaml keys, so leave those keys alone in your edits if you want env vars to win.
 
@@ -116,7 +116,7 @@ spec:
                 # Always re-apply env-var-driven keys so changes to LLM/ASR/TTS settings via
                 # Zeabur env vars take effect on restart. Other yaml keys (character, MCP,
                 # provider switches, etc.) are left untouched and may be edited via
-                # `vi /app/conf/conf.yaml` from the service console — edits persist.
+                # /app/conf/conf.yaml from the Files tab — edits persist.
                 /app/.venv/bin/python - <<'PY'
                 import os
                 from ruamel.yaml import YAML
@@ -283,9 +283,9 @@ localization:
 
       上面 6 個 env var 涵蓋常用設定。其他想動的（換 Live2D 角色、開關 MCP 工具、切 ASR/TTS 供應商、調語音風格等）直接編 `/app/conf/conf.yaml`：
 
-      1. Zeabur dashboard 開該 service → **Console** 分頁
-      2. 執行 `vi /app/conf/conf.yaml`（或 `nano`）
-      3. 存檔後重啟 service
+      1. Zeabur dashboard 開該 service → **檔案** 分頁
+      2. 找到 `/app/conf/conf.yaml`，點開直接在瀏覽器內編輯、改完存檔
+      3. 重啟 service
 
       `/app/conf` 是持久化 volume — 編輯後重啟不會掉。上面那 6 個 env var 每次開機都會**覆蓋**對應的 yaml key，所以你如果想讓 env var 為準，這些 key 不用在 yaml 動。
 
@@ -363,9 +363,9 @@ localization:
 
       上面 6 个 env var 涵盖常用设置。其他想动的（换 Live2D 角色、开关 MCP 工具、切 ASR/TTS 供应商、调语音风格等）直接编辑 `/app/conf/conf.yaml`：
 
-      1. Zeabur dashboard 打开该 service → **Console** 选项卡
-      2. 执行 `vi /app/conf/conf.yaml`（或 `nano`）
-      3. 保存后重启 service
+      1. Zeabur dashboard 打开该 service → **文件** 选项卡
+      2. 找到 `/app/conf/conf.yaml`，点开直接在浏览器内编辑、改完保存
+      3. 重启 service
 
       `/app/conf` 是持久化 volume — 编辑后重启不会丢失。上面那 6 个 env var 每次开机都会**覆盖**对应的 yaml key，所以你如果想让 env var 为准，这些 key 不用在 yaml 改。
 
@@ -443,9 +443,9 @@ localization:
 
       上記 6 つの env var で一般的な設定はカバーされます。その他の設定（Live2D キャラクター切替、MCP ツール、ASR/TTS プロバイダー切替、音声スタイル等）は `/app/conf/conf.yaml` を直接編集してください：
 
-      1. Zeabur ダッシュボードで該当 service を開く → **Console** タブ
-      2. `vi /app/conf/conf.yaml`（または `nano`）を実行
-      3. 保存後、service を再起動
+      1. Zeabur ダッシュボードで該当 service を開く → **ファイル** タブ
+      2. `/app/conf/conf.yaml` を開き、ブラウザ内エディタで直接編集して保存
+      3. service を再起動
 
       `/app/conf` は永続ボリュームです — 編集内容は再起動しても残ります。上記 6 つの env var は起動のたびに対応する yaml キーを**上書き**するため、env var を優先したい場合はこれらのキーを yaml で触らないでください。
 
@@ -523,9 +523,9 @@ localization:
 
       Las 6 variables de entorno anteriores cubren la configuración común. Para cualquier otra cosa — cambio de personaje, herramientas MCP, intercambio de proveedor ASR/TTS, estilo de voz, etc. — edita `/app/conf/conf.yaml` directamente:
 
-      1. Abre el servicio en el dashboard de Zeabur → pestaña **Console**
-      2. Ejecuta `vi /app/conf/conf.yaml` (o `nano`)
-      3. Guarda y reinicia el servicio
+      1. Abre el servicio en el dashboard de Zeabur → pestaña **Archivos**
+      2. Abre `/app/conf/conf.yaml` con el editor integrado del navegador, edítalo y guárdalo
+      3. Reinicia el servicio
 
       `/app/conf` es un volumen persistente — tus ediciones sobreviven a los reinicios. Las variables de entorno se reaplican en cada arranque y **sobrescriben** las claves yaml correspondientes, así que déjalas tal cual en tus ediciones si quieres que las env vars ganen.
 
@@ -603,9 +603,9 @@ localization:
 
       6 env var di atas mencakup pengaturan umum. Untuk hal lain — ganti karakter, MCP tools, ganti penyedia ASR/TTS, gaya suara, dll. — edit `/app/conf/conf.yaml` langsung:
 
-      1. Buka service di dashboard Zeabur → tab **Console**
-      2. Jalankan `vi /app/conf/conf.yaml` (atau `nano`)
-      3. Simpan dan restart service
+      1. Buka service di dashboard Zeabur → tab **Files**
+      2. Buka `/app/conf/conf.yaml` di editor browser bawaan, edit, lalu simpan
+      3. Restart service
 
       `/app/conf` adalah persistent volume — edit Anda bertahan setelah restart. Env var di atas diterapkan ulang setiap boot dan **menimpa** key yaml yang sesuai, jadi biarkan key tersebut apa adanya dalam edit Anda jika Anda ingin env var yang menang.
 
