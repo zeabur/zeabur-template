@@ -6,15 +6,19 @@ metadata:
 spec:
     description: |
       Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D talking face. Cloud-API edition: all inference via OpenAI-compatible LLM (default Zeabur AI Hub), Groq Whisper for speech-to-text, and free Edge-TTS for voice output.
-    icon: https://raw.githubusercontent.com/Open-LLM-VTuber/Open-LLM-VTuber/main/assets/favicon.ico
+    icon: https://docs.llmvtuber.com/img/open_llm_vtuber.png
     tags:
       - AI
       - VTuber
     variables:
+      - key: ZEABUR_AI_HUB_API_KEY
+        type: AI_HUB_KEY
+        name: Zeabur AI Hub API Key (recommended)
+        description: Click Generate to mint a Zeabur AI Hub key — auto-configures the LLM to claude-haiku-4-5 via https://hnd1.aihub.zeabur.ai/v1, billed against your Zeabur credits. Leave blank if you'd rather use OpenAI / Anthropic / etc. directly (then fill LLM_API_KEY + LLM_BASE_URL + LLM_MODEL below).
       - key: LLM_API_KEY
         type: STRING
-        name: LLM API Key
-        description: API key for the OpenAI-compatible LLM provider. Default base URL points to Zeabur AI Hub — paste your AI Hub key here. For OpenAI/Claude/Gemini, also set LLM_BASE_URL and LLM_MODEL accordingly.
+        name: LLM API Key (only if not using AI Hub)
+        description: API key for an OpenAI-compatible LLM provider. Ignored when ZEABUR_AI_HUB_API_KEY is set. Pair with LLM_BASE_URL and LLM_MODEL.
       - key: LLM_BASE_URL
         type: STRING
         name: LLM Base URL
@@ -90,7 +94,7 @@ spec:
       - [Live2D model gallery](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
     services:
       - name: open-llm-vtuber
-        icon: https://raw.githubusercontent.com/Open-LLM-VTuber/Open-LLM-VTuber/main/assets/favicon.ico
+        icon: https://docs.llmvtuber.com/img/open_llm_vtuber.png
         template: PREBUILT_V2
         spec:
           source:
@@ -121,12 +125,28 @@ spec:
                     c = yaml.load(f)
                 c['system_config']['host'] = '0.0.0.0'
                 cc = c['character_config']
-                if os.environ.get('LLM_API_KEY'):
+                # Prefer Zeabur AI Hub key when present; otherwise fall back to a user-
+                # supplied LLM_API_KEY. AI Hub also forces the AI Hub base URL / model
+                # defaults so the "click Generate, deploy" flow just works without the
+                # user touching LLM_BASE_URL / LLM_MODEL.
+                ai_hub_key = os.environ.get('ZEABUR_AI_HUB_API_KEY') or ''
+                manual_key = os.environ.get('LLM_API_KEY') or ''
+                if ai_hub_key:
+                    api_key = ai_hub_key
+                    base_url = os.environ.get('LLM_BASE_URL') or 'https://hnd1.aihub.zeabur.ai/v1'
+                    model = os.environ.get('LLM_MODEL') or 'claude-haiku-4-5'
+                elif manual_key:
+                    api_key = manual_key
+                    base_url = os.environ.get('LLM_BASE_URL') or 'https://hnd1.aihub.zeabur.ai/v1'
+                    model = os.environ.get('LLM_MODEL') or 'claude-haiku-4-5'
+                else:
+                    api_key = ''
+                if api_key:
                     cc['agent_config']['agent_settings']['basic_memory_agent']['llm_provider'] = 'openai_compatible_llm'
                     llm = cc['agent_config']['llm_configs']['openai_compatible_llm']
-                    llm['llm_api_key'] = os.environ['LLM_API_KEY']
-                    llm['base_url']    = os.environ.get('LLM_BASE_URL') or 'https://hnd1.aihub.zeabur.ai/v1'
-                    llm['model']       = os.environ.get('LLM_MODEL') or 'claude-haiku-4-5'
+                    llm['llm_api_key'] = api_key
+                    llm['base_url']    = base_url
+                    llm['model']       = model
                 if os.environ.get('GROQ_API_KEY'):
                     cc['asr_config']['asr_model'] = 'groq_whisper_asr'
                     cc['asr_config']['groq_whisper_asr']['api_key'] = os.environ['GROQ_API_KEY']
@@ -181,6 +201,8 @@ spec:
             - id: conf
               dir: /app/conf
           env:
+            ZEABUR_AI_HUB_API_KEY:
+              default: ${ZEABUR_AI_HUB_API_KEY}
             LLM_API_KEY:
               default: ${LLM_API_KEY}
             LLM_BASE_URL:
@@ -198,9 +220,12 @@ localization:
     description: |
       與任何 LLM 進行免提語音對話，支援打斷與 Live2D 動態頭像。雲端 API 版本：LLM 走 OpenAI 相容 API（預設 Zeabur AI Hub）、語音輸入用 Groq Whisper、語音輸出用免費的 Edge-TTS，無需 GPU。
     variables:
+      - key: ZEABUR_AI_HUB_API_KEY
+        name: Zeabur AI Hub API Key（建議）
+        description: 按 Generate 即可當場生一把 Zeabur AI Hub key，自動把 LLM 設成 claude-haiku-4-5、走 https://hnd1.aihub.zeabur.ai/v1，從 Zeabur 點數扣費。如果想直接用 OpenAI / Anthropic 等則留空，並填下面的 LLM_API_KEY + LLM_BASE_URL + LLM_MODEL。
       - key: LLM_API_KEY
-        name: LLM API Key
-        description: OpenAI 相容 LLM 供應商的 API key。預設 base URL 指向 Zeabur AI Hub — 直接貼上 AI Hub key 即可。要用 OpenAI/Claude/Gemini 請同步調整 LLM_BASE_URL 和 LLM_MODEL。
+        name: LLM API Key（不用 AI Hub 才需要填）
+        description: OpenAI 相容 LLM 供應商的 API key。當 ZEABUR_AI_HUB_API_KEY 有值時此欄會被忽略。請搭配 LLM_BASE_URL 和 LLM_MODEL 一起設定。
       - key: LLM_BASE_URL
         name: LLM Base URL
         description: OpenAI 相容 API 的 base URL。預設指向 Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI 填 https://api.openai.com/v1，Anthropic 填 https://api.anthropic.com/v1（需 Claude key）。
@@ -273,9 +298,12 @@ localization:
     description: |
       与任何 LLM 进行免提语音对话，支持打断与 Live2D 动态头像。云端 API 版本：LLM 走 OpenAI 兼容 API（默认 Zeabur AI Hub）、语音输入用 Groq Whisper、语音输出用免费的 Edge-TTS，无需 GPU。
     variables:
+      - key: ZEABUR_AI_HUB_API_KEY
+        name: Zeabur AI Hub API Key（推荐）
+        description: 点 Generate 当场生成一个 Zeabur AI Hub key，自动把 LLM 设成 claude-haiku-4-5、走 https://hnd1.aihub.zeabur.ai/v1，从 Zeabur 余额扣费。如果想直接用 OpenAI / Anthropic 等则留空，并填下面的 LLM_API_KEY + LLM_BASE_URL + LLM_MODEL。
       - key: LLM_API_KEY
-        name: LLM API Key
-        description: OpenAI 兼容 LLM 供应商的 API key。默认 base URL 指向 Zeabur AI Hub — 直接粘贴 AI Hub key 即可。要用 OpenAI/Claude/Gemini 请同步调整 LLM_BASE_URL 和 LLM_MODEL。
+        name: LLM API Key（不用 AI Hub 时填）
+        description: OpenAI 兼容 LLM 供应商的 API key。当 ZEABUR_AI_HUB_API_KEY 有值时此字段会被忽略。请搭配 LLM_BASE_URL 和 LLM_MODEL 一起设置。
       - key: LLM_BASE_URL
         name: LLM Base URL
         description: OpenAI 兼容 API 的 base URL。默认指向 Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI 填 https://api.openai.com/v1，Anthropic 填 https://api.anthropic.com/v1（需 Claude key）。
@@ -348,9 +376,12 @@ localization:
     description: |
       Live2D の話す顔と音声割り込みに対応した、ハンズフリー音声で任意の LLM と対話できる AI VTuber。クラウド API 版：LLM は OpenAI 互換 API（デフォルトは Zeabur AI Hub）、音声入力は Groq Whisper、音声出力は無料の Edge-TTS。GPU 不要。
     variables:
+      - key: ZEABUR_AI_HUB_API_KEY
+        name: Zeabur AI Hub API キー（推奨）
+        description: Generate をクリックするだけで Zeabur AI Hub キーが発行され、LLM が自動的に claude-haiku-4-5 / https://hnd1.aihub.zeabur.ai/v1 に設定されます。料金は Zeabur のクレジットから引き落とされます。OpenAI / Anthropic などを直接使いたい場合は空欄のまま、下の LLM_API_KEY + LLM_BASE_URL + LLM_MODEL を設定してください。
       - key: LLM_API_KEY
-        name: LLM API Key
-        description: OpenAI 互換 LLM プロバイダーの API キー。デフォルトの base URL は Zeabur AI Hub を指します — AI Hub のキーをそのまま貼り付けてください。OpenAI/Claude/Gemini を使用する場合は LLM_BASE_URL と LLM_MODEL も合わせて設定してください。
+        name: LLM API キー（AI Hub を使わない場合のみ）
+        description: OpenAI 互換 LLM プロバイダーの API キー。ZEABUR_AI_HUB_API_KEY が設定されている場合、このフィールドは無視されます。LLM_BASE_URL と LLM_MODEL と一緒に設定してください。
       - key: LLM_BASE_URL
         name: LLM Base URL
         description: OpenAI 互換 API の base URL。デフォルトは Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI は https://api.openai.com/v1、Anthropic は https://api.anthropic.com/v1（Claude キーが必要）。
