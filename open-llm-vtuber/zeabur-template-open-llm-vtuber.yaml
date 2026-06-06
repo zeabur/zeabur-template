@@ -1,0 +1,421 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Open-LLM-VTuber (Cloud API)
+spec:
+    description: |
+      Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D talking face. Cloud-API edition: all inference via OpenAI-compatible LLM (default Zeabur AI Hub), Groq Whisper for speech-to-text, and free Edge-TTS for voice output.
+    icon: https://raw.githubusercontent.com/Open-LLM-VTuber/Open-LLM-VTuber/main/assets/favicon.ico
+    tags:
+      - AI
+      - VTuber
+    variables:
+      - key: LLM_API_KEY
+        type: STRING
+        name: LLM API Key
+        description: API key for the OpenAI-compatible LLM provider. Default base URL points to Zeabur AI Hub — paste your AI Hub key here. For OpenAI/Claude/Gemini, also set LLM_BASE_URL and LLM_MODEL accordingly.
+      - key: LLM_BASE_URL
+        type: STRING
+        name: LLM Base URL
+        description: OpenAI-compatible API base URL. Defaults to Zeabur AI Hub (https://hnd1.aihub.zeabur.ai/v1). For OpenAI use https://api.openai.com/v1, for Anthropic use https://api.anthropic.com/v1 (with Claude key).
+      - key: LLM_MODEL
+        type: STRING
+        name: LLM Model
+        description: Model name. Defaults to claude-haiku-4-5. Examples — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash; OpenAI gpt-4o-mini; Anthropic claude-haiku-4-5.
+      - key: GROQ_API_KEY
+        type: STRING
+        name: Groq API Key (optional — enables voice input)
+        description: Free Groq API key from https://console.groq.com — enables Whisper-large-v3-turbo speech-to-text. Leave blank to disable voice input (text chat still works).
+      - key: EDGE_TTS_VOICE
+        type: STRING
+        name: Edge-TTS Voice (optional)
+        description: Voice ID for Microsoft Edge-TTS (free, no key). Defaults to en-US-AvaMultilingualNeural. Examples — zh-CN-XiaoxiaoNeural, ja-JP-NanamiNeural, en-US-JennyNeural. Full list — edge-tts --list-voices.
+      - key: PERSONA_PROMPT
+        type: STRING
+        name: Character Persona Prompt (optional)
+        description: Override the default character persona prompt. Leave blank to use the built-in Mao character.
+    readme: |
+      # Open-LLM-VTuber (Cloud API)
+
+      [Open-LLM-VTuber](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber) is an open-source AI VTuber that talks to any LLM with hands-free voice interaction, voice interruption, and a Live2D talking face. This **Cloud API** edition runs all inference through cloud APIs — no local GPU required, deploys to Zeabur shared cluster in one click.
+
+      ## What's in this template
+
+      | Layer | Provider | Cost |
+      |-------|----------|------|
+      | **LLM** | OpenAI-compatible (default Zeabur AI Hub) | pay-per-token |
+      | **ASR** (speech-to-text) | Groq Whisper-large-v3-turbo | free tier |
+      | **TTS** (text-to-speech) | Microsoft Edge-TTS | free, no key |
+      | **Live2D** | rendered in browser | free |
+
+      ## Quick start
+
+      1. **Get an LLM API key** — sign up at [Zeabur AI Hub](https://zeabur.com/ai) for a one-stop key that covers Claude / GPT / Gemini / DeepSeek, or use OpenAI / Anthropic directly.
+      2. **(Optional) Get a Groq API key** — sign up at [console.groq.com](https://console.groq.com) for free Whisper STT. Without this, voice input is disabled but text chat still works.
+      3. Click **Deploy** and fill in the variables.
+      4. Open the deployed URL — start chatting or click the mic to talk.
+
+      > **About the URL auto-config**: Upstream's frontend bundle hardcodes `ws://127.0.0.1:12393` as the WebSocket / Base URL defaults (built for local dev). This template injects a tiny script into `index.html` at container start that points those defaults at the current page origin, so you don't have to touch the Settings UI. If a future upstream release adds runtime config support, we can drop this patch.
+
+      ## Want a different LLM provider?
+
+      | Provider | LLM_BASE_URL | LLM_MODEL |
+      |----------|--------------|-----------|
+      | Zeabur AI Hub *(default)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
+      | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+      | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
+      | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
+      | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+      | Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+
+      ## Advanced configuration
+
+      The 6 env vars above cover the common settings. For anything else — character switch, MCP tools, ASR/TTS provider swap, voice style, etc. — edit `/app/conf/conf.yaml` directly:
+
+      1. Open the service in Zeabur dashboard → **Console** tab
+      2. Run `vi /app/conf/conf.yaml` (or `nano`)
+      3. Save and restart the service
+
+      `/app/conf` is a persistent volume — your edits survive restarts. Env vars listed above are re-applied on each boot and **override** the corresponding yaml keys, so leave those keys alone in your edits if you want env vars to win.
+
+      ## Want local GPU inference instead?
+
+      Use the **Open-LLM-VTuber (Local GPU)** template — deploys to a GPU-equipped dedicated server with Ollama, local Whisper, and GPT-SoVITS. See the Zeabur Marketplace.
+
+      ## Links
+
+      - [Upstream GitHub](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber)
+      - [Project homepage](https://open-llm-vtuber.github.io/)
+      - [Live2D model gallery](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
+    services:
+      - name: open-llm-vtuber
+        icon: https://raw.githubusercontent.com/Open-LLM-VTuber/Open-LLM-VTuber/main/assets/favicon.ico
+        template: PREBUILT_V2
+        spec:
+          source:
+            image: openllmvtuber/open-llm-vtuber:latest
+            command:
+              - /bin/sh
+            args:
+              - -c
+              - |
+                set -eu
+                mkdir -p /app/conf
+                # First boot: seed conf.yaml from upstream default. Subsequent boots: keep
+                # whatever the user has edited (this dir is a persistent volume).
+                if [ ! -f /app/conf/conf.yaml ]; then
+                  cp /app/config_templates/conf.default.yaml /app/conf/conf.yaml
+                fi
+                # Always re-apply env-var-driven keys so changes to LLM/ASR/TTS settings via
+                # Zeabur env vars take effect on restart. Other yaml keys (character, MCP,
+                # provider switches, etc.) are left untouched and may be edited via
+                # `vi /app/conf/conf.yaml` from the service console — edits persist.
+                /app/.venv/bin/python - <<'PY'
+                import os
+                from ruamel.yaml import YAML
+                yaml = YAML()
+                yaml.preserve_quotes = True
+                yaml.width = 4096
+                with open('/app/conf/conf.yaml') as f:
+                    c = yaml.load(f)
+                c['system_config']['host'] = '0.0.0.0'
+                cc = c['character_config']
+                if os.environ.get('LLM_API_KEY'):
+                    cc['agent_config']['agent_settings']['basic_memory_agent']['llm_provider'] = 'openai_compatible_llm'
+                    llm = cc['agent_config']['llm_configs']['openai_compatible_llm']
+                    llm['llm_api_key'] = os.environ['LLM_API_KEY']
+                    llm['base_url']    = os.environ.get('LLM_BASE_URL') or 'https://hnd1.aihub.zeabur.ai/v1'
+                    llm['model']       = os.environ.get('LLM_MODEL') or 'claude-haiku-4-5'
+                if os.environ.get('GROQ_API_KEY'):
+                    cc['asr_config']['asr_model'] = 'groq_whisper_asr'
+                    cc['asr_config']['groq_whisper_asr']['api_key'] = os.environ['GROQ_API_KEY']
+                if os.environ.get('EDGE_TTS_VOICE'):
+                    cc['tts_config']['edge_tts']['voice'] = os.environ['EDGE_TTS_VOICE']
+                if os.environ.get('PERSONA_PROMPT'):
+                    cc['persona_prompt'] = os.environ['PERSONA_PROMPT']
+                with open('/app/conf/conf.yaml', 'w') as f:
+                    yaml.dump(c, f)
+                PY
+                # Frontend is a git submodule that run_server.py lazy-clones; init eagerly
+                # so we can inject the auto-origin script into index.html before the server
+                # starts serving it.
+                if [ ! -f /app/frontend/index.html ]; then
+                  (cd /app && git submodule update --init --recursive frontend 2>&1) || true
+                fi
+                # Patch frontend index.html: bundle hardcodes ws://127.0.0.1:12393 as
+                # DEFAULT_WS_URL / DEFAULT_BASE_URL. Inject a tiny script that points
+                # wsUrl / baseUrl at the current origin and drops any stale localStorage
+                # state from previous loads so the app works behind any reverse proxy.
+                /app/.venv/bin/python - <<'PY'
+                p = '/app/frontend/index.html'
+                try:
+                    with open(p) as f: html = f.read()
+                except FileNotFoundError:
+                    pass
+                else:
+                    if 'OPEN_LLM_VTUBER_AUTO_ORIGIN' not in html:
+                        tag = (
+                          '<script id="OPEN_LLM_VTUBER_AUTO_ORIGIN">try{'
+                          'var isHttps=location.protocol==="https:";'
+                          'var wsp=isHttps?"wss:":"ws:";'
+                          'var origin=location.protocol+"//"+location.host;'
+                          'function bad(c){return !c||typeof c!=="string"||c===""||c.indexOf("127.0.0.1")>-1||c.indexOf("localhost")>-1||c.indexOf("undefined")>-1||(isHttps&&(c.indexOf("ws://")===0||c.indexOf("http://")===0));}'
+                          'function fix(k,want){var raw=localStorage.getItem(k);var b=!raw;'
+                          'try{var cur=JSON.parse(raw);if(bad(cur))b=true;}catch(e){b=true;}'
+                          'if(b)localStorage.setItem(k,JSON.stringify(want));}'
+                          'fix("wsUrl",wsp+"//"+location.host+"/client-ws");'
+                          'fix("baseUrl",origin);'
+                          'fix("backgroundUrl",origin+"/bg/ceiling-window-room-night.jpeg");'
+                          'localStorage.removeItem("modelInfo");'
+                          '}catch(e){}</script>'
+                        )
+                        with open(p, 'w') as f: f.write(html.replace('<head>', '<head>' + tag, 1))
+                PY
+                exec /usr/local/bin/start-app
+          ports:
+            - id: web
+              port: 12393
+              type: HTTP
+          volumes:
+            - id: conf
+              dir: /app/conf
+          env:
+            LLM_API_KEY:
+              default: ${LLM_API_KEY}
+            LLM_BASE_URL:
+              default: ${LLM_BASE_URL}
+            LLM_MODEL:
+              default: ${LLM_MODEL}
+            GROQ_API_KEY:
+              default: ${GROQ_API_KEY}
+            EDGE_TTS_VOICE:
+              default: ${EDGE_TTS_VOICE}
+            PERSONA_PROMPT:
+              default: ${PERSONA_PROMPT}
+localization:
+  zh-TW:
+    description: |
+      與任何 LLM 進行免提語音對話，支援打斷與 Live2D 動態頭像。雲端 API 版本：LLM 走 OpenAI 相容 API（預設 Zeabur AI Hub）、語音輸入用 Groq Whisper、語音輸出用免費的 Edge-TTS，無需 GPU。
+    variables:
+      - key: LLM_API_KEY
+        name: LLM API Key
+        description: OpenAI 相容 LLM 供應商的 API key。預設 base URL 指向 Zeabur AI Hub — 直接貼上 AI Hub key 即可。要用 OpenAI/Claude/Gemini 請同步調整 LLM_BASE_URL 和 LLM_MODEL。
+      - key: LLM_BASE_URL
+        name: LLM Base URL
+        description: OpenAI 相容 API 的 base URL。預設指向 Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI 填 https://api.openai.com/v1，Anthropic 填 https://api.anthropic.com/v1（需 Claude key）。
+      - key: LLM_MODEL
+        name: LLM 模型
+        description: 模型名稱，預設 claude-haiku-4-5。範例 — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash；OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5。
+      - key: GROQ_API_KEY
+        name: Groq API Key（選填，啟用語音輸入）
+        description: 從 https://console.groq.com 取得免費 Groq API key — 啟用 Whisper-large-v3-turbo 語音辨識。留空則停用語音輸入（仍可文字對話）。
+      - key: EDGE_TTS_VOICE
+        name: Edge-TTS 語音（選填）
+        description: Microsoft Edge-TTS 語音 ID（免費、不需 key）。預設 en-US-AvaMultilingualNeural。範例 — zh-CN-XiaoxiaoNeural、ja-JP-NanamiNeural、en-US-JennyNeural。完整清單請執行 edge-tts --list-voices。
+      - key: PERSONA_PROMPT
+        name: 角色人設提示詞（選填）
+        description: 覆蓋預設角色人設。留空則使用內建的 Mao 角色。
+    readme: |
+      # Open-LLM-VTuber（雲端 API 版）
+
+      [Open-LLM-VTuber](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber) 是一個開源 AI VTuber，可與任何 LLM 進行免提語音對話、支援打斷，並搭配 Live2D 動態頭像。此**雲端 API** 版本將所有推論都走雲端 API — 無需 GPU，一鍵部署到 Zeabur shared cluster。
+
+      ## 此模板的組成
+
+      | 層級 | 供應商 | 費用 |
+      |------|--------|------|
+      | **LLM** | OpenAI 相容（預設 Zeabur AI Hub）| 依用量計費 |
+      | **ASR**（語音轉文字）| Groq Whisper-large-v3-turbo | 免費額度 |
+      | **TTS**（文字轉語音）| Microsoft Edge-TTS | 免費、不需 key |
+      | **Live2D** | 瀏覽器渲染 | 免費 |
+
+      ## 快速開始
+
+      1. **取得 LLM API key** — 至 [Zeabur AI Hub](https://zeabur.com/ai) 註冊一把可同時用 Claude / GPT / Gemini / DeepSeek 的 key，或直接用 OpenAI / Anthropic。
+      2. **（選填）取得 Groq API key** — 至 [console.groq.com](https://console.groq.com) 申請免費 Whisper STT。不填則停用語音輸入，但仍可文字對話。
+      3. 點 **Deploy** 並填入變數。
+      4. 開啟部署後的網址 — 開始對話或按麥克風講話。
+
+      > **關於自動 URL 設定**：上游 frontend 把 `ws://127.0.0.1:12393` 寫死當 WebSocket / Base URL 預設（本地開發思維）。此 template 在容器啟動時注入一段 script 到 `index.html`，把這些預設改成當前頁面 origin，使用者不需要進 Settings 改。未來上游若加 runtime config，可拿掉這個 patch。
+
+      ## 想換其他 LLM 供應商？
+
+      | 供應商 | LLM_BASE_URL | LLM_MODEL |
+      |--------|--------------|-----------|
+      | Zeabur AI Hub *(預設)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
+      | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+      | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
+      | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
+      | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+      | Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+
+      ## 進階設定
+
+      上面 6 個 env var 涵蓋常用設定。其他想動的（換 Live2D 角色、開關 MCP 工具、切 ASR/TTS 供應商、調語音風格等）直接編 `/app/conf/conf.yaml`：
+
+      1. Zeabur dashboard 開該 service → **Console** 分頁
+      2. 執行 `vi /app/conf/conf.yaml`（或 `nano`）
+      3. 存檔後重啟 service
+
+      `/app/conf` 是持久化 volume — 編輯後重啟不會掉。上面那 6 個 env var 每次開機都會**覆蓋**對應的 yaml key，所以你如果想讓 env var 為準，這些 key 不用在 yaml 動。
+
+      ## 想用地端 GPU 推論？
+
+      請使用 **Open-LLM-VTuber（地端 GPU 版）** 模板 — 部署到含 GPU 的 dedicated server，搭配 Ollama、本地 Whisper、GPT-SoVITS。詳見 Zeabur Marketplace。
+
+      ## 連結
+
+      - [上游 GitHub](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber)
+      - [專案首頁](https://open-llm-vtuber.github.io/)
+      - [Live2D 模型畫廊](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
+  zh-CN:
+    description: |
+      与任何 LLM 进行免提语音对话，支持打断与 Live2D 动态头像。云端 API 版本：LLM 走 OpenAI 兼容 API（默认 Zeabur AI Hub）、语音输入用 Groq Whisper、语音输出用免费的 Edge-TTS，无需 GPU。
+    variables:
+      - key: LLM_API_KEY
+        name: LLM API Key
+        description: OpenAI 兼容 LLM 供应商的 API key。默认 base URL 指向 Zeabur AI Hub — 直接粘贴 AI Hub key 即可。要用 OpenAI/Claude/Gemini 请同步调整 LLM_BASE_URL 和 LLM_MODEL。
+      - key: LLM_BASE_URL
+        name: LLM Base URL
+        description: OpenAI 兼容 API 的 base URL。默认指向 Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI 填 https://api.openai.com/v1，Anthropic 填 https://api.anthropic.com/v1（需 Claude key）。
+      - key: LLM_MODEL
+        name: LLM 模型
+        description: 模型名称，默认 claude-haiku-4-5。示例 — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash；OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5。
+      - key: GROQ_API_KEY
+        name: Groq API Key（选填，启用语音输入）
+        description: 从 https://console.groq.com 获取免费 Groq API key — 启用 Whisper-large-v3-turbo 语音识别。留空则停用语音输入（仍可文字对话）。
+      - key: EDGE_TTS_VOICE
+        name: Edge-TTS 语音（选填）
+        description: Microsoft Edge-TTS 语音 ID（免费、不需 key）。默认 en-US-AvaMultilingualNeural。示例 — zh-CN-XiaoxiaoNeural、ja-JP-NanamiNeural、en-US-JennyNeural。完整列表请执行 edge-tts --list-voices。
+      - key: PERSONA_PROMPT
+        name: 角色人设提示词（选填）
+        description: 覆盖默认角色人设。留空则使用内建的 Mao 角色。
+    readme: |
+      # Open-LLM-VTuber（云端 API 版）
+
+      [Open-LLM-VTuber](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber) 是一个开源 AI VTuber，可与任何 LLM 进行免提语音对话、支持打断，并搭配 Live2D 动态头像。此**云端 API** 版本将所有推理都走云端 API — 无需 GPU，一键部署到 Zeabur shared cluster。
+
+      ## 此模板的组成
+
+      | 层级 | 供应商 | 费用 |
+      |------|--------|------|
+      | **LLM** | OpenAI 兼容（默认 Zeabur AI Hub）| 按用量计费 |
+      | **ASR**（语音转文字）| Groq Whisper-large-v3-turbo | 免费额度 |
+      | **TTS**（文字转语音）| Microsoft Edge-TTS | 免费、不需 key |
+      | **Live2D** | 浏览器渲染 | 免费 |
+
+      ## 快速开始
+
+      1. **获取 LLM API key** — 至 [Zeabur AI Hub](https://zeabur.com/ai) 注册一把可同时用 Claude / GPT / Gemini / DeepSeek 的 key，或直接用 OpenAI / Anthropic。
+      2. **（选填）获取 Groq API key** — 至 [console.groq.com](https://console.groq.com) 申请免费 Whisper STT。不填则停用语音输入，但仍可文字对话。
+      3. 点 **Deploy** 并填入变量。
+      4. 打开部署后的网址 — 开始对话或按麦克风讲话。
+
+      > **关于自动 URL 设置**：上游 frontend 把 `ws://127.0.0.1:12393` 写死当 WebSocket / Base URL 默认值（本地开发思维）。此 template 在容器启动时注入一段 script 到 `index.html`，把这些默认值改成当前页面 origin，用户不需要进 Settings 改。未来上游若加 runtime config，可去掉这个 patch。
+
+      ## 想换其他 LLM 供应商？
+
+      | 供应商 | LLM_BASE_URL | LLM_MODEL |
+      |--------|--------------|-----------|
+      | Zeabur AI Hub *(默认)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
+      | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+      | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
+      | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
+      | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+      | Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+
+      ## 进阶设置
+
+      上面 6 个 env var 涵盖常用设置。其他想动的（换 Live2D 角色、开关 MCP 工具、切 ASR/TTS 供应商、调语音风格等）直接编辑 `/app/conf/conf.yaml`：
+
+      1. Zeabur dashboard 打开该 service → **Console** 选项卡
+      2. 执行 `vi /app/conf/conf.yaml`（或 `nano`）
+      3. 保存后重启 service
+
+      `/app/conf` 是持久化 volume — 编辑后重启不会丢失。上面那 6 个 env var 每次开机都会**覆盖**对应的 yaml key，所以你如果想让 env var 为准，这些 key 不用在 yaml 改。
+
+      ## 想用本地 GPU 推理？
+
+      请使用 **Open-LLM-VTuber（本地 GPU 版）** 模板 — 部署到含 GPU 的 dedicated server，搭配 Ollama、本地 Whisper、GPT-SoVITS。详见 Zeabur Marketplace。
+
+      ## 链接
+
+      - [上游 GitHub](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber)
+      - [项目主页](https://open-llm-vtuber.github.io/)
+      - [Live2D 模型画廊](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
+  ja-JP:
+    description: |
+      Live2D の話す顔と音声割り込みに対応した、ハンズフリー音声で任意の LLM と対話できる AI VTuber。クラウド API 版：LLM は OpenAI 互換 API（デフォルトは Zeabur AI Hub）、音声入力は Groq Whisper、音声出力は無料の Edge-TTS。GPU 不要。
+    variables:
+      - key: LLM_API_KEY
+        name: LLM API Key
+        description: OpenAI 互換 LLM プロバイダーの API キー。デフォルトの base URL は Zeabur AI Hub を指します — AI Hub のキーをそのまま貼り付けてください。OpenAI/Claude/Gemini を使用する場合は LLM_BASE_URL と LLM_MODEL も合わせて設定してください。
+      - key: LLM_BASE_URL
+        name: LLM Base URL
+        description: OpenAI 互換 API の base URL。デフォルトは Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI は https://api.openai.com/v1、Anthropic は https://api.anthropic.com/v1（Claude キーが必要）。
+      - key: LLM_MODEL
+        name: LLM モデル
+        description: モデル名。デフォルトは claude-haiku-4-5。例 — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash；OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5。
+      - key: GROQ_API_KEY
+        name: Groq API キー（任意、音声入力を有効化）
+        description: https://console.groq.com から無料の Groq API キーを取得 — Whisper-large-v3-turbo 音声認識を有効化します。空欄の場合は音声入力が無効になりますが、テキスト対話は引き続き可能です。
+      - key: EDGE_TTS_VOICE
+        name: Edge-TTS 音声（任意）
+        description: Microsoft Edge-TTS の音声 ID（無料、キー不要）。デフォルトは en-US-AvaMultilingualNeural。例 — zh-CN-XiaoxiaoNeural、ja-JP-NanamiNeural、en-US-JennyNeural。完全な一覧は edge-tts --list-voices で確認できます。
+      - key: PERSONA_PROMPT
+        name: キャラクターペルソナプロンプト（任意）
+        description: デフォルトのキャラクターペルソナを上書きします。空欄の場合は組み込みの Mao キャラクターを使用します。
+    readme: |
+      # Open-LLM-VTuber（クラウド API 版）
+
+      [Open-LLM-VTuber](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber) は、ハンズフリーの音声対話、音声割り込み、Live2D の話す顔を備えたオープンソース AI VTuber です。この**クラウド API** 版は、すべての推論をクラウド API で処理します — GPU 不要、Zeabur shared cluster にワンクリックでデプロイできます。
+
+      ## このテンプレートの構成
+
+      | レイヤー | プロバイダー | コスト |
+      |----------|------------|-------|
+      | **LLM** | OpenAI 互換（デフォルトは Zeabur AI Hub）| トークン従量課金 |
+      | **ASR**（音声認識）| Groq Whisper-large-v3-turbo | 無料枠 |
+      | **TTS**（音声合成）| Microsoft Edge-TTS | 無料、キー不要 |
+      | **Live2D** | ブラウザでレンダリング | 無料 |
+
+      ## クイックスタート
+
+      1. **LLM API キーを取得** — [Zeabur AI Hub](https://zeabur.com/ai) で Claude / GPT / Gemini / DeepSeek をまとめて使えるキーを登録するか、OpenAI / Anthropic を直接利用してください。
+      2. **（任意）Groq API キーを取得** — [console.groq.com](https://console.groq.com) で無料の Whisper STT を申請。空欄の場合は音声入力が無効になりますが、テキスト対話は引き続き可能です。
+      3. **Deploy** をクリックして変数を入力。
+      4. デプロイされた URL を開く — 対話を始めるか、マイクをクリックして話してください。
+
+      > **URL 自動設定について**：上流のフロントエンドバンドルは `ws://127.0.0.1:12393` を WebSocket / Base URL のデフォルトとしてハードコードしています（ローカル開発向け設計）。このテンプレートはコンテナ起動時に `index.html` へ小さなスクリプトを注入し、これらのデフォルトを現在のページ origin に向けることで、ユーザーが Settings UI を触る必要をなくしています。上流が将来 runtime 設定をサポートすれば、このパッチは削除できます。
+
+      ## 他の LLM プロバイダーを使用したい場合
+
+      | プロバイダー | LLM_BASE_URL | LLM_MODEL |
+      |------------|--------------|-----------|
+      | Zeabur AI Hub *(デフォルト)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
+      | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+      | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
+      | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
+      | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+      | Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+
+      ## 高度な設定
+
+      上記 6 つの env var で一般的な設定はカバーされます。その他の設定（Live2D キャラクター切替、MCP ツール、ASR/TTS プロバイダー切替、音声スタイル等）は `/app/conf/conf.yaml` を直接編集してください：
+
+      1. Zeabur ダッシュボードで該当 service を開く → **Console** タブ
+      2. `vi /app/conf/conf.yaml`（または `nano`）を実行
+      3. 保存後、service を再起動
+
+      `/app/conf` は永続ボリュームです — 編集内容は再起動しても残ります。上記 6 つの env var は起動のたびに対応する yaml キーを**上書き**するため、env var を優先したい場合はこれらのキーを yaml で触らないでください。
+
+      ## ローカル GPU 推論を使用したい場合
+
+      **Open-LLM-VTuber（ローカル GPU 版）** テンプレートを使用してください — Ollama、ローカル Whisper、GPT-SoVITS を備えた GPU 専用サーバーにデプロイします。詳細は Zeabur Marketplace をご覧ください。
+
+      ## リンク
+
+      - [上流 GitHub](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber)
+      - [プロジェクトホームページ](https://open-llm-vtuber.github.io/)
+      - [Live2D モデルギャラリー](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
