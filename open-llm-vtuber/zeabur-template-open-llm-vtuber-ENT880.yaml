@@ -42,6 +42,8 @@ spec:
     readme: |
       # Open-LLM-VTuber (Cloud API)
 
+      > ⚠️ **Heads up — upstream is in active development.** This template pins the `openllmvtuber/open-llm-vtuber:latest` image tag, so restarting your service can pull in a newer upstream build with breaking changes (config schema, frontend bundle, model defaults, etc.). Take a snapshot of `/app/conf/conf.yaml` from the service console before restarting if you've customized it.
+
       [Open-LLM-VTuber](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber) is an open-source AI VTuber that talks to any LLM with hands-free voice interaction, voice interruption, and a Live2D talking face. This **Cloud API** edition runs all inference through cloud APIs — no local GPU required, deploys to any Zeabur server in one click.
 
       ## What's in this template
@@ -244,6 +246,8 @@ localization:
     readme: |
       # Open-LLM-VTuber（雲端 API 版）
 
+      > ⚠️ **請注意，上游仍處於快速開發階段。** 此模板使用 `openllmvtuber/open-llm-vtuber:latest` image tag — 重啟 service 可能會拉到含 breaking change 的新版本（conf 結構、frontend bundle、預設模型等）。若你在 `/app/conf/conf.yaml` 有自訂內容，重啟前請先從 service console 備份一份。
+
       [Open-LLM-VTuber](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber) 是一個開源 AI VTuber，可與任何 LLM 進行免提語音對話、支援打斷，並搭配 Live2D 動態頭像。此**雲端 API** 版本將所有推論都走雲端 API — 無需 GPU，一鍵部署到任何 Zeabur 主機。
 
       ## 此模板的組成
@@ -322,6 +326,8 @@ localization:
     readme: |
       # Open-LLM-VTuber（云端 API 版）
 
+      > ⚠️ **请注意，上游仍处于快速开发阶段。** 此模板使用 `openllmvtuber/open-llm-vtuber:latest` image tag — 重启 service 可能会拉到含 breaking change 的新版本（conf 结构、frontend bundle、默认模型等）。若你在 `/app/conf/conf.yaml` 有自定义内容，重启前请先从 service console 备份一份。
+
       [Open-LLM-VTuber](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber) 是一个开源 AI VTuber，可与任何 LLM 进行免提语音对话、支持打断，并搭配 Live2D 动态头像。此**云端 API** 版本将所有推理都走云端 API — 无需 GPU，一键部署到任何 Zeabur 主机。
 
       ## 此模板的组成
@@ -399,6 +405,8 @@ localization:
         description: デフォルトのキャラクターペルソナを上書きします。空欄の場合は組み込みの Mao キャラクターを使用します。
     readme: |
       # Open-LLM-VTuber（クラウド API 版）
+
+      > ⚠️ **注意：上流は活発に開発中です。** このテンプレートは `openllmvtuber/open-llm-vtuber:latest` を pin しているため、サービスを再起動すると破壊的変更を含む新しい上流ビルド（conf スキーマ、フロントエンドバンドル、デフォルトモデル等）に更新される可能性があります。`/app/conf/conf.yaml` をカスタマイズしている場合は、再起動前にサービスコンソールでスナップショットを取得してください。
 
       [Open-LLM-VTuber](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber) は、ハンズフリーの音声対話、音声割り込み、Live2D の話す顔を備えたオープンソース AI VTuber です。この**クラウド API** 版は、すべての推論をクラウド API で処理します — GPU 不要、任意の Zeabur サーバーにワンクリックでデプロイできます。
 
