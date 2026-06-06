@@ -5,7 +5,7 @@ metadata:
     name: Open-LLM-VTuber (Cloud API)
 spec:
     description: |
-      Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D talking face. Cloud-API edition: all inference via OpenAI-compatible LLM (default Zeabur AI Hub), Groq Whisper for speech-to-text, and free Edge-TTS for voice output.
+      Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D talking face. Cloud-API edition: all inference via OpenAI-compatible LLM (default Zeabur AI Hub), Groq Whisper for speech-to-text, and free Edge-TTS for voice output. ⚠️ Pins openllmvtuber/open-llm-vtuber:latest — upstream is in rapid development, so restarting the service can pull breaking changes.
     icon: https://docs.llmvtuber.com/img/open_llm_vtuber.png
     tags:
       - AI
@@ -220,7 +220,7 @@ spec:
 localization:
   zh-TW:
     description: |
-      與任何 LLM 進行免提語音對話，支援打斷與 Live2D 動態頭像。雲端 API 版本：LLM 走 OpenAI 相容 API（預設 Zeabur AI Hub）、語音輸入用 Groq Whisper、語音輸出用免費的 Edge-TTS，無需 GPU。
+      與任何 LLM 進行免提語音對話，支援打斷與 Live2D 動態頭像。雲端 API 版本：LLM 走 OpenAI 相容 API（預設 Zeabur AI Hub）、語音輸入用 Groq Whisper、語音輸出用免費的 Edge-TTS，無需 GPU。⚠️ 鎖在 openllmvtuber/open-llm-vtuber:latest，上游仍處於快速開發階段，重啟 service 可能拉到含 breaking change 的新版本。
     variables:
       - key: ZEABUR_AI_HUB_API_KEY
         name: Zeabur AI Hub API Key（建議）
@@ -300,7 +300,7 @@ localization:
       - [Live2D 模型畫廊](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
   zh-CN:
     description: |
-      与任何 LLM 进行免提语音对话，支持打断与 Live2D 动态头像。云端 API 版本：LLM 走 OpenAI 兼容 API（默认 Zeabur AI Hub）、语音输入用 Groq Whisper、语音输出用免费的 Edge-TTS，无需 GPU。
+      与任何 LLM 进行免提语音对话，支持打断与 Live2D 动态头像。云端 API 版本：LLM 走 OpenAI 兼容 API（默认 Zeabur AI Hub）、语音输入用 Groq Whisper、语音输出用免费的 Edge-TTS，无需 GPU。⚠️ 锁在 openllmvtuber/open-llm-vtuber:latest，上游仍处于快速开发阶段，重启 service 可能拉到含 breaking change 的新版本。
     variables:
       - key: ZEABUR_AI_HUB_API_KEY
         name: Zeabur AI Hub API Key（推荐）
@@ -380,7 +380,7 @@ localization:
       - [Live2D 模型画廊](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
   ja-JP:
     description: |
-      Live2D の話す顔と音声割り込みに対応した、ハンズフリー音声で任意の LLM と対話できる AI VTuber。クラウド API 版：LLM は OpenAI 互換 API（デフォルトは Zeabur AI Hub）、音声入力は Groq Whisper、音声出力は無料の Edge-TTS。GPU 不要。
+      Live2D の話す顔と音声割り込みに対応した、ハンズフリー音声で任意の LLM と対話できる AI VTuber。クラウド API 版：LLM は OpenAI 互換 API（デフォルトは Zeabur AI Hub）、音声入力は Groq Whisper、音声出力は無料の Edge-TTS。GPU 不要。⚠️ openllmvtuber/open-llm-vtuber:latest を pin しているため、上流の活発な開発によりサービス再起動で破壊的変更が入る可能性があります。
     variables:
       - key: ZEABUR_AI_HUB_API_KEY
         name: Zeabur AI Hub API キー（推奨）
@@ -460,7 +460,7 @@ localization:
       - [Live2D モデルギャラリー](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
   es-ES:
     description: |
-      Conversa con cualquier LLM mediante voz manos libres, con interrupción por voz y un rostro hablante Live2D. Edición Cloud API: toda la inferencia se ejecuta vía APIs en la nube (LLM compatible con OpenAI por defecto Zeabur AI Hub, Groq Whisper para reconocimiento de voz y Edge-TTS gratuito). Sin GPU local requerida.
+      Conversa con cualquier LLM mediante voz manos libres, con interrupción por voz y un rostro hablante Live2D. Edición Cloud API: toda la inferencia se ejecuta vía APIs en la nube (LLM compatible con OpenAI por defecto Zeabur AI Hub, Groq Whisper para reconocimiento de voz y Edge-TTS gratuito). Sin GPU local requerida. ⚠️ Usa openllmvtuber/open-llm-vtuber:latest — el proyecto upstream está en desarrollo rápido, por lo que reiniciar el servicio puede traer cambios incompatibles.
     variables:
       - key: ZEABUR_AI_HUB_API_KEY
         name: Clave API de Zeabur AI Hub (recomendada)
@@ -540,7 +540,7 @@ localization:
       - [Galería de modelos Live2D](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
   id-ID:
     description: |
-      Berbicara dengan LLM apa pun melalui suara hands-free, dengan interupsi suara dan wajah berbicara Live2D. Edisi Cloud API: semua inferensi melalui API cloud (LLM kompatibel OpenAI default Zeabur AI Hub, Groq Whisper untuk speech-to-text, dan Edge-TTS gratis). Tanpa GPU lokal.
+      Berbicara dengan LLM apa pun melalui suara hands-free, dengan interupsi suara dan wajah berbicara Live2D. Edisi Cloud API: semua inferensi melalui API cloud (LLM kompatibel OpenAI default Zeabur AI Hub, Groq Whisper untuk speech-to-text, dan Edge-TTS gratis). Tanpa GPU lokal. ⚠️ Menggunakan openllmvtuber/open-llm-vtuber:latest — upstream dalam pengembangan cepat, jadi restart service bisa menarik breaking change.
     variables:
       - key: ZEABUR_AI_HUB_API_KEY
         name: Zeabur AI Hub API Key (direkomendasikan)
