@@ -1,939 +1,1523 @@
-# yaml-language-server: $schema=https://schema.zeabur.app/template.json
 apiVersion: zeabur.com/v1
 kind: Template
 metadata:
-    name: Alpaca MCP Server
+  name: Alpaca MCP Server
 spec:
-    description: Remote Model Context Protocol server for Alpaca's Trading API — trade stocks, options, and crypto from Claude, ChatGPT, or any MCP-compatible AI client over HTTPS.
-    coverImage: https://alpaca.markets/learn-api/content/images/2024/10/how-to-start-paper-trading-with-alpacas-trading-api-1--1-.png
+  description: Remote Model Context Protocol server for Alpaca's Trading API — trade stocks, options, and crypto from Claude, ChatGPT, or any MCP-compatible AI client over HTTPS.
+  coverImage: https://alpaca.markets/learn-api/content/images/2024/10/how-to-start-paper-trading-with-alpacas-trading-api-1--1-.png
+  icon: https://avatars.githubusercontent.com/u/30398729?v=4&s=400
+  variables:
+  - key: PUBLIC_DOMAIN
+    type: DOMAIN
+    name: Public Domain
+    description: The public domain for connecting your AI client to the MCP server. Append /mcp to this URL when adding it to Claude or ChatGPT.
+  tags:
+  - AI
+  - Developer Tool
+  readme: |
+    # Alpaca MCP Server on Zeabur
+
+    A remote [Model Context Protocol](https://modelcontextprotocol.io/) server for [Alpaca](https://alpaca.markets/)'s Trading API. Once deployed, you can add this server as a custom connector in Claude (web/desktop/mobile) or ChatGPT to trade stocks, options, and crypto and run market analysis through plain-English chat.
+
+    Original project: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — MIT License.
+
+    ## 1. Get your Alpaca API keys
+
+    1. Sign up at [alpaca.markets](https://alpaca.markets/)
+    2. Open the [Paper Trading dashboard](https://app.alpaca.markets/paper/dashboard/overview) (recommended for testing)
+    3. Generate an API key pair under *API Keys* → *Generate New Key*
+    4. Copy the `API Key ID` into `ALPACA_API_KEY` and the `Secret Key` into `ALPACA_SECRET_KEY` when deploying this template
+
+    > To trade with real money, switch the dashboard to *Live*, generate live keys, and set `ALPACA_PAPER_TRADE=false` after deployment.
+
+    ## 2. Deploy and configure
+
+    Click *Deploy* and pick a public domain — Zeabur gives you a free `.zeabur.app` subdomain or you can bind your own.
+
+    After the service starts, open the service URL in your browser and log in with the launcher password from the **Instructions** tab. The web launcher lets you:
+
+    - Set or update `ALPACA_API_KEY` and `ALPACA_SECRET_KEY`
+    - Toggle `ALPACA_PAPER_TRADE`
+    - Restart the internal MCP server
+    - Copy the MCP endpoint or a ready-to-paste setup prompt for Claude Code / Codex
+
+    ## 3. Connect your AI client
+
+    Your MCP endpoint is `https://<your-domain>/mcp`.
+
+    **Claude (web, desktop, mobile):**
+    1. Settings → Connectors → *Add custom connector*
+    2. Name: `Alpaca`, URL: `https://<your-domain>/mcp`
+    3. Save and toggle the connector on in any chat
+
+    **ChatGPT:**
+    1. Settings → Connectors → *New connector*
+    2. URL: `https://<your-domain>/mcp`, transport: `Streamable HTTP`
+
+    ## Configuration
+
+    | Variable | Default | Purpose |
+    |---|---|---|
+    | `ALPACA_API_KEY` | — | Optional at deploy time. Alpaca API key ID, configurable in the launcher |
+    | `ALPACA_SECRET_KEY` | — | Optional at deploy time. Alpaca API secret, configurable in the launcher |
+    | `ALPACA_PAPER_TRADE` | `true` | Set to `false` to enable live (real-money) trading |
+    | `WEB_LAUNCHER_PASSWORD` | Auto | Password for the web launcher login |
+
+    Advanced: you can also set `ALPACA_TOOLSETS` post-deploy under *Variables* — a comma-separated list (e.g. `account,positions,orders`) that restricts which tool families the MCP server exposes to the AI client.
+
+    ## Security warning
+
+    This deployment exposes your Alpaca trading credentials behind an HTTPS endpoint with no built-in auth — anyone with the URL can issue trades on your account. For production use:
+
+    - Keep `ALPACA_PAPER_TRADE=true` until you've verified the setup
+    - Treat the public URL as a secret; do not share it
+    - Consider putting the service behind an authenticating proxy
+
+    ## License & attribution
+
+    The Alpaca MCP Server is licensed under the [MIT License](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) by Alpaca Securities LLC. This Zeabur template repackages the upstream Docker build and is not an official Alpaca product.
+  services:
+  - name: alpaca-mcp-server
     icon: https://avatars.githubusercontent.com/u/30398729?v=4&s=400
-    variables:
-        - key: PUBLIC_DOMAIN
-          type: DOMAIN
-          name: Public Domain
-          description: The public domain for connecting your AI client to the MCP server. Append /mcp to this URL when adding it to Claude or ChatGPT.
-    tags:
-        - AI
-        - Developer Tool
-    readme: |
-        # Alpaca MCP Server on Zeabur
+    template: PREBUILT_V2
+    spec:
+      id: alpaca-mcp-server
+      source:
+        image: docker.io/zeabur/alpaca-mcp-server:2.0.1
+        command:
+        - /bin/sh
+        - -c
+        - /opt/startup.sh
+      ports:
+      - id: web
+        port: 8000
+        type: HTTP
+      volumes:
+      - id: data
+        dir: /data
+      configs:
+      - path: /opt/startup.sh
+        permission: 493
+        template: |
+          #!/bin/sh
+          mkdir -p /data
+          exec python /opt/launcher.py
+      - path: /opt/launcher.py
+        template: |
+          import hashlib
+          import hmac
+          import http.client
+          import http.cookies
+          import json
+          import os
+          import secrets
+          import signal
+          import subprocess
+          import threading
+          import time
+          from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+          from pathlib import Path
+          from urllib.parse import parse_qs, urlsplit
 
-        A remote [Model Context Protocol](https://modelcontextprotocol.io/) server for [Alpaca](https://alpaca.markets/)'s Trading API. Once deployed, you can add this server as a custom connector in Claude (web/desktop/mobile) or ChatGPT to trade stocks, options, and crypto and run market analysis through plain-English chat.
+          PUBLIC_PORT = int(os.environ.get("PORT", "8000"))
+          MCP_PORT = int(os.environ.get("MCP_INTERNAL_PORT", "8001"))
+          # OAuth gate sits between the public launcher and the internal MCP server.
+          # Public /mcp + OAuth endpoints are proxied to the gate, which enforces the
+          # login and forwards authenticated traffic to the MCP server on MCP_PORT.
+          GATE_PORT = int(os.environ.get("GATE_INTERNAL_PORT", "8002"))
+          CONFIG_PATH = Path("/data/alpaca-launcher.json")
+          LANDING_PATH = Path("/opt/landing.html")
+          TOKEN = os.environ.get("WEB_LAUNCHER_TOKEN", "")
+          SECRET = secrets.token_hex(32)
+          mcp_process = None
+          gate_process = None
+          process_lock = threading.Lock()
+          gate_lock = threading.Lock()
 
-        Original project: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — MIT License.
+          def load_config():
+              config = {
+                  "ALPACA_API_KEY": os.environ.get("ALPACA_API_KEY", ""),
+                  "ALPACA_SECRET_KEY": os.environ.get("ALPACA_SECRET_KEY", ""),
+                  "ALPACA_PAPER_TRADE": os.environ.get("ALPACA_PAPER_TRADE", "true"),
+              }
+              if CONFIG_PATH.exists():
+                  try:
+                      saved = json.loads(CONFIG_PATH.read_text())
+                      for key in config:
+                          if saved.get(key) not in (None, ""):
+                              config[key] = str(saved[key])
+                  except Exception:
+                      pass
+              config["ALPACA_PAPER_TRADE"] = "true" if str(config.get("ALPACA_PAPER_TRADE", "true")).lower() == "true" else "false"
+              return config
 
-        ## 1. Get your Alpaca API keys
+          def save_config(config):
+              CONFIG_PATH.write_text(json.dumps(config, indent=2))
+              CONFIG_PATH.chmod(0o600)
 
-        1. Sign up at [alpaca.markets](https://alpaca.markets/)
-        2. Open the [Paper Trading dashboard](https://app.alpaca.markets/paper/dashboard/overview) (recommended for testing)
-        3. Generate an API key pair under *API Keys* → *Generate New Key*
-        4. Copy the `API Key ID` into `ALPACA_API_KEY` and the `Secret Key` into `ALPACA_SECRET_KEY` when deploying this template
+          def public_domain(headers):
+              configured = os.environ.get("PUBLIC_DOMAIN", "").strip()
+              if configured:
+                  if "://" in configured:
+                      configured = configured.split("://", 1)[1]
+                  configured = configured.strip("/")
+                  if "." not in configured and ":" not in configured:
+                      configured = configured + ".zeabur.app"
+                  return configured
+              return headers.get("x-forwarded-host") or headers.get("host") or ""
 
-        > To trade with real money, switch the dashboard to *Live*, generate live keys, and set `ALPACA_PAPER_TRADE=false` after deployment.
+          def base_url_for_gate():
+              # The OAuth issuer/base_url MUST equal the public HTTPS URL clients use.
+              domain = public_domain({})
+              return ("https://" + domain) if domain else ""
 
-        ## 2. Deploy and configure
+          def mask(value):
+              if not value:
+                  return ""
+              if len(value) <= 8:
+                  return "*" * len(value)
+              return value[:4] + "*" * (len(value) - 8) + value[-4:]
 
-        Click *Deploy* and pick a public domain — Zeabur gives you a free `.zeabur.app` subdomain or you can bind your own.
+          def session_value():
+              return hmac.new(SECRET.encode(), TOKEN.encode(), hashlib.sha256).hexdigest()
 
-        After the service starts, open the service URL in your browser and log in with the launcher password from the **Instructions** tab. The web launcher lets you:
+          def parse_cookies(header):
+              cookie = http.cookies.SimpleCookie()
+              try:
+                  cookie.load(header or "")
+              except Exception:
+                  return {}
+              return {key: morsel.value for key, morsel in cookie.items()}
 
-        - Set or update `ALPACA_API_KEY` and `ALPACA_SECRET_KEY`
-        - Toggle `ALPACA_PAPER_TRADE`
-        - Restart the internal MCP server
-        - Copy the MCP endpoint or a ready-to-paste setup prompt for Claude Code / Codex
+          def authorized(handler):
+              if not TOKEN:
+                  return True
+              return parse_cookies(handler.headers.get("cookie")).get("session") == session_value()
 
-        ## 3. Connect your AI client
+          def start_mcp():
+              global mcp_process
+              with process_lock:
+                  if mcp_process and mcp_process.poll() is None:
+                      return
+                  config = load_config()
+                  env = os.environ.copy()
+                  env.update(config)
+                  env["PORT"] = str(MCP_PORT)
+                  cmd = [
+                      "alpaca-mcp-server",
+                      "--transport",
+                      "streamable-http",
+                      "--host",
+                      "127.0.0.1",
+                      "--port",
+                      str(MCP_PORT),
+                  ]
+                  try:
+                      mcp_process = subprocess.Popen(cmd, env=env)
+                      print("[launcher] started Alpaca MCP server on 127.0.0.1:%s" % MCP_PORT, flush=True)
+                  except Exception as exc:
+                      mcp_process = None
+                      print("[launcher] failed to start MCP server: %s" % exc, flush=True)
 
-        Your MCP endpoint is `https://<your-domain>/mcp`.
+          def restart_mcp():
+              global mcp_process
+              with process_lock:
+                  if mcp_process and mcp_process.poll() is None:
+                      mcp_process.terminate()
+                      try:
+                          mcp_process.wait(timeout=8)
+                      except subprocess.TimeoutExpired:
+                          mcp_process.kill()
+                          mcp_process.wait(timeout=3)
+                  mcp_process = None
+              start_mcp()
 
-        **Claude (web, desktop, mobile):**
-        1. Settings → Connectors → *Add custom connector*
-        2. Name: `Alpaca`, URL: `https://<your-domain>/mcp`
-        3. Save and toggle the connector on in any chat
+          def start_gate():
+              global gate_process
+              with gate_lock:
+                  if gate_process and gate_process.poll() is None:
+                      return
+                  base = base_url_for_gate()
+                  if not base:
+                      print("[launcher] PUBLIC_DOMAIN not resolved yet; OAuth gate not started", flush=True)
+                      return
+                  env = os.environ.copy()
+                  env["BASE_URL"] = base
+                  env["MCP_AUTH_PASSWORD"] = TOKEN  # one secret: same as the launcher login
+                  env["UPSTREAM_MCP_URL"] = "http://127.0.0.1:%s/mcp" % MCP_PORT
+                  env["PORT"] = str(GATE_PORT)
+                  env["OAUTH_STATE_DIR"] = "/data/oauth-state"
+                  try:
+                      gate_process = subprocess.Popen(["python", "/opt/server.py"], env=env)
+                      print("[launcher] started OAuth gate on 127.0.0.1:%s (issuer %s)" % (GATE_PORT, base), flush=True)
+                  except Exception as exc:
+                      gate_process = None
+                      print("[launcher] failed to start OAuth gate: %s" % exc, flush=True)
 
-        **ChatGPT:**
-        1. Settings → Connectors → *New connector*
-        2. URL: `https://<your-domain>/mcp`, transport: `Streamable HTTP`
+          def monitor_all():
+              while True:
+                  time.sleep(3)
+                  if mcp_process is None or mcp_process.poll() is not None:
+                      start_mcp()
+                  if gate_process is None or gate_process.poll() is not None:
+                      start_gate()
 
-        ## Configuration
+          class Handler(BaseHTTPRequestHandler):
+              protocol_version = "HTTP/1.1"
 
-        | Variable | Default | Purpose |
-        |---|---|---|
-        | `ALPACA_API_KEY` | — | Optional at deploy time. Alpaca API key ID, configurable in the launcher |
-        | `ALPACA_SECRET_KEY` | — | Optional at deploy time. Alpaca API secret, configurable in the launcher |
-        | `ALPACA_PAPER_TRADE` | `true` | Set to `false` to enable live (real-money) trading |
-        | `WEB_LAUNCHER_PASSWORD` | Auto | Password for the web launcher login |
+              def send_json(self, status, payload, headers=None):
+                  body = json.dumps(payload).encode()
+                  self.send_response(status)
+                  self.send_header("Content-Type", "application/json")
+                  self.send_header("Content-Length", str(len(body)))
+                  for key, value in (headers or {}).items():
+                      self.send_header(key, value)
+                  self.end_headers()
+                  self.wfile.write(body)
 
-        Advanced: you can also set `ALPACA_TOOLSETS` post-deploy under *Variables* — a comma-separated list (e.g. `account,positions,orders`) that restricts which tool families the MCP server exposes to the AI client.
+              def read_json(self):
+                  length = int(self.headers.get("content-length", "0"))
+                  if length <= 0:
+                      return {}
+                  return json.loads(self.rfile.read(length))
 
-        ## Security warning
+              def do_GET(self):
+                  parsed = urlsplit(self.path)
+                  path = parsed.path
+                  if path == "/":
+                      query_token = parse_qs(parsed.query).get("token", [""])[0]
+                      if query_token and query_token == TOKEN:
+                          self.send_response(302)
+                          self.send_header("Location", "/")
+                          self.send_header("Set-Cookie", "session=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400" % session_value())
+                          self.send_header("Connection", "close")
+                          self.end_headers()
+                          self.close_connection = True
+                          return
+                      html = LANDING_PATH.read_text()
+                      body = html.encode()
+                      self.send_response(200)
+                      self.send_header("Content-Type", "text/html; charset=utf-8")
+                      self.send_header("Content-Length", str(len(body)))
+                      self.end_headers()
+                      self.wfile.write(body)
+                      return
+                  if path == "/status":
+                      if not authorized(self):
+                          self.send_json(401, {"ok": False})
+                          return
+                      config = load_config()
+                      domain = public_domain(self.headers)
+                      scheme = self.headers.get("x-forwarded-proto", "https")
+                      endpoint = ("%s://%s/mcp" % (scheme, domain)) if domain else "/mcp"
+                      running = bool(mcp_process and mcp_process.poll() is None)
+                      self.send_json(200, {
+                          "ok": True,
+                          "running": running,
+                          "domain": domain,
+                          "endpoint": endpoint,
+                          "apiKeyMasked": mask(config.get("ALPACA_API_KEY", "")),
+                          "hasSecret": bool(config.get("ALPACA_SECRET_KEY", "")),
+                          "paperTrade": config.get("ALPACA_PAPER_TRADE", "true"),
+                      })
+                      return
+                  self.proxy_to_gate()
 
-        This deployment exposes your Alpaca trading credentials behind an HTTPS endpoint with no built-in auth — anyone with the URL can issue trades on your account. For production use:
+              def do_HEAD(self):
+                  path = urlsplit(self.path).path
+                  if path == "/":
+                      self.send_response(200)
+                      self.send_header("Content-Type", "text/html; charset=utf-8")
+                      self.send_header("Connection", "close")
+                      self.end_headers()
+                      self.close_connection = True
+                      return
+                  self.proxy_to_gate()
 
-        - Keep `ALPACA_PAPER_TRADE=true` until you've verified the setup
-        - Treat the public URL as a secret; do not share it
-        - Consider putting the service behind an authenticating proxy
+              def do_POST(self):
+                  path = urlsplit(self.path).path
+                  if path == "/auth":
+                      payload = self.read_json()
+                      if payload.get("token") == TOKEN:
+                          self.send_json(200, {"ok": True}, {
+                              "Set-Cookie": "session=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400" % session_value()
+                          })
+                      else:
+                          self.send_json(200, {"ok": False})
+                      return
+                  if path == "/config":
+                      if not authorized(self):
+                          self.send_json(401, {"ok": False})
+                          return
+                      payload = self.read_json()
+                      current = load_config()
+                      if payload.get("apiKey"):
+                          current["ALPACA_API_KEY"] = str(payload["apiKey"]).strip()
+                      if payload.get("secretKey"):
+                          current["ALPACA_SECRET_KEY"] = str(payload["secretKey"]).strip()
+                      current["ALPACA_PAPER_TRADE"] = "true" if payload.get("paperTrade") in (True, "true", "1", 1) else "false"
+                      save_config(current)
+                      restart_mcp()
+                      self.send_json(200, {"ok": True})
+                      return
+                  self.proxy_to_gate()
 
-        ## License & attribution
+              def do_DELETE(self):
+                  self.proxy_to_gate()
 
-        The Alpaca MCP Server is licensed under the [MIT License](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) by Alpaca Securities LLC. This Zeabur template repackages the upstream Docker build and is not an official Alpaca product.
-    services:
-        - name: alpaca-mcp-server
-          icon: https://avatars.githubusercontent.com/u/30398729?v=4&s=400
-          template: PREBUILT_V2
-          spec:
-            id: alpaca-mcp-server
-            source:
-                image: docker.io/zeabur/alpaca-mcp-server:2.0.1
-                command:
-                    - /bin/sh
-                    - -c
-                    - /opt/startup.sh
-            ports:
-                - id: web
-                  port: 8000
-                  type: HTTP
-            volumes:
-                - id: data
-                  dir: /data
-            configs:
-                - path: /opt/startup.sh
-                  permission: 493
-                  template: |
-                    #!/bin/sh
-                    mkdir -p /data
-                    exec python /opt/launcher.py
-                - path: /opt/launcher.py
-                  template: |
-                    import hashlib
-                    import hmac
-                    import http.client
-                    import http.cookies
-                    import json
-                    import os
-                    import secrets
-                    import signal
-                    import subprocess
-                    import threading
-                    import time
-                    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-                    from pathlib import Path
-                    from urllib.parse import parse_qs, urlsplit
+              def do_OPTIONS(self):
+                  self.proxy_to_gate()
 
-                    PUBLIC_PORT = int(os.environ.get("PORT", "8000"))
-                    MCP_PORT = int(os.environ.get("MCP_INTERNAL_PORT", "8001"))
-                    CONFIG_PATH = Path("/data/alpaca-launcher.json")
-                    LANDING_PATH = Path("/opt/landing.html")
-                    TOKEN = os.environ.get("WEB_LAUNCHER_TOKEN", "")
-                    SECRET = secrets.token_hex(32)
-                    mcp_process = None
-                    process_lock = threading.Lock()
+              def proxy_to_gate(self):
+                  # Forward all non-setup traffic (/mcp, /.well-known/*, /authorize,
+                  # /token, /register, /login, ...) to the OAuth gate, which enforces
+                  # login before reaching the MCP server.
+                  start_mcp()
+                  start_gate()
+                  body = None
+                  if self.command in ("POST", "PUT", "PATCH"):
+                      length = int(self.headers.get("content-length", "0"))
+                      body = self.rfile.read(length) if length else None
+                  headers = {key: value for key, value in self.headers.items() if key.lower() not in ("host", "content-length")}
+                  conn = http.client.HTTPConnection("127.0.0.1", GATE_PORT, timeout=300)
+                  try:
+                      conn.request(self.command, self.path, body=body, headers=headers)
+                      resp = conn.getresponse()
+                      self.send_response(resp.status, resp.reason)
+                      excluded = {"transfer-encoding", "connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers", "upgrade"}
+                      for key, value in resp.getheaders():
+                          if key.lower() not in excluded:
+                              self.send_header(key, value)
+                      self.send_header("Connection", "close")
+                      self.end_headers()
+                      self.close_connection = True
+                      while True:
+                          chunk = resp.read(8192)
+                          if not chunk:
+                              break
+                          self.wfile.write(chunk)
+                          self.wfile.flush()
+                  except Exception as exc:
+                      message = ("MCP gate starting: %s" % exc).encode()
+                      self.send_response(502)
+                      self.send_header("Content-Type", "text/plain")
+                      self.send_header("Content-Length", str(len(message)))
+                      self.end_headers()
+                      self.wfile.write(message)
+                  finally:
+                      conn.close()
 
-                    def load_config():
-                        config = {
-                            "ALPACA_API_KEY": os.environ.get("ALPACA_API_KEY", ""),
-                            "ALPACA_SECRET_KEY": os.environ.get("ALPACA_SECRET_KEY", ""),
-                            "ALPACA_PAPER_TRADE": os.environ.get("ALPACA_PAPER_TRADE", "true"),
-                        }
-                        if CONFIG_PATH.exists():
-                            try:
-                                saved = json.loads(CONFIG_PATH.read_text())
-                                for key in config:
-                                    if saved.get(key) not in (None, ""):
-                                        config[key] = str(saved[key])
-                            except Exception:
-                                pass
-                        config["ALPACA_PAPER_TRADE"] = "true" if str(config.get("ALPACA_PAPER_TRADE", "true")).lower() == "true" else "false"
-                        return config
+              def log_message(self, fmt, *args):
+                  print("[launcher] " + fmt % args, flush=True)
 
-                    def save_config(config):
-                        CONFIG_PATH.write_text(json.dumps(config, indent=2))
-                        CONFIG_PATH.chmod(0o600)
+          def shutdown(signum, frame):
+              for proc in (mcp_process, gate_process):
+                  if proc and proc.poll() is None:
+                      proc.terminate()
+              raise SystemExit(0)
 
-                    def public_domain(headers):
-                        configured = os.environ.get("PUBLIC_DOMAIN", "").strip()
-                        if configured:
-                            if "://" in configured:
-                                configured = configured.split("://", 1)[1]
-                            configured = configured.strip("/")
-                            if "." not in configured and ":" not in configured:
-                                configured = configured + ".zeabur.app"
-                            return configured
-                        return headers.get("x-forwarded-host") or headers.get("host") or ""
+          signal.signal(signal.SIGTERM, shutdown)
+          signal.signal(signal.SIGINT, shutdown)
+          start_mcp()
+          start_gate()
+          threading.Thread(target=monitor_all, daemon=True).start()
+          server = ThreadingHTTPServer(("0.0.0.0", PUBLIC_PORT), Handler)
+          print("[launcher] ready on 0.0.0.0:%s" % PUBLIC_PORT, flush=True)
+          server.serve_forever()
+      - path: /opt/landing.html
+        template: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Alpaca MCP Server</title>
+          <link rel="icon" href="https://avatars.githubusercontent.com/u/30398729?v=4&s=64">
+          <link rel="apple-touch-icon" href="https://avatars.githubusercontent.com/u/30398729?v=4&s=180">
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+          <style>
+            :root {
+              color-scheme: dark;
+              --bg:#0f0e11; --panel:#19181b; --inset:#0f0e11; --border:#322f37;
+              --text:#f5f4f5; --dim:#9a93a5;
+              --gold:#FCD72B; --gold-ink:#1c1600; --violet:#745df3; --success:#22D180;
+              --danger-tx:#ff9aa9;
+              --warn-bg:#2b2113; --warn-bd:#6f5325; --warn-tx:#f3d49f;
+              --glow-gold:rgba(252,215,43,.10); --glow-violet:rgba(99,0,255,.16);
+            }
+            @media (prefers-color-scheme: light) {
+              :root {
+                color-scheme: light;
+                --bg:#f7f7f7; --panel:#ffffff; --inset:#f3f2f4; --border:#e6e4ea;
+                --text:#19181b; --dim:#6b6675; --gold-ink:#1c1600; --violet:#6300ff;
+                --danger-tx:#b4232f;
+                --warn-bg:#fdf4e3; --warn-bd:#e9cf9b; --warn-tx:#8a6320;
+                --glow-gold:rgba(252,215,43,.20); --glow-violet:rgba(99,0,255,.07);
+              }
+            }
+            * { box-sizing:border-box; }
+            body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+                   font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                   -webkit-font-smoothing:antialiased; position:relative; }
+            body::before { content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+                   background:
+                     radial-gradient(700px 480px at 92% -10%, var(--glow-gold), transparent 60%),
+                     radial-gradient(760px 520px at 2% 110%, var(--glow-violet), transparent 60%); }
+            main { position:relative; z-index:1; width:min(980px, calc(100% - 32px)); margin:0 auto; padding:48px 0 56px; }
 
-                    def mask(value):
-                        if not value:
-                            return ""
-                        if len(value) <= 8:
-                            return "*" * len(value)
-                        return value[:4] + "*" * (len(value) - 8) + value[-4:]
+            header { display:flex; align-items:center; gap:14px; margin-bottom:30px;
+                     animation:rise .5s cubic-bezier(.2,.7,.2,1) both; }
+            header img { width:48px; height:48px; border-radius:13px; box-shadow:0 8px 22px rgba(252,215,43,.22); }
+            .wm { font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:13px;
+                  letter-spacing:.16em; text-transform:uppercase; color:var(--dim); margin:0 0 2px; }
+            .wm span { color:var(--gold); }
+            h1 { font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:25px;
+                 letter-spacing:-.01em; margin:0; line-height:1.1; }
+            .card { background:var(--panel); border:1px solid var(--border); border-radius:18px;
+                    box-shadow:0 24px 60px -24px rgba(0,0,0,.55); padding:24px; }
+            .grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(290px,360px); gap:18px;
+                    align-items:start; animation:rise .5s cubic-bezier(.2,.7,.2,1) both; }
 
-                    def session_value():
-                        return hmac.new(SECRET.encode(), TOKEN.encode(), hashlib.sha256).hexdigest()
+            h2 { font-family:'Bricolage Grotesque',sans-serif; font-weight:600; font-size:16px; margin:0 0 14px; letter-spacing:-.005em; }
+            label { display:block; margin:16px 0 8px; color:var(--dim); font-size:12px; font-weight:600;
+                    letter-spacing:.04em; text-transform:uppercase; }
+            .field { position:relative; }
+            input { width:100%; height:44px; border:1px solid var(--border); border-radius:11px;
+                    background:var(--inset); color:var(--text); padding:0 13px; font-size:14px;
+                    font-family:'Hanken Grotesk',sans-serif; outline:none; transition:border-color .15s,box-shadow .15s; }
+            input::placeholder { color:var(--dim); opacity:.7; }
+            input:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(252,215,43,.18); }
+            input.mono, .copy input { font-family:'JetBrains Mono',ui-monospace,monospace; font-size:13px; letter-spacing:.02em; }
+            .hint { margin:7px 0 0; color:var(--dim); font-size:12px; line-height:1.5; }
+            .hint b, .hint span { color:var(--text); font-weight:600; }
 
-                    def parse_cookies(header):
-                        cookie = http.cookies.SimpleCookie()
-                        try:
-                            cookie.load(header or "")
-                        except Exception:
-                            return {}
-                        return {key: morsel.value for key, morsel in cookie.items()}
+            .row { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:18px; }
+            .login-card { max-width:430px; margin:6vh auto 0; }
+            .sub { margin:6px 0 18px; color:var(--dim); font-size:13.5px; line-height:1.5; }
+            .field svg { position:absolute; left:13px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--dim); pointer-events:none; }
+            .field input { padding-left:38px; }
+            .err-inline { margin:10px 0 0; color:var(--danger-tx); font-size:12.5px; min-height:16px; }
 
-                    def authorized(handler):
-                        if not TOKEN:
-                            return True
-                        return parse_cookies(handler.headers.get("cookie")).get("session") == session_value()
+            button, .button { font-family:'Hanken Grotesk',sans-serif; border:0; border-radius:11px;
+                    background:var(--gold); color:var(--gold-ink); font-weight:700; height:44px; padding:0 16px;
+                    cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center;
+                    transition:transform .12s,filter .15s,box-shadow .15s; box-shadow:0 8px 20px rgba(252,215,43,.18); }
+            button:hover, .button:hover { filter:brightness(1.04); box-shadow:0 10px 24px rgba(252,215,43,.28); }
+            button:active { transform:translateY(1px); }
+            button.secondary { background:transparent; color:var(--text); border:1px solid var(--border); box-shadow:none; }
+            button.secondary:hover { filter:none; background:var(--inset); }
+            button:disabled { opacity:.5; cursor:not-allowed; box-shadow:none; }
 
-                    def start_mcp():
-                        global mcp_process
-                        with process_lock:
-                            if mcp_process and mcp_process.poll() is None:
-                                return
-                            config = load_config()
-                            env = os.environ.copy()
-                            env.update(config)
-                            env["PORT"] = str(MCP_PORT)
-                            cmd = [
-                                "alpaca-mcp-server",
-                                "--transport",
-                                "streamable-http",
-                                "--host",
-                                "127.0.0.1",
-                                "--port",
-                                str(MCP_PORT),
-                            ]
-                            mcp_process = subprocess.Popen(cmd, env=env)
-                            print("[launcher] started Alpaca MCP server on 127.0.0.1:%s" % MCP_PORT, flush=True)
+            .copy { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+            .split { position:relative; display:flex; height:44px; width:100%; }
+            .split-main { flex:1; border-radius:11px 0 0 11px; }
+            .split-toggle { width:42px; border-left:1px solid rgba(28,22,0,.22); border-radius:0 11px 11px 0; padding:0; }
+            .split-menu { position:absolute; right:0; top:calc(100% + 6px); z-index:5; min-width:200px; padding:6px;
+                          border:1px solid var(--border); border-radius:11px; background:var(--panel); box-shadow:0 16px 34px -12px rgba(0,0,0,.5); }
+            .split-menu button { width:100%; height:38px; justify-content:flex-start; background:transparent; color:var(--text); font-weight:600; box-shadow:none; }
+            .split-menu button:hover { background:var(--inset); filter:none; }
 
-                    def restart_mcp():
-                        global mcp_process
-                        with process_lock:
-                            if mcp_process and mcp_process.poll() is None:
-                                mcp_process.terminate()
-                                try:
-                                    mcp_process.wait(timeout=8)
-                                except subprocess.TimeoutExpired:
-                                    mcp_process.kill()
-                                    mcp_process.wait(timeout=3)
-                            mcp_process = None
-                        start_mcp()
+            .pill { display:inline-flex; align-items:center; gap:8px; padding:5px 11px; border-radius:999px;
+                    background:var(--inset); border:1px solid var(--border); color:var(--dim); font-size:12px; font-weight:600; }
+            .dot { width:8px; height:8px; border-radius:50%; background:#8b8590; transition:background .2s,box-shadow .2s; }
+            .dot.on { background:var(--success); box-shadow:0 0 0 3px rgba(34,209,128,.18); }
 
-                    def monitor_mcp():
-                        while True:
-                            time.sleep(3)
-                            if mcp_process is None or mcp_process.poll() is not None:
-                                start_mcp()
+            .switch { display:inline-flex; align-items:center; gap:10px; color:var(--text); font-size:13.5px; font-weight:500; cursor:pointer; }
+            .switch input { width:18px; height:18px; accent-color:var(--gold); }
+            .warn { margin-top:16px; background:var(--warn-bg); color:var(--warn-tx); border:1px solid var(--warn-bd);
+                    border-radius:11px; padding:12px 13px; font-size:12.5px; line-height:1.5; }
+            .steps { margin:0; padding-left:18px; color:var(--dim); font-size:13px; line-height:1.75; }
+            .steps li::marker { color:var(--gold); }
+            .toast { min-height:18px; margin-top:12px; color:var(--success); font-size:12.5px; font-weight:600; }
+            .hidden { display:none; }
+            @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+            @media (max-width:760px) { main { padding:28px 0; } .grid { grid-template-columns:1fr; } .row { align-items:stretch; flex-direction:column; } }
+          </style>
+          </head>
+          <body>
+          <main>
+            <header>
+              <img src="https://avatars.githubusercontent.com/u/30398729?v=4&s=400" alt="Alpaca">
+              <div>
+                <p class="wm">Alpaca <span>&middot;</span> MCP</p>
+                <h1>Trading server launcher</h1>
+              </div>
+            </header>
 
-                    class Handler(BaseHTTPRequestHandler):
-                        protocol_version = "HTTP/1.1"
+            <section id="login">
+              <div class="card login-card">
+                <h2>Launcher login</h2>
+                <p class="sub">Paste the access token from your Zeabur project's <b>Instructions</b> tab.</p>
+                <label for="token">Access token</label>
+                <div class="field">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <input id="token" type="password" autocomplete="current-password" placeholder="Open Alpaca Launcher link from Zeabur Instructions">
+                </div>
+                <p id="login-error" class="err-inline"></p>
+                <div class="row" style="margin-top:14px">
+                  <span></span>
+                  <button onclick="login()">Enter launcher</button>
+                </div>
+              </div>
+            </section>
 
-                        def send_json(self, status, payload, headers=None):
-                            body = json.dumps(payload).encode()
-                            self.send_response(status)
-                            self.send_header("Content-Type", "application/json")
-                            self.send_header("Content-Length", str(len(body)))
-                            for key, value in (headers or {}).items():
-                                self.send_header(key, value)
-                            self.end_headers()
-                            self.wfile.write(body)
+            <section id="app" class="grid hidden">
+              <div class="card">
+                <div class="row" style="margin-top:0">
+                  <h2 style="margin:0">Alpaca settings</h2>
+                  <span class="pill"><span id="dot" class="dot"></span><span id="runtime">Checking&hellip;</span></span>
+                </div>
+                <label for="apiKey">Alpaca API key</label>
+                <input id="apiKey" class="mono" placeholder="AKXXXXXXXXXXXXXXXXXX" autocomplete="off">
+                <p class="hint">Leave blank to keep the current key. Current: <span id="apiMasked">not set</span></p>
 
-                        def read_json(self):
-                            length = int(self.headers.get("content-length", "0"))
-                            if length <= 0:
-                                return {}
-                            return json.loads(self.rfile.read(length))
+                <label for="secretKey">Alpaca secret key</label>
+                <input id="secretKey" type="password" placeholder="Leave blank to keep current secret" autocomplete="off">
+                <p class="hint">Current secret: <span id="secretState">not set</span></p>
 
-                        def do_GET(self):
-                            parsed = urlsplit(self.path)
-                            path = parsed.path
-                            if path == "/":
-                                query_token = parse_qs(parsed.query).get("token", [""])[0]
-                                if query_token and query_token == TOKEN:
-                                    self.send_response(302)
-                                    self.send_header("Location", "/")
-                                    self.send_header("Set-Cookie", "session=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400" % session_value())
-                                    self.send_header("Connection", "close")
-                                    self.end_headers()
-                                    self.close_connection = True
-                                    return
-                                html = LANDING_PATH.read_text()
-                                body = html.encode()
-                                self.send_response(200)
-                                self.send_header("Content-Type", "text/html; charset=utf-8")
-                                self.send_header("Content-Length", str(len(body)))
-                                self.end_headers()
-                                self.wfile.write(body)
-                                return
-                            if path == "/status":
-                                if not authorized(self):
-                                    self.send_json(401, {"ok": False})
-                                    return
-                                config = load_config()
-                                domain = public_domain(self.headers)
-                                scheme = self.headers.get("x-forwarded-proto", "https")
-                                endpoint = ("%s://%s/mcp" % (scheme, domain)) if domain else "/mcp"
-                                running = bool(mcp_process and mcp_process.poll() is None)
-                                self.send_json(200, {
-                                    "ok": True,
-                                    "running": running,
-                                    "domain": domain,
-                                    "endpoint": endpoint,
-                                    "apiKeyMasked": mask(config.get("ALPACA_API_KEY", "")),
-                                    "hasSecret": bool(config.get("ALPACA_SECRET_KEY", "")),
-                                    "paperTrade": config.get("ALPACA_PAPER_TRADE", "true"),
-                                })
-                                return
-                            self.proxy_to_mcp()
+                <div class="row">
+                  <label class="switch" for="paperTrade">
+                    <input id="paperTrade" type="checkbox" checked>
+                    Paper trading
+                  </label>
+                  <button id="saveBtn" onclick="saveConfig()">Save &amp; restart</button>
+                </div>
+                <p class="hint">Disable paper trading only after switching Alpaca to live keys. Live mode can place real orders.</p>
+                <div class="warn">The <b>/mcp</b> endpoint is protected by OAuth &mdash; connecting requires this launcher password. Keep that password private; anyone who has it can trade your account.</div>
+                <p id="toast" class="toast"></p>
+              </div>
 
-                        def do_HEAD(self):
-                            path = urlsplit(self.path).path
-                            if path == "/":
-                                self.send_response(200)
-                                self.send_header("Content-Type", "text/html; charset=utf-8")
-                                self.send_header("Connection", "close")
-                                self.end_headers()
-                                self.close_connection = True
-                                return
-                            self.proxy_to_mcp()
+              <aside class="card">
+                <h2>Connect client</h2>
+                <label>MCP endpoint</label>
+                <div class="copy">
+                  <input id="endpoint" class="mono" readonly value="/mcp">
+                  <div class="split">
+                    <button class="split-main" onclick="copySetupPrompt()">Copy setup prompt</button>
+                    <button class="split-toggle" onclick="toggleCopyMenu()" aria-label="More copy options">&#9662;</button>
+                    <div id="copyMenu" class="split-menu hidden">
+                      <button onclick="copyEndpoint()">Copy MCP endpoint</button>
+                    </div>
+                  </div>
+                </div>
+                <p class="hint">Paste the setup prompt into Claude Code, Codex, or another coding agent to configure the connector. Use the menu to copy only the raw endpoint.</p>
+                <p id="copyToast" class="toast"></p>
 
-                        def do_POST(self):
-                            path = urlsplit(self.path).path
-                            if path == "/auth":
-                                payload = self.read_json()
-                                if payload.get("token") == TOKEN:
-                                    self.send_json(200, {"ok": True}, {
-                                        "Set-Cookie": "session=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400" % session_value()
-                                    })
-                                else:
-                                    self.send_json(200, {"ok": False})
-                                return
-                            if path == "/config":
-                                if not authorized(self):
-                                    self.send_json(401, {"ok": False})
-                                    return
-                                payload = self.read_json()
-                                current = load_config()
-                                if payload.get("apiKey"):
-                                    current["ALPACA_API_KEY"] = str(payload["apiKey"]).strip()
-                                if payload.get("secretKey"):
-                                    current["ALPACA_SECRET_KEY"] = str(payload["secretKey"]).strip()
-                                current["ALPACA_PAPER_TRADE"] = "true" if payload.get("paperTrade") in (True, "true", "1", 1) else "false"
-                                save_config(current)
-                                restart_mcp()
-                                self.send_json(200, {"ok": True})
-                                return
-                            self.proxy_to_mcp()
+                <h2 style="margin-top:24px">Claude</h2>
+                <ol class="steps">
+                  <li>Open Settings, then Connectors.</li>
+                  <li>Add a custom connector named Alpaca.</li>
+                  <li>Paste the MCP endpoint &mdash; you'll be asked for this launcher password.</li>
+                </ol>
 
-                        def do_DELETE(self):
-                            self.proxy_to_mcp()
+                <h2 style="margin-top:22px">ChatGPT</h2>
+                <ol class="steps">
+                  <li>Open Settings, then Connectors.</li>
+                  <li>Create a connector with Streamable HTTP transport.</li>
+                  <li>Paste the MCP endpoint.</li>
+                </ol>
+              </aside>
+            </section>
+          </main>
+          <script>
+            async function login() {
+              const token = document.getElementById('token').value;
+              const res = await fetch('/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+              const data = await res.json();
+              if (!data.ok) {
+                document.getElementById('login-error').textContent = 'Incorrect token';
+                return;
+              }
+              showApp();
+            }
+            function showApp() {
+              document.getElementById('login').classList.add('hidden');
+              document.getElementById('app').classList.remove('hidden');
+              refreshStatus();
+            }
+            async function bootstrap() {
+              const res = await fetch('/status');
+              if (res.status === 200) showApp();
+            }
+            async function refreshStatus() {
+              const res = await fetch('/status');
+              if (res.status === 401) return;
+              const data = await res.json();
+              document.getElementById('dot').classList.toggle('on', data.running);
+              document.getElementById('runtime').textContent = data.running ? 'Running' : 'Restarting';
+              document.getElementById('endpoint').value = data.endpoint || '/mcp';
+              document.getElementById('apiMasked').textContent = data.apiKeyMasked || 'not set';
+              document.getElementById('secretState').textContent = data.hasSecret ? 'set' : 'not set';
+              document.getElementById('paperTrade').checked = data.paperTrade !== 'false';
+            }
+            function buildSetupPrompt(endpoint) {
+              return [
+                'Configure an MCP connector for this workspace.',
+                '',
+                'Name: Alpaca',
+                'Transport: Streamable HTTP',
+                'URL: ' + endpoint,
+                '',
+                'After configuring it, verify that the Alpaca MCP tools are available.',
+                'Treat this URL as sensitive because anyone with access to it can send trading requests through the connected Alpaca account.'
+              ].join('\n');
+            }
+            async function saveConfig() {
+              const btn = document.getElementById('saveBtn');
+              btn.disabled = true;
+              document.getElementById('toast').textContent = 'Saving...';
+              const payload = {
+                apiKey: document.getElementById('apiKey').value.trim(),
+                secretKey: document.getElementById('secretKey').value.trim(),
+                paperTrade: document.getElementById('paperTrade').checked
+              };
+              const res = await fetch('/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+              btn.disabled = false;
+              if (!res.ok) {
+                document.getElementById('toast').textContent = 'Failed to save settings.';
+                return;
+              }
+              document.getElementById('apiKey').value = '';
+              document.getElementById('secretKey').value = '';
+              document.getElementById('toast').textContent = 'Settings saved. MCP server restarted.';
+              refreshStatus();
+            }
+            function copyValue(id) {
+              const input = document.getElementById(id);
+              navigator.clipboard.writeText(input.value);
+            }
+            function copyText(text) {
+              navigator.clipboard.writeText(text);
+            }
+            function copied(label) {
+              const el = document.getElementById('copyToast');
+              el.textContent = label + ' copied.';
+              setTimeout(() => {
+                if (el.textContent === label + ' copied.') el.textContent = '';
+              }, 1600);
+            }
+            function copySetupPrompt() {
+              copyText(buildSetupPrompt(document.getElementById('endpoint').value));
+              copied('Setup prompt');
+            }
+            function copyEndpoint() {
+              copyValue('endpoint');
+              document.getElementById('copyMenu').classList.add('hidden');
+              copied('MCP endpoint');
+            }
+            function toggleCopyMenu() {
+              document.getElementById('copyMenu').classList.toggle('hidden');
+            }
+            document.addEventListener('click', e => {
+              const split = document.querySelector('.split');
+              if (split && !split.contains(e.target)) {
+                document.getElementById('copyMenu').classList.add('hidden');
+              }
+            });
+            document.getElementById('token').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+            bootstrap();
+          </script>
+          </body>
+          </html>
+      - path: /opt/secure_auth.py
+        template: |
+          """
+          Secure self-contained OAuth 2.1 provider for FastMCP.
 
-                        def do_OPTIONS(self):
-                            self.proxy_to_mcp()
+          Unlike the upstream `fastmcp-personal-auth` PersonalAuthProvider — whose password
+          check is bypassed for any allowed redirect domain (i.e. always bypassed for
+          Claude), making URL-secrecy the only real gate — this provider ENFORCES a real
+          password via an interactive login page at /authorize.
 
-                        def proxy_to_mcp(self):
-                            start_mcp()
-                            body = None
-                            if self.command in ("POST", "PUT", "PATCH"):
-                                length = int(self.headers.get("content-length", "0"))
-                                body = self.rfile.read(length) if length else None
-                            headers = {key: value for key, value in self.headers.items() if key.lower() not in ("host", "content-length")}
-                            conn = http.client.HTTPConnection("127.0.0.1", MCP_PORT, timeout=300)
-                            try:
-                                conn.request(self.command, self.path, body=body, headers=headers)
-                                resp = conn.getresponse()
-                                self.send_response(resp.status, resp.reason)
-                                excluded = {"transfer-encoding", "connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers", "upgrade"}
-                                for key, value in resp.getheaders():
-                                    if key.lower() not in excluded:
-                                        self.send_header(key, value)
-                                self.send_header("Connection", "close")
-                                self.end_headers()
-                                self.close_connection = True
-                                while True:
-                                    chunk = resp.read(8192)
-                                    if not chunk:
-                                        break
-                                    self.wfile.write(chunk)
-                                    self.wfile.flush()
-                            except Exception as exc:
-                                message = ("MCP server starting: %s" % exc).encode()
-                                self.send_response(502)
-                                self.send_header("Content-Type", "text/plain")
-                                self.send_header("Content-Length", str(len(message)))
-                                self.end_headers()
-                                self.wfile.write(message)
-                            finally:
-                                conn.close()
+          Flow:
+            1. Claude opens GET /authorize (browser/webview).
+            2. We validate the redirect domain, stash the OAuth params under a one-time
+               login-session token, and 302 the browser to /login?session=<token>.
+            3. /login renders an HTML password form. POST verifies the password
+               (constant-time) and only then mints the authorization code and redirects
+               back to Claude's callback with ?code=...
+            4. Standard PKCE code->token exchange completes.
 
-                        def log_message(self, fmt, *args):
-                            print("[launcher] " + fmt % args, flush=True)
+          No external identity provider required. The password is the gate, set once at
+          deploy time via an env var. Tokens persist to disk so they survive restarts.
+          """
 
-                    def shutdown(signum, frame):
-                        if mcp_process and mcp_process.poll() is None:
-                            mcp_process.terminate()
-                        raise SystemExit(0)
+          import hmac
+          import json
+          import logging
+          import secrets
+          import time
+          from pathlib import Path
+          from typing import Optional
+          from urllib.parse import urlencode, urlparse
 
-                    signal.signal(signal.SIGTERM, shutdown)
-                    signal.signal(signal.SIGINT, shutdown)
-                    start_mcp()
-                    threading.Thread(target=monitor_mcp, daemon=True).start()
-                    server = ThreadingHTTPServer(("0.0.0.0", PUBLIC_PORT), Handler)
-                    print("[launcher] ready on 0.0.0.0:%s" % PUBLIC_PORT, flush=True)
-                    server.serve_forever()
-                - path: /opt/landing.html
-                  template: |
-                    <!doctype html>
-                    <html lang="en">
-                    <head>
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <title>Alpaca MCP Server</title>
-                    <link rel="icon" href="https://avatars.githubusercontent.com/u/30398729?v=4&s=64">
-                    <link rel="apple-touch-icon" href="https://avatars.githubusercontent.com/u/30398729?v=4&s=180">
-                    <style>
-                      * { box-sizing: border-box; }
-                      body { margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #101418; color: #eef3f2; }
-                      main { width: min(960px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0; }
-                      header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
-                      .logo { width: 56px; height: 56px; border-radius: 12px; }
-                      h1 { margin: 0; font-size: 28px; line-height: 1.15; }
-                      .sub { margin: 6px 0 0; color: #9fb0ad; font-size: 14px; }
-                      .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 18px; align-items: start; }
-                      .panel { background: #171d22; border: 1px solid #2b363b; border-radius: 8px; padding: 20px; }
-                      .panel h2 { margin: 0 0 14px; font-size: 16px; }
-                      label { display: block; margin: 14px 0 6px; color: #c8d3d0; font-size: 13px; font-weight: 600; }
-                      input { width: 100%; height: 42px; border: 1px solid #344147; border-radius: 6px; background: #0f1418; color: #fff; padding: 0 12px; font-size: 14px; outline: none; }
-                      input:focus { border-color: #53c58b; }
-                      .hint { margin: 6px 0 0; color: #7f8d8a; font-size: 12px; line-height: 1.45; }
-                      .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
-                      .switch { display: inline-flex; align-items: center; gap: 10px; color: #c8d3d0; font-size: 13px; cursor: pointer; }
-                      .switch input { width: 18px; height: 18px; accent-color: #53c58b; }
-                      button, .button { border: 0; border-radius: 6px; background: #53c58b; color: #07110c; font-weight: 700; height: 42px; padding: 0 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-                      button.secondary { background: #263238; color: #e7efed; border: 1px solid #344147; }
-                      button:disabled { opacity: .55; cursor: not-allowed; }
-                      .copy { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-                      .copy input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
-                      .split { position: relative; display: flex; height: 42px; width: 100%; }
-                      .split button { height: 42px; }
-                      .split-main { flex: 1; border-radius: 6px 0 0 6px; }
-                      .split-toggle { width: 40px; border-left: 1px solid rgba(7, 17, 12, .25); border-radius: 0 6px 6px 0; padding: 0; }
-                      .split-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 190px; padding: 6px; border: 1px solid #344147; border-radius: 6px; background: #171d22; box-shadow: 0 12px 28px rgba(0,0,0,.28); }
-                      .split-menu button { width: 100%; height: 36px; justify-content: flex-start; background: transparent; color: #e7efed; font-weight: 600; }
-                      .split-menu button:hover { background: #263238; }
-                      .status { display: inline-flex; align-items: center; gap: 8px; color: #9fb0ad; font-size: 13px; }
-                      .dot { width: 8px; height: 8px; border-radius: 50%; background: #8b9490; }
-                      .dot.on { background: #53c58b; }
-                      .warn { margin-top: 14px; background: #2b2113; color: #f3d49f; border: 1px solid #6f5325; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.45; }
-                      .steps { margin: 0; padding-left: 20px; color: #c8d3d0; font-size: 13px; line-height: 1.7; }
-                      .hidden { display: none; }
-                      .toast { min-height: 20px; margin-top: 12px; color: #80e1ad; font-size: 13px; }
-                      @media (max-width: 760px) { main { padding: 24px 0; } .grid { grid-template-columns: 1fr; } .row { align-items: stretch; flex-direction: column; } }
-                    </style>
-                    </head>
-                    <body>
-                    <main>
-                      <header>
-                        <img class="logo" src="https://avatars.githubusercontent.com/u/30398729?v=4&s=400" alt="Alpaca">
-                        <div>
-                          <h1>Alpaca MCP Server</h1>
-                          <p class="sub">Configure credentials, trading mode, and copy your MCP connector URL.</p>
-                        </div>
-                      </header>
+          from fastmcp.server.auth.auth import ClientRegistrationOptions
+          from fastmcp.server.auth.providers.in_memory import InMemoryOAuthProvider
+          from mcp.server.auth.provider import (
+              AccessToken,
+              AuthorizationCode,
+              AuthorizationParams,
+              AuthorizeError,
+              RefreshToken,
+              TokenError,
+          )
+          from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 
-                      <section id="login" class="panel">
-                        <h2>Launcher Login</h2>
-                        <label for="token">Access Token</label>
-                        <input id="token" type="password" autocomplete="current-password" placeholder="Use the Open Alpaca Launcher link from Zeabur Instructions">
-                        <div class="row">
-                          <p id="login-error" class="hint"></p>
-                          <button onclick="login()">Login</button>
-                        </div>
-                      </section>
+          logger = logging.getLogger("secure-auth")
 
-                      <section id="app" class="grid hidden">
-                        <div class="panel">
-                          <div class="row" style="margin-top:0">
-                            <h2>Alpaca Settings</h2>
-                            <span class="status"><span id="dot" class="dot"></span><span id="runtime">Checking...</span></span>
-                          </div>
-                          <label for="apiKey">Alpaca API Key</label>
-                          <input id="apiKey" placeholder="AKXXXXXXXXXXXXXXXXXX" autocomplete="off">
-                          <p class="hint">Leave blank to keep the current key. Current: <span id="apiMasked">not set</span></p>
+          DEFAULT_ACCESS_TOKEN_EXPIRY = 30 * 24 * 60 * 60  # 30 days
+          DEFAULT_STATE_DIR = ".oauth-state"
+          LOGIN_SESSION_TTL = 10 * 60  # 10 minutes to complete login
 
-                          <label for="secretKey">Alpaca Secret Key</label>
-                          <input id="secretKey" type="password" placeholder="Leave blank to keep current secret" autocomplete="off">
-                          <p class="hint">Current secret: <span id="secretState">not set</span></p>
+          # Brute-force throttle (per-process)
+          _LOCKOUT_THRESHOLD = 10
+          _LOCKOUT_WINDOW = 5 * 60
 
-                          <div class="row">
-                            <label class="switch" for="paperTrade">
-                              <input id="paperTrade" type="checkbox" checked>
-                              Paper trading
-                            </label>
-                            <button id="saveBtn" onclick="saveConfig()">Save & Restart MCP Server</button>
-                          </div>
-                          <p class="hint">Disable paper trading only after switching Alpaca to live keys. Live mode can place real orders.</p>
-                          <div class="warn">Anyone with the MCP URL can send trading requests. Keep this service URL private or put an authenticating proxy in front of it for production use.</div>
-                          <p id="toast" class="toast"></p>
-                        </div>
 
-                        <aside class="panel">
-                          <h2>Connect Client</h2>
-                          <label>MCP Endpoint</label>
-                          <div class="copy">
-                            <input id="endpoint" readonly value="/mcp">
-                            <div class="split">
-                              <button class="split-main" onclick="copySetupPrompt()">Copy Setup Prompt</button>
-                              <button class="split-toggle" onclick="toggleCopyMenu()" aria-label="More copy options">▾</button>
-                              <div id="copyMenu" class="split-menu hidden">
-                                <button onclick="copyEndpoint()">Copy MCP Endpoint</button>
-                              </div>
-                            </div>
-                          </div>
-                          <p class="hint">Paste the setup prompt into Claude Code, Codex, or another coding agent to configure the connector. Use the menu to copy only the raw endpoint.</p>
-                          <p id="copyToast" class="toast"></p>
+          class SecurePersonalAuthProvider(InMemoryOAuthProvider):
+              def __init__(
+                  self,
+                  base_url: str,
+                  password: str,
+                  allowed_redirect_domains: Optional[list[str]] = None,
+                  access_token_expiry_seconds: int = DEFAULT_ACCESS_TOKEN_EXPIRY,
+                  state_dir: Optional[str] = None,
+              ):
+                  super().__init__(
+                      base_url=base_url,
+                      client_registration_options=ClientRegistrationOptions(enabled=True),
+                  )
+                  if not password:
+                      raise ValueError(
+                          "A password is required. Set MCP_AUTH_PASSWORD — without it the "
+                          "endpoint would be gated only by URL secrecy, which is unsafe for "
+                          "a trading server."
+                      )
+                  self.password = password
+                  self.allowed_redirect_domains = (
+                      allowed_redirect_domains
+                      if allowed_redirect_domains is not None
+                      else ["claude.ai", "claude.com", "localhost"]
+                  )
+                  self.access_token_expiry_seconds = access_token_expiry_seconds
+                  self._state_dir = Path(state_dir or DEFAULT_STATE_DIR)
+                  self._state_dir.mkdir(parents=True, exist_ok=True)
+                  # login_session_token -> (client_id, AuthorizationParams, created_at)
+                  self._login_sessions: dict[str, tuple[str, AuthorizationParams, float]] = {}
+                  self._fail_count = 0
+                  self._fail_window_start = 0.0
+                  self._load_state()
 
-                          <h2 style="margin-top:22px">Claude</h2>
-                          <ol class="steps">
-                            <li>Open Settings, then Connectors.</li>
-                            <li>Add a custom connector named Alpaca.</li>
-                            <li>Paste the MCP endpoint and enable it in a chat.</li>
-                          </ol>
+              # --- state persistence ---
 
-                          <h2 style="margin-top:22px">ChatGPT</h2>
-                          <ol class="steps">
-                            <li>Open Settings, then Connectors.</li>
-                            <li>Create a connector with Streamable HTTP transport.</li>
-                            <li>Paste the MCP endpoint.</li>
-                          </ol>
-                        </aside>
-                      </section>
-                    </main>
-                    <script>
-                      async function login() {
-                        const token = document.getElementById('token').value;
-                        const res = await fetch('/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
-                        const data = await res.json();
-                        if (!data.ok) {
-                          document.getElementById('login-error').textContent = 'Incorrect token';
-                          return;
-                        }
-                        showApp();
-                      }
-                      function showApp() {
-                        document.getElementById('login').classList.add('hidden');
-                        document.getElementById('app').classList.remove('hidden');
-                        refreshStatus();
-                      }
-                      async function bootstrap() {
-                        const res = await fetch('/status');
-                        if (res.status === 200) showApp();
-                      }
-                      async function refreshStatus() {
-                        const res = await fetch('/status');
-                        if (res.status === 401) return;
-                        const data = await res.json();
-                        document.getElementById('dot').classList.toggle('on', data.running);
-                        document.getElementById('runtime').textContent = data.running ? 'Running' : 'Restarting';
-                        document.getElementById('endpoint').value = data.endpoint || '/mcp';
-                        document.getElementById('apiMasked').textContent = data.apiKeyMasked || 'not set';
-                        document.getElementById('secretState').textContent = data.hasSecret ? 'set' : 'not set';
-                        document.getElementById('paperTrade').checked = data.paperTrade !== 'false';
-                      }
-                      function buildSetupPrompt(endpoint) {
-                        return [
-                          'Configure an MCP connector for this workspace.',
-                          '',
-                          'Name: Alpaca',
-                          'Transport: Streamable HTTP',
-                          'URL: ' + endpoint,
-                          '',
-                          'After configuring it, verify that the Alpaca MCP tools are available.',
-                          'Treat this URL as sensitive because anyone with access to it can send trading requests through the connected Alpaca account.'
-                        ].join('\\n');
-                      }
-                      async function saveConfig() {
-                        const btn = document.getElementById('saveBtn');
-                        btn.disabled = true;
-                        document.getElementById('toast').textContent = 'Saving...';
-                        const payload = {
-                          apiKey: document.getElementById('apiKey').value.trim(),
-                          secretKey: document.getElementById('secretKey').value.trim(),
-                          paperTrade: document.getElementById('paperTrade').checked
-                        };
-                        const res = await fetch('/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                        btn.disabled = false;
-                        if (!res.ok) {
-                          document.getElementById('toast').textContent = 'Failed to save settings.';
-                          return;
-                        }
-                        document.getElementById('apiKey').value = '';
-                        document.getElementById('secretKey').value = '';
-                        document.getElementById('toast').textContent = 'Settings saved. MCP server restarted.';
-                        refreshStatus();
-                      }
-                      function copyValue(id) {
-                        const input = document.getElementById(id);
-                        navigator.clipboard.writeText(input.value);
-                      }
-                      function copyText(text) {
-                        navigator.clipboard.writeText(text);
-                      }
-                      function copied(label) {
-                        const el = document.getElementById('copyToast');
-                        el.textContent = label + ' copied.';
-                        setTimeout(() => {
-                          if (el.textContent === label + ' copied.') el.textContent = '';
-                        }, 1600);
-                      }
-                      function copySetupPrompt() {
-                        copyText(buildSetupPrompt(document.getElementById('endpoint').value));
-                        copied('Setup prompt');
-                      }
-                      function copyEndpoint() {
-                        copyValue('endpoint');
-                        document.getElementById('copyMenu').classList.add('hidden');
-                        copied('MCP endpoint');
-                      }
-                      function toggleCopyMenu() {
-                        document.getElementById('copyMenu').classList.toggle('hidden');
-                      }
-                      document.addEventListener('click', e => {
-                        const split = document.querySelector('.split');
-                        if (split && !split.contains(e.target)) {
-                          document.getElementById('copyMenu').classList.add('hidden');
-                        }
-                      });
-                      document.getElementById('token').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-                      bootstrap();
-                    </script>
-                    </body>
-                    </html>
-            env:
-                ALPACA_API_KEY:
-                    default: ""
-                    expose: true
-                ALPACA_PAPER_TRADE:
-                    default: "true"
-                    expose: true
-                ALPACA_SECRET_KEY:
-                    default: ""
-                    expose: true
-                WEB_LAUNCHER_TOKEN:
-                    default: ${PASSWORD}
-                    expose: true
-                PORT:
-                    default: "8000"
-            healthCheck:
-                type: TCP
-                port: web
-            instructions:
-                - type: URL
-                  title: Open Alpaca Launcher
-                  content: ${ZEABUR_WEB_URL}?token=${WEB_LAUNCHER_TOKEN}
-          domainKey: PUBLIC_DOMAIN
+              def _state_file(self) -> Path:
+                  return self._state_dir / "oauth_tokens.json"
+
+              def _load_state(self):
+                  f = self._state_file()
+                  if not f.exists():
+                      return
+                  try:
+                      data = json.loads(f.read_text())
+                      for k, v in data.get("clients", {}).items():
+                          self.clients[k] = OAuthClientInformationFull(**v)
+                      for k, v in data.get("access_tokens", {}).items():
+                          self.access_tokens[k] = AccessToken(**v)
+                      for k, v in data.get("refresh_tokens", {}).items():
+                          self.refresh_tokens[k] = RefreshToken(**v)
+                      self._access_to_refresh_map = data.get("a2r", {})
+                      self._refresh_to_access_map = data.get("r2a", {})
+                      logger.info(
+                          "Loaded OAuth state: %d clients, %d access tokens",
+                          len(self.clients),
+                          len(self.access_tokens),
+                      )
+                  except Exception as e:  # noqa: BLE001
+                      logger.warning("Failed to load OAuth state from %s: %s", f, e)
+
+              def _save_state(self):
+                  data = {
+                      "clients": {k: v.model_dump(mode="json") for k, v in self.clients.items()},
+                      "access_tokens": {
+                          k: v.model_dump(mode="json") for k, v in self.access_tokens.items()
+                      },
+                      "refresh_tokens": {
+                          k: v.model_dump(mode="json") for k, v in self.refresh_tokens.items()
+                      },
+                      "a2r": self._access_to_refresh_map,
+                      "r2a": self._refresh_to_access_map,
+                  }
+                  tmp = self._state_file().with_suffix(".tmp")
+                  tmp.write_text(json.dumps(data, indent=2))
+                  tmp.replace(self._state_file())
+
+              # --- gating helpers ---
+
+              def _is_redirect_allowed(self, redirect_uri: str) -> bool:
+                  if self.allowed_redirect_domains is None:
+                      return True
+                  try:
+                      host = urlparse(redirect_uri).hostname or ""
+                      return any(
+                          host == d or host.endswith(f".{d}")
+                          for d in self.allowed_redirect_domains
+                      )
+                  except Exception:  # noqa: BLE001
+                      return False
+
+              def _gc_sessions(self):
+                  now = time.time()
+                  expired = [
+                      t
+                      for t, (_, _, created) in self._login_sessions.items()
+                      if now - created > LOGIN_SESSION_TTL
+                  ]
+                  for t in expired:
+                      del self._login_sessions[t]
+
+              def _locked_out(self) -> bool:
+                  now = time.time()
+                  if now - self._fail_window_start > _LOCKOUT_WINDOW:
+                      self._fail_window_start = now
+                      self._fail_count = 0
+                  return self._fail_count >= _LOCKOUT_THRESHOLD
+
+              def _record_failure(self):
+                  now = time.time()
+                  if now - self._fail_window_start > _LOCKOUT_WINDOW:
+                      self._fail_window_start = now
+                      self._fail_count = 0
+                  self._fail_count += 1
+
+              # --- registration ---
+
+              async def register_client(self, client_info: OAuthClientInformationFull) -> None:
+                  await super().register_client(client_info)
+                  self._save_state()
+
+              # --- authorize: bounce to interactive login instead of auto-approving ---
+
+              async def authorize(
+                  self, client: OAuthClientInformationFull, params: AuthorizationParams
+              ) -> str:
+                  redirect = str(params.redirect_uri) if params.redirect_uri else ""
+                  if not self._is_redirect_allowed(redirect):
+                      raise AuthorizeError(
+                          error="access_denied",
+                          error_description="Redirect URI domain not allowed.",
+                      )
+                  self._gc_sessions()
+                  token = secrets.token_urlsafe(32)
+                  self._login_sessions[token] = (client.client_id, params, time.time())
+                  base = str(self.base_url).rstrip("/")
+                  return f"{base}/login?{urlencode({'session': token})}"
+
+              async def complete_login(self, session_token: str, password: str):
+                  """Return ("ok", redirect_url) | ("bad_password", None)
+                  | ("expired", None) | ("locked", None)."""
+                  if self._locked_out():
+                      return ("locked", None)
+                  entry = self._login_sessions.get(session_token)
+                  if not entry:
+                      return ("expired", None)
+                  client_id, params, created = entry
+                  if time.time() - created > LOGIN_SESSION_TTL:
+                      self._login_sessions.pop(session_token, None)
+                      return ("expired", None)
+                  if not hmac.compare_digest(password or "", self.password):
+                      self._record_failure()
+                      return ("bad_password", None)
+                  # success
+                  self._login_sessions.pop(session_token, None)
+                  self._fail_count = 0
+                  client = await self.get_client(client_id)
+                  if client is None:
+                      return ("expired", None)
+                  redirect_url = await InMemoryOAuthProvider.authorize(self, client, params)
+                  self._save_state()
+                  return ("ok", redirect_url)
+
+              # --- token exchange: custom prefixes, configurable expiry, persistence ---
+
+              async def exchange_authorization_code(
+                  self, client: OAuthClientInformationFull, authorization_code: AuthorizationCode
+              ) -> OAuthToken:
+                  if authorization_code.code not in self.auth_codes:
+                      raise TokenError("invalid_grant", "Authorization code not found or already used.")
+                  del self.auth_codes[authorization_code.code]
+
+                  access_token_value = f"pat_{secrets.token_hex(32)}"
+                  refresh_token_value = f"prt_{secrets.token_hex(32)}"
+                  access_token_expires_at = int(time.time() + self.access_token_expiry_seconds)
+
+                  if client.client_id is None:
+                      raise TokenError("invalid_client", "Client ID is required")
+
+                  self.access_tokens[access_token_value] = AccessToken(
+                      token=access_token_value,
+                      client_id=client.client_id,
+                      scopes=authorization_code.scopes,
+                      expires_at=access_token_expires_at,
+                  )
+                  self.refresh_tokens[refresh_token_value] = RefreshToken(
+                      token=refresh_token_value,
+                      client_id=client.client_id,
+                      scopes=authorization_code.scopes,
+                      expires_at=None,
+                  )
+                  self._access_to_refresh_map[access_token_value] = refresh_token_value
+                  self._refresh_to_access_map[refresh_token_value] = access_token_value
+                  self._save_state()
+
+                  return OAuthToken(
+                      access_token=access_token_value,
+                      token_type="Bearer",
+                      expires_in=self.access_token_expiry_seconds,
+                      refresh_token=refresh_token_value,
+                      scope=" ".join(authorization_code.scopes),
+                  )
+
+              async def exchange_refresh_token(self, client, refresh_token, scopes):
+                  result = await super().exchange_refresh_token(client, refresh_token, scopes)
+                  self._save_state()
+                  return result
+
+              async def revoke_token(self, token):
+                  await super().revoke_token(token)
+                  self._save_state()
+      - path: /opt/server.py
+        template: |
+          """
+          mcp-oauth-proxy — a self-contained OAuth 2.1 gate in front of any remote MCP
+          server (here: the Alpaca MCP server).
+
+          The Alpaca image is left untouched and kept internal; this proxy terminates the
+          public domain, forces a password login (interactive, real — see secure_auth.py),
+          validates bearer tokens, and forwards authenticated /mcp traffic to the upstream
+          over the Zeabur private network.
+
+          Config via env:
+            BASE_URL                 public https URL of THIS proxy (e.g. https://x.zeabur.app)
+            MCP_AUTH_PASSWORD        the login password (the gate) — REQUIRED
+            UPSTREAM_MCP_URL         internal URL of the Alpaca MCP server's /mcp endpoint
+            ALLOWED_REDIRECT_DOMAINS csv, default "claude.ai,claude.com,localhost"
+            OAUTH_STATE_DIR          token persistence dir, default /data/oauth-state
+            PORT                     listen port, default 8000
+          """
+
+          import html
+          import os
+
+          from starlette.requests import Request
+          from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse
+
+          from fastmcp import FastMCP
+
+          from secure_auth import SecurePersonalAuthProvider
+
+          BASE_URL = os.environ["BASE_URL"].rstrip("/")
+          PASSWORD = os.environ["MCP_AUTH_PASSWORD"]
+          UPSTREAM_MCP_URL = os.environ["UPSTREAM_MCP_URL"]
+          ALLOWED_REDIRECT_DOMAINS = [
+              d.strip()
+              for d in os.environ.get(
+                  "ALLOWED_REDIRECT_DOMAINS", "claude.ai,claude.com,localhost"
+              ).split(",")
+              if d.strip()
+          ]
+          STATE_DIR = os.environ.get("OAUTH_STATE_DIR", "/data/oauth-state")
+          PORT = int(os.environ.get("PORT", "8000"))
+
+          auth = SecurePersonalAuthProvider(
+              base_url=BASE_URL,
+              password=PASSWORD,
+              allowed_redirect_domains=ALLOWED_REDIRECT_DOMAINS,
+              state_dir=STATE_DIR,
+          )
+
+          mcp = FastMCP.as_proxy(UPSTREAM_MCP_URL, name="Alpaca (secured)", auth=auth)
+
+
+          # Shared Alpaca x Zeabur design tokens (Alpaca gold primary, Zeabur violet glow,
+          # Zeabur neutral surfaces) with automatic light/dark via prefers-color-scheme.
+          THEME_CSS = """
+            :root {
+              color-scheme: dark;
+              --bg:#0f0e11; --panel:#19181b; --inset:#0f0e11; --border:#322f37;
+              --text:#f5f4f5; --dim:#9a93a5;
+              --gold:#FCD72B; --gold-ink:#1c1600; --violet:#745df3; --success:#22D180;
+              --danger-bg:#3a1620; --danger-bd:#6b2233; --danger-tx:#ff9aa9;
+              --warn-bg:#2b2113; --warn-bd:#6f5325; --warn-tx:#f3d49f;
+              --glow-gold:rgba(252,215,43,.10); --glow-violet:rgba(99,0,255,.16);
+            }
+            @media (prefers-color-scheme: light) {
+              :root {
+                color-scheme: light;
+                --bg:#f7f7f7; --panel:#ffffff; --inset:#f3f2f4; --border:#e6e4ea;
+                --text:#19181b; --dim:#6b6675; --gold-ink:#1c1600; --violet:#6300ff;
+                --danger-bg:#fdecee; --danger-bd:#f3c2c8; --danger-tx:#b4232f;
+                --warn-bg:#fdf4e3; --warn-bd:#e9cf9b; --warn-tx:#8a6320;
+                --glow-gold:rgba(252,215,43,.20); --glow-violet:rgba(99,0,255,.07);
+              }
+            }
+            * { box-sizing:border-box; }
+            body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+                   font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                   -webkit-font-smoothing:antialiased; position:relative; }
+            body::before { content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+                   background:
+                     radial-gradient(680px 480px at 88% -8%, var(--glow-gold), transparent 60%),
+                     radial-gradient(720px 520px at 6% 108%, var(--glow-violet), transparent 60%); }
+            body > * { position:relative; z-index:1; }
+            .card { background:var(--panel); border:1px solid var(--border); border-radius:18px;
+                    box-shadow:0 24px 60px -20px rgba(0,0,0,.55); }
+            @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+          """
+
+
+          def _login_page(session: str, error: str | None = None) -> str:
+              err_html = (
+                  f'<div class="err" role="alert">{html.escape(error)}</div>' if error else ""
+              )
+              # Shared Alpaca x Zeabur design system (see THEME_CSS reused by the launcher).
+              return f"""<!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Sign in &middot; Alpaca MCP</title>
+          <link rel="icon" href="https://avatars.githubusercontent.com/u/30398729?v=4&s=64">
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+          <style>
+          {THEME_CSS}
+            body {{ display:flex; align-items:center; justify-content:center; padding:24px; }}
+            .auth {{ width:100%; max-width:392px; animation:rise .5s cubic-bezier(.2,.7,.2,1) both; }}
+            .brand {{ display:flex; align-items:center; gap:12px; margin:0 4px 18px; }}
+            .brand img {{ width:40px; height:40px; border-radius:11px; box-shadow:0 6px 18px rgba(252,215,43,.22); }}
+            .brand .wm {{ font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:15px;
+                         letter-spacing:.14em; text-transform:uppercase; color:var(--text); }}
+            .brand .wm span {{ color:var(--gold); }}
+            .card {{ padding:30px 28px 26px; }}
+            h1 {{ font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:23px;
+                  line-height:1.12; margin:0 0 6px; letter-spacing:-.01em; }}
+            .sub {{ margin:0 0 22px; font-size:13.5px; color:var(--dim); line-height:1.5; }}
+            .sub b {{ color:var(--text); font-weight:600; }}
+            label {{ display:block; font-size:12px; font-weight:600; letter-spacing:.04em;
+                     text-transform:uppercase; color:var(--dim); margin:0 0 8px; }}
+            .field {{ position:relative; }}
+            .field svg {{ position:absolute; left:14px; top:50%; transform:translateY(-50%);
+                         width:16px; height:16px; color:var(--dim); pointer-events:none; }}
+            input[type=password] {{ width:100%; height:48px; padding:0 14px 0 40px; font-size:15px;
+                    font-family:'JetBrains Mono',ui-monospace,monospace; letter-spacing:.04em;
+                    border:1px solid var(--border); border-radius:12px; background:var(--inset);
+                    color:var(--text); outline:none; transition:border-color .15s,box-shadow .15s; }}
+            input[type=password]:focus {{ border-color:var(--gold);
+                    box-shadow:0 0 0 3px rgba(252,215,43,.18); }}
+            .btn {{ width:100%; height:48px; margin-top:18px; font-family:'Hanken Grotesk',sans-serif;
+                   font-size:15px; font-weight:700; letter-spacing:.01em; border:0; border-radius:12px;
+                   background:var(--gold); color:var(--gold-ink); cursor:pointer;
+                   transition:transform .12s,filter .15s, box-shadow .15s;
+                   box-shadow:0 8px 22px rgba(252,215,43,.20); }}
+            .btn:hover {{ filter:brightness(1.04); box-shadow:0 10px 26px rgba(252,215,43,.30); }}
+            .btn:active {{ transform:translateY(1px); }}
+            .err {{ background:var(--danger-bg); border:1px solid var(--danger-bd); color:var(--danger-tx);
+                    padding:11px 13px; border-radius:10px; font-size:13px; margin:0 0 16px; }}
+            .foot {{ margin:18px 4px 0; font-size:11.5px; color:var(--dim); text-align:center;
+                     letter-spacing:.02em; }}
+            .foot b {{ color:var(--violet); font-weight:600; }}
+          </style>
+          </head>
+          <body>
+            <div class="auth">
+              <div class="brand">
+                <img src="https://avatars.githubusercontent.com/u/30398729?v=4&s=160" alt="Alpaca">
+                <div class="wm">Alpaca <span>&middot;</span> MCP</div>
+              </div>
+              <form class="card" method="POST" action="/login">
+                <h1>Sign in to your<br>trading connector</h1>
+                <p class="sub">Enter the launcher password from your Zeabur project's <b>Instructions</b> tab.</p>
+                {err_html}
+                <label for="password">Launcher password</label>
+                <div class="field">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
+                </div>
+                <input type="hidden" name="session" value="{html.escape(session)}">
+                <button class="btn" type="submit">Unlock connector</button>
+              </form>
+              <p class="foot">Secured with OAuth 2.1 &middot; deployed on <b>Zeabur</b></p>
+            </div>
+          </body>
+          </html>"""
+
+
+          @mcp.custom_route("/login", methods=["GET", "POST"], include_in_schema=False)
+          async def login(request: Request):
+              if request.method == "GET":
+                  session = request.query_params.get("session", "")
+                  return HTMLResponse(_login_page(session))
+
+              form = await request.form()
+              session = str(form.get("session", ""))
+              password = str(form.get("password", ""))
+              status, redirect_url = await auth.complete_login(session, password)
+
+              if status == "ok":
+                  return RedirectResponse(redirect_url, status_code=302)
+              if status == "bad_password":
+                  return HTMLResponse(_login_page(session, "Incorrect password."), status_code=401)
+              if status == "locked":
+                  return HTMLResponse(
+                      _login_page(session, "Too many attempts. Wait a few minutes and try again."),
+                      status_code=429,
+                  )
+              # expired / unknown session
+              return HTMLResponse(
+                  _login_page("", "This sign-in link expired. Reconnect from Claude to try again."),
+                  status_code=400,
+              )
+
+
+          @mcp.custom_route("/healthz", methods=["GET"], include_in_schema=False)
+          async def healthz(_request: Request):
+              return JSONResponse({"status": "ok"})
+
+
+          if __name__ == "__main__":
+              mcp.run(transport="streamable-http", host="0.0.0.0", port=PORT)
+      env:
+        ALPACA_API_KEY:
+          default: ''
+          expose: true
+        ALPACA_PAPER_TRADE:
+          default: 'true'
+          expose: true
+        ALPACA_SECRET_KEY:
+          default: ''
+          expose: true
+        WEB_LAUNCHER_TOKEN:
+          default: ${PASSWORD}
+          expose: true
+        PORT:
+          default: '8000'
+        PUBLIC_DOMAIN:
+          default: ${PUBLIC_DOMAIN}
+          expose: true
+      healthCheck:
+        type: TCP
+        port: web
+      instructions:
+      - type: URL
+        title: Open Alpaca Launcher
+        content: ${ZEABUR_WEB_URL}?token=${WEB_LAUNCHER_TOKEN}
+    domainKey: PUBLIC_DOMAIN
 localization:
-    es-ES:
-        description: Servidor remoto MCP (Model Context Protocol) para la API de Trading de Alpaca — opera acciones, opciones y cripto desde Claude, ChatGPT o cualquier cliente de IA compatible con MCP a través de HTTPS.
-        variables:
-            - key: PUBLIC_DOMAIN
-              type: STRING
-              name: Dominio público
-              description: Dominio público para conectar tu cliente de IA al servidor MCP. Añade /mcp al final de esta URL al añadirla a Claude o ChatGPT.
-        readme: |
-            # Alpaca MCP Server en Zeabur
+  es-ES:
+    description: Servidor remoto MCP (Model Context Protocol) para la API de Trading de Alpaca — opera acciones, opciones y cripto desde Claude, ChatGPT o cualquier cliente de IA compatible con MCP a través de HTTPS.
+    variables:
+    - key: PUBLIC_DOMAIN
+      type: STRING
+      name: Dominio público
+      description: Dominio público para conectar tu cliente de IA al servidor MCP. Añade /mcp al final de esta URL al añadirla a Claude o ChatGPT.
+    readme: |
+      # Alpaca MCP Server en Zeabur
 
-            Un servidor remoto [Model Context Protocol](https://modelcontextprotocol.io/) para la [API de Trading de Alpaca](https://alpaca.markets/). Una vez desplegado, puedes añadir este servidor como conector personalizado en Claude (web/escritorio/móvil) o ChatGPT para operar acciones, opciones y cripto y hacer análisis de mercado mediante chat en lenguaje natural.
+      Un servidor remoto [Model Context Protocol](https://modelcontextprotocol.io/) para la [API de Trading de Alpaca](https://alpaca.markets/). Una vez desplegado, puedes añadir este servidor como conector personalizado en Claude (web/escritorio/móvil) o ChatGPT para operar acciones, opciones y cripto y hacer análisis de mercado mediante chat en lenguaje natural.
 
-            Proyecto original: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — Licencia MIT.
+      Proyecto original: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — Licencia MIT.
 
-            ## 1. Obtén tus claves de API de Alpaca
+      ## 1. Obtén tus claves de API de Alpaca
 
-            1. Regístrate en [alpaca.markets](https://alpaca.markets/)
-            2. Abre el [panel de Paper Trading](https://app.alpaca.markets/paper/dashboard/overview) (recomendado para pruebas)
-            3. Genera un par de claves en *API Keys* → *Generate New Key*
-            4. Al desplegar la plantilla, copia `API Key ID` en `ALPACA_API_KEY` y `Secret Key` en `ALPACA_SECRET_KEY`
+      1. Regístrate en [alpaca.markets](https://alpaca.markets/)
+      2. Abre el [panel de Paper Trading](https://app.alpaca.markets/paper/dashboard/overview) (recomendado para pruebas)
+      3. Genera un par de claves en *API Keys* → *Generate New Key*
+      4. Al desplegar la plantilla, copia `API Key ID` en `ALPACA_API_KEY` y `Secret Key` en `ALPACA_SECRET_KEY`
 
-            > Para operar con dinero real: cambia a *Live*, genera claves live y, tras el despliegue, ajusta `ALPACA_PAPER_TRADE=false`.
+      > Para operar con dinero real: cambia a *Live*, genera claves live y, tras el despliegue, ajusta `ALPACA_PAPER_TRADE=false`.
 
-            ## 2. Despliega
+      ## 2. Despliega
 
-            Pulsa *Deploy*, rellena `ALPACA_API_KEY` y `ALPACA_SECRET_KEY` y elige un dominio público. Zeabur ofrece un subdominio gratuito `.zeabur.app`, o puedes vincular el tuyo.
+      Pulsa *Deploy*, rellena `ALPACA_API_KEY` y `ALPACA_SECRET_KEY` y elige un dominio público. Zeabur ofrece un subdominio gratuito `.zeabur.app`, o puedes vincular el tuyo.
 
-            ## 3. Conecta tu cliente de IA
+      ## 3. Conecta tu cliente de IA
 
-            Tu endpoint MCP es `https://<tu-dominio>/mcp`.
+      Tu endpoint MCP es `https://<tu-dominio>/mcp`.
 
-            **Claude (web, escritorio, móvil):**
-            1. Ajustes → Connectors → *Add custom connector*
-            2. Nombre: `Alpaca`, URL: `https://<tu-dominio>/mcp`
-            3. Guarda y activa el conector en cualquier chat
+      **Claude (web, escritorio, móvil):**
+      1. Ajustes → Connectors → *Add custom connector*
+      2. Nombre: `Alpaca`, URL: `https://<tu-dominio>/mcp`
+      3. Guarda y activa el conector en cualquier chat
 
-            **ChatGPT:**
-            1. Ajustes → Connectors → *New connector*
-            2. URL: `https://<tu-dominio>/mcp`, transporte: `Streamable HTTP`
+      **ChatGPT:**
+      1. Ajustes → Connectors → *New connector*
+      2. URL: `https://<tu-dominio>/mcp`, transporte: `Streamable HTTP`
 
-            ## Configuración
+      ## Configuración
 
-            | Variable | Por defecto | Propósito |
-            |---|---|---|
-            | `ALPACA_API_KEY` | — | Obligatoria. ID de la clave API de Alpaca |
-            | `ALPACA_SECRET_KEY` | — | Obligatoria. Secreto API de Alpaca |
-            | `ALPACA_PAPER_TRADE` | `true` | Pon `false` para trading real (con dinero) |
+      | Variable | Por defecto | Propósito |
+      |---|---|---|
+      | `ALPACA_API_KEY` | — | Obligatoria. ID de la clave API de Alpaca |
+      | `ALPACA_SECRET_KEY` | — | Obligatoria. Secreto API de Alpaca |
+      | `ALPACA_PAPER_TRADE` | `true` | Pon `false` para trading real (con dinero) |
 
-            Avanzado: tras el despliegue puedes añadir `ALPACA_TOOLSETS` en *Variables* — una lista separada por comas (p. ej. `account,positions,orders`) que limita las familias de herramientas que el servidor MCP expone al cliente de IA.
+      Avanzado: tras el despliegue puedes añadir `ALPACA_TOOLSETS` en *Variables* — una lista separada por comas (p. ej. `account,positions,orders`) que limita las familias de herramientas que el servidor MCP expone al cliente de IA.
 
-            ## Aviso de seguridad
+      ## Aviso de seguridad
 
-            Este despliegue expone tus credenciales de trading de Alpaca tras un endpoint HTTPS sin autenticación incorporada — cualquiera con la URL puede ejecutar operaciones en tu cuenta. Para producción:
+      Este despliegue expone tus credenciales de trading de Alpaca tras un endpoint HTTPS sin autenticación incorporada — cualquiera con la URL puede ejecutar operaciones en tu cuenta. Para producción:
 
-            - Mantén `ALPACA_PAPER_TRADE=true` hasta verificar la configuración
-            - Trata la URL pública como un secreto; no la compartas
-            - Considera poner el servicio detrás de un proxy con autenticación
+      - Mantén `ALPACA_PAPER_TRADE=true` hasta verificar la configuración
+      - Trata la URL pública como un secreto; no la compartas
+      - Considera poner el servicio detrás de un proxy con autenticación
 
-            ## Licencia y atribución
+      ## Licencia y atribución
 
-            Alpaca MCP Server se publica bajo [Licencia MIT](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) por Alpaca Securities LLC. Esta plantilla de Zeabur reempaqueta la imagen Docker original y no es un producto oficial de Alpaca.
-    id-ID:
-        description: Server MCP (Model Context Protocol) remote untuk Alpaca Trading API — perdagangkan saham, opsi, dan kripto dari Claude, ChatGPT, atau klien AI apa pun yang mendukung MCP melalui HTTPS.
-        variables:
-            - key: PUBLIC_DOMAIN
-              type: STRING
-              name: Domain Publik
-              description: Domain publik untuk menghubungkan klien AI ke server MCP. Tambahkan /mcp di akhir URL saat ditambahkan ke Claude atau ChatGPT.
-        readme: |
-            # Alpaca MCP Server di Zeabur
+      Alpaca MCP Server se publica bajo [Licencia MIT](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) por Alpaca Securities LLC. Esta plantilla de Zeabur reempaqueta la imagen Docker original y no es un producto oficial de Alpaca.
+  id-ID:
+    description: Server MCP (Model Context Protocol) remote untuk Alpaca Trading API — perdagangkan saham, opsi, dan kripto dari Claude, ChatGPT, atau klien AI apa pun yang mendukung MCP melalui HTTPS.
+    variables:
+    - key: PUBLIC_DOMAIN
+      type: STRING
+      name: Domain Publik
+      description: Domain publik untuk menghubungkan klien AI ke server MCP. Tambahkan /mcp di akhir URL saat ditambahkan ke Claude atau ChatGPT.
+    readme: |
+      # Alpaca MCP Server di Zeabur
 
-            Server [Model Context Protocol](https://modelcontextprotocol.io/) remote untuk [Alpaca](https://alpaca.markets/) Trading API. Setelah di-deploy, Anda bisa menambahkan server ini sebagai custom connector di Claude (web/desktop/mobile) atau ChatGPT untuk memperdagangkan saham, opsi, dan kripto serta melakukan analisis pasar via chat bahasa natural.
+      Server [Model Context Protocol](https://modelcontextprotocol.io/) remote untuk [Alpaca](https://alpaca.markets/) Trading API. Setelah di-deploy, Anda bisa menambahkan server ini sebagai custom connector di Claude (web/desktop/mobile) atau ChatGPT untuk memperdagangkan saham, opsi, dan kripto serta melakukan analisis pasar via chat bahasa natural.
 
-            Proyek asal: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — Lisensi MIT.
+      Proyek asal: [github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server) — Lisensi MIT.
 
-            ## 1. Dapatkan API key Alpaca
+      ## 1. Dapatkan API key Alpaca
 
-            1. Daftar di [alpaca.markets](https://alpaca.markets/)
-            2. Buka [Paper Trading dashboard](https://app.alpaca.markets/paper/dashboard/overview) (disarankan untuk pengujian)
-            3. Buat pasangan key di *API Keys* → *Generate New Key*
-            4. Saat deploy template, salin `API Key ID` ke `ALPACA_API_KEY` dan `Secret Key` ke `ALPACA_SECRET_KEY`
+      1. Daftar di [alpaca.markets](https://alpaca.markets/)
+      2. Buka [Paper Trading dashboard](https://app.alpaca.markets/paper/dashboard/overview) (disarankan untuk pengujian)
+      3. Buat pasangan key di *API Keys* → *Generate New Key*
+      4. Saat deploy template, salin `API Key ID` ke `ALPACA_API_KEY` dan `Secret Key` ke `ALPACA_SECRET_KEY`
 
-            > Untuk trading dengan uang sungguhan: ganti ke *Live*, buat key live, lalu setelah deploy ubah `ALPACA_PAPER_TRADE=false`.
+      > Untuk trading dengan uang sungguhan: ganti ke *Live*, buat key live, lalu setelah deploy ubah `ALPACA_PAPER_TRADE=false`.
 
-            ## 2. Deploy
+      ## 2. Deploy
 
-            Klik *Deploy*, isi `ALPACA_API_KEY` dan `ALPACA_SECRET_KEY`, lalu pilih domain publik. Zeabur menyediakan subdomain `.zeabur.app` gratis atau Anda bisa menggunakan domain sendiri.
+      Klik *Deploy*, isi `ALPACA_API_KEY` dan `ALPACA_SECRET_KEY`, lalu pilih domain publik. Zeabur menyediakan subdomain `.zeabur.app` gratis atau Anda bisa menggunakan domain sendiri.
 
-            ## 3. Hubungkan klien AI
+      ## 3. Hubungkan klien AI
 
-            Endpoint MCP Anda adalah `https://<domain-anda>/mcp`.
+      Endpoint MCP Anda adalah `https://<domain-anda>/mcp`.
 
-            **Claude (web, desktop, mobile):**
-            1. Settings → Connectors → *Add custom connector*
-            2. Name: `Alpaca`, URL: `https://<domain-anda>/mcp`
-            3. Simpan dan aktifkan connector di chat
+      **Claude (web, desktop, mobile):**
+      1. Settings → Connectors → *Add custom connector*
+      2. Name: `Alpaca`, URL: `https://<domain-anda>/mcp`
+      3. Simpan dan aktifkan connector di chat
 
-            **ChatGPT:**
-            1. Settings → Connectors → *New connector*
-            2. URL: `https://<domain-anda>/mcp`, transport: `Streamable HTTP`
+      **ChatGPT:**
+      1. Settings → Connectors → *New connector*
+      2. URL: `https://<domain-anda>/mcp`, transport: `Streamable HTTP`
 
-            ## Konfigurasi
+      ## Konfigurasi
 
-            | Variabel | Default | Kegunaan |
-            |---|---|---|
-            | `ALPACA_API_KEY` | — | Wajib. ID API key Alpaca |
-            | `ALPACA_SECRET_KEY` | — | Wajib. Secret API Alpaca |
-            | `ALPACA_PAPER_TRADE` | `true` | Set `false` untuk trading uang sungguhan |
+      | Variabel | Default | Kegunaan |
+      |---|---|---|
+      | `ALPACA_API_KEY` | — | Wajib. ID API key Alpaca |
+      | `ALPACA_SECRET_KEY` | — | Wajib. Secret API Alpaca |
+      | `ALPACA_PAPER_TRADE` | `true` | Set `false` untuk trading uang sungguhan |
 
-            Lanjutan: setelah deploy, Anda dapat menambahkan `ALPACA_TOOLSETS` di tab *Variables* — daftar dipisah koma (mis. `account,positions,orders`) yang membatasi keluarga tool yang server MCP ekspos ke klien AI.
+      Lanjutan: setelah deploy, Anda dapat menambahkan `ALPACA_TOOLSETS` di tab *Variables* — daftar dipisah koma (mis. `account,positions,orders`) yang membatasi keluarga tool yang server MCP ekspos ke klien AI.
 
-            ## Peringatan keamanan
+      ## Peringatan keamanan
 
-            Deployment ini menempatkan kredensial trading Alpaca di belakang endpoint HTTPS tanpa autentikasi bawaan — siapa pun yang punya URL bisa melakukan trading di akun Anda. Untuk produksi:
+      Deployment ini menempatkan kredensial trading Alpaca di belakang endpoint HTTPS tanpa autentikasi bawaan — siapa pun yang punya URL bisa melakukan trading di akun Anda. Untuk produksi:
 
-            - Pertahankan `ALPACA_PAPER_TRADE=true` sampai konfigurasi terverifikasi
-            - Perlakukan URL publik sebagai rahasia; jangan dibagikan
-            - Pertimbangkan menempatkan service di belakang reverse proxy berautentikasi
+      - Pertahankan `ALPACA_PAPER_TRADE=true` sampai konfigurasi terverifikasi
+      - Perlakukan URL publik sebagai rahasia; jangan dibagikan
+      - Pertimbangkan menempatkan service di belakang reverse proxy berautentikasi
 
-            ## Lisensi & atribusi
+      ## Lisensi & atribusi
 
-            Alpaca MCP Server dilisensikan di bawah [MIT License](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) oleh Alpaca Securities LLC. Template Zeabur ini mengemas ulang build Docker hulu dan bukan produk resmi Alpaca.
-    ja-JP:
-        description: Alpaca Trading API のリモート MCP（Model Context Protocol）サーバー — Claude、ChatGPT などの MCP 対応 AI クライアントから HTTPS 経由で株式・オプション・暗号資産を取引できます。
-        variables:
-            - key: PUBLIC_DOMAIN
-              type: STRING
-              name: 公開ドメイン
-              description: AI クライアントから接続する公開ドメイン。Claude や ChatGPT に追加するときは末尾に /mcp を付けてください。
-        readme: |
-            # Zeabur で Alpaca MCP Server をデプロイ
+      Alpaca MCP Server dilisensikan di bawah [MIT License](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE) oleh Alpaca Securities LLC. Template Zeabur ini mengemas ulang build Docker hulu dan bukan produk resmi Alpaca.
+  ja-JP:
+    description: Alpaca Trading API のリモート MCP（Model Context Protocol）サーバー — Claude、ChatGPT などの MCP 対応 AI クライアントから HTTPS 経由で株式・オプション・暗号資産を取引できます。
+    variables:
+    - key: PUBLIC_DOMAIN
+      type: STRING
+      name: 公開ドメイン
+      description: AI クライアントから接続する公開ドメイン。Claude や ChatGPT に追加するときは末尾に /mcp を付けてください。
+    readme: |
+      # Zeabur で Alpaca MCP Server をデプロイ
 
-            [Alpaca](https://alpaca.markets/) Trading API のリモート [Model Context Protocol](https://modelcontextprotocol.io/) サーバーです。デプロイ後、Claude（Web/デスクトップ/モバイル）や ChatGPT にカスタムコネクタとして追加し、自然言語で米国株・オプション・暗号資産の取引や市場分析が行えます。
+      [Alpaca](https://alpaca.markets/) Trading API のリモート [Model Context Protocol](https://modelcontextprotocol.io/) サーバーです。デプロイ後、Claude（Web/デスクトップ/モバイル）や ChatGPT にカスタムコネクタとして追加し、自然言語で米国株・オプション・暗号資産の取引や市場分析が行えます。
 
-            元プロジェクト：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT ライセンス）。
+      元プロジェクト：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT ライセンス）。
 
-            ## 1. Alpaca API キーを取得
+      ## 1. Alpaca API キーを取得
 
-            1. [alpaca.markets](https://alpaca.markets/) でサインアップ
-            2. [Paper Trading ダッシュボード](https://app.alpaca.markets/paper/dashboard/overview)を開く（まずはペーパー口座での検証を推奨）
-            3. *API Keys* → *Generate New Key* でキーペアを発行
-            4. テンプレートをデプロイする際に、`API Key ID` を `ALPACA_API_KEY` に、`Secret Key` を `ALPACA_SECRET_KEY` に入力
+      1. [alpaca.markets](https://alpaca.markets/) でサインアップ
+      2. [Paper Trading ダッシュボード](https://app.alpaca.markets/paper/dashboard/overview)を開く（まずはペーパー口座での検証を推奨）
+      3. *API Keys* → *Generate New Key* でキーペアを発行
+      4. テンプレートをデプロイする際に、`API Key ID` を `ALPACA_API_KEY` に、`Secret Key` を `ALPACA_SECRET_KEY` に入力
 
-            > 実資金で取引する場合：*Live* に切り替えて live キーを発行し、デプロイ後に `ALPACA_PAPER_TRADE=false` に変更してください。
+      > 実資金で取引する場合：*Live* に切り替えて live キーを発行し、デプロイ後に `ALPACA_PAPER_TRADE=false` に変更してください。
 
-            ## 2. デプロイ
+      ## 2. デプロイ
 
-            *Deploy* をクリックし、`ALPACA_API_KEY` と `ALPACA_SECRET_KEY` を入力して公開ドメインを選びます。Zeabur が無料の `.zeabur.app` サブドメインを提供しますが、独自ドメインも利用できます。
+      *Deploy* をクリックし、`ALPACA_API_KEY` と `ALPACA_SECRET_KEY` を入力して公開ドメインを選びます。Zeabur が無料の `.zeabur.app` サブドメインを提供しますが、独自ドメインも利用できます。
 
-            ## 3. AI クライアントと接続
+      ## 3. AI クライアントと接続
 
-            MCP エンドポイントは `https://<your-domain>/mcp` です。
+      MCP エンドポイントは `https://<your-domain>/mcp` です。
 
-            **Claude（Web、デスクトップ、モバイル）：**
-            1. 設定 → Connectors → *Add custom connector*
-            2. 名前：`Alpaca`、URL：`https://<your-domain>/mcp`
-            3. 保存し、チャット内でコネクタを有効化
+      **Claude（Web、デスクトップ、モバイル）：**
+      1. 設定 → Connectors → *Add custom connector*
+      2. 名前：`Alpaca`、URL：`https://<your-domain>/mcp`
+      3. 保存し、チャット内でコネクタを有効化
 
-            **ChatGPT：**
-            1. 設定 → Connectors → *New connector*
-            2. URL：`https://<your-domain>/mcp`、トランスポート：`Streamable HTTP`
+      **ChatGPT：**
+      1. 設定 → Connectors → *New connector*
+      2. URL：`https://<your-domain>/mcp`、トランスポート：`Streamable HTTP`
 
-            ## 設定
+      ## 設定
 
-            | 変数 | デフォルト | 用途 |
-            |---|---|---|
-            | `ALPACA_API_KEY` | — | 必須。Alpaca API key ID |
-            | `ALPACA_SECRET_KEY` | — | 必須。Alpaca API secret |
-            | `ALPACA_PAPER_TRADE` | `true` | `false` にするとライブ（実資金）取引が有効 |
+      | 変数 | デフォルト | 用途 |
+      |---|---|---|
+      | `ALPACA_API_KEY` | — | 必須。Alpaca API key ID |
+      | `ALPACA_SECRET_KEY` | — | 必須。Alpaca API secret |
+      | `ALPACA_PAPER_TRADE` | `true` | `false` にするとライブ（実資金）取引が有効 |
 
-            応用：デプロイ後に *Variables* で `ALPACA_TOOLSETS` を追加できます。カンマ区切り（例：`account,positions,orders`）で、MCP サーバーが AI クライアントに公開するツールファミリを制限します。
+      応用：デプロイ後に *Variables* で `ALPACA_TOOLSETS` を追加できます。カンマ区切り（例：`account,positions,orders`）で、MCP サーバーが AI クライアントに公開するツールファミリを制限します。
 
-            ## セキュリティ警告
+      ## セキュリティ警告
 
-            このデプロイは Alpaca のトレーディング認証情報を、組み込み認証のない HTTPS エンドポイントの背後に配置します。URL を知っている人は誰でもあなたの口座で取引を発注できます。本番利用では：
+      このデプロイは Alpaca のトレーディング認証情報を、組み込み認証のない HTTPS エンドポイントの背後に配置します。URL を知っている人は誰でもあなたの口座で取引を発注できます。本番利用では：
 
-            - 動作確認が完了するまで `ALPACA_PAPER_TRADE=true` を維持
-            - 公開 URL は秘密として扱い、共有しない
-            - 認証付きのリバースプロキシを前段に置く検討を
+      - 動作確認が完了するまで `ALPACA_PAPER_TRADE=true` を維持
+      - 公開 URL は秘密として扱い、共有しない
+      - 認証付きのリバースプロキシを前段に置く検討を
 
-            ## ライセンスとクレジット
+      ## ライセンスとクレジット
 
-            Alpaca MCP Server は Alpaca Securities LLC が公開する [MIT ライセンス](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)です。この Zeabur テンプレートは上流の Docker イメージを再パッケージしたもので、Alpaca 公式製品ではありません。
-    zh-CN:
-        description: Alpaca 交易 API 的远程 MCP（Model Context Protocol）服务器 — 从 Claude、ChatGPT 或任何支持 MCP 的 AI 客户端，通过 HTTPS 交易股票、期权与加密货币。
-        variables:
-            - key: PUBLIC_DOMAIN
-              type: STRING
-              name: 公开域名
-              description: 连接 AI 客户端用的公开域名。加入 Claude 或 ChatGPT 时记得在网址后面加上 /mcp。
-        readme: |
-            # 在 Zeabur 部署 Alpaca MCP Server
+      Alpaca MCP Server は Alpaca Securities LLC が公開する [MIT ライセンス](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)です。この Zeabur テンプレートは上流の Docker イメージを再パッケージしたもので、Alpaca 公式製品ではありません。
+  zh-CN:
+    description: Alpaca 交易 API 的远程 MCP（Model Context Protocol）服务器 — 从 Claude、ChatGPT 或任何支持 MCP 的 AI 客户端，通过 HTTPS 交易股票、期权与加密货币。
+    variables:
+    - key: PUBLIC_DOMAIN
+      type: STRING
+      name: 公开域名
+      description: 连接 AI 客户端用的公开域名。加入 Claude 或 ChatGPT 时记得在网址后面加上 /mcp。
+    readme: |
+      # 在 Zeabur 部署 Alpaca MCP Server
 
-            [Alpaca](https://alpaca.markets/) 交易 API 的远程 [Model Context Protocol](https://modelcontextprotocol.io/) 服务器。部署完成后，可以在 Claude（网页/桌面/手机）或 ChatGPT 添加自定义连接器，用自然语言交易美股、期权、加密货币与进行市场分析。
+      [Alpaca](https://alpaca.markets/) 交易 API 的远程 [Model Context Protocol](https://modelcontextprotocol.io/) 服务器。部署完成后，可以在 Claude（网页/桌面/手机）或 ChatGPT 添加自定义连接器，用自然语言交易美股、期权、加密货币与进行市场分析。
 
-            原始项目：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT 许可）。
+      原始项目：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT 许可）。
 
-            ## 1. 获取 Alpaca API 密钥
+      ## 1. 获取 Alpaca API 密钥
 
-            1. 在 [alpaca.markets](https://alpaca.markets/) 注册
-            2. 打开 [Paper Trading 控制台](https://app.alpaca.markets/paper/dashboard/overview)（建议先用模拟账户测试)
-            3. 在 *API Keys* → *Generate New Key* 生成密钥
-            4. 部署模板时，把 `API Key ID` 填进 `ALPACA_API_KEY`、`Secret Key` 填进 `ALPACA_SECRET_KEY`
+      1. 在 [alpaca.markets](https://alpaca.markets/) 注册
+      2. 打开 [Paper Trading 控制台](https://app.alpaca.markets/paper/dashboard/overview)（建议先用模拟账户测试)
+      3. 在 *API Keys* → *Generate New Key* 生成密钥
+      4. 部署模板时，把 `API Key ID` 填进 `ALPACA_API_KEY`、`Secret Key` 填进 `ALPACA_SECRET_KEY`
 
-            > 想用真钱交易：切到 *Live* 界面、生成 live 密钥，部署后再把 `ALPACA_PAPER_TRADE` 改成 `false`。
+      > 想用真钱交易：切到 *Live* 界面、生成 live 密钥，部署后再把 `ALPACA_PAPER_TRADE` 改成 `false`。
 
-            ## 2. 部署
+      ## 2. 部署
 
-            点 *Deploy*，填入 `ALPACA_API_KEY` 和 `ALPACA_SECRET_KEY`，选一个公开域名。Zeabur 会提供免费的 `.zeabur.app` 子域名，也可以绑自己的域名。
+      点 *Deploy*，填入 `ALPACA_API_KEY` 和 `ALPACA_SECRET_KEY`，选一个公开域名。Zeabur 会提供免费的 `.zeabur.app` 子域名，也可以绑自己的域名。
 
-            ## 3. 接入 AI 客户端
+      ## 3. 接入 AI 客户端
 
-            MCP 端点是 `https://<你的域名>/mcp`。
+      MCP 端点是 `https://<你的域名>/mcp`。
 
-            **Claude（网页、桌面、手机）：**
-            1. 设置 → Connectors → *Add custom connector*
-            2. 名称填 `Alpaca`、URL 填 `https://<你的域名>/mcp`
-            3. 保存后在对话中打开此连接器
+      **Claude（网页、桌面、手机）：**
+      1. 设置 → Connectors → *Add custom connector*
+      2. 名称填 `Alpaca`、URL 填 `https://<你的域名>/mcp`
+      3. 保存后在对话中打开此连接器
 
-            **ChatGPT：**
-            1. 设置 → Connectors → *New connector*
-            2. URL 填 `https://<你的域名>/mcp`，传输方式选 `Streamable HTTP`
+      **ChatGPT：**
+      1. 设置 → Connectors → *New connector*
+      2. URL 填 `https://<你的域名>/mcp`，传输方式选 `Streamable HTTP`
 
-            ## 配置
+      ## 配置
 
-            | 变量 | 默认值 | 用途 |
-            |---|---|---|
-            | `ALPACA_API_KEY` | — | 必填。Alpaca API key ID |
-            | `ALPACA_SECRET_KEY` | — | 必填。Alpaca API secret |
-            | `ALPACA_PAPER_TRADE` | `true` | 设成 `false` 启用真钱交易 |
+      | 变量 | 默认值 | 用途 |
+      |---|---|---|
+      | `ALPACA_API_KEY` | — | 必填。Alpaca API key ID |
+      | `ALPACA_SECRET_KEY` | — | 必填。Alpaca API secret |
+      | `ALPACA_PAPER_TRADE` | `true` | 设成 `false` 启用真钱交易 |
 
-            进阶：部署后可在 *Variables* 添加 `ALPACA_TOOLSETS`，逗号分隔（如 `account,positions,orders`），限制 MCP 服务器暴露给 AI 客户端的工具家族。
+      进阶：部署后可在 *Variables* 添加 `ALPACA_TOOLSETS`，逗号分隔（如 `account,positions,orders`），限制 MCP 服务器暴露给 AI 客户端的工具家族。
 
-            ## 安全警告
+      ## 安全警告
 
-            这个部署会把你的 Alpaca 交易密钥放在一个没有内置验证的 HTTPS 端点后面 —— 任何拿到 URL 的人都能对你的账户下单。实际使用时：
+      这个部署会把你的 Alpaca 交易密钥放在一个没有内置验证的 HTTPS 端点后面 —— 任何拿到 URL 的人都能对你的账户下单。实际使用时：
 
-            - 在验证部署配置前，保持 `ALPACA_PAPER_TRADE=true`
-            - 把这个公开 URL 当成机密处理，不要分享
-            - 考虑在前面加一层有验证的反向代理
+      - 在验证部署配置前，保持 `ALPACA_PAPER_TRADE=true`
+      - 把这个公开 URL 当成机密处理，不要分享
+      - 考虑在前面加一层有验证的反向代理
 
-            ## 许可与致谢
+      ## 许可与致谢
 
-            Alpaca MCP Server 采用 [MIT 许可](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)，由 Alpaca Securities LLC 发布。此 Zeabur 模板只是把上游的 Docker 镜像重新打包，并非 Alpaca 官方产品。
-    zh-TW:
-        description: Alpaca 交易 API 的遠端 MCP（Model Context Protocol）伺服器 — 從 Claude、ChatGPT 或任何支援 MCP 的 AI 客戶端，透過 HTTPS 交易股票、選擇權與加密貨幣。
-        variables:
-            - key: PUBLIC_DOMAIN
-              type: STRING
-              name: 公開網域
-              description: 連線 AI 客戶端用的公開網域。加入 Claude 或 ChatGPT 時記得在網址後面加上 /mcp。
-        readme: |
-            # 在 Zeabur 部署 Alpaca MCP Server
+      Alpaca MCP Server 采用 [MIT 许可](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)，由 Alpaca Securities LLC 发布。此 Zeabur 模板只是把上游的 Docker 镜像重新打包，并非 Alpaca 官方产品。
+  zh-TW:
+    description: Alpaca 交易 API 的遠端 MCP（Model Context Protocol）伺服器 — 從 Claude、ChatGPT 或任何支援 MCP 的 AI 客戶端，透過 HTTPS 交易股票、選擇權與加密貨幣。
+    variables:
+    - key: PUBLIC_DOMAIN
+      type: STRING
+      name: 公開網域
+      description: 連線 AI 客戶端用的公開網域。加入 Claude 或 ChatGPT 時記得在網址後面加上 /mcp。
+    readme: |
+      # 在 Zeabur 部署 Alpaca MCP Server
 
-            [Alpaca](https://alpaca.markets/) 交易 API 的遠端 [Model Context Protocol](https://modelcontextprotocol.io/) 伺服器。部署完成後，可以在 Claude（網頁/桌面/手機）或 ChatGPT 加入自訂連接器，用自然語言交易美股、選擇權、加密貨幣與進行市場分析。
+      [Alpaca](https://alpaca.markets/) 交易 API 的遠端 [Model Context Protocol](https://modelcontextprotocol.io/) 伺服器。部署完成後，可以在 Claude（網頁/桌面/手機）或 ChatGPT 加入自訂連接器，用自然語言交易美股、選擇權、加密貨幣與進行市場分析。
 
-            原始專案：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT 授權）。
+      原始專案：[github.com/alpacahq/alpaca-mcp-server](https://github.com/alpacahq/alpaca-mcp-server)（MIT 授權）。
 
-            ## 1. 取得 Alpaca API 金鑰
+      ## 1. 取得 Alpaca API 金鑰
 
-            1. 在 [alpaca.markets](https://alpaca.markets/) 註冊
-            2. 開啟 [Paper Trading 儀表板](https://app.alpaca.markets/paper/dashboard/overview)（建議先用模擬帳戶測試)
-            3. 在 *API Keys* → *Generate New Key* 產生金鑰
-            4. 部署這個模板時，把 `API Key ID` 填進 `ALPACA_API_KEY`、`Secret Key` 填進 `ALPACA_SECRET_KEY`
+      1. 在 [alpaca.markets](https://alpaca.markets/) 註冊
+      2. 開啟 [Paper Trading 儀表板](https://app.alpaca.markets/paper/dashboard/overview)（建議先用模擬帳戶測試)
+      3. 在 *API Keys* → *Generate New Key* 產生金鑰
+      4. 部署這個模板時，把 `API Key ID` 填進 `ALPACA_API_KEY`、`Secret Key` 填進 `ALPACA_SECRET_KEY`
 
-            > 想用真錢交易：切到 *Live* 介面、產生 live 金鑰，部署後再把 `ALPACA_PAPER_TRADE` 改成 `false`。
+      > 想用真錢交易：切到 *Live* 介面、產生 live 金鑰，部署後再把 `ALPACA_PAPER_TRADE` 改成 `false`。
 
-            ## 2. 部署
+      ## 2. 部署
 
-            點 *Deploy*，填入 `ALPACA_API_KEY` 和 `ALPACA_SECRET_KEY`，選一個公開網域。Zeabur 會提供免費的 `.zeabur.app` 子網域，也可以綁自己的網域。
+      點 *Deploy*，填入 `ALPACA_API_KEY` 和 `ALPACA_SECRET_KEY`，選一個公開網域。Zeabur 會提供免費的 `.zeabur.app` 子網域，也可以綁自己的網域。
 
-            ## 3. 串接 AI 客戶端
+      ## 3. 串接 AI 客戶端
 
-            MCP 端點是 `https://<你的網域>/mcp`。
+      MCP 端點是 `https://<你的網域>/mcp`。
 
-            **Claude（網頁、桌面、手機）：**
-            1. 設定 → Connectors → *Add custom connector*
-            2. 名稱填 `Alpaca`、URL 填 `https://<你的網域>/mcp`
-            3. 存檔後在對話中開啟此連接器
+      **Claude（網頁、桌面、手機）：**
+      1. 設定 → Connectors → *Add custom connector*
+      2. 名稱填 `Alpaca`、URL 填 `https://<你的網域>/mcp`
+      3. 存檔後在對話中開啟此連接器
 
-            **ChatGPT：**
-            1. 設定 → Connectors → *New connector*
-            2. URL 填 `https://<你的網域>/mcp`，傳輸方式選 `Streamable HTTP`
+      **ChatGPT：**
+      1. 設定 → Connectors → *New connector*
+      2. URL 填 `https://<你的網域>/mcp`，傳輸方式選 `Streamable HTTP`
 
-            ## 設定
+      ## 設定
 
-            | 變數 | 預設值 | 用途 |
-            |---|---|---|
-            | `ALPACA_API_KEY` | — | 必填。Alpaca API key ID |
-            | `ALPACA_SECRET_KEY` | — | 必填。Alpaca API secret |
-            | `ALPACA_PAPER_TRADE` | `true` | 設成 `false` 啟用真錢交易 |
+      | 變數 | 預設值 | 用途 |
+      |---|---|---|
+      | `ALPACA_API_KEY` | — | 必填。Alpaca API key ID |
+      | `ALPACA_SECRET_KEY` | — | 必填。Alpaca API secret |
+      | `ALPACA_PAPER_TRADE` | `true` | 設成 `false` 啟用真錢交易 |
 
-            進階：部署後可在 *Variables* 加上 `ALPACA_TOOLSETS`，逗號分隔（例如 `account,positions,orders`），限制 MCP 伺服器暴露給 AI 客戶端的工具家族。
+      進階：部署後可在 *Variables* 加上 `ALPACA_TOOLSETS`，逗號分隔（例如 `account,positions,orders`），限制 MCP 伺服器暴露給 AI 客戶端的工具家族。
 
-            ## 安全警告
+      ## 安全警告
 
-            這個部署會把你的 Alpaca 交易金鑰擺在一個沒有內建驗證的 HTTPS 端點後面 —— 任何拿到網址的人都能對你的帳戶下單。實際使用時：
+      這個部署會把你的 Alpaca 交易金鑰擺在一個沒有內建驗證的 HTTPS 端點後面 —— 任何拿到網址的人都能對你的帳戶下單。實際使用時：
 
-            - 在驗證部署設定前，保持 `ALPACA_PAPER_TRADE=true`
-            - 把這個公開網址當成機密處理，不要分享
-            - 考慮在前面加一層有驗證的反向代理
+      - 在驗證部署設定前，保持 `ALPACA_PAPER_TRADE=true`
+      - 把這個公開網址當成機密處理，不要分享
+      - 考慮在前面加一層有驗證的反向代理
 
-            ## 授權與致謝
+      ## 授權與致謝
 
-            Alpaca MCP Server 採用 [MIT 授權](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)，由 Alpaca Securities LLC 釋出。這個 Zeabur 模板只是把上游的 Docker 映像檔重新打包，並非 Alpaca 官方產品。
+      Alpaca MCP Server 採用 [MIT 授權](https://github.com/alpacahq/alpaca-mcp-server/blob/main/LICENSE)，由 Alpaca Securities LLC 釋出。這個 Zeabur 模板只是把上游的 Docker 映像檔重新打包，並非 Alpaca 官方產品。
