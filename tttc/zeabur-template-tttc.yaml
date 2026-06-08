@@ -16,6 +16,10 @@ spec:
       type: DOMAIN
       name: Client Domain
       description: Domain for the Talk to the City frontend
+    - key: PIPELINE_WORKER_DOMAIN
+      type: DOMAIN
+      name: Pipeline Worker Domain
+      description: Public domain for the pipeline worker. Required as the push endpoint for Google Pub/Sub.
     - key: OPENAI_API_KEY
       type: STRING
       name: OpenAI API Key
@@ -51,11 +55,23 @@ spec:
     - key: GOOGLE_CREDENTIALS_ENCODED
       type: STRING
       name: Google Cloud Credentials (Base64)
-      description: Base64-encoded Google Cloud service account JSON for Cloud Storage
+      description: Base64-encoded Google Cloud service account JSON for Cloud Storage and Pub/Sub
     - key: GCLOUD_STORAGE_BUCKET
       type: STRING
       name: GCS Bucket Name
       description: Google Cloud Storage bucket name for report storage
+    - key: GOOGLE_CLOUD_PROJECT_ID
+      type: STRING
+      name: Google Cloud Project ID
+      description: GCP project ID hosting your Pub/Sub topic
+    - key: NODE_WORKER_TOPIC_NAME
+      type: STRING
+      name: Pub/Sub Topic Name
+      description: Google Pub/Sub topic name for pipeline jobs
+    - key: NODE_WORKER_SUBSCRIPTION_NAME
+      type: STRING
+      name: Pub/Sub Subscription Name
+      description: Google Pub/Sub push subscription name for pipeline jobs
   readme: |
     # Talk to the City (T3C)
 
@@ -68,13 +84,13 @@ spec:
     | Service | Port | Role |
     |---------|------|------|
     | **next-client** | 3000 | Next.js frontend |
-    | **express-server** | 8080 | Node.js backend API |
-    | **pyserver** | 8000 | Python LLM processing |
-    | **redis** | 6379 | Job queue management |
+    | **express-server** | 8080 | Node.js backend API (publishes jobs to Pub/Sub) |
+    | **pipeline-worker** | 8080 | Node.js LLM processing worker (receives Pub/Sub push) |
+    | **redis** | 6379 | Pipeline state and caching |
 
     ## External Services Setup
 
-    This template requires 3 external services. **Set them up before deploying.**
+    This template requires 4 external services. **Set up steps 1-3 before deploying;** Pub/Sub (step 4) requires the deployed `pipeline-worker` URL, so configure it after the first deploy.
 
     ### 1. OpenAI API (LLM Processing)
 
@@ -141,33 +157,68 @@ spec:
 
     > **No rebuild needed!** The Docker image includes an entrypoint script that automatically injects Firebase config from environment variables at startup. Just set the `NEXT_PUBLIC_FIREBASE_*` variables and restart the service.
 
-    ### 3. Google Cloud Storage (Report Storage)
+    ### 3. Google Cloud (Storage + Pub/Sub)
 
-    T3C stores generated reports (JSON topic trees) in a GCS bucket.
+    T3C stores generated reports in GCS and dispatches LLM jobs via Pub/Sub.
 
-    #### 3.1 Create Bucket
+    #### 3.1 Create GCS Bucket
 
     1. Go to [Google Cloud Console — Storage](https://console.cloud.google.com/storage)
     2. **Create bucket** → enter a unique name (e.g., `tttc-reports-prod`)
     3. Choose a region, Standard storage class → **Create**
     4. Enter the bucket name as `GCLOUD_STORAGE_BUCKET`
 
-    #### 3.2 Create Service Account & Key
+    #### 3.2 Note Your Project ID
+
+    The Pub/Sub topic and the bucket live in the same GCP project. Find the project ID at the top of the [Cloud Console](https://console.cloud.google.com/) and enter it as `GOOGLE_CLOUD_PROJECT_ID`.
+
+    #### 3.3 Create Service Account & Key
 
     1. Go to [IAM & Admin → Service Accounts](https://console.cloud.google.com/iam-admin/service-accounts)
-    2. **Create Service Account** → name: `tttc-storage`
-    3. Grant role: **Storage Object Admin** → **Done**
+    2. **Create Service Account** → name: `tttc-backend`
+    3. Grant roles:
+       - **Storage Object Admin** (for GCS report storage)
+       - **Pub/Sub Publisher** (for express-server to enqueue jobs)
+       - **Pub/Sub Subscriber** (for pipeline-worker push acknowledgement)
     4. Click the service account → **Keys** tab → **Add Key** → **Create new key** → **JSON**
     5. Base64-encode the downloaded key:
 
     ```bash
     # macOS
-    base64 -i gcs-service-account.json | tr -d '\n'
+    base64 -i gcp-service-account.json | tr -d '\n'
     # Linux
-    base64 -w 0 gcs-service-account.json
+    base64 -w 0 gcp-service-account.json
     ```
 
     6. Enter the result as `GOOGLE_CREDENTIALS_ENCODED`
+
+    ### 4. Google Pub/Sub (Job Queue) — configure AFTER first deploy
+
+    Pub/Sub push needs the public URL of the deployed `pipeline-worker` as its endpoint. Complete this step after services come up:
+
+    #### 4.1 Deploy first, copy the worker URL
+
+    1. Deploy this template with placeholder values for `NODE_WORKER_TOPIC_NAME` / `NODE_WORKER_SUBSCRIPTION_NAME` (any string — Pub/Sub doesn't exist yet)
+    2. Once the services start, open the `pipeline-worker` service in the Zeabur dashboard and copy its public URL (`https://<pipeline-worker-domain>`)
+
+    #### 4.2 Create Pub/Sub topic and push subscription
+
+    1. Go to [Pub/Sub → Topics](https://console.cloud.google.com/cloudpubsub/topic/list)
+    2. **Create topic** → name (e.g., `tttc-pipeline-jobs`) → uncheck "Add a default subscription" → **Create**
+    3. Enter the topic name as `NODE_WORKER_TOPIC_NAME`
+    4. **Subscriptions** → **Create subscription**:
+       - Subscription ID (e.g., `tttc-pipeline-jobs-sub`)
+       - Topic: the topic you just created
+       - Delivery type: **Push**
+       - Endpoint URL: `https://<pipeline-worker-domain>/pubsub/push`
+       - Ack deadline: at least `600` seconds (LLM steps are long-running)
+    5. Enter the subscription name as `NODE_WORKER_SUBSCRIPTION_NAME`
+
+    #### 4.3 Restart express-server
+
+    After filling the three Pub/Sub variables, restart `express-server` so it picks up the new env vars.
+
+    > **Security note**: The `pipeline-worker`'s `/pubsub/push` endpoint does not verify a Pub/Sub OIDC token. The endpoint is publicly reachable; anyone who knows the URL can inject jobs. Treat the URL as a shared secret, or front it with an auth proxy if you need defence-in-depth.
 
     ## Variables Reference
 
@@ -181,17 +232,24 @@ spec:
     | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Yes* | e.g., `project.appspot.com` |
     | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Yes* | Firebase messaging sender ID |
     | `NEXT_PUBLIC_FIREBASE_APP_ID` | Yes* | Firebase app ID |
-    | `GOOGLE_CREDENTIALS_ENCODED` | Yes | Base64-encoded GCS service account JSON |
+    | `GOOGLE_CREDENTIALS_ENCODED` | Yes | Base64-encoded GCP service account JSON (GCS + Pub/Sub) |
     | `GCLOUD_STORAGE_BUCKET` | Yes | GCS bucket name for report storage |
+    | `GOOGLE_CLOUD_PROJECT_ID` | Yes | GCP project ID hosting your Pub/Sub topic |
+    | `NODE_WORKER_TOPIC_NAME` | Yes** | Pub/Sub topic name for pipeline jobs |
+    | `NODE_WORKER_SUBSCRIPTION_NAME` | Yes** | Pub/Sub push subscription name |
 
     \* Injected at runtime via entrypoint script. Set the variables and restart `next-client`.
+    \*\* Set during initial deploy (any string), then update to the real Pub/Sub names after step 4 and restart `express-server`.
 
     ## Post-Deployment Checklist
 
     1. Add your Zeabur domain to Firebase Authorized Domains
-    2. Verify all 4 services show **Running** in the Dashboard
-    3. Check `express-server` logs for: `Firebase admin app initialized successfully`
-    4. Visit your domain and test sign-in
+    2. Complete Pub/Sub setup (step 4 above) using the deployed `pipeline-worker` URL
+    3. Restart `express-server` after filling Pub/Sub variables
+    4. Verify all 4 services show **Running** in the Dashboard
+    5. Check `express-server` logs for: `Firebase admin app initialized successfully`
+    6. Check `pipeline-worker` logs for: `Pipeline worker started successfully`
+    7. Visit your domain and test sign-in
 
     ## Links
 
@@ -233,30 +291,37 @@ spec:
             expose: true
             readonly: true
 
-    # Python LLM Processing Service
-    - name: pyserver
+    # Pipeline Worker — receives jobs via Google Pub/Sub push, runs LLM pipeline
+    - name: pipeline-worker
       icon: https://avatars.githubusercontent.com/u/130554778
       template: PREBUILT_V2
+      domainKey: PIPELINE_WORKER_DOMAIN
       dependencies:
         - redis
       spec:
         source:
-          image: ghcr.io/zeabur/tttc-pyserver:latest
+          image: ghcr.io/zeabur/tttc-pipeline-worker:latest
         ports:
           - id: web
-            port: 8000
+            port: 8080
             type: HTTP
         env:
           PORT:
-            default: "8000"
-          ALLOWED_ORIGINS:
-            default: "*"
+            default: "8080"
+          NODE_ENV:
+            default: production
+          REDIS_HOST:
+            default: ${REDIS_HOST}
+          REDIS_PORT:
+            default: ${REDIS_PORT}
           REDIS_URL:
             default: ${REDIS_CONNECTION_STRING}
-          PYSERVER_HOST:
-            default: ${CONTAINER_HOSTNAME}
-            expose: true
-            readonly: true
+          GOOGLE_CREDENTIALS_ENCODED:
+            default: ${GOOGLE_CREDENTIALS_ENCODED}
+          FIREBASE_CREDENTIALS_ENCODED:
+            default: ${FIREBASE_CREDENTIALS_ENCODED}
+          GCLOUD_STORAGE_BUCKET:
+            default: ${GCLOUD_STORAGE_BUCKET}
 
     # Express Backend API
     - name: express-server
@@ -264,7 +329,6 @@ spec:
       template: PREBUILT_V2
       dependencies:
         - redis
-        - pyserver
       spec:
         source:
           image: ghcr.io/zeabur/tttc-express-server:latest
@@ -281,8 +345,6 @@ spec:
             default: https://${NEXT_CLIENT_DOMAIN}
           ALLOWED_ORIGINS:
             default: https://${NEXT_CLIENT_DOMAIN}
-          PYSERVER_URL:
-            default: http://${PYSERVER_HOST}:8000
           REDIS_HOST:
             default: ${REDIS_HOST}
           REDIS_PORT:
@@ -301,6 +363,12 @@ spec:
             default: ${GCLOUD_STORAGE_BUCKET}
           ALLOWED_GCS_BUCKETS:
             default: ${GCLOUD_STORAGE_BUCKET}
+          GOOGLE_CLOUD_PROJECT_ID:
+            default: ${GOOGLE_CLOUD_PROJECT_ID}
+          NODE_WORKER_TOPIC_NAME:
+            default: ${NODE_WORKER_TOPIC_NAME}
+          NODE_WORKER_SUBSCRIPTION_NAME:
+            default: ${NODE_WORKER_SUBSCRIPTION_NAME}
           FEATURE_FLAG_PROVIDER:
             default: local
           LOCAL_FLAGS:
@@ -360,6 +428,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: 客戶端網域
         description: Talk to the City 前端的網域
+      - key: PIPELINE_WORKER_DOMAIN
+        name: Pipeline Worker 網域
+        description: Pipeline worker 的公開網域，將作為 Google Pub/Sub 的 push endpoint。
       - key: OPENAI_API_KEY
         name: OpenAI API 金鑰
         description: 用於 LLM 處理的 OpenAI API 金鑰
@@ -386,10 +457,19 @@ localization:
         description: Firebase 應用程式識別碼
       - key: GOOGLE_CREDENTIALS_ENCODED
         name: Google Cloud 憑證（Base64）
-        description: Base64 編碼的 Google Cloud 服務帳號 JSON（用於 Cloud Storage）
+        description: Base64 編碼的 Google Cloud 服務帳號 JSON（用於 Cloud Storage 與 Pub/Sub）
       - key: GCLOUD_STORAGE_BUCKET
         name: GCS 儲存桶名稱
         description: 用於報告儲存的 Google Cloud Storage 儲存桶名稱
+      - key: GOOGLE_CLOUD_PROJECT_ID
+        name: Google Cloud 專案 ID
+        description: 你的 Pub/Sub 主題所在的 GCP 專案 ID
+      - key: NODE_WORKER_TOPIC_NAME
+        name: Pub/Sub 主題名稱
+        description: 用於 pipeline 工作分派的 Google Pub/Sub topic 名稱
+      - key: NODE_WORKER_SUBSCRIPTION_NAME
+        name: Pub/Sub 訂閱名稱
+        description: 用於 pipeline 工作分派的 Google Pub/Sub push 訂閱名稱
     readme: |
       # Talk to the City (T3C)
 
@@ -402,13 +482,13 @@ localization:
       | 服務 | 連接埠 | 角色 |
       |------|--------|------|
       | **next-client** | 3000 | Next.js 前端 |
-      | **express-server** | 8080 | Node.js 後端 API |
-      | **pyserver** | 8000 | Python LLM 處理 |
-      | **redis** | 6379 | 工作佇列管理 |
+      | **express-server** | 8080 | Node.js 後端 API（將工作發佈到 Pub/Sub） |
+      | **pipeline-worker** | 8080 | Node.js LLM 處理 worker（透過 Pub/Sub push 接收工作） |
+      | **redis** | 6379 | Pipeline 狀態與快取 |
 
       ## 外部服務設定
 
-      此範本需要 3 個外部服務。**請在部署前完成設定。**
+      此範本需要 4 個外部服務。**步驟 1-3 請在部署前完成；** Pub/Sub（步驟 4）需要 `pipeline-worker` 部署後的網址，所以要在第一次部署之後設定。
 
       ### 1. OpenAI API（LLM 處理）
 
@@ -475,33 +555,68 @@ localization:
 
       > **不需要重新建置映像檔！** Docker 映像檔內建 entrypoint 腳本，會在啟動時自動將環境變數注入 Firebase 設定。只需設定 `NEXT_PUBLIC_FIREBASE_*` 變數並重啟服務即可。
 
-      ### 3. Google Cloud Storage（報告儲存）
+      ### 3. Google Cloud（Storage + Pub/Sub）
 
-      T3C 將產生的報告（JSON 主題樹）儲存在 GCS 儲存桶中。
+      T3C 將報告存到 GCS，並透過 Pub/Sub 分派 LLM 工作。
 
-      #### 3.1 建立儲存桶
+      #### 3.1 建立 GCS 儲存桶
 
       1. 前往 [Google Cloud 控制台 — Storage](https://console.cloud.google.com/storage)
       2. **建立儲存桶** → 輸入唯一名稱（例如 `tttc-reports-prod`）
       3. 選擇區域、Standard 儲存類別 → **建立**
       4. 將儲存桶名稱輸入為 `GCLOUD_STORAGE_BUCKET`
 
-      #### 3.2 建立服務帳號與金鑰
+      #### 3.2 記下你的專案 ID
+
+      Pub/Sub topic 和儲存桶位在同一個 GCP 專案。在 [Cloud Console](https://console.cloud.google.com/) 頂部可以找到專案 ID，將它輸入為 `GOOGLE_CLOUD_PROJECT_ID`。
+
+      #### 3.3 建立服務帳號與金鑰
 
       1. 前往 [IAM 與管理 → 服務帳號](https://console.cloud.google.com/iam-admin/service-accounts)
-      2. **建立服務帳號** → 名稱：`tttc-storage`
-      3. 授予角色：**Storage Object Admin** → **完成**
+      2. **建立服務帳號** → 名稱：`tttc-backend`
+      3. 授予角色：
+         - **Storage Object Admin**（GCS 報告儲存）
+         - **Pub/Sub Publisher**（express-server 發佈工作）
+         - **Pub/Sub Subscriber**（pipeline-worker 確認 push 訊息）
       4. 點擊該服務帳號 → **金鑰**分頁 → **新增金鑰** → **建立新金鑰** → **JSON**
       5. 將下載的金鑰進行 Base64 編碼：
 
       ```bash
       # macOS
-      base64 -i gcs-service-account.json | tr -d '\n'
+      base64 -i gcp-service-account.json | tr -d '\n'
       # Linux
-      base64 -w 0 gcs-service-account.json
+      base64 -w 0 gcp-service-account.json
       ```
 
       6. 將結果輸入為 `GOOGLE_CREDENTIALS_ENCODED`
+
+      ### 4. Google Pub/Sub（工作佇列）— 第一次部署後再設定
+
+      Pub/Sub push 需要 `pipeline-worker` 的公開網址作為 endpoint，所以這一步要在服務上線後執行：
+
+      #### 4.1 先部署、複製 worker 網址
+
+      1. 部署此範本，`NODE_WORKER_TOPIC_NAME` / `NODE_WORKER_SUBSCRIPTION_NAME` 暫時填任意字串（Pub/Sub 尚未建立）
+      2. 服務啟動後，在 Zeabur Dashboard 開啟 `pipeline-worker` 服務，複製其公開網址（`https://<pipeline-worker-domain>`）
+
+      #### 4.2 建立 Pub/Sub topic 與 push 訂閱
+
+      1. 前往 [Pub/Sub → Topics](https://console.cloud.google.com/cloudpubsub/topic/list)
+      2. **建立 topic** → 輸入名稱（例如 `tttc-pipeline-jobs`）→ 取消「Add a default subscription」→ **建立**
+      3. 將 topic 名稱輸入為 `NODE_WORKER_TOPIC_NAME`
+      4. **Subscriptions** → **Create subscription**：
+         - Subscription ID（例如 `tttc-pipeline-jobs-sub`）
+         - Topic：剛建的 topic
+         - Delivery type：**Push**
+         - Endpoint URL：`https://<pipeline-worker-domain>/pubsub/push`
+         - Ack deadline：至少 `600` 秒（LLM 步驟需要較長時間）
+      5. 將訂閱名稱輸入為 `NODE_WORKER_SUBSCRIPTION_NAME`
+
+      #### 4.3 重啟 express-server
+
+      填完 3 個 Pub/Sub 變數後，重啟 `express-server` 讓它讀到新的環境變數。
+
+      > **安全提示**：`pipeline-worker` 的 `/pubsub/push` endpoint 不會驗證 Pub/Sub 的 OIDC token，是公開可達的；任何知道網址的人都能塞工作進去。請將此網址視為共享密碼，或在前面加一層驗證 proxy。
 
       ## 變數對照表
 
@@ -515,17 +630,24 @@ localization:
       | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | 是* | 例如 `project.appspot.com` |
       | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | 是* | Firebase 訊息傳送者 ID |
       | `NEXT_PUBLIC_FIREBASE_APP_ID` | 是* | Firebase 應用程式 ID |
-      | `GOOGLE_CREDENTIALS_ENCODED` | 是 | Base64 編碼的 GCS 服務帳號 JSON |
+      | `GOOGLE_CREDENTIALS_ENCODED` | 是 | Base64 編碼的 GCP 服務帳號 JSON（GCS + Pub/Sub） |
       | `GCLOUD_STORAGE_BUCKET` | 是 | 用於報告儲存的 GCS 儲存桶名稱 |
+      | `GOOGLE_CLOUD_PROJECT_ID` | 是 | Pub/Sub topic 所在的 GCP 專案 ID |
+      | `NODE_WORKER_TOPIC_NAME` | 是** | Pub/Sub topic 名稱 |
+      | `NODE_WORKER_SUBSCRIPTION_NAME` | 是** | Pub/Sub push 訂閱名稱 |
 
       \* 透過 entrypoint 腳本在執行時注入。設定變數後重啟 `next-client` 即可。
+      \*\* 初次部署時先填任意字串，等完成步驟 4 後改為實際 Pub/Sub 名稱並重啟 `express-server`。
 
       ## 部署後檢查清單
 
       1. 將您的 Zeabur 網域加入 Firebase 授權網域
-      2. 確認所有 4 個服務在 Dashboard 中顯示**執行中**
-      3. 檢查 `express-server` 日誌是否出現：`Firebase admin app initialized successfully`
-      4. 造訪您的網域並測試登入
+      2. 使用部署完成的 `pipeline-worker` 網址完成步驟 4 的 Pub/Sub 設定
+      3. 填完 Pub/Sub 變數後重啟 `express-server`
+      4. 確認所有 4 個服務在 Dashboard 中顯示**執行中**
+      5. 檢查 `express-server` 紀錄是否出現：`Firebase admin app initialized successfully`
+      6. 檢查 `pipeline-worker` 紀錄是否出現：`Pipeline worker started successfully`
+      7. 造訪您的網域並測試登入
 
       ## 連結
 
@@ -538,6 +660,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: 客户端域名
         description: Talk to the City 前端的域名
+      - key: PIPELINE_WORKER_DOMAIN
+        name: Pipeline Worker 域名
+        description: Pipeline worker 的公开域名，将作为 Google Pub/Sub 的 push endpoint。
       - key: OPENAI_API_KEY
         name: OpenAI API 密钥
         description: 用于 LLM 处理的 OpenAI API 密钥
@@ -564,10 +689,19 @@ localization:
         description: Firebase 应用标识符
       - key: GOOGLE_CREDENTIALS_ENCODED
         name: Google Cloud 凭证（Base64）
-        description: Base64 编码的 Google Cloud 服务账号 JSON（用于 Cloud Storage）
+        description: Base64 编码的 Google Cloud 服务账号 JSON（用于 Cloud Storage 和 Pub/Sub）
       - key: GCLOUD_STORAGE_BUCKET
         name: GCS 存储桶名称
         description: 用于报告存储的 Google Cloud Storage 存储桶名称
+      - key: GOOGLE_CLOUD_PROJECT_ID
+        name: Google Cloud 项目 ID
+        description: 你的 Pub/Sub 主题所在的 GCP 项目 ID
+      - key: NODE_WORKER_TOPIC_NAME
+        name: Pub/Sub 主题名称
+        description: 用于 pipeline 任务分派的 Google Pub/Sub topic 名称
+      - key: NODE_WORKER_SUBSCRIPTION_NAME
+        name: Pub/Sub 订阅名称
+        description: 用于 pipeline 任务分派的 Google Pub/Sub push 订阅名称
     readme: |
       # Talk to the City (T3C)
 
@@ -580,13 +714,13 @@ localization:
       | 服务 | 端口 | 角色 |
       |------|------|------|
       | **next-client** | 3000 | Next.js 前端 |
-      | **express-server** | 8080 | Node.js 后端 API |
-      | **pyserver** | 8000 | Python LLM 处理 |
-      | **redis** | 6379 | 作业队列管理 |
+      | **express-server** | 8080 | Node.js 后端 API（发布任务到 Pub/Sub） |
+      | **pipeline-worker** | 8080 | Node.js LLM 处理 worker（通过 Pub/Sub push 接收任务） |
+      | **redis** | 6379 | Pipeline 状态与缓存 |
 
       ## 外部服务设置
 
-      此模板需要 3 个外部服务。**请在部署前完成设置。**
+      此模板需要 4 个外部服务。**步骤 1-3 请在部署前完成；** Pub/Sub（步骤 4）需要 `pipeline-worker` 部署后的 URL，所以要在第一次部署之后设定。
 
       ### 1. OpenAI API（LLM 处理）
 
@@ -653,33 +787,68 @@ localization:
 
       > **无需重新构建镜像！** Docker 镜像内置 entrypoint 脚本，会在启动时自动将环境变量注入 Firebase 配置。只需设置 `NEXT_PUBLIC_FIREBASE_*` 变量并重启服务即可。
 
-      ### 3. Google Cloud Storage（报告存储）
+      ### 3. Google Cloud（Storage + Pub/Sub）
 
-      T3C 将生成的报告（JSON 主题树）存储在 GCS 存储桶中。
+      T3C 将报告存到 GCS，并通过 Pub/Sub 分派 LLM 任务。
 
-      #### 3.1 创建存储桶
+      #### 3.1 创建 GCS 存储桶
 
       1. 前往 [Google Cloud 控制台 — Storage](https://console.cloud.google.com/storage)
       2. **创建存储桶** → 输入唯一名称（例如 `tttc-reports-prod`）
       3. 选择区域、Standard 存储类别 → **创建**
       4. 将存储桶名称输入为 `GCLOUD_STORAGE_BUCKET`
 
-      #### 3.2 创建服务账号与密钥
+      #### 3.2 记下你的项目 ID
+
+      Pub/Sub topic 和存储桶位于同一个 GCP 项目。在 [Cloud Console](https://console.cloud.google.com/) 顶部可以找到项目 ID，将它输入为 `GOOGLE_CLOUD_PROJECT_ID`。
+
+      #### 3.3 创建服务账号与密钥
 
       1. 前往 [IAM 与管理 → 服务账号](https://console.cloud.google.com/iam-admin/service-accounts)
-      2. **创建服务账号** → 名称：`tttc-storage`
-      3. 授予角色：**Storage Object Admin** → **完成**
+      2. **创建服务账号** → 名称：`tttc-backend`
+      3. 授予角色：
+         - **Storage Object Admin**（GCS 报告存储）
+         - **Pub/Sub Publisher**（express-server 发布任务）
+         - **Pub/Sub Subscriber**（pipeline-worker 确认 push 消息）
       4. 点击该服务账号 → **密钥**选项卡 → **添加密钥** → **创建新密钥** → **JSON**
       5. 将下载的密钥进行 Base64 编码：
 
       ```bash
       # macOS
-      base64 -i gcs-service-account.json | tr -d '\n'
+      base64 -i gcp-service-account.json | tr -d '\n'
       # Linux
-      base64 -w 0 gcs-service-account.json
+      base64 -w 0 gcp-service-account.json
       ```
 
       6. 将结果输入为 `GOOGLE_CREDENTIALS_ENCODED`
+
+      ### 4. Google Pub/Sub（任务队列）— 第一次部署后再设定
+
+      Pub/Sub push 需要 `pipeline-worker` 的公开 URL 作为 endpoint，所以这一步要在服务上线后执行：
+
+      #### 4.1 先部署、复制 worker URL
+
+      1. 部署此模板，`NODE_WORKER_TOPIC_NAME` / `NODE_WORKER_SUBSCRIPTION_NAME` 暂时填任意字符串（Pub/Sub 尚未建立）
+      2. 服务启动后，在 Zeabur Dashboard 打开 `pipeline-worker` 服务，复制其公开 URL（`https://<pipeline-worker-domain>`）
+
+      #### 4.2 创建 Pub/Sub topic 与 push 订阅
+
+      1. 前往 [Pub/Sub → Topics](https://console.cloud.google.com/cloudpubsub/topic/list)
+      2. **创建 topic** → 输入名称（例如 `tttc-pipeline-jobs`）→ 取消「Add a default subscription」→ **创建**
+      3. 将 topic 名称输入为 `NODE_WORKER_TOPIC_NAME`
+      4. **Subscriptions** → **Create subscription**：
+         - Subscription ID（例如 `tttc-pipeline-jobs-sub`）
+         - Topic：刚建的 topic
+         - Delivery type：**Push**
+         - Endpoint URL：`https://<pipeline-worker-domain>/pubsub/push`
+         - Ack deadline：至少 `600` 秒（LLM 步骤需要较长时间）
+      5. 将订阅名称输入为 `NODE_WORKER_SUBSCRIPTION_NAME`
+
+      #### 4.3 重启 express-server
+
+      填完 3 个 Pub/Sub 变量后，重启 `express-server` 让它读到新的环境变量。
+
+      > **安全提示**：`pipeline-worker` 的 `/pubsub/push` endpoint 不会验证 Pub/Sub 的 OIDC token，是公开可达的；任何知道 URL 的人都能塞任务进去。请将此 URL 视为共享密钥，或在前面加一层验证 proxy。
 
       ## 变量参考表
 
@@ -693,17 +862,24 @@ localization:
       | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | 是* | 例如 `project.appspot.com` |
       | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | 是* | Firebase 消息发送者 ID |
       | `NEXT_PUBLIC_FIREBASE_APP_ID` | 是* | Firebase 应用 ID |
-      | `GOOGLE_CREDENTIALS_ENCODED` | 是 | Base64 编码的 GCS 服务账号 JSON |
+      | `GOOGLE_CREDENTIALS_ENCODED` | 是 | Base64 编码的 GCP 服务账号 JSON（GCS + Pub/Sub） |
       | `GCLOUD_STORAGE_BUCKET` | 是 | 用于报告存储的 GCS 存储桶名称 |
+      | `GOOGLE_CLOUD_PROJECT_ID` | 是 | Pub/Sub topic 所在的 GCP 项目 ID |
+      | `NODE_WORKER_TOPIC_NAME` | 是** | Pub/Sub topic 名称 |
+      | `NODE_WORKER_SUBSCRIPTION_NAME` | 是** | Pub/Sub push 订阅名称 |
 
       \* 通过 entrypoint 脚本在运行时注入。设置变量后重启 `next-client` 即可。
+      \*\* 初次部署时先填任意字符串，等完成步骤 4 后改为实际 Pub/Sub 名称并重启 `express-server`。
 
       ## 部署后检查清单
 
       1. 将您的 Zeabur 域名添加到 Firebase 授权域名
-      2. 确认所有 4 个服务在 Dashboard 中显示**运行中**
-      3. 检查 `express-server` 日志是否出现：`Firebase admin app initialized successfully`
-      4. 访问您的域名并测试登录
+      2. 使用部署完成的 `pipeline-worker` URL 完成步骤 4 的 Pub/Sub 设定
+      3. 填完 Pub/Sub 变量后重启 `express-server`
+      4. 确认所有 4 个服务在 Dashboard 中显示**运行中**
+      5. 检查 `express-server` 日志是否出现：`Firebase admin app initialized successfully`
+      6. 检查 `pipeline-worker` 日志是否出现：`Pipeline worker started successfully`
+      7. 访问您的域名并测试登录
 
       ## 链接
 
@@ -716,6 +892,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: クライアントドメイン
         description: Talk to the City フロントエンドのドメイン
+      - key: PIPELINE_WORKER_DOMAIN
+        name: パイプラインワーカードメイン
+        description: パイプラインワーカーの公開ドメイン。Google Pub/Sub の push エンドポイントとして必須。
       - key: OPENAI_API_KEY
         name: OpenAI API キー
         description: LLM 処理用の OpenAI API キー
@@ -742,10 +921,19 @@ localization:
         description: Firebase アプリケーション識別子
       - key: GOOGLE_CREDENTIALS_ENCODED
         name: Google Cloud 認証情報（Base64）
-        description: Base64 エンコードされた Google Cloud サービスアカウント JSON（Cloud Storage 用）
+        description: Base64 エンコードされた Google Cloud サービスアカウント JSON（Cloud Storage および Pub/Sub 用）
       - key: GCLOUD_STORAGE_BUCKET
         name: GCS バケット名
         description: レポート保存用の Google Cloud Storage バケット名
+      - key: GOOGLE_CLOUD_PROJECT_ID
+        name: Google Cloud プロジェクト ID
+        description: Pub/Sub トピックをホストする GCP プロジェクト ID
+      - key: NODE_WORKER_TOPIC_NAME
+        name: Pub/Sub トピック名
+        description: パイプラインジョブ配信用の Google Pub/Sub トピック名
+      - key: NODE_WORKER_SUBSCRIPTION_NAME
+        name: Pub/Sub サブスクリプション名
+        description: パイプラインジョブ配信用の Google Pub/Sub push サブスクリプション名
     readme: |
       # Talk to the City (T3C)
 
@@ -758,13 +946,13 @@ localization:
       | サービス | ポート | 役割 |
       |----------|--------|------|
       | **next-client** | 3000 | Next.js フロントエンド |
-      | **express-server** | 8080 | Node.js バックエンド API |
-      | **pyserver** | 8000 | Python LLM 処理 |
-      | **redis** | 6379 | ジョブキュー管理 |
+      | **express-server** | 8080 | Node.js バックエンド API（Pub/Sub へジョブを発行） |
+      | **pipeline-worker** | 8080 | Node.js LLM 処理ワーカー（Pub/Sub push で受信） |
+      | **redis** | 6379 | Pipeline 状態とキャッシュ |
 
       ## 外部サービスの設定
 
-      このテンプレートには 3 つの外部サービスが必要です。**デプロイ前に設定を完了してください。**
+      このテンプレートには 4 つの外部サービスが必要です。**ステップ 1〜3 はデプロイ前に完了；** Pub/Sub（ステップ 4）はデプロイ後の `pipeline-worker` URL が必要なので、初回デプロイ後に設定してください。
 
       ### 1. OpenAI API（LLM 処理）
 
@@ -831,33 +1019,68 @@ localization:
 
       > **再ビルド不要！** Docker イメージには entrypoint スクリプトが含まれており、起動時に環境変数から Firebase 設定を自動的に注入します。`NEXT_PUBLIC_FIREBASE_*` 変数を設定してサービスを再起動するだけで反映されます。
 
-      ### 3. Google Cloud Storage（レポート保存）
+      ### 3. Google Cloud（Storage + Pub/Sub）
 
-      T3C は生成されたレポート（JSON トピックツリー）を GCS バケットに保存します。
+      T3C は生成されたレポートを GCS に保存し、LLM ジョブを Pub/Sub 経由で配信します。
 
-      #### 3.1 バケットの作成
+      #### 3.1 GCS バケットを作成
 
       1. [Google Cloud コンソール — Storage](https://console.cloud.google.com/storage) にアクセス
       2. **バケットを作成** → 一意の名前を入力（例：`tttc-reports-prod`）
       3. リージョンを選択、Standard ストレージクラス → **作成**
       4. バケット名を `GCLOUD_STORAGE_BUCKET` として入力
 
-      #### 3.2 サービスアカウントとキーの作成
+      #### 3.2 プロジェクト ID をメモ
+
+      Pub/Sub トピックとバケットは同じ GCP プロジェクトに置きます。[Cloud Console](https://console.cloud.google.com/) の上部からプロジェクト ID を確認し、`GOOGLE_CLOUD_PROJECT_ID` として入力してください。
+
+      #### 3.3 サービスアカウントとキーを作成
 
       1. [IAM と管理 → サービスアカウント](https://console.cloud.google.com/iam-admin/service-accounts) にアクセス
-      2. **サービスアカウントを作成** → 名前：`tttc-storage`
-      3. ロールを付与：**Storage Object Admin** → **完了**
+      2. **サービスアカウントを作成** → 名前：`tttc-backend`
+      3. ロールを付与：
+         - **Storage Object Admin**（GCS レポート保存用）
+         - **Pub/Sub Publisher**（express-server がジョブをキューイングするため）
+         - **Pub/Sub Subscriber**（pipeline-worker の push 確認用）
       4. サービスアカウントをクリック → **鍵**タブ → **鍵を追加** → **新しい鍵を作成** → **JSON**
       5. ダウンロードした鍵を Base64 エンコード：
 
       ```bash
       # macOS
-      base64 -i gcs-service-account.json | tr -d '\n'
+      base64 -i gcp-service-account.json | tr -d '\n'
       # Linux
-      base64 -w 0 gcs-service-account.json
+      base64 -w 0 gcp-service-account.json
       ```
 
       6. 結果を `GOOGLE_CREDENTIALS_ENCODED` として入力
+
+      ### 4. Google Pub/Sub（ジョブキュー）— 初回デプロイ後に設定
+
+      Pub/Sub push はデプロイ済みの `pipeline-worker` の公開 URL を endpoint として要求するため、サービス起動後に実行してください：
+
+      #### 4.1 まずデプロイ、worker の URL をコピー
+
+      1. このテンプレートをデプロイ。`NODE_WORKER_TOPIC_NAME` / `NODE_WORKER_SUBSCRIPTION_NAME` には仮の文字列を入れておきます（Pub/Sub はまだ存在しないため、任意の値で OK）
+      2. サービスが起動したら、Zeabur ダッシュボードで `pipeline-worker` サービスを開き、公開 URL（`https://<pipeline-worker-domain>`）をコピー
+
+      #### 4.2 Pub/Sub topic と push subscription を作成
+
+      1. [Pub/Sub → Topics](https://console.cloud.google.com/cloudpubsub/topic/list) にアクセス
+      2. **topic を作成** → 名前を入力（例：`tttc-pipeline-jobs`）→ 「Add a default subscription」のチェックを外す → **作成**
+      3. topic 名を `NODE_WORKER_TOPIC_NAME` として入力
+      4. **Subscriptions** → **Create subscription**：
+         - Subscription ID（例：`tttc-pipeline-jobs-sub`）
+         - Topic：先ほど作成した topic
+         - Delivery type：**Push**
+         - Endpoint URL：`https://<pipeline-worker-domain>/pubsub/push`
+         - Ack deadline：`600` 秒以上（LLM ステップは長時間かかります）
+      5. サブスクリプション名を `NODE_WORKER_SUBSCRIPTION_NAME` として入力
+
+      #### 4.3 express-server を再起動
+
+      3 つの Pub/Sub 変数を入力したら、`express-server` を再起動して新しい環境変数を読み込ませます。
+
+      > **セキュリティ注意**：`pipeline-worker` の `/pubsub/push` エンドポイントは OIDC トークンを検証しないため、URL を知っている人なら誰でもジョブを投入できます。URL は共有シークレットとして扱うか、防御を厚くしたい場合は前段に認証 proxy を置いてください。
 
       ## 変数リファレンス
 
@@ -871,17 +1094,24 @@ localization:
       | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | はい* | 例：`project.appspot.com` |
       | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | はい* | Firebase メッセージング送信者 ID |
       | `NEXT_PUBLIC_FIREBASE_APP_ID` | はい* | Firebase アプリ ID |
-      | `GOOGLE_CREDENTIALS_ENCODED` | はい | Base64 エンコードされた GCS サービスアカウント JSON |
+      | `GOOGLE_CREDENTIALS_ENCODED` | はい | Base64 エンコードされた GCP サービスアカウント JSON（GCS + Pub/Sub） |
       | `GCLOUD_STORAGE_BUCKET` | はい | レポート保存用の GCS バケット名 |
+      | `GOOGLE_CLOUD_PROJECT_ID` | はい | Pub/Sub トピックが置かれる GCP プロジェクト ID |
+      | `NODE_WORKER_TOPIC_NAME` | はい** | Pub/Sub トピック名 |
+      | `NODE_WORKER_SUBSCRIPTION_NAME` | はい** | Pub/Sub push サブスクリプション名 |
 
       \* entrypoint スクリプトにより実行時に注入されます。変数を設定して `next-client` を再起動してください。
+      \*\* 初回デプロイ時は任意の文字列を入れておき、ステップ 4 完了後に実際の Pub/Sub 名へ更新して `express-server` を再起動してください。
 
       ## デプロイ後チェックリスト
 
       1. Zeabur ドメインを Firebase の承認済みドメインに追加
-      2. 4 つのサービスすべてがダッシュボードで**実行中**と表示されていることを確認
-      3. `express-server` のログに `Firebase admin app initialized successfully` と表示されていることを確認
-      4. ドメインにアクセスしてサインインをテスト
+      2. デプロイ済みの `pipeline-worker` URL を使ってステップ 4 の Pub/Sub 設定を完了
+      3. Pub/Sub 変数を入力したら `express-server` を再起動
+      4. 4 つのサービスすべてがダッシュボードで**実行中**と表示されていることを確認
+      5. `express-server` のログに `Firebase admin app initialized successfully` と表示されていることを確認
+      6. `pipeline-worker` のログに `Pipeline worker started successfully` と表示されていることを確認
+      7. ドメインにアクセスしてサインインをテスト
 
       ## リンク
 
@@ -894,6 +1124,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: Dominio del cliente
         description: Dominio para el frontend de Talk to the City
+      - key: PIPELINE_WORKER_DOMAIN
+        name: Dominio de Pipeline Worker
+        description: Dominio público del pipeline worker. Requerido como endpoint de push de Google Pub/Sub.
       - key: OPENAI_API_KEY
         name: Clave API de OpenAI
         description: Tu clave API de OpenAI para procesamiento LLM
@@ -920,10 +1153,19 @@ localization:
         description: Identificador de aplicación Firebase
       - key: GOOGLE_CREDENTIALS_ENCODED
         name: Credenciales Google Cloud (Base64)
-        description: JSON de cuenta de servicio Google Cloud codificado en Base64 para Cloud Storage
+        description: JSON de cuenta de servicio Google Cloud codificado en Base64 para Cloud Storage y Pub/Sub
       - key: GCLOUD_STORAGE_BUCKET
         name: Nombre del bucket GCS
         description: Nombre del bucket de Google Cloud Storage para almacenamiento de informes
+      - key: GOOGLE_CLOUD_PROJECT_ID
+        name: ID de proyecto de Google Cloud
+        description: ID del proyecto GCP que aloja tu topic de Pub/Sub
+      - key: NODE_WORKER_TOPIC_NAME
+        name: Nombre del topic de Pub/Sub
+        description: Nombre del topic de Google Pub/Sub para los trabajos del pipeline
+      - key: NODE_WORKER_SUBSCRIPTION_NAME
+        name: Nombre de la suscripción de Pub/Sub
+        description: Nombre de la suscripción push de Google Pub/Sub para los trabajos del pipeline
     readme: |
       # Talk to the City (T3C)
 
@@ -936,13 +1178,13 @@ localization:
       | Servicio | Puerto | Rol |
       |----------|--------|-----|
       | **next-client** | 3000 | Frontend Next.js |
-      | **express-server** | 8080 | API backend Node.js |
-      | **pyserver** | 8000 | Procesamiento LLM Python |
-      | **redis** | 6379 | Gestión de cola de trabajos |
+      | **express-server** | 8080 | API backend Node.js (publica trabajos en Pub/Sub) |
+      | **pipeline-worker** | 8080 | Worker de procesamiento LLM (recibe push de Pub/Sub) |
+      | **redis** | 6379 | Estado y caché del pipeline |
 
       ## Configuración de servicios externos
 
-      Esta plantilla requiere 3 servicios externos. **Configúralos antes de desplegar.**
+      Esta plantilla requiere 4 servicios externos. **Configura los pasos 1-3 antes de desplegar;** Pub/Sub (paso 4) requiere la URL desplegada de `pipeline-worker`, así que configúralo después del primer despliegue.
 
       ### 1. OpenAI API (Procesamiento LLM)
 
@@ -1009,33 +1251,68 @@ localization:
 
       > **¡No es necesario reconstruir!** La imagen Docker incluye un script de entrypoint que inyecta automáticamente la configuración de Firebase desde las variables de entorno al iniciar. Solo establece las variables `NEXT_PUBLIC_FIREBASE_*` y reinicia el servicio.
 
-      ### 3. Google Cloud Storage (Almacenamiento de informes)
+      ### 3. Google Cloud (Storage + Pub/Sub)
 
-      T3C almacena los informes generados (árboles temáticos JSON) en un bucket de GCS.
+      T3C almacena los informes generados en GCS y despacha los trabajos LLM a través de Pub/Sub.
 
-      #### 3.1 Crear bucket
+      #### 3.1 Crear bucket de GCS
 
       1. Ve a [Google Cloud Console — Storage](https://console.cloud.google.com/storage)
       2. **Crear bucket** → ingresa un nombre único (ej., `tttc-reports-prod`)
       3. Elige una región, clase de almacenamiento Standard → **Crear**
       4. Ingresa el nombre del bucket como `GCLOUD_STORAGE_BUCKET`
 
-      #### 3.2 Crear cuenta de servicio y clave
+      #### 3.2 Anota tu Project ID
+
+      El topic de Pub/Sub y el bucket viven en el mismo proyecto de GCP. Encuentra el ID del proyecto en la parte superior de la [Cloud Console](https://console.cloud.google.com/) e ingrésalo como `GOOGLE_CLOUD_PROJECT_ID`.
+
+      #### 3.3 Crear cuenta de servicio y clave
 
       1. Ve a [IAM y administración → Cuentas de servicio](https://console.cloud.google.com/iam-admin/service-accounts)
-      2. **Crear cuenta de servicio** → nombre: `tttc-storage`
-      3. Otorga el rol: **Storage Object Admin** → **Listo**
+      2. **Crear cuenta de servicio** → nombre: `tttc-backend`
+      3. Otorga los roles:
+         - **Storage Object Admin** (para almacenamiento de informes en GCS)
+         - **Pub/Sub Publisher** (para que express-server encole trabajos)
+         - **Pub/Sub Subscriber** (para la confirmación de push del pipeline-worker)
       4. Haz clic en la cuenta de servicio → pestaña **Claves** → **Agregar clave** → **Crear nueva clave** → **JSON**
       5. Codifica en Base64 la clave descargada:
 
       ```bash
       # macOS
-      base64 -i gcs-service-account.json | tr -d '\n'
+      base64 -i gcp-service-account.json | tr -d '\n'
       # Linux
-      base64 -w 0 gcs-service-account.json
+      base64 -w 0 gcp-service-account.json
       ```
 
       6. Ingresa el resultado como `GOOGLE_CREDENTIALS_ENCODED`
+
+      ### 4. Google Pub/Sub (Cola de trabajos) — configurar DESPUÉS del primer despliegue
+
+      El push de Pub/Sub necesita la URL pública del `pipeline-worker` desplegado como su endpoint. Completa este paso después de que los servicios estén en marcha:
+
+      #### 4.1 Despliega primero, copia la URL del worker
+
+      1. Despliega esta plantilla con valores provisionales para `NODE_WORKER_TOPIC_NAME` / `NODE_WORKER_SUBSCRIPTION_NAME` (cualquier cadena — Pub/Sub aún no existe)
+      2. Una vez que los servicios arranquen, abre el servicio `pipeline-worker` en el dashboard de Zeabur y copia su URL pública (`https://<pipeline-worker-domain>`)
+
+      #### 4.2 Crea topic y push subscription
+
+      1. Ve a [Pub/Sub → Topics](https://console.cloud.google.com/cloudpubsub/topic/list)
+      2. **Crear topic** → nombre (ej., `tttc-pipeline-jobs`) → desmarca "Add a default subscription" → **Crear**
+      3. Ingresa el nombre del topic como `NODE_WORKER_TOPIC_NAME`
+      4. **Subscriptions** → **Crear subscription**:
+         - ID de la suscripción (ej., `tttc-pipeline-jobs-sub`)
+         - Topic: el topic que acabas de crear
+         - Tipo de entrega: **Push**
+         - URL del endpoint: `https://<pipeline-worker-domain>/pubsub/push`
+         - Ack deadline: al menos `600` segundos (los pasos de LLM son de larga duración)
+      5. Ingresa el nombre de la suscripción como `NODE_WORKER_SUBSCRIPTION_NAME`
+
+      #### 4.3 Reinicia express-server
+
+      Después de rellenar las tres variables de Pub/Sub, reinicia `express-server` para que recoja las nuevas variables de entorno.
+
+      > **Nota de seguridad**: el endpoint `/pubsub/push` del `pipeline-worker` no verifica el token OIDC de Pub/Sub. El endpoint es accesible públicamente; cualquiera con la URL puede inyectar trabajos. Trata la URL como un secreto compartido, o ponle delante un proxy de autenticación si necesitas defensa en profundidad.
 
       ## Referencia de variables
 
@@ -1049,17 +1326,24 @@ localization:
       | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Sí* | Ej., `project.appspot.com` |
       | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Sí* | ID de remitente de Firebase Messaging |
       | `NEXT_PUBLIC_FIREBASE_APP_ID` | Sí* | ID de la aplicación Firebase |
-      | `GOOGLE_CREDENTIALS_ENCODED` | Sí | JSON de cuenta de servicio GCS codificado en Base64 |
+      | `GOOGLE_CREDENTIALS_ENCODED` | Sí | JSON de cuenta de servicio GCP codificado en Base64 (GCS + Pub/Sub) |
       | `GCLOUD_STORAGE_BUCKET` | Sí | Nombre del bucket GCS para almacenamiento de informes |
+      | `GOOGLE_CLOUD_PROJECT_ID` | Sí | ID del proyecto GCP que aloja tu topic de Pub/Sub |
+      | `NODE_WORKER_TOPIC_NAME` | Sí** | Nombre del topic de Pub/Sub para los trabajos del pipeline |
+      | `NODE_WORKER_SUBSCRIPTION_NAME` | Sí** | Nombre de la suscripción push de Pub/Sub |
 
       \* Inyectadas en tiempo de ejecución mediante el script de entrypoint. Establece las variables y reinicia `next-client`.
+      \*\* Establece un valor cualquiera durante el despliegue inicial, luego actualízalo a los nombres reales de Pub/Sub después del paso 4 y reinicia `express-server`.
 
       ## Lista de verificación post-despliegue
 
       1. Agrega tu dominio de Zeabur a los dominios autorizados de Firebase
-      2. Verifica que los 4 servicios muestren **Ejecutándose** en el Dashboard
-      3. Revisa los logs de `express-server` buscando: `Firebase admin app initialized successfully`
-      4. Visita tu dominio y prueba el inicio de sesión
+      2. Completa la configuración de Pub/Sub (paso 4 arriba) usando la URL desplegada de `pipeline-worker`
+      3. Reinicia `express-server` después de rellenar las variables de Pub/Sub
+      4. Verifica que los 4 servicios muestren **Ejecutándose** en el Dashboard
+      5. Revisa los logs de `express-server` buscando: `Firebase admin app initialized successfully`
+      6. Revisa los logs de `pipeline-worker` buscando: `Pipeline worker started successfully`
+      7. Visita tu dominio y prueba el inicio de sesión
 
       ## Enlaces
 
@@ -1072,6 +1356,9 @@ localization:
       - key: PUBLIC_DOMAIN
         name: Domain Klien
         description: Domain untuk frontend Talk to the City
+      - key: PIPELINE_WORKER_DOMAIN
+        name: Domain Pipeline Worker
+        description: Domain publik untuk pipeline worker. Diperlukan sebagai endpoint push Google Pub/Sub.
       - key: OPENAI_API_KEY
         name: Kunci API OpenAI
         description: Kunci API OpenAI Anda untuk pemrosesan LLM
@@ -1098,10 +1385,19 @@ localization:
         description: Pengidentifikasi aplikasi Firebase
       - key: GOOGLE_CREDENTIALS_ENCODED
         name: Kredensial Google Cloud (Base64)
-        description: JSON akun layanan Google Cloud yang dikodekan Base64 untuk Cloud Storage
+        description: JSON akun layanan Google Cloud yang dikodekan Base64 untuk Cloud Storage dan Pub/Sub
       - key: GCLOUD_STORAGE_BUCKET
         name: Nama Bucket GCS
         description: Nama bucket Google Cloud Storage untuk penyimpanan laporan
+      - key: GOOGLE_CLOUD_PROJECT_ID
+        name: ID Proyek Google Cloud
+        description: ID proyek GCP yang menampung topic Pub/Sub Anda
+      - key: NODE_WORKER_TOPIC_NAME
+        name: Nama Topic Pub/Sub
+        description: Nama topic Google Pub/Sub untuk pekerjaan pipeline
+      - key: NODE_WORKER_SUBSCRIPTION_NAME
+        name: Nama Subscription Pub/Sub
+        description: Nama push subscription Google Pub/Sub untuk pekerjaan pipeline
     readme: |
       # Talk to the City (T3C)
 
@@ -1114,13 +1410,13 @@ localization:
       | Layanan | Port | Peran |
       |---------|------|-------|
       | **next-client** | 3000 | Frontend Next.js |
-      | **express-server** | 8080 | API backend Node.js |
-      | **pyserver** | 8000 | Pemrosesan LLM Python |
-      | **redis** | 6379 | Manajemen antrean tugas |
+      | **express-server** | 8080 | API backend Node.js (menerbitkan pekerjaan ke Pub/Sub) |
+      | **pipeline-worker** | 8080 | Worker pemrosesan LLM Node.js (menerima Pub/Sub push) |
+      | **redis** | 6379 | Status pipeline dan caching |
 
       ## Pengaturan Layanan Eksternal
 
-      Template ini memerlukan 3 layanan eksternal. **Siapkan sebelum melakukan deployment.**
+      Template ini memerlukan 4 layanan eksternal. **Siapkan langkah 1-3 sebelum deploy;** Pub/Sub (langkah 4) memerlukan URL `pipeline-worker` yang sudah terdeploy, jadi konfigurasi setelah deploy pertama.
 
       ### 1. OpenAI API (Pemrosesan LLM)
 
@@ -1187,33 +1483,68 @@ localization:
 
       > **Tidak perlu build ulang!** Image Docker sudah menyertakan script entrypoint yang secara otomatis menyuntikkan konfigurasi Firebase dari variabel lingkungan saat startup. Cukup atur variabel `NEXT_PUBLIC_FIREBASE_*` dan restart layanan.
 
-      ### 3. Google Cloud Storage (Penyimpanan Laporan)
+      ### 3. Google Cloud (Storage + Pub/Sub)
 
-      T3C menyimpan laporan yang dihasilkan (pohon topik JSON) di bucket GCS.
+      T3C menyimpan laporan yang dihasilkan di GCS dan mendispatch pekerjaan LLM melalui Pub/Sub.
 
-      #### 3.1 Buat Bucket
+      #### 3.1 Buat Bucket GCS
 
       1. Buka [Google Cloud Console — Storage](https://console.cloud.google.com/storage)
       2. **Buat bucket** → masukkan nama unik (misal, `tttc-reports-prod`)
       3. Pilih region, kelas penyimpanan Standard → **Buat**
       4. Masukkan nama bucket sebagai `GCLOUD_STORAGE_BUCKET`
 
-      #### 3.2 Buat Akun Layanan & Kunci
+      #### 3.2 Catat Project ID Anda
+
+      Topic Pub/Sub dan bucket berada dalam proyek GCP yang sama. Project ID dapat ditemukan di bagian atas [Cloud Console](https://console.cloud.google.com/) dan masukkan sebagai `GOOGLE_CLOUD_PROJECT_ID`.
+
+      #### 3.3 Buat Service Account & Key
 
       1. Buka [IAM & Admin → Akun Layanan](https://console.cloud.google.com/iam-admin/service-accounts)
-      2. **Buat Akun Layanan** → nama: `tttc-storage`
-      3. Berikan peran: **Storage Object Admin** → **Selesai**
+      2. **Buat Akun Layanan** → nama: `tttc-backend`
+      3. Berikan peran:
+         - **Storage Object Admin** (untuk penyimpanan laporan GCS)
+         - **Pub/Sub Publisher** (agar express-server dapat menerbitkan pekerjaan)
+         - **Pub/Sub Subscriber** (untuk konfirmasi push pipeline-worker)
       4. Klik akun layanan tersebut → tab **Kunci** → **Tambahkan Kunci** → **Buat kunci baru** → **JSON**
       5. Encode Base64 kunci yang diunduh:
 
       ```bash
       # macOS
-      base64 -i gcs-service-account.json | tr -d '\n'
+      base64 -i gcp-service-account.json | tr -d '\n'
       # Linux
-      base64 -w 0 gcs-service-account.json
+      base64 -w 0 gcp-service-account.json
       ```
 
       6. Masukkan hasilnya sebagai `GOOGLE_CREDENTIALS_ENCODED`
+
+      ### 4. Google Pub/Sub (Antrian Pekerjaan) — konfigurasi SETELAH deploy pertama
+
+      Pub/Sub push memerlukan URL publik dari `pipeline-worker` yang sudah terdeploy sebagai endpoint-nya. Selesaikan langkah ini setelah layanan berjalan:
+
+      #### 4.1 Deploy dulu, salin URL worker
+
+      1. Deploy template ini dengan nilai placeholder untuk `NODE_WORKER_TOPIC_NAME` / `NODE_WORKER_SUBSCRIPTION_NAME` (string apa saja — Pub/Sub belum ada)
+      2. Setelah layanan berjalan, buka layanan `pipeline-worker` di Zeabur dashboard dan salin URL publiknya (`https://<pipeline-worker-domain>`)
+
+      #### 4.2 Buat topic Pub/Sub dan push subscription
+
+      1. Buka [Pub/Sub → Topics](https://console.cloud.google.com/cloudpubsub/topic/list)
+      2. **Create topic** → nama (misal, `tttc-pipeline-jobs`) → hilangkan centang "Add a default subscription" → **Create**
+      3. Masukkan nama topic sebagai `NODE_WORKER_TOPIC_NAME`
+      4. **Subscriptions** → **Create subscription**:
+         - Subscription ID (misal, `tttc-pipeline-jobs-sub`)
+         - Topic: topic yang baru saja dibuat
+         - Delivery type: **Push**
+         - Endpoint URL: `https://<pipeline-worker-domain>/pubsub/push`
+         - Ack deadline: minimal `600` detik (langkah LLM berjalan lama)
+      5. Masukkan nama subscription sebagai `NODE_WORKER_SUBSCRIPTION_NAME`
+
+      #### 4.3 Restart express-server
+
+      Setelah mengisi tiga variabel Pub/Sub, restart `express-server` agar membaca env vars yang baru.
+
+      > **Catatan keamanan**: endpoint `/pubsub/push` pada `pipeline-worker` tidak memverifikasi OIDC token Pub/Sub. Endpoint dapat diakses publik; siapa pun yang tahu URL dapat menyisipkan pekerjaan. Perlakukan URL sebagai shared secret, atau pasang auth proxy di depannya jika Anda memerlukan defence-in-depth.
 
       ## Referensi Variabel
 
@@ -1227,17 +1558,24 @@ localization:
       | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Ya* | Misal, `project.appspot.com` |
       | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Ya* | ID pengirim Firebase Messaging |
       | `NEXT_PUBLIC_FIREBASE_APP_ID` | Ya* | ID aplikasi Firebase |
-      | `GOOGLE_CREDENTIALS_ENCODED` | Ya | JSON akun layanan GCS yang dikodekan Base64 |
+      | `GOOGLE_CREDENTIALS_ENCODED` | Ya | JSON akun layanan GCP yang dikodekan Base64 (GCS + Pub/Sub) |
       | `GCLOUD_STORAGE_BUCKET` | Ya | Nama bucket GCS untuk penyimpanan laporan |
+      | `GOOGLE_CLOUD_PROJECT_ID` | Ya | ID proyek GCP yang menampung topic Pub/Sub Anda |
+      | `NODE_WORKER_TOPIC_NAME` | Ya** | Nama topic Pub/Sub untuk pekerjaan pipeline |
+      | `NODE_WORKER_SUBSCRIPTION_NAME` | Ya** | Nama push subscription Pub/Sub |
 
       \* Disuntikkan saat runtime melalui script entrypoint. Atur variabel dan restart `next-client`.
+      \*\* Isi nilai apa saja saat deploy awal, lalu perbarui ke nama Pub/Sub sebenarnya setelah langkah 4 dan restart `express-server`.
 
       ## Checklist Pasca-Deployment
 
       1. Tambahkan domain Zeabur Anda ke Domain yang Diotorisasi di Firebase
-      2. Pastikan semua 4 layanan menampilkan **Berjalan** di Dashboard
-      3. Periksa log `express-server` untuk: `Firebase admin app initialized successfully`
-      4. Kunjungi domain Anda dan uji login
+      2. Selesaikan konfigurasi Pub/Sub (langkah 4 di atas) menggunakan URL `pipeline-worker` yang sudah terdeploy
+      3. Restart `express-server` setelah mengisi variabel Pub/Sub
+      4. Pastikan semua 4 layanan menampilkan **Berjalan** di Dashboard
+      5. Periksa log `express-server` untuk: `Firebase admin app initialized successfully`
+      6. Periksa log `pipeline-worker` untuk: `Pipeline worker started successfully`
+      7. Kunjungi domain Anda dan uji login
 
       ## Tautan
 

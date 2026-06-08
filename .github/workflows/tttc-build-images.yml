@@ -24,9 +24,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - service: pyserver
-            dockerfile: pyserver/Dockerfile
-            image: pyserver
+          - service: pipeline-worker
+            dockerfile: pipeline-worker/Dockerfile
+            image: pipeline-worker
           - service: express-server
             dockerfile: express-server/Dockerfile
             image: express-server
