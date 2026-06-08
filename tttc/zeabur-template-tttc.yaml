@@ -241,7 +241,7 @@ spec:
         - redis
       spec:
         source:
-          image: ghcr.io/canyugs/tttc-pyserver:latest
+          image: ghcr.io/zeabur/tttc-pyserver:latest
         ports:
           - id: web
             port: 8000
@@ -267,7 +267,7 @@ spec:
         - pyserver
       spec:
         source:
-          image: ghcr.io/canyugs/tttc-express-server:latest
+          image: ghcr.io/zeabur/tttc-express-server:latest
         ports:
           - id: web
             port: 8080
@@ -323,7 +323,7 @@ spec:
         - express-server
       spec:
         source:
-          image: ghcr.io/canyugs/tttc-next-client:latest
+          image: ghcr.io/zeabur/tttc-next-client:latest
         ports:
           - id: web
             port: 3000
