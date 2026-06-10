@@ -58,6 +58,14 @@ spec:
       type: STRING
       name: Max Concurrent Sessions (optional)
       description: "Optional. Maximum number of concurrent agent sessions (default: 10). Oldest idle session is evicted when the limit is reached."
+    - key: OPENAB_AGENT_COMMAND
+      type: STRING
+      name: Agent Command (optional)
+      description: "Optional. Override the agent CLI command (default: codex-acp). Only change if you know what you're doing."
+    - key: OPENAB_CONFIG_URL
+      type: STRING
+      name: Config URL (optional)
+      description: "Optional. URL to a remote config.toml (https://). When set, the local config file is ignored and this URL is used instead."
   readme: |
     # OpenAB Codex
 
@@ -67,7 +75,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template tracks the floating `stable` channel and auto-updates when a new OpenAB stable releases. To pin a specific version, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
+    - **Image tag:** This template tracks the floating `beta` channel and auto-updates with each new OpenAB beta release. Switch to `stable` for production use. To pin a specific version, change the image tag in Zeabur Dashboard → Service → Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-codex).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
 
     ## Setup
@@ -160,7 +168,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-codex:stable
+          image: ghcr.io/openabdev/openab-codex:beta
           runAsUserID: 1000
           command:
             - /bin/sh
@@ -250,16 +258,13 @@ spec:
 
               if [ "$(id -u)" = "0" ]; then
                 chown -R node:node "$CONFIG_DIR"
-                exec runuser -u node --preserve-environment -- openab run --config "$CONFIG_FILE"
+                exec runuser -u node --preserve-environment -- openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
               fi
 
-              exec openab run --config "$CONFIG_FILE"
+              exec openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
           - path: /opt/config.toml.template
             template: |
               [agent]
-              command = "codex-acp"
-              args = []
-              working_dir = "/home/node"
         env:
           DISCORD_BOT_TOKEN:
             default: ${DISCORD_BOT_TOKEN}
@@ -278,6 +283,10 @@ spec:
           OPENAB_TRUSTED_BOT_IDS:
             default: ""
           OPENAB_MAX_SESSIONS:
+            default: ""
+          OPENAB_AGENT_COMMAND:
+            default: ""
+          OPENAB_CONFIG_URL:
             default: ""
 localization:
   zh-TW:

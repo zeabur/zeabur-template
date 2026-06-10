@@ -45,6 +45,14 @@ spec:
       type: STRING
       name: Max Concurrent Sessions (optional)
       description: "Optional. Maximum number of concurrent agent sessions (default: 5)."
+    - key: OPENAB_AGENT_COMMAND
+      type: STRING
+      name: Agent Command (optional)
+      description: "Optional. Override the agent CLI command (default: agy-acp). Only change if you know what you're doing."
+    - key: OPENAB_CONFIG_URL
+      type: STRING
+      name: Config URL (optional)
+      description: "Optional. URL to a remote config.toml (https://). When set, the local config file is ignored and this URL is used instead."
   readme: |
     # OpenAB Antigravity
 
@@ -185,13 +193,10 @@ spec:
                 echo "openab: using existing config.toml (delete to regenerate)"
               fi
 
-              exec openab run --config "$CONFIG_FILE"
+              exec openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
           - path: /opt/config.toml.template
             template: |
               [agent]
-              command = "agy-acp"
-              args = []
-              working_dir = "/home/agent"
               env = { AGY_WORKING_DIR = "/home/agent" }
 
               [reactions]
@@ -212,6 +217,10 @@ spec:
           OPENAB_TRUSTED_BOT_IDS:
             default: ""
           OPENAB_MAX_SESSIONS:
+            default: ""
+          OPENAB_AGENT_COMMAND:
+            default: ""
+          OPENAB_CONFIG_URL:
             default: ""
           GATEWAY_URL:
             default: ""

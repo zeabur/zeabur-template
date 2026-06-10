@@ -45,6 +45,14 @@ spec:
       type: STRING
       name: Slack App Token (optional)
       description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
+    - key: OPENAB_AGENT_COMMAND
+      type: STRING
+      name: Agent Command (optional)
+      description: "Optional. Override the agent CLI command (default: gemini). Only change if you know what you're doing."
+    - key: OPENAB_CONFIG_URL
+      type: STRING
+      name: Config URL (optional)
+      description: "Optional. URL to a remote config.toml (https://). When set, the local config file is ignored and this URL is used instead."
   readme: |
     # OpenAB Gemini
 
@@ -54,7 +62,7 @@ spec:
 
     ## Important Notes
 
-    - **Image tag:** This template uses a floating `stable` tag. To pin a specific version, change the image tag in Zeabur Dashboard -> Service -> Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
+    - **Image tag:** This template uses the floating `beta` tag and auto-updates with each new beta release. Switch to `stable` for production use. To pin a specific version, change the image tag in Zeabur Dashboard -> Service -> Settings. Available tags: [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab-gemini).
     - **Persistent storage:** `/home/node` is mounted as a persistent volume. Plugins, settings, config, and credentials survive restarts.
 
     ## Setup
@@ -154,7 +162,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-gemini:stable
+          image: ghcr.io/openabdev/openab-gemini:beta
           runAsUserID: 1000
           command:
             - /bin/sh
@@ -222,16 +230,14 @@ spec:
 
               if [ "$(id -u)" = "0" ]; then
                 chown -R node:node "$CONFIG_DIR"
-                exec runuser -u node --preserve-environment -- openab run --config "$CONFIG_FILE"
+                exec runuser -u node --preserve-environment -- openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
               fi
 
-              exec openab run --config "$CONFIG_FILE"
+              exec openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
           - path: /opt/config.toml.template
             template: |
               [agent]
-              command = "gemini"
               args = ["--acp", "--approval-mode", "yolo"]
-              working_dir = "/home/node"
         env:
           DISCORD_BOT_TOKEN:
             default: ${DISCORD_BOT_TOKEN}
@@ -244,6 +250,10 @@ spec:
           SLACK_BOT_TOKEN:
             default: ""
           SLACK_APP_TOKEN:
+            default: ""
+          OPENAB_AGENT_COMMAND:
+            default: ""
+          OPENAB_CONFIG_URL:
             default: ""
 localization:
   zh-TW:

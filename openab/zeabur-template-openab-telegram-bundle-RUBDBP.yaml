@@ -37,6 +37,14 @@ spec:
       type: DOMAIN
       name: Gateway Domain
       description: "Public HTTPS domain for receiving Telegram webhooks. Auto-assigned."
+    - key: OPENAB_AGENT_COMMAND
+      type: STRING
+      name: Agent Command (optional)
+      description: "Optional. Override the agent CLI command (default: kiro-cli). Only change if you know what you're doing."
+    - key: OPENAB_CONFIG_URL
+      type: STRING
+      name: Config URL (optional)
+      description: "Optional. URL to a remote config.toml (https://). When set, the local config file is ignored and this URL is used instead."
   readme: |
     # OpenAB Telegram Bundle
 
@@ -101,7 +109,7 @@ spec:
     ## Customization
 
     - **`/home/agent/.config/openab/config.toml`** — OAB config (sessions, reactions, etc.). Created on first boot from a built-in template with the `[gateway]` block pre-wired. To regenerate, delete and restart.
-    - **Image tags** — bot tracks the floating `stable` channel (`ghcr.io/openabdev/openab:stable`) and auto-updates with each OpenAB stable release. Gateway is pinned at `ghcr.io/openabdev/openab-gateway:0.5.1` (no `:stable` tag yet). To pin or bump, change the tag in Zeabur Dashboard → Service → Settings. Available tags: [OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway).
+    - **Image tags** — bot tracks the floating `beta` channel (`ghcr.io/openabdev/openab:beta`) and auto-updates with each new beta release. Switch to `stable` for production use. Gateway is pinned at `ghcr.io/openabdev/openab-gateway:0.5.1` (no `:stable` tag yet). To pin or bump, change the tag in Zeabur Dashboard → Service → Settings. Available tags: [OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway).
 
     ## Want a different agent backend?
 
@@ -122,7 +130,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab:stable
+          image: ghcr.io/openabdev/openab:beta
           runAsUserID: 1000
           command:
             - /bin/sh
@@ -177,16 +185,14 @@ spec:
 
               if [ "$(id -u)" = "0" ]; then
                 chown -R agent:agent "$CONFIG_DIR"
-                exec runuser -u agent --preserve-environment -- openab run --config "$CONFIG_FILE"
+                exec runuser -u agent --preserve-environment -- openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
               fi
 
-              exec openab run --config "$CONFIG_FILE"
+              exec openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
           - path: /opt/config.toml.template
             template: |
               [agent]
-              command = "kiro-cli"
               args = ["acp", "--trust-all-tools"]
-              working_dir = "/home/agent"
         env:
           GATEWAY_URL:
             default: ws://openab-gateway:8080/ws
@@ -197,6 +203,10 @@ spec:
           KIRO_API_KEY:
             default: ${KIRO_API_KEY}
           OPENAB_MAX_SESSIONS:
+            default: ""
+          OPENAB_AGENT_COMMAND:
+            default: ""
+          OPENAB_CONFIG_URL:
             default: ""
     - name: openab-gateway
       icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
@@ -328,7 +338,7 @@ localization:
       ## 自訂設定
 
       - **`/home/agent/.config/openab/config.toml`** — OAB 設定（sessions、reactions 等）。首次啟動時從內建範本建立，`[gateway]` 區塊已預先設好。如需重建，刪除檔案後重啟服務。
-      - **映像標籤** — bot 追蹤 floating `stable` 標籤（`ghcr.io/openabdev/openab:stable`），OpenAB 推出新穩定版時自動更新。Gateway 目前 pin 在 `ghcr.io/openabdev/openab-gateway:0.5.1`（尚未發布 `:stable` 標籤）。若要 pin 至特定版本或手動升版，請至 Zeabur Dashboard → 服務 → 設定修改映像標籤。可用標籤：[OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway)。
+      - **映像標籤** — bot 追蹤 floating `beta` 標籤（`ghcr.io/openabdev/openab:beta`），每次推出新 beta 版時自動更新。正式環境建議切換至 `stable`。Gateway 目前 pin 在 `ghcr.io/openabdev/openab-gateway:0.5.1`（尚未發布 `:stable` 標籤）。若要 pin 至特定版本或手動升版，請至 Zeabur Dashboard → 服務 → 設定修改映像標籤。可用標籤：[OpenAB](https://github.com/openabdev/openab/pkgs/container/openab) / [Gateway](https://github.com/openabdev/openab/pkgs/container/openab-gateway)。
 
       ## 想換不同的 agent 後端？
 
