@@ -1,0 +1,179 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: Elasticsearch Single Node with Kibana (v9)
+spec:
+    description: Production-ready single-node Elasticsearch with Kibana, using official images. Password and SSL enabled by default.
+    coverImage: https://static-www.elastic.co/v3/assets/bltefdd0b53724fa2ce/bltd2b695348ddc99f3/62fcf82cbcca746334bc3ddc/blog-thumb-release-platform.png
+    icon: https://cdn.zeabur.com/templates/icon/elastic.svg
+    variables:
+        - key: PUBLIC_KIBANA_DOMAIN
+          type: DOMAIN
+          name: Kibana Domain
+          description: The domain for your Kibana service.
+        - key: PUBLIC_ELASTICSEARCH_DOMAIN
+          type: DOMAIN
+          name: Elasticsearch Domain
+          description: The domain for your Elasticsearch service.
+    tags:
+        - Search
+        - Analytics
+        - Elasticsearch
+        - Kibana
+        - Single Node
+    readme: |
+        # Elasticsearch Single Node with Kibana
+
+        This template deploys a secure, production-ready single-node Elasticsearch with Kibana, using official Elastic images. Password and SSL are enabled by default.
+
+        ## Features
+
+        - Single-node Elasticsearch with security enabled
+        - Kibana with secure connection to Elasticsearch
+        - Password and port auto-configured
+        - Suitable for production and development
+
+        ## Usage
+
+        ELK does not provide a one-click deployment. You should follow the instructions below to get a secured instance of ELK:
+
+        1. Deploy the stack
+        2. Run the following command in "Terminal" to create a service account token for Kibana.
+            ```bash
+            $ ./bin/elasticsearch-service-tokens create elastic/kibana kibana
+            SERVICE_TOKEN elastic/kibana/kibana2 = <your-service-token>
+            ```
+        3. Fill the service token to the Kibana environment variable `ELASTICSEARCH_SERVICEACCOUNTTOKEN`.
+        4. Restart the Kibana service.
+        5. Generate the encryption keys for Kibana. Run the following command in "Terminal":
+           ```bash
+           $ bin/kibana-encryption-keys generate
+           ## Kibana Encryption Key Generation Utility
+
+           The 'generate' command guides you through the process of setting encryption keys for:
+
+           xpack.encryptedSavedObjects.encryptionKey
+               Used to encrypt stored objects such as dashboards and visualizations
+               https://www.elastic.co/guide/en/kibana/current/xpack-security-secure-saved-objects.   html#xpack-security-secure-saved-objects
+
+           xpack.reporting.encryptionKey
+               Used to encrypt saved reports
+               https://www.elastic.co/guide/en/kibana/current/reporting-settings-kb.   html#general-reporting-settings
+
+           xpack.security.encryptionKey
+               Used to encrypt session information
+               https://www.elastic.co/guide/en/kibana/current/security-settings-kb.   html#security-session-and-cookie-settings
+
+
+           Already defined settings are ignored and can be regenerated using the --force flag.  Check the    documentation links for instructions on how to rotate encryption keys.
+           Definitions should be set in the kibana.yml used configure Kibana.
+
+           Settings:
+           xpack.encryptedSavedObjects.encryptionKey: <XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY>
+           xpack.reporting.encryptionKey: <XPACK_REPORTING_ENCRYPTIONKEY>
+           xpack.security.encryptionKey: <XPACK_SECURITY_ENCRYPTIONKEY>
+           ```
+           6. Fill the generated encryption keys to the Kibana environment variable `XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY`, `XPACK_REPORTING_ENCRYPTIONKEY`, and `XPACK_SECURITY_ENCRYPTIONKEY`.
+           7. Restart the Kibana service.
+           8. Access Elasticsearch at `https://<your-elasticsearch-domain>:9200`
+           9. Access Kibana at `https://<your-kibana-domain>:5601` (Web-based visualization interface)
+
+           ## Default Credentials
+
+           Check the instruction section of the Kibana service to get the default credentials.
+
+           Login to Kibana using the **elastic** username and the auto-generated password to start    exploring, visualizing, and managing your Elasticsearch data through the intuitive web    interface.
+
+           ## Official Docs
+
+           - [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html)
+           - [Kibana](https://www.elastic.co/guide/en/kibana/current/index.html)
+    services:
+        - name: elasticsearch
+          icon: https://cdn.zeabur.com/templates/icon/elastic.svg
+          template: PREBUILT
+          spec:
+            id: elasticsearch
+            source:
+                image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.2.3
+                runAsUserID: 1000
+            ports:
+                - id: http
+                  port: 9200
+                  type: HTTP
+            volumes:
+                - id: esdata
+                  dir: /usr/share/elasticsearch/data
+            instructions:
+                - title: Elasticsearch Username
+                  content: elastic
+                - title: Elasticsearch Password
+                  content: ${ELASTIC_PASSWORD}
+            env:
+                ELASTIC_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                ES_JAVA_OPTS:
+                    default: -Xms1g -Xmx1g
+                bootstrap.memory_lock:
+                    default: "true"
+                discovery.type:
+                    default: single-node
+                node.name:
+                    default: elasticsearch
+                xpack.license.self_generated.type:
+                    default: basic
+                xpack.ml.use_auto_machine_memory_percent:
+                    default: "true"
+                xpack.security.autoconfiguration.enabled:
+                    default: "false"
+                xpack.security.enabled:
+                    default: "true"
+                xpack.security.http.ssl.enabled:
+                    default: "false"
+                xpack.security.transport.ssl.enabled:
+                    default: "false"
+          domainKey: PUBLIC_ELASTICSEARCH_DOMAIN
+        - name: kibana
+          icon: https://cdn.zeabur.com/templates/icon/elastic.svg
+          dependencies:
+            - elasticsearch
+          template: PREBUILT
+          spec:
+            id: kibana
+            source:
+                image: docker.elastic.co/kibana/kibana-wolfi:9.2.3
+                command:
+                    - /usr/local/bin/kibana-docker
+                runAsUserID: 1000
+            ports:
+                - id: web
+                  port: 5601
+                  type: HTTP
+            volumes:
+                - id: kibanadata
+                  dir: /usr/share/kibana/data
+            instructions:
+                - title: Elasticsearch Username
+                  content: elastic
+                - title: Elasticsearch Password
+                  content: ${ELASTIC_PASSWORD}
+            env:
+                ELASTICSEARCH_HOSTS:
+                    default: http://elasticsearch:9200
+                ELASTICSEARCH_SERVICEACCOUNTTOKEN:
+                    default: ""
+                KIBANA_PORT:
+                    default: "5601"
+                SERVER_PUBLICBASEURL:
+                    default: https://${ZEABUR_WEB_DOMAIN}
+                SERVERNAME:
+                    default: kibana
+                XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY:
+                    default: ""
+                XPACK_REPORTING_ENCRYPTIONKEY:
+                    default: ""
+                XPACK_SECURITY_ENCRYPTIONKEY:
+                    default: ""
+          domainKey: PUBLIC_KIBANA_DOMAIN
