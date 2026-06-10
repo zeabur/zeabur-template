@@ -1,0 +1,2908 @@
+{
+  "generatedAt": "2026-06-10T05:30:00.000Z",
+  "assignee": "can.yu",
+  "window": {
+    "start": "2026-06-04T00:00:00.000Z",
+    "end": "2026-06-10T23:59:59.999Z",
+    "label": "Jun 4 – Jun 10, 2026"
+  },
+  "stats": {
+    "resolved": 84,
+    "inProgress": 81,
+    "triage": 51,
+    "waiting": 64,
+    "total": 280
+  },
+  "teams": [
+    {
+      "key": "SUP",
+      "name": "Support",
+      "count": 253,
+      "resolved": 74
+    },
+    {
+      "key": "SEI",
+      "name": "Support Improvements",
+      "count": 15,
+      "resolved": 7
+    },
+    {
+      "key": "TRU",
+      "name": "Trust & Safety",
+      "count": 5,
+      "resolved": 0
+    },
+    {
+      "key": "PLA",
+      "name": "Platform",
+      "count": 4,
+      "resolved": 1
+    },
+    {
+      "key": "DES",
+      "name": "Design",
+      "count": 3,
+      "resolved": 2
+    }
+  ],
+  "highlights": [
+    {
+      "id": "DES-686",
+      "title": "Usage chart bars render black for single-project accounts (invisible in dark mode)",
+      "team": "DES",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "DES-696",
+      "title": "Wonder Mesh DomainTab: fallback breaks when use-wonder-mesh-public-access flag is off",
+      "team": "DES",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "PLA-1762",
+      "title": "fra1 共享叢集無 autoscaler — t3-2xl-1-33-spot 卡在 min=5 導致全叢集無法排程新 pod 達 6.5 小時",
+      "team": "PLA",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "SEI-320",
+      "title": "擴充 eval set 覆蓋率",
+      "team": "SEI",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "SEI-329",
+      "title": "新增 Changelog 相關 eval query 至 eval-set",
+      "team": "SEI",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "SEI-330",
+      "title": "新增 Blog 相關 eval query 至 eval-set",
+      "team": "SEI",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "SEI-664",
+      "title": "Stage 1: Expand eval set to 200+ queries (production-first)",
+      "team": "SEI",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "SEI-668",
+      "title": "DB Migration: InsForge → Zeabur-managed PostgreSQL + pgvector",
+      "team": "SEI",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "SEI-686",
+      "title": "新增 Wonder Mesh 架構與排查文件至 zebra-manual",
+      "team": "SEI",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "SEI-719",
+      "title": "Align subscription refund docs with industry convention (remove prorated remaining-days refund)",
+      "team": "SEI",
+      "state": "Done",
+      "bucket": "resolved",
+      "resolved": true
+    },
+    {
+      "id": "DES-679",
+      "title": "zeabur.cn 登入後被踢回 login 頁面",
+      "team": "DES",
+      "state": "Backlog",
+      "bucket": "waiting",
+      "resolved": false
+    },
+    {
+      "id": "PLA-1632",
+      "title": "GCP / Lightsail 182 台過期伺服器手動處理（月損 $3,752）",
+      "team": "PLA",
+      "state": "In Progress",
+      "bucket": "inProgress",
+      "resolved": false
+    },
+    {
+      "id": "PLA-1649",
+      "title": "修復 GCP / Lightsail 續約 cronjob 和 cleanup_server 覆蓋缺口",
+      "team": "PLA",
+      "state": "In Progress",
+      "bucket": "inProgress",
+      "resolved": false
+    },
+    {
+      "id": "PLA-1759",
+      "title": "補遷移 wonder-gateway daily-restart 的 bitnami/kubectl 鏡像（ZEA-5921 漏掃，已造成 mesh 事故）",
+      "team": "PLA",
+      "state": "In Review",
+      "bucket": "inProgress",
+      "resolved": false
+    },
+    {
+      "id": "SEI-665",
+      "title": "Stage 2: Index-time chunk enrichment (contextual headers + breadcrumbs)",
+      "team": "SEI",
+      "state": "Backlog",
+      "bucket": "waiting",
+      "resolved": false
+    },
+    {
+      "id": "SEI-666",
+      "title": "CJK tokenizer upgrade (jieba / OpenCC)",
+      "team": "SEI",
+      "state": "Backlog",
+      "bucket": "waiting",
+      "resolved": false
+    },
+    {
+      "id": "SEI-667",
+      "title": "Stage 4: BGE-M3 embedding migration (MIRACL 44→68)",
+      "team": "SEI",
+      "state": "Backlog",
+      "bucket": "waiting",
+      "resolved": false
+    },
+    {
+      "id": "SEI-709",
+      "title": "專用主機購買失敗時的 UX 修復（扣款顯示 / 髒資料 / 退款訊息消失）",
+      "team": "SEI",
+      "state": "Backlog",
+      "bucket": "waiting",
+      "resolved": false
+    },
+    {
+      "id": "SEI-715",
+      "title": "Abuse scan dashboard: batch actions, bilingual emails, execution history",
+      "team": "SEI",
+      "state": "In Progress",
+      "bucket": "inProgress",
+      "resolved": false
+    },
+    {
+      "id": "SEI-717",
+      "title": "CLI swallows /v2/upload error body — REQUIRE_PAID_PLAN surfaces as opaque \"status code 400\"",
+      "team": "SEI",
+      "state": "In Progress",
+      "bucket": "inProgress",
+      "resolved": false
+    },
+    {
+      "id": "SEI-718",
+      "title": "Cross-encoder reranker (BGE-reranker-v2-m3)",
+      "team": "SEI",
+      "state": "In Progress",
+      "bucket": "inProgress",
+      "resolved": false
+    },
+    {
+      "id": "SEI-720",
+      "title": "客服手冊補充：部署被「not allowed to deploy on Zeabur」誤擋的排查與放行 SOP",
+      "team": "SEI",
+      "state": "In Progress",
+      "bucket": "inProgress",
+      "resolved": false
+    },
+    {
+      "id": "TRU-56",
+      "title": "DKIM setup SUCCESS for z1b2.com in US East (N. Virginia) region",
+      "team": "TRU",
+      "state": "Canceled",
+      "bucket": "waiting",
+      "resolved": false
+    },
+    {
+      "id": "TRU-62",
+      "title": "DKIM setup SUCCESS for mmmmatthew.com in US East (N. Virginia) region",
+      "team": "TRU",
+      "state": "Canceled",
+      "bucket": "waiting",
+      "resolved": false
+    },
+    {
+      "id": "TRU-68",
+      "title": "DKIM setup SUCCESS for ekti.cc in Asia Pacific (Tokyo) region",
+      "team": "TRU",
+      "state": "Canceled",
+      "bucket": "waiting",
+      "resolved": false
+    },
+    {
+      "id": "TRU-74",
+      "title": "Your AWS Abuse Report [12314352240] [AWS ID 793407052998]",
+      "team": "TRU",
+      "state": "In Progress",
+      "bucket": "inProgress",
+      "resolved": false
+    },
+    {
+      "id": "TRU-80",
+      "title": "DKIM setup SUCCESS for easyrsvp.me in US East (N. Virginia) region",
+      "team": "TRU",
+      "state": "Canceled",
+      "bucket": "waiting",
+      "resolved": false
+    }
+  ],
+  "incidents": [
+    {
+      "id": "SUP-14199",
+      "title": "关于ICP备案",
+      "state": "Agent Draft Created",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13941",
+      "title": "神奇网络工具问题",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14239",
+      "title": "Your invoice is attached",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14237",
+      "title": "2026-06-09 ap-east-2 服務與 PostgreSQL 非預期重啟，DB 中斷 68 分鐘",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13951",
+      "title": "LINODE伺服器訂閱",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14229",
+      "title": "突然說 你無法部署任何服務???",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14195",
+      "title": "前端連線忽然變的非常緩慢, 有時候還會出現 520 Bad Gateway",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13978",
+      "title": "Hermes New Template Migration Guide",
+      "state": "Agent Draft Created",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14184",
+      "title": "伺服器不穩定",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14227",
+      "title": "申请停止订阅并退款",
+      "state": "Agent Draft Created",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14221",
+      "title": "申請退款感謝",
+      "state": "Agent Draft Created",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14160",
+      "title": "K3s shows as offline",
+      "state": "Agent Draft Created",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14050",
+      "title": "開啟對外網域連線Hermes Desktop App",
+      "state": "Agent Draft Created",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14051",
+      "title": "Wonder Mesh 所佈屬的 node,其內 port forwarding都未正常顯示出",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14112",
+      "title": "The server instance is rubbish. The K3s will be done every 2 days. what a joke. No way im paying $ for this kind of shitty service",
+      "state": "Agent Draft Created",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14225",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14226",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14046",
+      "title": "密碼無法登入",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14038",
+      "title": "Credit",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14216",
+      "title": "can't access to n8n shows 502: SERVICE_UNAVAILABLE",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14222",
+      "title": "叢集複製失敗",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14198",
+      "title": "請問為何已經取消訂閱，5、6月還有扣款?未來的月份還會繼續扣款嗎?",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14049",
+      "title": "為何還會收取服務器的費用。我不是昨天關掉服務器了嗎？結果昨天繼續收費用？",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14197",
+      "title": "关于账户级别的疑问",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14192",
+      "title": "Postgresql的自動備份，可以手動刪除歷史備份檔嗎？",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14200",
+      "title": "K3s 叢集目前無法連線",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14208",
+      "title": "數據丟失 - PostgreSQL 服務無法啟動，所有數據已消失",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14108",
+      "title": "共享叢集複製專案失敗：PostgreSQL Volume Copy 無法完成",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14219",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14217",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14218",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14215",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14214",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14212",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14213",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14210",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14211",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14209",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14202",
+      "title": "K3s cluster currently unreachable",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14207",
+      "title": "網域卡在provisioning",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14206",
+      "title": "Content on your website (amazonerp1998 [.] zeabur [.] app) [OP#1247057]",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13934",
+      "title": "發票問題",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13973",
+      "title": "神奇网络工具能够加入 mesh 网络，但服务器一直处于尚未连接的状态，请求检查 zeabur 自身节点 100.64.0.1 工作是否正常。",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13933",
+      "title": "服務無法啟動",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14004",
+      "title": "GraphQL error details - money is gone but server was not created",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13928",
+      "title": "NOT RUNNING",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14032",
+      "title": "用量儀表板的顯示問題",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13926",
+      "title": "SSH 终端无法正常打开，我申请退款",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14045",
+      "title": "How to upgrade from Pro to Team plan?",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14042",
+      "title": "Wonder Mesh 安裝腳本後,無法再後續動作?",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14188",
+      "title": "【DDoS 防护】公网 IP 解封通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14187",
+      "title": "安全风险通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14180",
+      "title": "求助 我无法登录我的账号和服务器",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13942",
+      "title": "無法部署",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14027",
+      "title": "我在 Zeabur 部署的服務遇到了 502 Bad Gateway 錯誤。 ## 錯誤詳情 - 狀態碼：502 Bad Gateway - 請求 ID： - URL：https://uno.zeabur.app/ ## 可能原因 1. 服務未監聽正確的 Port——可以到 Zeabur 控制台",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14181",
+      "title": "项目下的所有服务报错不是https协议连接，全部无法访问",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13940",
+      "title": "K3s offline",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14034",
+      "title": "無法手動備份",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13980",
+      "title": "為何我取消訂閱後依然收到帳單費用？",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14044",
+      "title": "網域簽證一直卡在provisioning PROVISIONING",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13929",
+      "title": "Hermes Terminal Error",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13905",
+      "title": "无法使用SSH终端连接到服务器",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13930",
+      "title": "Zeabur 仪表板终端页面无法打开 (Terminal page not loading)",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14183",
+      "title": "Billing Dispute for Receipt #2831-4138: Unauthorized Automatic Service Version Upgrade on n8n Service",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14182",
+      "title": "關於帳單 #2831-4138 費用暴增的申訴：n8n 服務版本遭未經授權自動升級",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13981",
+      "title": "MX记录无法添加",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14175",
+      "title": "Wonder Mesh 域名绑定问题",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14116",
+      "title": "这是什么问题 客服求助",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14041",
+      "title": "已退訂Dev Plan，申請剩餘天數款項轉移至Zeabur 餘額。",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14164",
+      "title": "成功扣费 但是服务器为续约",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13977",
+      "title": "生成網域 giptest.zeabur.app 的 TLS termination 失效 — :443 完全沒送出憑證（deploy RUNNING、domain PROVISIONED）",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14156",
+      "title": "帮我看看为什么这一天的费用这么高",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14035",
+      "title": "CRITICAL: Dedicated Server littledancer control plane unresponsive, SSH timeout, Zeabur APIs return INTERNAL_SERVER_ERROR",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14161",
+      "title": "官方模板部署不成功，https://zeabur.com/zh-CN/templates/PLTG0I",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14036",
+      "title": "需要遷移嗎?",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14037",
+      "title": "網域 SSL 憑證卡在 PROVISIONING 無法簽發",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13932",
+      "title": "reinstall server os fail",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14172",
+      "title": "违规网站屏蔽访问通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14171",
+      "title": "請問現在是否不能登入",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14170",
+      "title": "违规URL屏蔽访问处理通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13922",
+      "title": "伺服器意外被關閉",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13974",
+      "title": "[Billing Question] Significant TWD exchange rate discrepancy between two identical $100 USD top-ups",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13825",
+      "title": "我買了服務器，請幫我把共享集羣的所有項目轉到vps上，總是轉移失敗",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13916",
+      "title": "伺服器不斷崩潰",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13911",
+      "title": "为什么扣了我60刀",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14158",
+      "title": "Purchase confirmed",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14157",
+      "title": "Your invoice is attached",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14154",
+      "title": "service-6a1152633b4e14f4812574e5 網域一直有問題",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14115",
+      "title": "VPS network completely down after installing Cloudflare WARP - need backend assistance",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14145",
+      "title": "請協助搬移資料, 謝謝。",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14144",
+      "title": "自有阿里云域名icp备案申请",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14147",
+      "title": "Server Completely Inaccessible — WARP Broke All Network, SSH Refused, K3s Offline (Need Staff Help)",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13952",
+      "title": "綁定信用卡失敗 No such setupintent（購買 Linode Tokyo VPS）",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13971",
+      "title": "要付款時，跳出以下錯誤",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14150",
+      "title": "网络流量异常突增通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14149",
+      "title": "因流量异常突增导致公网 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14148",
+      "title": "因流量异常突增导致公网 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14130",
+      "title": "Refund Request – Double Charge on June 5 / Service Not Restored After Payment",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13474",
+      "title": "我想扩充我的Zeabur Email的API额度，但现在team套餐无法购买",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14138",
+      "title": "Service Deployment Blocked - \"not allowed to deploy on Zeabur\"",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14141",
+      "title": "Domain error https",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14091",
+      "title": "申请退款",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14121",
+      "title": "Inquiry About an Unrecognized NT$1,100 Credit Card Charge",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14132",
+      "title": "The SSL certificate has expired.",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14127",
+      "title": "Nothing works. I need help.",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14122",
+      "title": "已確認建置已成功，成功後啟動的時間約過了10分鐘後，下方Deployments裡面的狀態欄顯示已移除，上方卻依然顯示啟動中",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14139",
+      "title": "超過四小時布署失敗",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14137",
+      "title": "建置被取消",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14125",
+      "title": "AWS Taipei cluster FailedScheduling: PostgreSQL service stuck PENDING, please restore with existing PVC",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13874",
+      "title": "[Urgent] Request Temporary LibSQL Database Recovery for Backup (Free Plan Suspended)",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14140",
+      "title": "违规URL屏蔽访问处理通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13768",
+      "title": "Another Rate Increase?",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13872",
+      "title": "更新卡住了",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13877",
+      "title": "Build OK but ImagePullBackOff / Canceled on VPS K3s (tutoring-system)",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13876",
+      "title": "部署問題",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14136",
+      "title": "您的云资源存在高危风险，需立即修复！",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13869",
+      "title": "连接 GitHub 仓库的服务在推送新 commit 后一直在启动中，我有两个部署的项目都是这样",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14126",
+      "title": "Customer Invoice",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14124",
+      "title": "Urgent: Service Deployment Failure - 502 Bad Gateway - nuvora-landes",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13813",
+      "title": "InsForge後台打不開",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13868",
+      "title": "Zeabur's upstream SSL provider (ZeroSSL) updated their certificate chain",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13870",
+      "title": "服務無法啟動 - 映像拉取失敗 (laoj-ai-lab)",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13866",
+      "title": "LineBot 設定失敗",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14109",
+      "title": "支持 *.xxxx.com 的动态域名吗？",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14120",
+      "title": "Domain went provisioning for no reason",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13793",
+      "title": "Difference between Free & Dev Plan",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14110",
+      "title": "无法重启、无法重新部署、所有最近部署失败",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14113",
+      "title": "zeabur agent 修改了我的port，导致原port上数据不见了",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14119",
+      "title": "伺服器升級請求 - Volcengine Jakarta K3s 節點頻繁離線",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14095",
+      "title": "Request for refund",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14118",
+      "title": "關於本月 Dev 方案的退款申請",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-12180",
+      "title": "Lighthouse涉及内容违规的违规通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-12817",
+      "title": "Your receipt from Zeabur, Inc. #2211-7408",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14114",
+      "title": "Zeabur agent changed my port, causing data on the original port to disappear",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14111",
+      "title": "Shitty service. K3s down every 2 days",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13786",
+      "title": "dev 訂閱還有用處嗎",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13826",
+      "title": "退款 因為以前退過一次因此需要協助",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13805",
+      "title": "I accidentally changed the settings without knowing why. I set the Maximum Reserved Resource to my Server.",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13792",
+      "title": "Couldn't restart/redploy after adding credit to account balance",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13764",
+      "title": "已完成扣款但 VPS 未出現在後台，並申請退款（Receipt #2278-9014）",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13791",
+      "title": "为什么我无法删掉购买的服务器也无法再次购买新的服务器",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13831",
+      "title": "GitHub account linked with deleted Zeabur account, please unlink",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13815",
+      "title": "Aliyun Server with huaweicloud mirror - ingress-controller failed to start",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13838",
+      "title": "Any update on when Public Domain Binding will be shipped on wonder mesh？",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13816",
+      "title": "六一放假了吗？偌大一个网站找客服，找了半天找到了discord又找到这里",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13785",
+      "title": "共享叢集已停用, 請將專案複製到專屬伺服器以避免服務中斷 --> copy to vps fail",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14011",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14012",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14013",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14014",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14015",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14016",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14017",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14018",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14019",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14020",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14021",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14022",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14023",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14024",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14025",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14026",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14028",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14029",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14030",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14031",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14056",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14057",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14058",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14059",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14060",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14061",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14062",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14063",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14064",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14065",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14066",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14067",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14068",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14069",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14070",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14071",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14072",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14073",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14074",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14075",
+      "title": "【DDoS 防护】DDoS 攻击结束通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14077",
+      "title": "【DDoS 防护】公网 IP 解封通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14078",
+      "title": "【DDoS 防护】公网 IP 解封通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14079",
+      "title": "【DDoS 防护】公网 IP 解封通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14080",
+      "title": "【DDoS 防护】公网 IP 解封通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14104",
+      "title": "【DDoS 防护】公网 IP 解封通知",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14088",
+      "title": "安全风险通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13817",
+      "title": "服務卡在 PROVISIONING 紅色狀態，無法部署 - k3s 集群問題",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14089",
+      "title": "神奇網路工具",
+      "state": "Agent Draft Created",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13788",
+      "title": "流量用光就是流量有一个限度但是我用关了能不能找客服充值",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14087",
+      "title": "阿里云侵权举报通知：chatgptstore.zeabur.app [202606060708937777771]",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14092",
+      "title": "SSL Certificate Stuck on PROVISIONING for altar-ink.zeabur.app",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14090",
+      "title": "my server k3s go wrong",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13912",
+      "title": "Intermittent Cloudflare 524 on Shared Cluster service (Tencent Singapore) + shell/SSH access question",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13829",
+      "title": "$3.00 payment to Zeabur, Inc. was unsuccessful",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14086",
+      "title": "n8n 升级到 1.22.4 后数据库迁移失败，无法启动",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14085",
+      "title": "K3S 再次频繁意外中断",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13976",
+      "title": "【申請】解鎖 SMTP Port 465 - Ghost CMS 訂閱功能",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14082",
+      "title": "supabase 無法開啟多個專案",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13804",
+      "title": "Help please",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-12202",
+      "title": "Problems with my server",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13780",
+      "title": "想咨询一下升级到Dev 方案，创始用户还有半价吗",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13801",
+      "title": "月流量不低的 Ghost Blog 壞掉",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13797",
+      "title": "请求协助修改服务器ip",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13775",
+      "title": "ICP 备案",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13736",
+      "title": "神奇網路工具無法連上線",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13984",
+      "title": "[Notice] 您的專用伺服器收到內容安全通報",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-12955",
+      "title": "Trouble in access account",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13969",
+      "title": "申請更換伺服器節點 — 現有伺服器封鎖 SMTP，請求切換至 AWS 日本東京",
+      "state": "Waiting for Response",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13772",
+      "title": "Device keeps crashing and restarting with save error (Memory upgraded)",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14010",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14009",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14008",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14007",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14005",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14006",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14003",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14001",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14000",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13998",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13997",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14002",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13995",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13996",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13999",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13993",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13994",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13992",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13990",
+      "title": "【DDoS 防护】DDoS 攻击通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13987",
+      "title": "【DDoS 防护】DDoS 攻击导致公网 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13989",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13986",
+      "title": "【DDoS 防护】DDoS 攻击导致 IP 封堵通知",
+      "state": "Triage",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13983",
+      "title": "Tencent Cloud 內容安全 Abuse Report — 3 台 Lighthouse 伺服器",
+      "state": "In Progress",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13776",
+      "title": "Hermes Agent 未能啟動",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13752",
+      "title": "一键迁移失败",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13769",
+      "title": "想測試自己部署的所有服務，能否移至 3C / 4GB Nuremberg, DE $10 這個伺服器",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13763",
+      "title": "取消订阅计划 - 从付费计划（Developer/Team）降级到免费计划",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13751",
+      "title": "為什麼 /api/get-app-version/ 在 origin nginx access log 裡沒有對應紀錄",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13761",
+      "title": "Upgraded server specs reflect correctly but server name still shows old plan",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-12793",
+      "title": "zeabur帳戶餘額退款",
+      "state": "Cancelled",
+      "resolved": false
+    },
+    {
+      "id": "SUP-9989",
+      "title": "domain持续在provisioning无法正常进入",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13755",
+      "title": "Request for Subscription Refund - Account: sunfrank521@gmail.com",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13747",
+      "title": "项目的域名提示证书过期",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13734",
+      "title": "「This service is not allowed to deploy on Zeabur」",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13749",
+      "title": "上传文件失败",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13737",
+      "title": "申請主機升級後已經扣款但主機沒有升級",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13732",
+      "title": "关于订阅功能",
+      "state": "Resolved",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13909",
+      "title": "我实在无法备份我的数据了",
+      "state": "Resolved",
+      "resolved": true
+    }
+  ],
+  "tickets": [
+    {
+      "id": "SUP-14199",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13941",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14239",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14237",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13951",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14229",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14195",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13978",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14184",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14227",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14221",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14160",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14050",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14051",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14112",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14225",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14226",
+      "resolved": false
+    },
+    {
+      "id": "SEI-719",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14046",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14038",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14216",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14222",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14198",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14049",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14197",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14192",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14200",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14208",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14108",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14219",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14217",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14218",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14215",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14214",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14212",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14213",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14210",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14211",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14209",
+      "resolved": false
+    },
+    {
+      "id": "PLA-1649",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14202",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14207",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14206",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13934",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13973",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13933",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14004",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13928",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14032",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13926",
+      "resolved": true
+    },
+    {
+      "id": "DES-696",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14045",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14042",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14188",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14187",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14180",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13942",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14027",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14181",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13940",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14034",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13980",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14044",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13929",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13905",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13930",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14183",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14182",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13981",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14175",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14116",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14041",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14164",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13977",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14156",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14035",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14161",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14036",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14037",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13932",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14172",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14171",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14170",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13922",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13974",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13825",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13916",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13911",
+      "resolved": true
+    },
+    {
+      "id": "TRU-80",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14158",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14157",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14154",
+      "resolved": false
+    },
+    {
+      "id": "SEI-709",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14115",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14145",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14144",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14147",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13952",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13971",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14150",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14149",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14148",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14130",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13474",
+      "resolved": false
+    },
+    {
+      "id": "SEI-720",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14138",
+      "resolved": false
+    },
+    {
+      "id": "PLA-1632",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14141",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14091",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14121",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14132",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14127",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14122",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14139",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14137",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14125",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13874",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14140",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13768",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13872",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13877",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13876",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14136",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13869",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14126",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14124",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13813",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13868",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13870",
+      "resolved": true
+    },
+    {
+      "id": "PLA-1762",
+      "resolved": true
+    },
+    {
+      "id": "SEI-666",
+      "resolved": false
+    },
+    {
+      "id": "SEI-718",
+      "resolved": false
+    },
+    {
+      "id": "SEI-665",
+      "resolved": false
+    },
+    {
+      "id": "SEI-320",
+      "resolved": true
+    },
+    {
+      "id": "SEI-330",
+      "resolved": true
+    },
+    {
+      "id": "SEI-329",
+      "resolved": true
+    },
+    {
+      "id": "SEI-664",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13866",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14109",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14120",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13793",
+      "resolved": true
+    },
+    {
+      "id": "SEI-717",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14110",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14113",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14119",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14095",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14118",
+      "resolved": false
+    },
+    {
+      "id": "SUP-12180",
+      "resolved": false
+    },
+    {
+      "id": "SUP-12817",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14114",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14111",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13786",
+      "resolved": true
+    },
+    {
+      "id": "TRU-74",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13826",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13805",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13792",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13764",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13791",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13831",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13815",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13838",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13816",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13785",
+      "resolved": true
+    },
+    {
+      "id": "SEI-667",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14011",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14012",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14013",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14014",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14015",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14016",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14017",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14018",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14019",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14020",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14021",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14022",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14023",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14024",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14025",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14026",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14028",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14029",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14030",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14031",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14056",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14057",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14058",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14059",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14060",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14061",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14062",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14063",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14064",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14065",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14066",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14067",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14068",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14069",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14070",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14071",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14072",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14073",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14074",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14075",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14077",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14078",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14079",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14080",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14104",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14088",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13817",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14089",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13788",
+      "resolved": true
+    },
+    {
+      "id": "SEI-668",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14087",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14092",
+      "resolved": false
+    },
+    {
+      "id": "PLA-1759",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14090",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13912",
+      "resolved": false
+    },
+    {
+      "id": "TRU-68",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13829",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14086",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14085",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13976",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14082",
+      "resolved": false
+    },
+    {
+      "id": "SEI-715",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13804",
+      "resolved": true
+    },
+    {
+      "id": "SUP-12202",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13780",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13801",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13797",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13775",
+      "resolved": true
+    },
+    {
+      "id": "DES-686",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13736",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13984",
+      "resolved": false
+    },
+    {
+      "id": "SUP-12955",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13969",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13772",
+      "resolved": true
+    },
+    {
+      "id": "SUP-14010",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14009",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14008",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14007",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14005",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14006",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14003",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14001",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14000",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13998",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13997",
+      "resolved": false
+    },
+    {
+      "id": "SUP-14002",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13995",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13996",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13999",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13993",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13994",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13992",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13990",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13987",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13989",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13986",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13983",
+      "resolved": false
+    },
+    {
+      "id": "SUP-13776",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13752",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13769",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13763",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13751",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13761",
+      "resolved": true
+    },
+    {
+      "id": "TRU-62",
+      "resolved": false
+    },
+    {
+      "id": "DES-679",
+      "resolved": false
+    },
+    {
+      "id": "TRU-56",
+      "resolved": false
+    },
+    {
+      "id": "SEI-686",
+      "resolved": true
+    },
+    {
+      "id": "SUP-12793",
+      "resolved": false
+    },
+    {
+      "id": "SUP-9989",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13755",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13747",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13734",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13749",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13737",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13732",
+      "resolved": true
+    },
+    {
+      "id": "SUP-13909",
+      "resolved": true
+    }
+  ]
+}

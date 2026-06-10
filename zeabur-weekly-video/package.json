@@ -1,0 +1,25 @@
+{
+  "name": "zeabur-weekly-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion weekly report video generated from Linear issues (assignee can.yu, Thu→Wed window)",
+  "license": "MIT",
+  "scripts": {
+    "fetch": "tsx scripts/fetch.ts",
+    "typecheck": "tsc --noEmit",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts WeeklyReport out/weekly-report.mp4",
+    "build": "npm run fetch && npm run render"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.290",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.290"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2"
+  }
+}
