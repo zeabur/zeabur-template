@@ -1,0 +1,460 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB Native
+spec:
+  description: |
+    Deploy OpenAB with the native Rust coding agent (openab-agent) as a Discord/Slack bot. Single static binary, no Node.js or Python runtime, ~50ms cold start. Supports Anthropic API key or OpenAI Codex (ChatGPT Plus/Pro) subscription via OAuth device flow.
+    Source: https://github.com/openabdev/openab
+  icon: https://avatars.githubusercontent.com/u/274127192?v=4
+  coverImage: https://raw.githubusercontent.com/openabdev/openab/main/images/banner.jpg
+  tags:
+    - AI
+    - Discord Bot
+    - Developer Tools
+  variables:
+    - key: DISCORD_BOT_TOKEN
+      type: STRING
+      name: Discord Bot Token (optional)
+      description: "Optional. Token from https://discord.com/developers/applications. Leave empty if using Slack only."
+    - key: ANTHROPIC_API_KEY
+      type: STRING
+      name: Anthropic API Key (optional)
+      description: "Optional. Anthropic API key for Claude models. Leave empty to use OpenAI Codex subscription via OAuth device flow (post-deploy)."
+    - key: OPENAB_ALLOWED_CHANNELS
+      type: STRING
+      name: Discord Channel IDs (optional)
+      description: "Optional. Comma-separated Discord channel IDs where the bot listens. Leave empty to allow all channels."
+    - key: OPENAB_ALLOWED_USERS
+      type: STRING
+      name: Discord User IDs (optional)
+      description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone."
+    - key: SLACK_BOT_TOKEN
+      type: STRING
+      name: Slack Bot Token (optional)
+      description: "Optional. Bot User OAuth Token (xoxb-...) from Slack App settings. Leave empty to disable Slack."
+    - key: SLACK_APP_TOKEN
+      type: STRING
+      name: Slack App Token (optional)
+      description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
+    - key: OPENAB_ALLOW_BOT_MESSAGES
+      type: STRING
+      name: Allow Bot Messages (optional)
+      description: "Optional. Set to 'on' or 'mentions' to allow messages from bots/webhooks. Leave empty to disable."
+    - key: OPENAB_TRUSTED_BOT_IDS
+      type: STRING
+      name: Trusted Bot IDs (optional)
+      description: "Optional. Comma-separated Discord bot IDs trusted to send messages. Leave empty to trust all bots."
+    - key: OPENAB_MAX_SESSIONS
+      type: STRING
+      name: Max Concurrent Sessions (optional)
+      description: "Optional. Maximum number of concurrent agent sessions (default: 5)."
+  readme: |
+    # OpenAB Native
+
+    One-click deployment of [OpenAB](https://github.com/openabdev/openab) with **openab-agent** — a native Rust coding agent built into OpenAB itself. No Node.js, no Python, no adapter layer.
+
+    ## Why native?
+
+    | | openab-native | Other agent templates |
+    |---|---|---|
+    | Runtime | None (single Rust binary) | Node.js / Python |
+    | Cold start | ~50ms | 1–3s |
+    | Image size | ~20MB layer | 300–800MB |
+    | Adapter layer | None (ACP built in) | Required (codex-acp / pi-acp / agy-acp) |
+    | Tools | 4 only: read / write / edit / bash | Varies per CLI |
+
+    Designed for **fast, deterministic** agent loops without the supply-chain surface of npm/pip.
+
+    ## Important Notes
+
+    - **Image tag:** This template tracks the `beta` tag. To pin a specific version, change the image tag in Zeabur Dashboard → Service → Settings.
+    - **Persistent storage:** `/home/agent` is mounted as a persistent volume. Config and auth tokens (`~/.openab/agent/auth.json`) survive restarts.
+    - **Config location:** `config.toml` is generated at `/home/agent/.config/openab/config.toml` on first boot. Edit it directly after that — env vars are only used for initial setup.
+
+    ## Setup
+
+    ### 1. Create a Discord Bot
+
+    1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+    2. Create a new application and add a Bot
+    3. Enable **Message Content Intent** under Privileged Gateway Intents
+    4. Copy the bot token and paste it as `DISCORD_BOT_TOKEN`
+    5. Go to **OAuth2 → URL Generator** → check scope `bot` → check permissions: Send Messages, Send Messages in Threads, Create Public Threads, Read Message History, Add Reactions, Manage Messages
+    6. Invite the bot to your server with the generated URL
+
+    ### 2. Choose an LLM provider (pick one)
+
+    **Option A — Anthropic API key (simplest):**
+    Paste your Anthropic API key into `ANTHROPIC_API_KEY`. The agent defaults to `claude-sonnet-4-20250514`. Done.
+
+    **Option B — OpenAI Codex subscription (ChatGPT Plus/Pro):**
+    Leave `ANTHROPIC_API_KEY` empty. After deployment, open the **Exec** tab in Zeabur Dashboard and run:
+
+    ```bash
+    openab-agent auth codex-device
+    ```
+
+    Follow the URL + code shown in your browser to authorize. Tokens persist at `~/.openab/agent/auth.json`.
+
+    Verify with:
+
+    ```bash
+    openab-agent auth status
+    ```
+
+    ### 3. Configure Channels (Optional)
+
+    Set `OPENAB_ALLOWED_CHANNELS` to restrict which channels the bot responds in. Leave empty to allow all channels.
+
+    ## Slack Setup (Optional)
+
+    1. Go to https://api.slack.com/apps → Create New App → From scratch
+    2. Enable Socket Mode → generate App-Level Token with scope `connections:write`
+    3. Enable Event Subscriptions → add bot events: `app_mention`, `message.channels`, `message.groups`
+    4. OAuth & Permissions → add scopes: `app_mentions:read`, `chat:write`, `channels:history`, `groups:history`, `channels:read`, `groups:read`, `reactions:write`, `files:read`, `users:read`
+    5. Install App → copy `xoxb-...` token and `xapp-...` token
+
+    ## Choosing a model
+
+    Add env vars in Zeabur Dashboard → Service → Variables:
+
+    | Variable | Default | Notes |
+    |---|---|---|
+    | `OPENAB_AGENT_PROVIDER` | auto-detect | `anthropic` or `codex` to force one |
+    | `OPENAB_AGENT_MODEL` | `claude-sonnet-4-20250514` (Anthropic) | Any Anthropic model ID |
+    | `OPENAB_AGENT_OPENAI_MODEL` | `gpt-4.1-nano` (Codex) | Used when provider is `codex` |
+    | `OPENAB_AGENT_MAX_TOKENS` | `8192` | Output max tokens |
+
+    Auto-detect order: tries `ANTHROPIC_API_KEY` first, then OAuth token store.
+
+    ## Customization
+
+    | File | Description |
+    |------|-------------|
+    | `/home/agent/.config/openab/config.toml` | OpenAB config (sessions, reactions, etc.) |
+    | `/home/agent/.openab/agent/auth.json` | OAuth tokens (Codex flow only) |
+
+    To reset config to defaults: `rm /home/agent/.config/openab/config.toml` and restart.
+
+    ## Security
+
+    The native agent's `bash` tool filters environment variables by default — `ANTHROPIC_API_KEY`, `*_TOKEN`, `*_SECRET`, etc. are stripped from child processes to prevent prompt-injection exfiltration. Add safe vars to `OPENAB_AGENT_BASH_ENV_ALLOW` (comma-separated) if needed.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [openab-agent ADR](https://github.com/openabdev/openab/blob/main/docs/adr/openab-agent.md)
+    - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  services:
+    - name: openab-native
+      icon: https://avatars.githubusercontent.com/u/274127192?v=4
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab-native:beta
+          runAsUserID: 1000
+          command:
+            - tini
+            - --
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ] && [ -z "$GATEWAY_URL" ]; then
+                echo "openab: no adapter configured (set DISCORD_BOT_TOKEN, SLACK_BOT_TOKEN, or GATEWAY_URL) — sleeping"
+                exec sleep infinity
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                if [ -n "$DISCORD_BOT_TOKEN" ]; then
+                  printf '\n[discord]\nbot_token = "%s"\n' "$DISCORD_BOT_TOKEN" >> "$CONFIG_FILE"
+                  if [ -n "$OPENAB_ALLOW_BOT_MESSAGES" ]; then
+                    printf 'allow_bot_messages = "%s"\n' "$OPENAB_ALLOW_BOT_MESSAGES" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_TRUSTED_BOT_IDS" ]; then
+                    IFS=','; bots=""; for id in $OPENAB_TRUSTED_BOT_IDS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && bots="${bots}\"${id}\","; done; unset IFS
+                    printf 'trusted_bot_ids = [%s]\n' "$(echo "$bots" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
+                    IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
+                    printf 'allowed_channels = [%s]\n' "$(echo "$channels" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_USERS" ]; then
+                    IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
+                    printf 'allowed_users = [%s]\n' "$(echo "$users" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                fi
+
+                if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
+                  printf '\n[slack]\nbot_token = "%s"\napp_token = "%s"\n' "$SLACK_BOT_TOKEN" "$SLACK_APP_TOKEN" >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$GATEWAY_URL" ]; then
+                  printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\nallow_all_channels = true\nallow_all_users = true\n' "$GATEWAY_URL" "${GATEWAY_PLATFORM:-telegram}" >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated at $CONFIG_FILE"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              exec openab run --config "$CONFIG_FILE"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "openab-agent"
+              args = []
+              working_dir = "/home/agent"
+              inherit_env = ["ANTHROPIC_API_KEY", "OPENAB_AGENT_PROVIDER", "OPENAB_AGENT_MODEL", "OPENAB_AGENT_OPENAI_MODEL", "OPENAB_AGENT_MAX_TOKENS", "OPENAB_AGENT_BASH_ENV_ALLOW"]
+
+              [reactions]
+              enabled = true
+        env:
+          DISCORD_BOT_TOKEN:
+            default: ${DISCORD_BOT_TOKEN}
+          ANTHROPIC_API_KEY:
+            default: ${ANTHROPIC_API_KEY}
+          OPENAB_ALLOWED_CHANNELS:
+            default: ""
+          OPENAB_ALLOWED_USERS:
+            default: ""
+          SLACK_BOT_TOKEN:
+            default: ""
+          SLACK_APP_TOKEN:
+            default: ""
+          OPENAB_ALLOW_BOT_MESSAGES:
+            default: ""
+          OPENAB_TRUSTED_BOT_IDS:
+            default: ""
+          OPENAB_MAX_SESSIONS:
+            default: ""
+          GATEWAY_URL:
+            default: ""
+          GATEWAY_PLATFORM:
+            default: ""
+localization:
+  zh-TW:
+    description: |
+      部署 OpenAB 搭配原生 Rust coding agent（openab-agent）作為 Discord/Slack 機器人。單一靜態 binary、無 Node.js 或 Python runtime、冷啟動 ~50ms。支援 Anthropic API key 或 OpenAI Codex（ChatGPT Plus/Pro）OAuth device flow 訂閱認證。
+      來源:https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord 機器人 Token（選填）
+        description: "選填。從 Discord Developer Portal 取得的 Token。僅使用 Slack 時可留空。"
+      - key: ANTHROPIC_API_KEY
+        name: Anthropic API Key（選填）
+        description: "選填。Anthropic API key（使用 Claude 模型）。留空則使用 OpenAI Codex 訂閱（部署後執行 OAuth device flow）。"
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 頻道 ID（選填）
+        description: "選填。Bot 監聽的 Discord 頻道 ID，以逗號分隔。留空則允許所有頻道。"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用戶 ID（選填）
+        description: "選填。以逗號分隔的 Discord 用戶 ID。留空則允許所有人。"
+      - key: SLACK_BOT_TOKEN
+        name: Slack Bot Token（選填）
+        description: "選填。Slack App 的 Bot User OAuth Token（xoxb-...）。留空則停用 Slack。"
+      - key: SLACK_APP_TOKEN
+        name: Slack App Token（選填）
+        description: "選填。Socket Mode 用的 App-Level Token（xapp-...）。設定 Slack Bot Token 時必填。"
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: 允許 Bot 訊息（選填）
+        description: "選填。設為 'on' 或 'mentions' 以允許 bot 訊息觸發。留空則停用。"
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: 信任的 Bot ID（選填）
+        description: "選填。以逗號分隔的信任 Bot ID。留空則信任所有 bot。"
+      - key: OPENAB_MAX_SESSIONS
+        name: 最大並行 Session 數（選填）
+        description: "選填。最大並行 agent session 數量（預設：5）。"
+    readme: |
+      # OpenAB Native
+
+      一鍵部署 [OpenAB](https://github.com/openabdev/openab) 搭配 **openab-agent**——OpenAB 自帶的原生 Rust coding agent。無 Node.js、無 Python、無 adapter 層。
+
+      ## 為什麼用 native？
+
+      | | openab-native | 其他 agent 模板 |
+      |---|---|---|
+      | Runtime | 無（單一 Rust binary） | Node.js / Python |
+      | 冷啟動 | ~50ms | 1–3 秒 |
+      | Image 大小 | ~20MB 層 | 300–800MB |
+      | Adapter 層 | 無（ACP 內建） | 需 codex-acp / pi-acp / agy-acp |
+      | 工具 | 4 個：read / write / edit / bash | 依 CLI 而定 |
+
+      設計目標：快速、可預測的 agent loop，無 npm/pip 供應鏈風險。
+
+      ## 注意事項
+
+      - **映像標籤：** 本模板追蹤 `beta` 標籤。若要 pin 特定版本，請至 Zeabur Dashboard → 服務 → 設定修改映像標籤。
+      - **持久化儲存：** `/home/agent` 掛載為持久化磁碟。Config 與認證 Token（`~/.openab/agent/auth.json`）會在重啟後保留。
+      - **Config 位置：** 首次啟動時生成於 `/home/agent/.config/openab/config.toml`。之後直接編輯即可。
+
+      ## 設定
+
+      ### 1. 建立 Discord Bot
+
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications) 建立應用程式並加上 Bot
+      2. 在 Privileged Gateway Intents 啟用 **Message Content Intent**
+      3. 複製 bot token 貼到 `DISCORD_BOT_TOKEN`
+      4. **OAuth2 → URL Generator** → scope 勾 `bot`、權限勾 Send Messages、Read Message History、Add Reactions 等
+      5. 用產生的網址邀請 bot 到伺服器
+
+      ### 2. 選擇 LLM 提供者（擇一）
+
+      **方案 A — Anthropic API key（最簡單）：**
+      把 Anthropic API key 貼到 `ANTHROPIC_API_KEY`。Agent 預設用 `claude-sonnet-4-20250514`。完成。
+
+      **方案 B — OpenAI Codex 訂閱（ChatGPT Plus/Pro）：**
+      `ANTHROPIC_API_KEY` 留空。部署後於 Zeabur Dashboard → **Exec** 分頁執行：
+
+      ```bash
+      openab-agent auth codex-device
+      ```
+
+      依畫面顯示的 URL 與 code 在瀏覽器完成授權。Token 會存於 `~/.openab/agent/auth.json`，重啟後仍有效。
+
+      驗證：
+
+      ```bash
+      openab-agent auth status
+      ```
+
+      ### 3. 設定頻道（選填）
+
+      設定 `OPENAB_ALLOWED_CHANNELS` 限制 bot 回應的頻道；留空則允許所有頻道。
+
+      ## Slack 設定（選填）
+
+      1. https://api.slack.com/apps → Create New App
+      2. 啟用 Socket Mode → 產生 App-Level Token（scope `connections:write`）
+      3. 啟用 Event Subscriptions → bot events: `app_mention`、`message.channels`、`message.groups`
+      4. OAuth & Permissions → scopes: `app_mentions:read`、`chat:write`、`channels:history` 等
+      5. 安裝 App → 複製 `xoxb-...` 與 `xapp-...` token
+
+      ## 選擇模型
+
+      於 Zeabur Dashboard → 服務 → 環境變數新增：
+
+      | 變數 | 預設 | 說明 |
+      |---|---|---|
+      | `OPENAB_AGENT_PROVIDER` | auto-detect | `anthropic` 或 `codex` 強制指定 |
+      | `OPENAB_AGENT_MODEL` | `claude-sonnet-4-20250514`（Anthropic） | 任何 Anthropic 模型 ID |
+      | `OPENAB_AGENT_OPENAI_MODEL` | `gpt-4.1-nano`（Codex） | provider 為 `codex` 時使用 |
+      | `OPENAB_AGENT_MAX_TOKENS` | `8192` | 輸出最大 token 數 |
+
+      Auto-detect 順序：先試 `ANTHROPIC_API_KEY`，再試 OAuth token store。
+
+      ## 自訂
+
+      | 檔案 | 說明 |
+      |------|------|
+      | `/home/agent/.config/openab/config.toml` | OpenAB 設定（sessions、reactions 等） |
+      | `/home/agent/.openab/agent/auth.json` | OAuth token（Codex 流程） |
+
+      重置：`rm /home/agent/.config/openab/config.toml` 後重啟。
+
+      ## 安全性
+
+      Native agent 的 `bash` 工具預設過濾環境變數——`ANTHROPIC_API_KEY`、`*_TOKEN`、`*_SECRET` 等不會傳給子程序，避免 prompt injection 攻擊外洩 API key。需要傳入特定安全變數可加到 `OPENAB_AGENT_BASH_ENV_ALLOW`（以逗號分隔）。
+
+      ## 連結
+
+      - [OpenAB GitHub](https://github.com/openabdev/openab)
+      - [openab-agent ADR](https://github.com/openabdev/openab/blob/main/docs/adr/openab-agent.md)
+      - [Agent Client Protocol](https://github.com/anthropics/agent-protocol)
+  zh-CN:
+    description: |
+      部署 OpenAB 搭配原生 Rust coding agent（openab-agent）作为 Discord/Slack 机器人。单一静态 binary、无 Node.js 或 Python runtime、冷启动 ~50ms。支持 Anthropic API key 或 OpenAI Codex（ChatGPT Plus/Pro）OAuth device flow 订阅认证。
+      来源：https://github.com/openabdev/openab
+    variables:
+      - key: DISCORD_BOT_TOKEN
+        name: Discord 机器人 Token（选填）
+        description: "选填。从 Discord Developer Portal 获取的 Token。仅使用 Slack 时可留空。"
+      - key: ANTHROPIC_API_KEY
+        name: Anthropic API Key（选填）
+        description: "选填。Anthropic API key（使用 Claude 模型）。留空则使用 OpenAI Codex 订阅（部署后执行 OAuth device flow）。"
+      - key: OPENAB_ALLOWED_CHANNELS
+        name: Discord 频道 ID（选填）
+        description: "选填。Bot 监听的 Discord 频道 ID，以逗号分隔。留空则允许所有频道。"
+      - key: OPENAB_ALLOWED_USERS
+        name: Discord 用户 ID（选填）
+        description: "选填。以逗号分隔的 Discord 用户 ID。留空则允许所有人。"
+      - key: SLACK_BOT_TOKEN
+        name: Slack Bot Token（选填）
+        description: "选填。Slack App 的 Bot User OAuth Token（xoxb-...）。留空则禁用 Slack。"
+      - key: SLACK_APP_TOKEN
+        name: Slack App Token（选填）
+        description: "选填。Socket Mode 用的 App-Level Token（xapp-...）。设置 Slack Bot Token 时必填。"
+      - key: OPENAB_ALLOW_BOT_MESSAGES
+        name: 允许 Bot 消息（选填）
+        description: "选填。设为 'on' 或 'mentions' 以允许 bot 消息触发。留空则禁用。"
+      - key: OPENAB_TRUSTED_BOT_IDS
+        name: 信任的 Bot ID（选填）
+        description: "选填。以逗号分隔的信任 Bot ID。留空则信任所有 bot。"
+      - key: OPENAB_MAX_SESSIONS
+        name: 最大并行 Session 数（选填）
+        description: "选填。最大并行 agent session 数量（默认：5）。"
+    readme: |
+      # OpenAB Native
+
+      一键部署 [OpenAB](https://github.com/openabdev/openab) 搭配 **openab-agent**——OpenAB 自带的原生 Rust coding agent。无 Node.js、无 Python、无 adapter 层。
+
+      ## 注意事项
+
+      - **镜像标签：** 本模板追踪 `beta` 标签。若要 pin 特定版本，请至 Zeabur Dashboard → 服务 → 设置修改镜像标签。
+      - **持久化存储：** `/home/agent` 挂载为持久化磁盘。Config 与认证 Token（`~/.openab/agent/auth.json`）会在重启后保留。
+      - **Config 位置：** 首次启动时生成于 `/home/agent/.config/openab/config.toml`。之后直接编辑即可。
+
+      ## 设置
+
+      ### 1. 创建 Discord Bot
+
+      1. 前往 [Discord Developer Portal](https://discord.com/developers/applications) 创建应用并添加 Bot
+      2. 在 Privileged Gateway Intents 启用 **Message Content Intent**
+      3. 复制 bot token 粘贴到 `DISCORD_BOT_TOKEN`
+
+      ### 2. 选择 LLM 提供者（择一）
+
+      **方案 A — Anthropic API key（最简单）：**
+      把 Anthropic API key 粘贴到 `ANTHROPIC_API_KEY`。Agent 默认使用 `claude-sonnet-4-20250514`。完成。
+
+      **方案 B — OpenAI Codex 订阅（ChatGPT Plus/Pro）：**
+      `ANTHROPIC_API_KEY` 留空。部署后于 Zeabur Dashboard → **Exec** 分页运行：
+
+      ```bash
+      openab-agent auth codex-device
+      ```
+
+      按照屏幕显示的 URL 与 code 在浏览器完成授权。Token 会存于 `~/.openab/agent/auth.json`，重启后仍有效。
+
+      ## 选择模型
+
+      于 Zeabur Dashboard → 服务 → 环境变量添加：
+
+      | 变量 | 默认 | 说明 |
+      |---|---|---|
+      | `OPENAB_AGENT_PROVIDER` | auto-detect | `anthropic` 或 `codex` 强制指定 |
+      | `OPENAB_AGENT_MODEL` | `claude-sonnet-4-20250514`（Anthropic） | 任何 Anthropic 模型 ID |
+      | `OPENAB_AGENT_OPENAI_MODEL` | `gpt-4.1-nano`（Codex） | provider 为 `codex` 时使用 |
+
+      Auto-detect 顺序：先试 `ANTHROPIC_API_KEY`，再试 OAuth token store。
