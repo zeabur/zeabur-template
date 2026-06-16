@@ -226,7 +226,7 @@ spec:
               command = "openab-agent"
               args = []
               working_dir = "/home/agent"
-              inherit_env = ["ANTHROPIC_API_KEY", "OPENAB_AGENT_PROVIDER", "OPENAB_AGENT_MODEL", "OPENAB_AGENT_OPENAI_MODEL", "OPENAB_AGENT_MAX_TOKENS", "OPENAB_AGENT_BASH_ENV_ALLOW"]
+              inherit_env = ["ANTHROPIC_API_KEY", "OPENAB_AGENT_PROVIDER", "OPENAB_AGENT_MODEL", "OPENAB_AGENT_OPENAI_MODEL", "OPENAB_AGENT_MAX_TOKENS", "OPENAB_AGENT_MAX_TOOL_LOOPS", "OPENAB_AGENT_BASH_ENV_ALLOW"]
 
               [reactions]
               enabled = true
