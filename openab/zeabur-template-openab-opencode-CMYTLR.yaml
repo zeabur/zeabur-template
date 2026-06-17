@@ -274,7 +274,7 @@ spec:
           SLACK_APP_TOKEN:
             default: ""
           OPENAB_AGENT_COMMAND:
-            default: ""
+            default: "opencode"
           OPENAB_CONFIG_URL:
             default: ""
 localization:

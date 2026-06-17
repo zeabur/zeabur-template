@@ -280,7 +280,7 @@ spec:
           OPENAB_MAX_SESSIONS:
             default: ""
           OPENAB_AGENT_COMMAND:
-            default: ""
+            default: "kiro-cli"
           OPENAB_CONFIG_URL:
             default: ""
 localization:

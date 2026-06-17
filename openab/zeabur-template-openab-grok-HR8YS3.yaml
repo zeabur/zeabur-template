@@ -276,7 +276,7 @@ spec:
           OPENAB_MAX_SESSIONS:
             default: ""
           OPENAB_AGENT_COMMAND:
-            default: ""
+            default: "grok"
           OPENAB_CONFIG_URL:
             default: ""
 localization:

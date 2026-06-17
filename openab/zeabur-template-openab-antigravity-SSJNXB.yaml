@@ -219,7 +219,7 @@ spec:
           OPENAB_MAX_SESSIONS:
             default: ""
           OPENAB_AGENT_COMMAND:
-            default: ""
+            default: "agy-acp"
           OPENAB_CONFIG_URL:
             default: ""
           GATEWAY_URL:

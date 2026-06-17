@@ -314,7 +314,7 @@ spec:
           OPENAB_MAX_SESSIONS:
             default: ""
           OPENAB_AGENT_COMMAND:
-            default: ""
+            default: "claude-agent-acp"
           OPENAB_CONFIG_URL:
             default: ""
 localization:
