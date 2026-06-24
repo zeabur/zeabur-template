@@ -20,18 +20,14 @@ spec:
       cpu: 4
       ram: 8
   variables:
-    - key: OPENROUTER_API_KEY
-      type: STRING
-      name: OpenRouter API Key
-      description: "API key from openrouter.ai — provides access to Claude, GPT, Gemini, and 200+ models through one key."
-    - key: TELEGRAM_BOT_TOKEN
-      type: STRING
-      name: Telegram Bot Token (optional)
-      description: "Bot token from @BotFather on Telegram. Leave empty to skip Telegram integration."
-    - key: TELEGRAM_ALLOWED_USERS
-      type: STRING
-      name: Telegram Allowed Users
-      description: "Comma-separated Telegram user IDs (required if bot token is set). Get your ID from @userinfobot on Telegram."
+    - key: AI_HUB_API_KEY
+      type: AI_HUB_KEY
+      name: Zeabur AI Hub Key
+      description: "Generate a Zeabur AI Hub key — this is all you need to start. The agent and the web dashboard work out of the box. To use OpenRouter, another provider, or Telegram instead, add the relevant environment variables after deploy (see the README)."
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Dashboard Domain
+      description: "A domain for the web dashboard, e.g. my-hermes → my-hermes.zeabur.app. This is the URL you open and log into. You can bind a custom domain later."
   readme: |
     # Hermes Agent
 
@@ -39,57 +35,60 @@ spec:
 
     ## Quick Start
 
-    1. **Deploy this template** — fill in your OpenRouter API key (required) and optionally a Telegram bot token.
-    2. **Bind a domain** — go to the **Networking** tab and bind a domain to the port you need (see **Ports & Domains** below).
-    3. **Start using your agent** — via the web dashboard, Telegram, or the OpenAI-compatible API.
+    1. **Deploy this template** — generate a **Zeabur AI Hub key** and pick a **dashboard domain** (e.g. `my-hermes`). That's it; the agent and dashboard work out of the box.
+    2. **Open the dashboard** — go to your domain (auto-bound to the dashboard). Add a custom domain later in the **Networking** tab if you like.
+    3. **Log in** — username `admin`, password = your service `PASSWORD` (shown in the service instructions). Start chatting in the browser — no Telegram needed.
+
+    > Want OpenRouter, another provider (Minimax, Kimi, …), or Telegram instead? Add the relevant environment variables after deploy — see **Models & Providers** and **Messaging Platforms** below.
 
     ## Ports & Domains
 
-    This service exposes two independent ports. Bind a domain only to the ports you actually use:
+    This service exposes two HTTP ports:
 
-    | Port | Purpose | When to bind a domain |
-    |------|---------|----------------------|
-    | **5000** | OpenAI-compatible API server | Only if you need external API access (curl, SDK, etc.) |
-    | **9119** | Web dashboard (requires `HERMES_DASHBOARD=true`) | Only if you want the browser UI |
+    | Port | Id | Purpose | Domain |
+    |------|----|---------|--------|
+    | **9119** | `web` | Web dashboard (on by default, login-protected) | The service's main domain — open it and log in |
+    | **5000** | `api` | OpenAI-compatible API server | Bind a domain only if you need external API access |
 
     **Messaging platforms (Telegram, Discord, Slack, etc.) use outbound connections — they do not require any public URL or open port.**
 
+    ### Using the Web Dashboard
+
+    The dashboard is **enabled by default** and protected by login. Open your service's domain (the **web** port) and log in:
+    - Username: `admin`
+    - Password: your service `PASSWORD` value (shown in the service instructions)
+
+    To disable it, set `HERMES_DASHBOARD=false` in the **Variables** tab. To change the credentials, set `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` / `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`.
+
+    > **Security note:** Basic auth login is best for a backend behind a trusted network; for hardened public exposure use OAuth (`HERMES_DASHBOARD_OAUTH_CLIENT_ID`) or self-hosted OIDC (`HERMES_DASHBOARD_OIDC_*`) — see the [environment variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+
     ### Using the OpenAI-compatible API
 
-    Bind a domain to **port 5000**, then send requests with your auto-generated API key (shown in the service instructions):
+    Bind a domain to the **`api`** port (5000) in the **Networking** tab, then send requests with your auto-generated API key (shown in the service instructions):
 
     ```bash
-    curl https://YOUR_DOMAIN/v1/chat/completions \
+    curl https://YOUR_API_DOMAIN/v1/chat/completions \
       -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
       -H "Content-Type: application/json" \
       -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
     ```
 
-    ### Using the Web Dashboard
+    ## Models & Providers
 
-    1. Set `HERMES_DASHBOARD=true` in the **Variables** tab and restart the service.
-    2. Bind a domain to **port 9119** in the **Networking** tab.
-    3. Access the dashboard at that domain.
+    Out of the box this template uses **Zeabur AI Hub** (key from the **Zeabur AI Hub Key** variable), model `claude-sonnet-4-5`, region `sfo1`. To change things, add these in the **Variables** tab and restart:
 
-    > **Security note:** The dashboard will be publicly accessible from the internet. Do not enable it without understanding the risk — anyone with the URL can access and control your agent. OAuth authentication can be configured via `HERMES_DASHBOARD_OAUTH_CLIENT_ID` (see the [environment variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)).
+    - **Model** — set `LLM_MODEL` to any [AI Hub model](https://zeabur.com/ai).
+    - **Region** — set `LLM_BASE_URL` to `https://hnd1.aihub.zeabur.ai/v1` for Tokyo (default is `sfo1`).
+    - **OpenRouter instead** — set `OPENROUTER_API_KEY` (leave the AI Hub key empty); Hermes auto-detects it.
+    - **Another provider** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — add that provider's API key env var (e.g. `KIMI_API_KEY`, `MINIMAX_API_KEY`) and pick the model with `hermes model` in the **Exec** tab. See the [Configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) and [Environment Variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+
+    > `LLM_MODEL` / `LLM_BASE_URL` + the AI Hub key are applied to the `model` block of `/opt/data/config.yaml` on every start. Leave them unset to manage `config.yaml` by hand instead.
 
     ## Messaging Platforms
 
-    **Telegram** is configured at deploy time as an example. You can add any of the 14+ supported platforms (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, generic webhooks) by setting the corresponding environment variables after deployment.
+    Messaging is **optional** — by default you interact through the web dashboard (no platform needed). To connect **Telegram**, add `TELEGRAM_BOT_TOKEN` (from @BotFather) and `TELEGRAM_ALLOWED_USERS` (your Telegram user ID from @userinfobot) in the **Variables** tab, then restart. Hermes supports 14+ platforms (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, generic webhooks) — each is enabled by setting its environment variables after deployment.
 
-    See the official [Messaging Gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) for setup instructions for each platform.
-
-    ## Using Zeabur AI Hub (alternative to OpenRouter)
-
-    Instead of an OpenRouter key, you can use [Zeabur AI Hub](https://zeabur.com/ai) — an OpenAI-compatible aggregator. After deployment:
-
-    1. Put your AI Hub key in `OPENROUTER_API_KEY` (reuse the same variable).
-    2. Edit `/opt/data/config.yaml` via the Zeabur Files tab:
-       - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"` (or `hnd1` for Tokyo)
-       - `model.default: "claude-sonnet-4-5"` (or any [AI Hub model](https://zeabur.com/ai))
-    3. Restart the service.
-
-    Note: the `OPENROUTER_BASE_URL` env var does **not** override `config.yaml` — you must edit the file.
+    See the official [Messaging Gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) for per-platform setup.
 
     ## Configuration
 
@@ -121,7 +120,7 @@ spec:
 
     ## Notes
 
-    - The Docker image is ~4.5 GB (includes Playwright + Chromium for browser automation). First deployment may take several minutes to pull the image.
+    - The Docker image is ~1.3 GB (download). First deployment usually pulls within a minute; later deploys reuse the cached image.
     - First boot may take 30–60 seconds as the agent initializes config files and syncs skills.
     - Using browser tools may cause high memory usage — if you encounter OOM (out of memory) errors, consider upgrading to a larger instance (recommended 4 vCPU / 8 GB RAM).
 
@@ -132,67 +131,95 @@ spec:
     - name: hermes-agent
       icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/static/img/logo.png
       template: PREBUILT_V2
+      domainKey:
+        - port: web
+          variable: PUBLIC_DOMAIN
       spec:
         source:
-          image: nousresearch/hermes-agent:v2026.5.29.2
-          runAsUserID: 10000
+          # Run the image natively: /init (s6-overlay) stays PID 1 and handles
+          # privilege drop, volume ownership, and config seeding; the gateway runs
+          # as the main program. The dashboard runs as the image's own supervised
+          # s6 service (gated by HERMES_DASHBOARD). Do NOT set runAsUserID — the
+          # image must start as root to bootstrap, then drops to the hermes user.
+          image: nousresearch/hermes-agent:v2026.6.19
           command:
-            - /bin/bash
-            - -c
-            - /opt/zeabur/startup.sh
+            - /init
+            - /opt/hermes/docker/main-wrapper.sh
+            - gateway
         ports:
+          # Dashboard is the primary port (default browser experience), so the
+          # service's generated domain opens the logged-in web UI. The API server
+          # is a secondary port — bind a domain to it only if you need API access.
           - id: web
-            port: 5000
-            type: HTTP
-          - id: port-9119
             port: 9119
+            type: HTTP
+          - id: api
+            port: 5000
             type: HTTP
         volumes:
           - id: data
             dir: /opt/data
         configs:
-          - path: /opt/zeabur/startup.sh
+          # Native s6-overlay cont-init hook. Runs as root after the image seeds
+          # config.yaml (01-hermes-setup) and before the gateway starts, so it can
+          # point Hermes at Zeabur AI Hub / a custom OpenAI-compatible endpoint
+          # without the user hand-editing config.yaml. No-op unless one of
+          # AI_HUB_API_KEY / LLM_BASE_URL / LLM_MODEL is set. Never fatal.
+          - path: /etc/cont-init.d/99-zeabur-llm-config
             envsubst: false
             permission: 493
             template: |
-              #!/bin/bash
-              set -e
-
-              HERMES_HOME="/opt/data"
-              INSTALL_DIR="/opt/hermes"
-
-              source "${INSTALL_DIR}/.venv/bin/activate"
-
-              mkdir -p "$HERMES_HOME"/{cron,sessions,logs,hooks,memories,skills,skins,plans,workspace,home,.local/bin}
-              ln -sf "${INSTALL_DIR}/.venv/bin/hermes" "$HERMES_HOME/.local/bin/hermes"
-
-              [ -f "$HERMES_HOME/.env" ]        || cp "$INSTALL_DIR/.env.example"          "$HERMES_HOME/.env"
-              [ -f "$HERMES_HOME/config.yaml" ]  || cp "$INSTALL_DIR/cli-config.yaml.example" "$HERMES_HOME/config.yaml"
-              [ -f "$HERMES_HOME/SOUL.md" ]      || cp "$INSTALL_DIR/docker/SOUL.md"        "$HERMES_HOME/SOUL.md"
-
-              if [ -d "$INSTALL_DIR/skills" ]; then
-                  python3 "$INSTALL_DIR/tools/skills_sync.py"
-              fi
-
-              case "${HERMES_DASHBOARD:-}" in
-                  1|true|TRUE|True|yes|YES|Yes)
-                      hermes dashboard --host 0.0.0.0 --port 9119 --no-open --insecure &
-                      ;;
+              #!/command/with-contenv sh
+              HERMES_HOME="${HERMES_HOME:-/opt/data}"
+              cfg="$HERMES_HOME/config.yaml"
+              case "${AI_HUB_API_KEY:-}${LLM_BASE_URL:-}${LLM_MODEL:-}" in
+                  "") exit 0 ;;
               esac
-
-              exec hermes gateway
+              [ -f "$cfg" ] || exit 0
+              /opt/hermes/.venv/bin/python - "$cfg" <<'PY' || { echo "[zeabur] LLM config patch failed; continuing"; exit 0; }
+              import os, sys, yaml
+              path = sys.argv[1]
+              with open(path) as f:
+                  cfg = yaml.safe_load(f) or {}
+              model = cfg.get("model") or {}
+              aihub = os.environ.get("AI_HUB_API_KEY", "").strip()
+              base = os.environ.get("LLM_BASE_URL", "").strip()
+              name = os.environ.get("LLM_MODEL", "").strip()
+              if aihub or base:
+                  # provider must be "custom" so the key is sent to a non-OpenRouter
+                  # base_url (otherwise upstream returns 401).
+                  model["provider"] = "custom"
+                  model["base_url"] = base or "https://sfo1.aihub.zeabur.ai/v1"
+                  model["api_key"] = aihub or os.environ.get("OPENROUTER_API_KEY", "")
+                  # The seeded default model is an OpenRouter-style id; pick a valid
+                  # AI Hub model so an AI-Hub-only deploy works with no extra input.
+                  if not name:
+                      name = "claude-sonnet-4-5"
+              if name:
+                  model["default"] = name
+              cfg["model"] = model
+              with open(path, "w") as f:
+                  yaml.safe_dump(cfg, f, sort_keys=False, allow_unicode=True)
+              print(f"[zeabur] LLM configured: provider={model.get('provider')} base_url={model.get('base_url')} model={model.get('default')}")
+              PY
+              chown hermes:hermes "$cfg" 2>/dev/null || true
+              exit 0
         instructions:
-          - title: API Server URL
-            content: ${ZEABUR_WEB_URL}/v1/chat/completions
+          - title: API Server URL (bind a domain to the api port)
+            content: ${ZEABUR_API_URL}/v1/chat/completions
           - title: API Server Key
             content: ${API_SERVER_KEY}
+          - title: Dashboard Username
+            content: admin
+          - title: Dashboard Password
+            content: ${PASSWORD}
         env:
-          OPENROUTER_API_KEY:
-            default: ${OPENROUTER_API_KEY}
-          TELEGRAM_BOT_TOKEN:
-            default: ${TELEGRAM_BOT_TOKEN}
-          TELEGRAM_ALLOWED_USERS:
-            default: ${TELEGRAM_ALLOWED_USERS}
+          # AI Hub is the out-of-box LLM. Other providers (OpenRouter, Minimax,
+          # Kimi, …) and Telegram are added by the user as env vars after deploy —
+          # see the README. The cont-init hook reads them from the live env, so
+          # they don't need to be declared here.
+          AI_HUB_API_KEY:
+            default: ${AI_HUB_API_KEY}
           API_SERVER_ENABLED:
             default: "true"
           API_SERVER_PORT:
@@ -203,21 +230,24 @@ spec:
             default: ${PASSWORD}
             expose: true
           HERMES_DASHBOARD:
-            default: "false"
+            default: "true"
+          HERMES_DASHBOARD_BASIC_AUTH_USERNAME:
+            default: admin
+          HERMES_DASHBOARD_BASIC_AUTH_PASSWORD:
+            default: ${PASSWORD}
+          HERMES_DASHBOARD_BASIC_AUTH_SECRET:
+            default: ${PASSWORD}
 localization:
   zh-TW:
     description: |
       Hermes Agent 由 NousResearch 開發，是一款具備持久記憶、工具使用、排程任務及 14+ 訊息平台整合（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、微信、企業微信、飛書、釘釘、Email 等）的自主 AI 代理。內建 OpenAI 相容 API 伺服器。
     variables:
-      - key: OPENROUTER_API_KEY
-        name: OpenRouter API 金鑰
-        description: "從 openrouter.ai 取得的 API 金鑰，可存取 Claude、GPT、Gemini 等 200 多種模型。"
-      - key: TELEGRAM_BOT_TOKEN
-        name: Telegram Bot Token（選填）
-        description: "從 Telegram @BotFather 取得的 Bot Token。留空則跳過 Telegram 整合。"
-      - key: TELEGRAM_ALLOWED_USERS
-        name: Telegram 允許的使用者
-        description: "以逗號分隔的 Telegram 使用者 ID（設定了 Bot Token 則為必填）。可透過 @userinfobot 取得 ID。"
+      - key: AI_HUB_API_KEY
+        name: Zeabur AI Hub 金鑰
+        description: "產生一組 Zeabur AI Hub 金鑰即可開始——這是唯一需要的輸入，Agent 與網頁 Dashboard 開箱即用。若想改用 OpenRouter、其他供應商或 Telegram，請在部署後自行新增對應的環境變數（見 README）。"
+      - key: PUBLIC_DOMAIN
+        name: Dashboard 網域
+        description: "網頁 Dashboard 的網域，例如 my-hermes → my-hermes.zeabur.app，就是你開啟並登入的網址。之後也可綁定自訂網域。"
     readme: |
       # Hermes Agent
 
@@ -225,57 +255,60 @@ localization:
 
       ## 快速開始
 
-      1. **部署此模板** — 填入 OpenRouter API 金鑰（必填），以及選填的 Telegram Bot Token。
-      2. **綁定網域** — 前往「網路」分頁，依需求將網域綁定到對應的 port（詳見下方「Port 與網域」）。
-      3. **開始使用** — 透過網頁 Dashboard、Telegram 或 OpenAI 相容 API 操作您的 Agent。
+      1. **部署此模板** — 產生一組 **Zeabur AI Hub 金鑰**，並填一個 **Dashboard 網域**（例如 `my-hermes`）。就這樣，Agent 與 Dashboard 開箱即用。
+      2. **開啟 Dashboard** — 前往你的網域（已自動綁定到 Dashboard）。之後可在「網路」分頁綁定自訂網域。
+      3. **登入** — 帳號 `admin`，密碼為服務的 `PASSWORD`（顯示於服務說明中）。直接在瀏覽器裡對話——不需要 Telegram。
+
+      > 想改用 OpenRouter、其他供應商（Minimax、Kimi……）或 Telegram 嗎？請在部署後新增對應的環境變數——詳見下方的**模型與供應商**及**訊息平台**。
 
       ## Port 與網域
 
-      此服務提供兩個獨立的 HTTP port，請只為實際需要的 port 綁定網域：
+      此服務提供兩個 HTTP port：
 
-      | Port | 用途 | 何時需要綁定網域 |
-      |------|------|----------------|
-      | **5000** | OpenAI 相容 API 伺服器 | 僅在需要外部 API 存取時（curl、SDK 等） |
-      | **9119** | 網頁 Dashboard（需設定 `HERMES_DASHBOARD=true`） | 僅在需要瀏覽器介面時 |
+      | Port | Id | 用途 | 網域 |
+      |------|----|------|------|
+      | **9119** | `web` | 網頁 Dashboard（預設開啟，已帶登入） | 服務的主網域——開啟後登入即可 |
+      | **5000** | `api` | OpenAI 相容 API 伺服器 | 僅在需要外部 API 存取時才綁定網域 |
 
       **訊息平台（Telegram、Discord、Slack 等）使用對外連線，不需要公開網址或開放任何 port。**
 
+      ### 使用網頁 Dashboard
+
+      Dashboard **預設開啟**並帶登入保護。開啟服務的網域（**web** port）後登入：
+      - 帳號：`admin`
+      - 密碼：服務的 `PASSWORD` 值（顯示於服務說明中）
+
+      若要停用，在「變數」分頁把 `HERMES_DASHBOARD` 設為 `false`。若要變更帳密，設定 `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` ／ `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`。
+
+      > **安全提醒：** Basic auth 登入適合受信任網路後方的後端；若要更強的公網防護，請改用 OAuth（`HERMES_DASHBOARD_OAUTH_CLIENT_ID`）或自架 OIDC（`HERMES_DASHBOARD_OIDC_*`），詳見[環境變數參考文件](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
+
       ### 使用 OpenAI 相容 API
 
-      將網域綁定到 **port 5000**，再使用自動產生的 API 金鑰（顯示於服務說明中）發送請求：
+      在「網路」分頁將網域綁定到 **`api`** port（5000），再使用自動產生的 API 金鑰（顯示於服務說明中）發送請求：
 
       ```bash
-      curl https://YOUR_DOMAIN/v1/chat/completions \
+      curl https://YOUR_API_DOMAIN/v1/chat/completions \
         -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
 
-      ### 使用網頁 Dashboard
-
-      1. 在「變數」分頁設定 `HERMES_DASHBOARD=true` 並重啟服務。
-      2. 在「網路」分頁將網域綁定到 **port 9119**。
-      3. 透過該網域存取 Dashboard。
-
-      > **安全提醒：** Dashboard 將可從網際網路公開存取。請在了解風險後再啟用——任何知道網址的人都能存取並控制您的 Agent。可透過 `HERMES_DASHBOARD_OAUTH_CLIENT_ID` 設定 OAuth 驗證（詳見[環境變數參考文件](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)）。
-
       ## 訊息平台
 
-      部署時預設設定 **Telegram** 作為範例。您可以在部署後設定對應的環境變數，啟用 14+ 支援平台中的任一個（Discord、Slack、WhatsApp、Signal、Matrix、Email、微信、企業微信、飛書、釘釘、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、通用 webhook）。
+      訊息平台為**選填**——預設透過網頁 Dashboard 互動（不需要任何平台）。若要連接 **Telegram**，請在「變數」分頁新增 `TELEGRAM_BOT_TOKEN`（向 @BotFather 取得）與 `TELEGRAM_ALLOWED_USERS`（你的 Telegram 使用者 ID，向 @userinfobot 取得），然後重啟服務。Hermes 支援 14+ 種平台（Discord、Slack、WhatsApp、Signal、Matrix、Email、微信、企業微信、飛書、釘釘、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、通用 webhook）——每一個都是在部署後設定其環境變數即可啟用。
 
       詳見官方 [Messaging Gateway 指南](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)。
 
-      ## 使用 Zeabur AI Hub（OpenRouter 替代方案）
+      ## 模型與供應商
 
-      除了 OpenRouter，也可以使用 [Zeabur AI Hub](https://zeabur.com/ai) — 一個 OpenAI 相容的 LLM 聚合服務。部署後：
+      開箱即用時，此模板使用 **Zeabur AI Hub**（金鑰來自「Zeabur AI Hub 金鑰」變數）、模型 `claude-sonnet-4-5`、區域 `sfo1`。若要調整，請在「變數」分頁新增以下項目並重啟：
 
-      1. 把 AI Hub 的金鑰填入 `OPENROUTER_API_KEY`（沿用同一個變數）。
-      2. 透過 Zeabur「檔案」分頁編輯 `/opt/data/config.yaml`：
-         - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"`（Tokyo 用 `hnd1`）
-         - `model.default: "claude-sonnet-4-5"`（或任一 [AI Hub 模型](https://zeabur.com/ai)）
-      3. 重啟服務。
+      - **模型** — 把 `LLM_MODEL` 設為任一 [AI Hub 模型](https://zeabur.com/ai)。
+      - **區域** — 把 `LLM_BASE_URL` 設為 `https://hnd1.aihub.zeabur.ai/v1` 即可使用東京（預設為 `sfo1`）。
+      - **改用 OpenRouter** — 設定 `OPENROUTER_API_KEY`（並把 AI Hub 金鑰留空），Hermes 會自動偵測。
+      - **其他供應商**（Minimax、Kimi、GLM/智譜、Gemini、NVIDIA、xAI……）— 新增該供應商的 API 金鑰環境變數（例如 `KIMI_API_KEY`、`MINIMAX_API_KEY`），並在「Exec」分頁用 `hermes model` 選擇模型。詳見 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)與[環境變數參考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
 
-      注意：`OPENROUTER_BASE_URL` 環境變數**無法**覆寫 `config.yaml`，必須直接編輯該檔案。
+      > `LLM_MODEL` ／ `LLM_BASE_URL` 加上 AI Hub 金鑰會在每次啟動時套用到 `/opt/data/config.yaml` 的 `model` 區塊。若想自行手動管理 `config.yaml`，把它們留空即可。
 
       ## 設定
 
@@ -307,7 +340,7 @@ localization:
 
       ## 注意事項
 
-      - Docker 映像檔約 4.5 GB（含 Playwright + Chromium 瀏覽器自動化工具）。首次部署拉取映像檔可能需要數分鐘。
+      - Docker 映像檔約 1.3 GB（下載大小）。首次部署通常一分鐘內即可拉取完成；之後的部署會重用快取映像檔。
       - 首次啟動需要 30-60 秒來初始化設定檔和同步技能。
       - 使用瀏覽器工具可能導致記憶體用量過高，若遇到 OOM（記憶體不足）錯誤，建議升級至較大的實例（建議 4 vCPU / 8 GB RAM）。
 
@@ -318,15 +351,12 @@ localization:
     description: |
       Hermes Agent 由 NousResearch 开发，是一款具备持久记忆、工具使用、定时任务及 14+ 消息平台集成（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、微信、企业微信、飞书、钉钉、Email 等）的自主 AI 代理。内置 OpenAI 兼容 API 服务器。
     variables:
-      - key: OPENROUTER_API_KEY
-        name: OpenRouter API 密钥
-        description: "从 openrouter.ai 获取的 API 密钥，可访问 Claude、GPT、Gemini 等 200 多种模型。"
-      - key: TELEGRAM_BOT_TOKEN
-        name: Telegram Bot Token（可选）
-        description: "从 Telegram @BotFather 获取的 Bot Token。留空则跳过 Telegram 集成。"
-      - key: TELEGRAM_ALLOWED_USERS
-        name: Telegram 允许的用户
-        description: "以逗号分隔的 Telegram 用户 ID（设置了 Bot Token 则为必填）。可通过 @userinfobot 获取 ID。"
+      - key: AI_HUB_API_KEY
+        name: Zeabur AI Hub 密钥
+        description: "生成一组 Zeabur AI Hub 密钥即可开始——这是唯一需要的输入，Agent 与网页 Dashboard 开箱即用。若想改用 OpenRouter、其他供应商或 Telegram，请在部署后自行新增对应的环境变量（见 README）。"
+      - key: PUBLIC_DOMAIN
+        name: Dashboard 域名
+        description: "网页 Dashboard 的域名，例如 my-hermes → my-hermes.zeabur.app，就是你打开并登录的网址。之后也可绑定自定义域名。"
     readme: |
       # Hermes Agent
 
@@ -334,57 +364,60 @@ localization:
 
       ## 快速开始
 
-      1. **部署此模板** — 填入 OpenRouter API 密钥（必填），以及可选的 Telegram Bot Token。
-      2. **绑定域名** — 前往「网络」标签页，根据需求将域名绑定到对应的端口（详见下方「端口与域名」）。
-      3. **开始使用** — 通过网页 Dashboard、Telegram 或 OpenAI 兼容 API 操作您的 Agent。
+      1. **部署此模板** — 生成一组 **Zeabur AI Hub 密钥**，并填一个 **Dashboard 域名**（例如 `my-hermes`）。就这样，Agent 与 Dashboard 开箱即用。
+      2. **打开 Dashboard** — 前往你的域名（已自动绑定到 Dashboard）。之后可在「网络」标签页绑定自定义域名。
+      3. **登录** — 账号 `admin`，密码为服务的 `PASSWORD`（显示在服务说明中）。直接在浏览器里对话——不需要 Telegram。
+
+      > 想改用 OpenRouter、其他供应商（Minimax、Kimi……）或 Telegram 吗？请在部署后新增对应的环境变量——详见下方的**模型与供应商**及**消息平台**。
 
       ## 端口与域名
 
-      此服务提供两个独立的 HTTP 端口，请只为实际需要的端口绑定域名：
+      此服务提供两个 HTTP 端口：
 
-      | 端口 | 用途 | 何时需要绑定域名 |
-      |------|------|----------------|
-      | **5000** | OpenAI 兼容 API 服务器 | 仅在需要外部 API 访问时（curl、SDK 等） |
-      | **9119** | 网页 Dashboard（需设置 `HERMES_DASHBOARD=true`） | 仅在需要浏览器界面时 |
+      | 端口 | Id | 用途 | 域名 |
+      |------|----|------|------|
+      | **9119** | `web` | 网页 Dashboard（默认开启，已带登录） | 服务的主域名——打开后登录即可 |
+      | **5000** | `api` | OpenAI 兼容 API 服务器 | 仅在需要外部 API 访问时才绑定域名 |
 
       **消息平台（Telegram、Discord、Slack 等）使用出站连接，不需要公开 URL 或开放任何端口。**
 
+      ### 使用网页 Dashboard
+
+      Dashboard **默认开启**并带登录保护。打开服务的域名（**web** 端口）后登录：
+      - 账号：`admin`
+      - 密码：服务的 `PASSWORD` 值（显示在服务说明中）
+
+      若要停用，在「变量」标签页把 `HERMES_DASHBOARD` 设为 `false`。若要修改账密，设置 `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` ／ `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`。
+
+      > **安全提示：** Basic auth 登录适合受信任网络后方的后端；若需要更强的公网防护，请改用 OAuth（`HERMES_DASHBOARD_OAUTH_CLIENT_ID`）或自建 OIDC（`HERMES_DASHBOARD_OIDC_*`），详见[环境变量参考文档](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
+
       ### 使用 OpenAI 兼容 API
 
-      将域名绑定到 **端口 5000**，再使用自动生成的 API 密钥（显示在服务说明中）发送请求：
+      在「网络」标签页将域名绑定到 **`api`** 端口（5000），再使用自动生成的 API 密钥（显示在服务说明中）发送请求：
 
       ```bash
-      curl https://YOUR_DOMAIN/v1/chat/completions \
+      curl https://YOUR_API_DOMAIN/v1/chat/completions \
         -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
 
-      ### 使用网页 Dashboard
-
-      1. 在「变量」标签页设置 `HERMES_DASHBOARD=true` 并重启服务。
-      2. 在「网络」标签页将域名绑定到 **端口 9119**。
-      3. 通过该域名访问 Dashboard。
-
-      > **安全提示：** Dashboard 将可从互联网公开访问。请在了解风险后再启用——任何知道网址的人都能访问并控制您的 Agent。可通过 `HERMES_DASHBOARD_OAUTH_CLIENT_ID` 配置 OAuth 验证（详见[环境变量参考文档](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)）。
-
       ## 消息平台
 
-      部署时默认设置 **Telegram** 作为示例。您可以在部署后设置对应的环境变量，启用 14+ 支持平台中的任一个（Discord、Slack、WhatsApp、Signal、Matrix、Email、微信、企业微信、飞书、钉钉、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、通用 webhook）。
+      消息平台为**可选**——默认通过网页 Dashboard 交互（不需要任何平台）。若要连接 **Telegram**，请在「变量」标签页新增 `TELEGRAM_BOT_TOKEN`（向 @BotFather 获取）与 `TELEGRAM_ALLOWED_USERS`（你的 Telegram 用户 ID，向 @userinfobot 获取），然后重启服务。Hermes 支持 14+ 种平台（Discord、Slack、WhatsApp、Signal、Matrix、Email、微信、企业微信、飞书、钉钉、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、通用 webhook）——每一个都是在部署后设置其环境变量即可启用。
 
       详见官方 [Messaging Gateway 指南](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)。
 
-      ## 使用 Zeabur AI Hub（OpenRouter 替代方案）
+      ## 模型与供应商
 
-      除了 OpenRouter，也可以使用 [Zeabur AI Hub](https://zeabur.com/ai) — 一个 OpenAI 兼容的 LLM 聚合服务。部署后：
+      开箱即用时，此模板使用 **Zeabur AI Hub**（密钥来自「Zeabur AI Hub 密钥」变量）、模型 `claude-sonnet-4-5`、区域 `sfo1`。若要调整，请在「变量」标签页新增以下项目并重启：
 
-      1. 把 AI Hub 密钥填入 `OPENROUTER_API_KEY`（沿用同一个变量）。
-      2. 通过 Zeabur「文件」标签页编辑 `/opt/data/config.yaml`：
-         - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"`（Tokyo 用 `hnd1`）
-         - `model.default: "claude-sonnet-4-5"`（或任一 [AI Hub 模型](https://zeabur.com/ai)）
-      3. 重启服务。
+      - **模型** — 把 `LLM_MODEL` 设为任一 [AI Hub 模型](https://zeabur.com/ai)。
+      - **区域** — 把 `LLM_BASE_URL` 设为 `https://hnd1.aihub.zeabur.ai/v1` 即可使用东京（默认为 `sfo1`）。
+      - **改用 OpenRouter** — 设置 `OPENROUTER_API_KEY`（并把 AI Hub 密钥留空），Hermes 会自动检测。
+      - **其他供应商**（Minimax、Kimi、GLM/智谱、Gemini、NVIDIA、xAI……）— 新增该供应商的 API 密钥环境变量（例如 `KIMI_API_KEY`、`MINIMAX_API_KEY`），并在「Exec」标签页用 `hermes model` 选择模型。详见 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)与[环境变量参考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
 
-      注意：`OPENROUTER_BASE_URL` 环境变量**无法**覆盖 `config.yaml`，必须直接编辑该文件。
+      > `LLM_MODEL` ／ `LLM_BASE_URL` 加上 AI Hub 密钥会在每次启动时应用到 `/opt/data/config.yaml` 的 `model` 区块。若想自行手动管理 `config.yaml`，将它们留空即可。
 
       ## 配置
 
@@ -416,7 +449,7 @@ localization:
 
       ## 注意事项
 
-      - Docker 镜像约 4.5 GB（含 Playwright + Chromium 浏览器自动化工具）。首次部署拉取镜像可能需要数分钟。
+      - Docker 镜像约 1.3 GB（下载大小）。首次部署通常一分钟内即可拉取完成；之后的部署会重用缓存镜像。
       - 首次启动需要 30-60 秒来初始化配置文件和同步技能。
       - 使用浏览器工具可能导致内存占用过高，若遇到 OOM（内存不足）错误，建议升级至更大的实例（推荐 4 vCPU / 8 GB RAM）。
 
@@ -427,15 +460,12 @@ localization:
     description: |
       Hermes Agent（NousResearch 開発）— 永続メモリ、ツール使用、スケジュール実行、14+ メッセージングプラットフォーム（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、WeChat、WeCom、Feishu、DingTalk、Email など）を備えた自律型 AI エージェント。OpenAI 互換 API サーバー内蔵。
     variables:
-      - key: OPENROUTER_API_KEY
-        name: OpenRouter API キー
-        description: "openrouter.ai から取得した API キー。Claude、GPT、Gemini など 200 以上のモデルにアクセスできます。"
-      - key: TELEGRAM_BOT_TOKEN
-        name: Telegram Bot トークン（任意）
-        description: "Telegram の @BotFather から取得した Bot トークン。空欄にすると Telegram 連携をスキップします。"
-      - key: TELEGRAM_ALLOWED_USERS
-        name: Telegram 許可ユーザー
-        description: "カンマ区切りの Telegram ユーザー ID（Bot トークンを設定した場合は必須）。@userinfobot で ID を確認できます。"
+      - key: AI_HUB_API_KEY
+        name: Zeabur AI Hub キー
+        description: "Zeabur AI Hub キーを生成すれば準備完了——必要な入力はこれだけで、エージェントとウェブ Dashboard はそのまま使えます。OpenRouter や他のプロバイダー、Telegram を使う場合は、デプロイ後に対応する環境変数を追加してください（README を参照）。"
+      - key: PUBLIC_DOMAIN
+        name: Dashboard ドメイン
+        description: "ウェブ Dashboard 用のドメイン。例：my-hermes → my-hermes.zeabur.app。これが開いてログインする URL です。後からカスタムドメインも設定できます。"
     readme: |
       # Hermes Agent
 
@@ -443,57 +473,60 @@ localization:
 
       ## クイックスタート
 
-      1. **このテンプレートをデプロイ** — OpenRouter API キー（必須）と、任意で Telegram Bot トークンを入力します。
-      2. **ドメインをバインド** — **ネットワーク**タブでポートに応じたドメインをバインドします（下記「ポートとドメイン」を参照）。
-      3. **使用開始** — ウェブ Dashboard、Telegram、または OpenAI 互換 API でエージェントを操作します。
+      1. **このテンプレートをデプロイ** — **Zeabur AI Hub キー**を生成し、**Dashboard ドメイン**（例：`my-hermes`）を入力します。これだけで、エージェントと Dashboard はそのまま使えます。
+      2. **Dashboard を開く** — あなたのドメインにアクセスします（Dashboard に自動でバインドされます）。後から**ネットワーク**タブでカスタムドメインも設定できます。
+      3. **ログイン** — ユーザー名 `admin`、パスワードはサービスの `PASSWORD`（サービス説明に表示）。ブラウザで直接チャットできます — Telegram は不要です。
+
+      > OpenRouter、他のプロバイダー（Minimax、Kimi など）、または Telegram を使いたい場合は、デプロイ後に対応する環境変数を追加してください — 下記の**モデルとプロバイダー**および**メッセージプラットフォーム**を参照してください。
 
       ## ポートとドメイン
 
-      このサービスは独立した 2 つの HTTP ポートを提供します。実際に使用するポートにのみドメインをバインドしてください：
+      このサービスは 2 つの HTTP ポートを提供します：
 
-      | ポート | 用途 | ドメインが必要な場合 |
-      |--------|------|------------------|
-      | **5000** | OpenAI 互換 API サーバー | 外部 API アクセスが必要な場合のみ（curl、SDK など） |
-      | **9119** | ウェブ Dashboard（`HERMES_DASHBOARD=true` が必要） | ブラウザ UI が必要な場合のみ |
+      | ポート | Id | 用途 | ドメイン |
+      |--------|----|------|----------|
+      | **9119** | `web` | ウェブ Dashboard（標準で有効・ログイン保護付き） | サービスのメインドメイン — 開いてログイン |
+      | **5000** | `api` | OpenAI 互換 API サーバー | 外部 API アクセスが必要な場合のみドメインをバインド |
 
       **メッセージングプラットフォーム（Telegram、Discord、Slack など）はアウトバウンド接続を使用するため、公開 URL やポートの開放は不要です。**
 
+      ### ウェブ Dashboard を使用する
+
+      Dashboard は**標準で有効**で、ログイン保護されています。サービスのドメイン（**web** ポート）を開いてログインします：
+      - ユーザー名：`admin`
+      - パスワード：サービスの `PASSWORD` 値（サービス説明に表示）
+
+      無効にするには、**変数**タブで `HERMES_DASHBOARD` を `false` に設定します。認証情報を変更するには `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` ／ `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` を設定します。
+
+      > **セキュリティに関する注意：** Basic 認証のログインは信頼できるネットワーク内のバックエンド向けです。公開インターネットでより強固に保護するには OAuth（`HERMES_DASHBOARD_OAUTH_CLIENT_ID`）またはセルフホスト OIDC（`HERMES_DASHBOARD_OIDC_*`）を使用してください（[環境変数リファレンス](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)を参照）。
+
       ### OpenAI 互換 API を使用する
 
-      **ポート 5000** にドメインをバインドし、自動生成された API キー（サービス説明に表示）でリクエストを送信：
+      **ネットワーク**タブで **`api`** ポート（5000）にドメインをバインドし、自動生成された API キー（サービス説明に表示）でリクエストを送信：
 
       ```bash
-      curl https://YOUR_DOMAIN/v1/chat/completions \
+      curl https://YOUR_API_DOMAIN/v1/chat/completions \
         -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
 
-      ### ウェブ Dashboard を使用する
-
-      1. **変数**タブで `HERMES_DASHBOARD=true` を設定してサービスを再起動します。
-      2. **ネットワーク**タブで **ポート 9119** にドメインをバインドします。
-      3. そのドメインから Dashboard にアクセスします。
-
-      > **セキュリティに関する注意：** Dashboard はインターネットから公開アクセス可能になります。リスクを理解した上で有効にしてください — URL を知っている人なら誰でもエージェントにアクセスして操作できます。`HERMES_DASHBOARD_OAUTH_CLIENT_ID` で OAuth 認証を設定できます（[環境変数リファレンス](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)を参照）。
-
       ## メッセージプラットフォーム
 
-      デプロイ時に **Telegram** を例として設定します。デプロイ後に対応する環境変数を設定して、14+ のサポート対象プラットフォーム（Discord、Slack、WhatsApp、Signal、Matrix、Email、WeChat、WeCom、Feishu、DingTalk、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、汎用 webhook）から任意のものを有効化できます。
+      メッセージングは**任意**です — デフォルトではウェブ Dashboard で操作します（プラットフォームは不要）。**Telegram** を接続するには、**変数**タブで `TELEGRAM_BOT_TOKEN`（@BotFather から取得）と `TELEGRAM_ALLOWED_USERS`（@userinfobot から取得するあなたの Telegram ユーザー ID）を追加し、サービスを再起動します。Hermes は 14+ のプラットフォーム（Discord、Slack、WhatsApp、Signal、Matrix、Email、WeChat、WeCom、Feishu、DingTalk、QQ Bot、Mattermost、BlueBubbles/iMessage、SMS、Home Assistant、汎用 webhook）に対応しており、いずれもデプロイ後にその環境変数を設定するだけで有効化できます。
 
       詳細は公式 [Messaging Gateway ガイド](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)をご覧ください。
 
-      ## Zeabur AI Hub を使う（OpenRouter の代替）
+      ## モデルとプロバイダー
 
-      OpenRouter の代わりに [Zeabur AI Hub](https://zeabur.com/ai)（OpenAI 互換の LLM アグリゲーター）を使えます。デプロイ後：
+      このテンプレートは標準で **Zeabur AI Hub**（キーは「Zeabur AI Hub キー」変数から）、モデル `claude-sonnet-4-5`、リージョン `sfo1` を使用します。変更するには、**変数**タブで以下を追加して再起動してください：
 
-      1. AI Hub のキーを `OPENROUTER_API_KEY` に設定（同じ変数を流用）。
-      2. Zeabur の「ファイル」タブから `/opt/data/config.yaml` を編集：
-         - `model.base_url: "https://hnd1.aihub.zeabur.ai/v1"`（SFO なら `sfo1`）
-         - `model.default: "claude-sonnet-4-5"`（または [AI Hub モデル](https://zeabur.com/ai) の任意のもの）
-      3. サービスを再起動。
+      - **モデル** — `LLM_MODEL` を任意の [AI Hub モデル](https://zeabur.com/ai)に設定します。
+      - **リージョン** — 東京を使う場合は `LLM_BASE_URL` を `https://hnd1.aihub.zeabur.ai/v1` に設定します（デフォルトは `sfo1`）。
+      - **OpenRouter を使う** — `OPENROUTER_API_KEY` を設定します（AI Hub キーは空のままに）。Hermes が自動検出します。
+      - **他のプロバイダー**（Minimax、Kimi、GLM/Zhipu、Gemini、NVIDIA、xAI など）— そのプロバイダーの API キー環境変数（例：`KIMI_API_KEY`、`MINIMAX_API_KEY`）を追加し、**Exec** タブで `hermes model` を使ってモデルを選択します。[Configuration ガイド](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)と[環境変数リファレンス](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)を参照してください。
 
-      注意：`OPENROUTER_BASE_URL` 環境変数は `config.yaml` を上書き**しません**。ファイルを直接編集してください。
+      > `LLM_MODEL` ／ `LLM_BASE_URL` と AI Hub キーは、起動のたびに `/opt/data/config.yaml` の `model` ブロックに適用されます。`config.yaml` を手動で管理したい場合は空欄のままにしてください。
 
       ## 設定
 
@@ -525,7 +558,7 @@ localization:
 
       ## 注意事項
 
-      - Docker イメージは約 4.5 GB（Playwright + Chromium ブラウザ自動化ツール含む）。初回デプロイ時のイメージ取得に数分かかる場合があります。
+      - Docker イメージは約 1.3 GB（ダウンロードサイズ）。初回デプロイは通常 1 分以内に取得が完了し、以降のデプロイはキャッシュ済みイメージを再利用します。
       - 初回起動時、設定ファイルの初期化とスキル同期に 30〜60 秒かかります。
       - ブラウザツールの使用によりメモリ使用量が増加する場合があります。OOM（メモリ不足）エラーが発生した場合は、より大きなインスタンスへのアップグレードをお勧めします（推奨 4 vCPU / 8 GB RAM）。
 
@@ -536,15 +569,12 @@ localization:
     description: |
       Hermes Agent de NousResearch — un agente de IA autónomo con memoria persistente, uso de herramientas, programación de tareas y más de 14 plataformas de mensajería (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, WeChat, WeCom, Feishu, DingTalk, Email, y más). Incluye un servidor API compatible con OpenAI.
     variables:
-      - key: OPENROUTER_API_KEY
-        name: Clave API de OpenRouter
-        description: "Clave API de openrouter.ai — proporciona acceso a Claude, GPT, Gemini y más de 200 modelos con una sola clave."
-      - key: TELEGRAM_BOT_TOKEN
-        name: Token del Bot de Telegram (opcional)
-        description: "Token del bot obtenido de @BotFather en Telegram. Dejar vacío para omitir la integración con Telegram."
-      - key: TELEGRAM_ALLOWED_USERS
-        name: Usuarios permitidos en Telegram
-        description: "IDs de usuario de Telegram separados por comas (obligatorio si se configura el token del bot). Obtenga su ID en @userinfobot."
+      - key: AI_HUB_API_KEY
+        name: Clave de Zeabur AI Hub
+        description: "Genere una clave de Zeabur AI Hub y listo — es lo único que necesita; el agente y el dashboard web funcionan de inmediato. Para usar OpenRouter, otro proveedor o Telegram, añada las variables de entorno correspondientes tras el despliegue (consulte el README)."
+      - key: PUBLIC_DOMAIN
+        name: Dominio del Dashboard
+        description: "Un dominio para el dashboard web, p. ej. my-hermes → my-hermes.zeabur.app. Es la URL que abre e inicia sesión. Puede vincular un dominio personalizado más tarde."
     readme: |
       # Hermes Agent
 
@@ -552,57 +582,60 @@ localization:
 
       ## Inicio rápido
 
-      1. **Despliegue esta plantilla** — introduzca su clave API de OpenRouter (obligatoria) y opcionalmente un token de bot de Telegram.
-      2. **Vincule un dominio** — vaya a la pestaña **Redes** y vincule un dominio al puerto que necesite (consulte «Puertos y dominios» más abajo).
-      3. **Comience a usar** — a través del Dashboard web, Telegram o la API compatible con OpenAI.
+      1. **Despliegue esta plantilla** — genere una **clave de Zeabur AI Hub** e indique un **dominio para el Dashboard** (p. ej. `my-hermes`). Eso es todo; el agente y el Dashboard funcionan de inmediato.
+      2. **Abra el Dashboard** — vaya a su dominio (vinculado al Dashboard automáticamente). Puede añadir un dominio personalizado más tarde en la pestaña **Redes**.
+      3. **Inicie sesión** — usuario `admin`, contraseña = el `PASSWORD` de su servicio (mostrado en las instrucciones del servicio). Chatee en el navegador — sin necesidad de Telegram.
+
+      > ¿Quiere usar OpenRouter, otro proveedor (Minimax, Kimi, …) o Telegram en su lugar? Añada las variables de entorno correspondientes tras el despliegue — consulte **Modelos y proveedores** y **Plataformas de mensajería** más abajo.
 
       ## Puertos y dominios
 
-      Este servicio expone dos puertos HTTP independientes. Vincule un dominio solo a los puertos que realmente necesite:
+      Este servicio expone dos puertos HTTP:
 
-      | Puerto | Propósito | Cuándo vincular un dominio |
-      |--------|-----------|--------------------------|
-      | **5000** | Servidor API compatible con OpenAI | Solo si necesita acceso externo a la API (curl, SDK, etc.) |
-      | **9119** | Dashboard web (requiere `HERMES_DASHBOARD=true`) | Solo si quiere la interfaz de navegador |
+      | Puerto | Id | Propósito | Dominio |
+      |--------|----|-----------|---------|
+      | **9119** | `web` | Dashboard web (activo por defecto, protegido con login) | El dominio principal del servicio — ábralo e inicie sesión |
+      | **5000** | `api` | Servidor API compatible con OpenAI | Vincule un dominio solo si necesita acceso externo a la API |
 
       **Las plataformas de mensajería (Telegram, Discord, Slack, etc.) usan conexiones salientes — no requieren URL pública ni puertos abiertos.**
 
+      ### Usar el Dashboard web
+
+      El Dashboard está **activado por defecto** y protegido con login. Abra el dominio de su servicio (puerto **web**) e inicie sesión:
+      - Usuario: `admin`
+      - Contraseña: el valor `PASSWORD` de su servicio (mostrado en las instrucciones del servicio)
+
+      Para desactivarlo, ponga `HERMES_DASHBOARD=false` en la pestaña **Variables**. Para cambiar las credenciales, configure `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` / `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`.
+
+      > **Nota de seguridad:** La autenticación básica es ideal para un backend en una red de confianza; para una exposición pública reforzada use OAuth (`HERMES_DASHBOARD_OAUTH_CLIENT_ID`) u OIDC autoalojado (`HERMES_DASHBOARD_OIDC_*`) — consulte la [referencia de variables de entorno](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+
       ### Usar la API compatible con OpenAI
 
-      Vincule un dominio al **puerto 5000** y envíe solicitudes con su clave API generada automáticamente:
+      Vincule un dominio al puerto **`api`** (5000) en la pestaña **Redes** y envíe solicitudes con su clave API generada automáticamente:
 
       ```bash
-      curl https://YOUR_DOMAIN/v1/chat/completions \
+      curl https://YOUR_API_DOMAIN/v1/chat/completions \
         -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
 
-      ### Usar el Dashboard web
-
-      1. Configure `HERMES_DASHBOARD=true` en la pestaña **Variables** y reinicie el servicio.
-      2. Vincule un dominio al **puerto 9119** en la pestaña **Redes**.
-      3. Acceda al Dashboard mediante ese dominio.
-
-      > **Nota de seguridad:** El Dashboard será públicamente accesible desde internet. No lo active sin entender los riesgos — cualquier persona con la URL puede acceder y controlar su agente. Puede configurar autenticación OAuth mediante `HERMES_DASHBOARD_OAUTH_CLIENT_ID` (consulte la [referencia de variables de entorno](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)).
-
       ## Plataformas de mensajería
 
-      **Telegram** se configura durante el despliegue como ejemplo. Puede activar cualquiera de las más de 14 plataformas compatibles (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, webhooks genéricos) configurando las variables de entorno correspondientes después del despliegue.
+      La mensajería es **opcional** — por defecto interactúa a través del Dashboard web (sin necesidad de ninguna plataforma). Para conectar **Telegram**, añada `TELEGRAM_BOT_TOKEN` (de @BotFather) y `TELEGRAM_ALLOWED_USERS` (su ID de usuario de Telegram, de @userinfobot) en la pestaña **Variables** y reinicie. Hermes admite más de 14 plataformas (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, webhooks genéricos) — cada una se activa configurando sus variables de entorno después del despliegue.
 
       Consulte la guía oficial de [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) para instrucciones de configuración de cada plataforma.
 
-      ## Usando Zeabur AI Hub (alternativa a OpenRouter)
+      ## Modelos y proveedores
 
-      En lugar de una clave de OpenRouter, puede usar [Zeabur AI Hub](https://zeabur.com/ai) — un agregador compatible con OpenAI. Tras el despliegue:
+      De fábrica, esta plantilla usa **Zeabur AI Hub** (clave de la variable **Clave de Zeabur AI Hub**), el modelo `claude-sonnet-4-5` y la región `sfo1`. Para cambiarlo, añada lo siguiente en la pestaña **Variables** y reinicie:
 
-      1. Ponga su clave de AI Hub en `OPENROUTER_API_KEY` (reutilice la misma variable).
-      2. Edite `/opt/data/config.yaml` desde la pestaña «Archivos» de Zeabur:
-         - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"` (use `hnd1` para Tokio)
-         - `model.default: "claude-sonnet-4-5"` (o cualquier [modelo de AI Hub](https://zeabur.com/ai))
-      3. Reinicie el servicio.
+      - **Modelo** — ponga `LLM_MODEL` en cualquier [modelo de AI Hub](https://zeabur.com/ai).
+      - **Región** — ponga `LLM_BASE_URL` en `https://hnd1.aihub.zeabur.ai/v1` para Tokio (por defecto es `sfo1`).
+      - **OpenRouter en su lugar** — configure `OPENROUTER_API_KEY` (deje vacía la clave de AI Hub); Hermes lo detecta automáticamente.
+      - **Otro proveedor** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — añada la variable de entorno con la clave API de ese proveedor (p. ej. `KIMI_API_KEY`, `MINIMAX_API_KEY`) y elija el modelo con `hermes model` en la pestaña **Exec**. Consulte la guía de [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) y la [referencia de variables de entorno](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
 
-      Nota: la variable de entorno `OPENROUTER_BASE_URL` **no** sobrescribe `config.yaml`; debe editar el archivo.
+      > `LLM_MODEL` / `LLM_BASE_URL` y la clave de AI Hub se aplican al bloque `model` de `/opt/data/config.yaml` en cada arranque. Déjelas sin configurar para gestionar `config.yaml` a mano.
 
       ## Configuración
 
@@ -634,7 +667,7 @@ localization:
 
       ## Notas
 
-      - La imagen Docker es de ~4.5 GB (incluye Playwright + Chromium para automatización del navegador). El primer despliegue puede tardar varios minutos en descargar la imagen.
+      - La imagen Docker es de ~1.3 GB (descarga). El primer despliegue suele descargarse en menos de un minuto; los despliegues posteriores reutilizan la imagen en caché.
       - El primer arranque tarda 30-60 segundos en inicializar los archivos de configuración y sincronizar las habilidades.
       - El uso de herramientas del navegador puede causar un alto consumo de memoria — si encuentra errores OOM (memoria insuficiente), considere actualizar a una instancia mayor (recomendado 4 vCPU / 8 GB RAM).
 
@@ -645,15 +678,12 @@ localization:
     description: |
       Hermes Agent oleh NousResearch — agen AI otonom dengan memori persisten, penggunaan alat, penjadwalan tugas, dan 14+ platform pesan (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, WeChat, WeCom, Feishu, DingTalk, Email, dan lainnya). Dilengkapi server API yang kompatibel dengan OpenAI.
     variables:
-      - key: OPENROUTER_API_KEY
-        name: Kunci API OpenRouter
-        description: "Kunci API dari openrouter.ai — menyediakan akses ke Claude, GPT, Gemini, dan 200+ model melalui satu kunci."
-      - key: TELEGRAM_BOT_TOKEN
-        name: Token Bot Telegram (opsional)
-        description: "Token bot dari @BotFather di Telegram. Kosongkan untuk melewati integrasi Telegram."
-      - key: TELEGRAM_ALLOWED_USERS
-        name: Pengguna Telegram yang Diizinkan
-        description: "ID pengguna Telegram dipisahkan koma (wajib jika token bot diisi). Dapatkan ID Anda dari @userinfobot."
+      - key: AI_HUB_API_KEY
+        name: Kunci Zeabur AI Hub
+        description: "Buat kunci Zeabur AI Hub dan selesai — hanya ini yang Anda perlukan; agen dan dashboard web langsung berfungsi. Untuk menggunakan OpenRouter, penyedia lain, atau Telegram, tambahkan variabel lingkungan terkait setelah deploy (lihat README)."
+      - key: PUBLIC_DOMAIN
+        name: Domain Dashboard
+        description: "Domain untuk dashboard web, mis. my-hermes → my-hermes.zeabur.app. Inilah URL yang Anda buka dan login. Anda bisa bind domain kustom nanti."
     readme: |
       # Hermes Agent
 
@@ -661,57 +691,60 @@ localization:
 
       ## Mulai Cepat
 
-      1. **Deploy template ini** — masukkan kunci API OpenRouter (wajib) dan opsional token bot Telegram.
-      2. **Bind domain** — buka tab **Networking** dan bind domain ke port yang Anda butuhkan (lihat «Port & Domain» di bawah).
-      3. **Mulai gunakan** — melalui Dashboard web, Telegram, atau OpenAI-compatible API.
+      1. **Deploy template ini** — buat sebuah **kunci Zeabur AI Hub** dan isi sebuah **domain Dashboard** (mis. `my-hermes`). Itu saja; agen dan Dashboard langsung berfungsi.
+      2. **Buka Dashboard** — kunjungi domain Anda (otomatis ter-bind ke Dashboard). Anda bisa menambahkan domain kustom nanti di tab **Networking**.
+      3. **Masuk** — nama pengguna `admin`, kata sandi = `PASSWORD` layanan Anda (ditampilkan pada instruksi layanan). Langsung chat di browser — tanpa Telegram.
+
+      > Ingin menggunakan OpenRouter, penyedia lain (Minimax, Kimi, …), atau Telegram? Tambahkan variabel lingkungan terkait setelah deploy — lihat **Model & Penyedia** dan **Platform Pesan** di bawah.
 
       ## Port & Domain
 
-      Layanan ini menyediakan dua port HTTP independen. Bind domain hanya ke port yang benar-benar Anda gunakan:
+      Layanan ini menyediakan dua port HTTP:
 
-      | Port | Tujuan | Kapan perlu bind domain |
-      |------|--------|------------------------|
-      | **5000** | Server API kompatibel OpenAI | Hanya jika perlu akses API eksternal (curl, SDK, dll.) |
-      | **9119** | Dashboard web (perlu `HERMES_DASHBOARD=true`) | Hanya jika ingin antarmuka browser |
+      | Port | Id | Tujuan | Domain |
+      |------|----|--------|--------|
+      | **9119** | `web` | Dashboard web (aktif secara bawaan, dilindungi login) | Domain utama layanan — buka dan masuk |
+      | **5000** | `api` | Server API kompatibel OpenAI | Bind domain hanya jika perlu akses API eksternal |
 
       **Platform pesan (Telegram, Discord, Slack, dll.) menggunakan koneksi keluar — tidak memerlukan URL publik atau port yang dibuka.**
 
+      ### Menggunakan Dashboard web
+
+      Dashboard **aktif secara bawaan** dan dilindungi login. Buka domain layanan Anda (port **web**) lalu masuk:
+      - Nama pengguna: `admin`
+      - Kata sandi: nilai `PASSWORD` layanan Anda (ditampilkan pada instruksi layanan)
+
+      Untuk menonaktifkan, atur `HERMES_DASHBOARD=false` di tab **Variables**. Untuk mengubah kredensial, atur `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` / `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`.
+
+      > **Catatan keamanan:** Basic auth cocok untuk backend di balik jaringan tepercaya; untuk eksposur publik yang lebih kuat gunakan OAuth (`HERMES_DASHBOARD_OAUTH_CLIENT_ID`) atau OIDC mandiri (`HERMES_DASHBOARD_OIDC_*`) — lihat [referensi variabel lingkungan](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+
       ### Menggunakan OpenAI-compatible API
 
-      Bind domain ke **port 5000**, lalu kirim permintaan dengan kunci API yang dibuat otomatis:
+      Bind domain ke port **`api`** (5000) di tab **Networking**, lalu kirim permintaan dengan kunci API yang dibuat otomatis:
 
       ```bash
-      curl https://YOUR_DOMAIN/v1/chat/completions \
+      curl https://YOUR_API_DOMAIN/v1/chat/completions \
         -H "Authorization: Bearer YOUR_API_SERVER_KEY" \
         -H "Content-Type: application/json" \
         -d '{"model": "default", "messages": [{"role": "user", "content": "Hello!"}]}'
       ```
 
-      ### Menggunakan Dashboard web
-
-      1. Atur `HERMES_DASHBOARD=true` di tab **Variables** dan restart layanan.
-      2. Bind domain ke **port 9119** di tab **Networking**.
-      3. Akses Dashboard melalui domain tersebut.
-
-      > **Catatan keamanan:** Dashboard akan dapat diakses secara publik dari internet. Jangan aktifkan tanpa memahami risikonya — siapa pun yang mengetahui URL dapat mengakses dan mengontrol agen Anda. Autentikasi OAuth dapat dikonfigurasi melalui `HERMES_DASHBOARD_OAUTH_CLIENT_ID` (lihat [referensi variabel lingkungan](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)).
-
       ## Platform Pesan
 
-      **Telegram** dikonfigurasi saat deployment sebagai contoh. Anda dapat mengaktifkan salah satu dari 14+ platform yang didukung (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, webhook umum) dengan mengatur variabel lingkungan yang sesuai setelah deployment.
+      Pesan bersifat **opsional** — secara bawaan Anda berinteraksi melalui Dashboard web (tanpa perlu platform apa pun). Untuk menghubungkan **Telegram**, tambahkan `TELEGRAM_BOT_TOKEN` (dari @BotFather) dan `TELEGRAM_ALLOWED_USERS` (ID pengguna Telegram Anda dari @userinfobot) di tab **Variables**, lalu restart. Hermes mendukung 14+ platform (Discord, Slack, WhatsApp, Signal, Matrix, Email, WeChat, WeCom, Feishu, DingTalk, QQ Bot, Mattermost, BlueBubbles/iMessage, SMS, Home Assistant, webhook umum) — masing-masing diaktifkan dengan mengatur variabel lingkungannya setelah deployment.
 
       Lihat panduan resmi [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging) untuk instruksi pengaturan setiap platform.
 
-      ## Menggunakan Zeabur AI Hub (alternatif OpenRouter)
+      ## Model & Penyedia
 
-      Sebagai pengganti kunci OpenRouter, Anda dapat menggunakan [Zeabur AI Hub](https://zeabur.com/ai) — agregator yang kompatibel dengan OpenAI. Setelah deployment:
+      Secara bawaan, template ini menggunakan **Zeabur AI Hub** (kunci dari variabel **Kunci Zeabur AI Hub**), model `claude-sonnet-4-5`, region `sfo1`. Untuk mengubahnya, tambahkan berikut ini di tab **Variables** lalu restart:
 
-      1. Masukkan kunci AI Hub Anda ke `OPENROUTER_API_KEY` (gunakan variabel yang sama).
-      2. Edit `/opt/data/config.yaml` melalui tab "Berkas" Zeabur:
-         - `model.base_url: "https://sfo1.aihub.zeabur.ai/v1"` (atau `hnd1` untuk Tokyo)
-         - `model.default: "claude-sonnet-4-5"` (atau [model AI Hub](https://zeabur.com/ai) lainnya)
-      3. Restart layanan.
+      - **Model** — atur `LLM_MODEL` ke salah satu [model AI Hub](https://zeabur.com/ai).
+      - **Region** — atur `LLM_BASE_URL` ke `https://hnd1.aihub.zeabur.ai/v1` untuk Tokyo (default-nya `sfo1`).
+      - **OpenRouter sebagai gantinya** — atur `OPENROUTER_API_KEY` (kosongkan kunci AI Hub); Hermes mendeteksinya secara otomatis.
+      - **Penyedia lain** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — tambahkan variabel lingkungan kunci API penyedia tersebut (mis. `KIMI_API_KEY`, `MINIMAX_API_KEY`) dan pilih model dengan `hermes model` di tab **Exec**. Lihat panduan [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) dan [referensi variabel lingkungan](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
 
-      Catatan: variabel lingkungan `OPENROUTER_BASE_URL` **tidak** menimpa `config.yaml`; Anda harus mengedit file tersebut.
+      > `LLM_MODEL` / `LLM_BASE_URL` beserta kunci AI Hub diterapkan ke blok `model` pada `/opt/data/config.yaml` setiap kali start. Kosongkan untuk mengelola `config.yaml` secara manual.
 
       ## Konfigurasi
 
@@ -743,7 +776,7 @@ localization:
 
       ## Catatan
 
-      - Image Docker berukuran ~4.5 GB (termasuk Playwright + Chromium untuk otomatisasi browser). Deployment pertama mungkin memerlukan beberapa menit untuk mengunduh image.
+      - Image Docker berukuran ~1.3 GB (unduhan). Deployment pertama biasanya selesai diunduh dalam waktu kurang dari satu menit; deployment berikutnya menggunakan kembali image dari cache.
       - Boot pertama memerlukan 30-60 detik untuk menginisialisasi file konfigurasi dan menyinkronkan skill.
       - Penggunaan alat browser dapat menyebabkan penggunaan memori yang tinggi — jika mengalami error OOM (kehabisan memori), pertimbangkan untuk meningkatkan ke instance yang lebih besar (disarankan 4 vCPU / 8 GB RAM).
 
