@@ -1,0 +1,259 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB AgentCore
+spec:
+  description: |
+    Open Agent Broker for Amazon Bedrock AgentCore Runtime. OAB runs locally while the coding agent runs remotely in an AgentCore microVM.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - Discord
+    - Slack
+    - AWS
+  resourceRequirement:
+    minConfig:
+      cpu: 1
+      ram: 1
+    recommendedConfig:
+      cpu: 2
+      ram: 2
+  variables:
+    - key: DISCORD_BOT_TOKEN
+      type: STRING
+      name: Discord Bot Token (optional)
+      description: "Optional. Token from https://discord.com/developers/applications. Leave empty if using Slack or a gateway only."
+    - key: OPENAB_ALLOWED_CHANNELS
+      type: STRING
+      name: Discord Channel IDs (optional)
+      description: "Optional. Comma-separated Discord channel IDs where the bot listens. Leave empty to allow all channels."
+    - key: OPENAB_ALLOWED_USERS
+      type: STRING
+      name: Discord User IDs (optional)
+      description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone."
+    - key: SLACK_BOT_TOKEN
+      type: STRING
+      name: Slack Bot Token (optional)
+      description: "Optional. Bot User OAuth Token (xoxb-...) from Slack App settings. Leave empty to disable Slack."
+    - key: SLACK_APP_TOKEN
+      type: STRING
+      name: Slack App Token (optional)
+      description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
+    - key: AGENTCORE_RUNTIME_ARN
+      type: STRING
+      name: AgentCore Runtime ARN
+      description: "Required. ARN of an Amazon Bedrock AgentCore Runtime that hosts your ACP-compatible coding agent."
+    - key: AGENTCORE_SHELL_COMMAND
+      type: STRING
+      name: AgentCore Shell Command (optional)
+      description: "Optional. Command to run inside the AgentCore PTY. Defaults to kiro-cli acp --trust-all-tools."
+    - key: AWS_ACCESS_KEY_ID
+      type: STRING
+      name: AWS Access Key ID (optional)
+      description: "Optional. AWS credentials with bedrock-agentcore:InvokeAgentRuntimeCommandShell permission. Prefer short-lived credentials or an IAM role when available."
+    - key: AWS_SECRET_ACCESS_KEY
+      type: STRING
+      name: AWS Secret Access Key (optional)
+      description: "Optional. AWS secret access key for the access key above."
+    - key: AWS_SESSION_TOKEN
+      type: STRING
+      name: AWS Session Token (optional)
+      description: "Optional. Session token for temporary AWS credentials."
+    - key: AWS_REGION
+      type: STRING
+      name: AWS Region (optional)
+      description: "Optional. Region for AWS credential resolution. The runtime region is also inferred from AGENTCORE_RUNTIME_ARN."
+    - key: OPENAB_ALLOW_BOT_MESSAGES
+      type: STRING
+      name: Allow Bot Messages (optional)
+      description: "Optional. Set to 'on' or 'mentions' to allow messages from bots/webhooks. Leave empty to disable."
+    - key: OPENAB_TRUSTED_BOT_IDS
+      type: STRING
+      name: Trusted Bot IDs (optional)
+      description: "Optional. Comma-separated Discord bot IDs trusted to send messages. Leave empty to trust all bots."
+    - key: OPENAB_MAX_SESSIONS
+      type: STRING
+      name: Max Concurrent Sessions (optional)
+      description: "Optional. Maximum number of concurrent agent sessions (default: 10)."
+    - key: OPENAB_CONFIG_URL
+      type: STRING
+      name: Config URL (optional)
+      description: "Optional. URL to a remote config.toml (https://). When set, the local config file is ignored."
+  readme: |
+    # OpenAB AgentCore
+
+    [OpenAB](https://github.com/openabdev/openab) bridges Discord, Slack, or gateway platforms to ACP-compatible coding agents. This template uses the `beta-agentcore` image: OAB runs on Zeabur, while your coding agent runs remotely inside Amazon Bedrock AgentCore Runtime.
+
+    ## Important Notes
+
+    - **Image tag:** This template tracks `ghcr.io/openabdev/openab:beta-agentcore`.
+    - **No local coding CLI:** The image only contains OpenAB and the native AgentCore bridge.
+    - **AgentCore required:** You must already have an AgentCore Runtime that can run an ACP command, such as `kiro-cli acp --trust-all-tools`.
+    - **AWS permissions:** Credentials must allow `bedrock-agentcore:InvokeAgentRuntimeCommandShell` for the target runtime.
+
+    ## Setup
+
+    1. Create or deploy an Amazon Bedrock AgentCore Runtime with your coding agent.
+    2. Paste the runtime ARN into `AGENTCORE_RUNTIME_ARN`.
+    3. Provide AWS credentials or run this service in an environment where AWS credentials are available.
+    4. Create a Discord bot at https://discord.com/developers/applications and paste the token into `DISCORD_BOT_TOKEN`, or configure Slack/gateway variables instead.
+    5. Deploy the template.
+
+    If your runtime uses something other than Kiro, set `AGENTCORE_SHELL_COMMAND` to the ACP command to run in the remote PTY, for example `codex-acp` or `gemini --acp`.
+
+    ## Customization
+
+    | File | Description |
+    |------|-------------|
+    | `/home/agent/.config/openab/config.toml` | OpenAB config, including `[agentcore]` |
+
+    To regenerate OpenAB config, delete `/home/agent/.config/openab/config.toml` and restart.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [OpenAB AgentCore docs](https://github.com/openabdev/openab/blob/main/docs/agentcore.md)
+    - [Amazon Bedrock AgentCore Runtime](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime.html)
+    - [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab:beta-agentcore
+          runAsUserID: 1000
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        volumes:
+          - id: agent-home
+            dir: /home/agent
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              if [ ! -f /home/agent/.bashrc ]; then
+                cp /etc/skel/.bashrc /home/agent/.bashrc 2>/dev/null || true
+                cp /etc/skel/.profile /home/agent/.profile 2>/dev/null || true
+                cp /etc/skel/.bash_logout /home/agent/.bash_logout 2>/dev/null || true
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent
+                chmod 755 /home/agent/.config 2>/dev/null || true
+              fi
+
+              if [ -z "$AGENTCORE_RUNTIME_ARN" ]; then
+                echo "openab: AGENTCORE_RUNTIME_ARN is required -- sleeping"
+                exec sleep infinity
+              fi
+
+              if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ] && [ -z "$GATEWAY_URL" ]; then
+                echo "openab: no adapter configured (set DISCORD_BOT_TOKEN, SLACK_BOT_TOKEN, or GATEWAY_URL) -- sleeping"
+                exec sleep infinity
+              fi
+
+              CONFIG_DIR=/home/agent/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                printf '\n[agentcore]\nruntime_arn = "%s"\n' "$AGENTCORE_RUNTIME_ARN" >> "$CONFIG_FILE"
+                if [ -n "$AGENTCORE_SHELL_COMMAND" ]; then
+                  printf 'shell_command = "%s"\n' "$AGENTCORE_SHELL_COMMAND" >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$DISCORD_BOT_TOKEN" ]; then
+                  printf '\n[discord]\nbot_token = "${DISCORD_BOT_TOKEN}"\n' >> "$CONFIG_FILE"
+                  if [ -n "$OPENAB_ALLOW_BOT_MESSAGES" ]; then
+                    printf 'allow_bot_messages = "%s"\n' "$OPENAB_ALLOW_BOT_MESSAGES" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_TRUSTED_BOT_IDS" ]; then
+                    IFS=','; bots=""; for id in $OPENAB_TRUSTED_BOT_IDS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && bots="${bots}\"${id}\","; done; unset IFS
+                    printf 'trusted_bot_ids = [%s]\n' "$(echo "$bots" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
+                    IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
+                    printf 'allowed_channels = [%s]\n' "$(echo "$channels" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_USERS" ]; then
+                    IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
+                    printf 'allowed_users = [%s]\n' "$(echo "$users" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                fi
+
+                if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
+                  printf '\n[slack]\nbot_token = "${SLACK_BOT_TOKEN}"\napp_token = "${SLACK_APP_TOKEN}"\n' >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$GATEWAY_URL" ]; then
+                  printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\nallow_all_channels = true\nallow_all_users = true\n' "$GATEWAY_URL" "${GATEWAY_PLATFORM:-telegram}" >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R agent:agent /home/agent "$CONFIG_DIR"
+                exec runuser -u agent --preserve-environment -- openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
+              fi
+
+              exec openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
+          - path: /opt/config.toml.template
+            template: |
+              [reactions]
+              enabled = true
+        env:
+          DISCORD_BOT_TOKEN:
+            default: ${DISCORD_BOT_TOKEN}
+          OPENAB_ALLOWED_CHANNELS:
+            default: ""
+          OPENAB_ALLOWED_USERS:
+            default: ""
+          SLACK_BOT_TOKEN:
+            default: ""
+          SLACK_APP_TOKEN:
+            default: ""
+          AGENTCORE_RUNTIME_ARN:
+            default: ${AGENTCORE_RUNTIME_ARN}
+          AGENTCORE_SHELL_COMMAND:
+            default: ${AGENTCORE_SHELL_COMMAND}
+          AWS_ACCESS_KEY_ID:
+            default: ${AWS_ACCESS_KEY_ID}
+          AWS_SECRET_ACCESS_KEY:
+            default: ${AWS_SECRET_ACCESS_KEY}
+          AWS_SESSION_TOKEN:
+            default: ${AWS_SESSION_TOKEN}
+          AWS_REGION:
+            default: ${AWS_REGION}
+          AWS_DEFAULT_REGION:
+            default: ${AWS_REGION}
+          OPENAB_ALLOW_BOT_MESSAGES:
+            default: ""
+          OPENAB_TRUSTED_BOT_IDS:
+            default: ""
+          OPENAB_MAX_SESSIONS:
+            default: ""
+          GATEWAY_URL:
+            default: ""
+          GATEWAY_PLATFORM:
+            default: telegram
+          OPENAB_CONFIG_URL:
+            default: ""

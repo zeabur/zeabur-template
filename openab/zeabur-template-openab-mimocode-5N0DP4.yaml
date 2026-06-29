@@ -1,0 +1,228 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: OpenAB MiMoCode
+spec:
+  description: |
+    Open Agent Broker with MiMoCode as the agent backend. MiMoCode is an OpenCode fork with ACP stdio support and a free MiMo Auto auth flow.
+    Source: https://github.com/openabdev/openab
+  icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+  coverImage: https://cdn-console.zeabur.com/f/Xp0H6/openab-cover.webp
+  tags:
+    - AI
+    - Developer Tools
+    - Discord
+    - Slack
+  resourceRequirement:
+    minConfig:
+      cpu: 2
+      ram: 4
+    recommendedConfig:
+      cpu: 4
+      ram: 8
+  variables:
+    - key: DISCORD_BOT_TOKEN
+      type: STRING
+      name: Discord Bot Token (optional)
+      description: "Optional. Token from https://discord.com/developers/applications. Leave empty if using Slack or a gateway only."
+    - key: OPENAB_ALLOWED_CHANNELS
+      type: STRING
+      name: Discord Channel IDs (optional)
+      description: "Optional. Comma-separated Discord channel IDs where the bot listens. Leave empty to allow all channels."
+    - key: OPENAB_ALLOWED_USERS
+      type: STRING
+      name: Discord User IDs (optional)
+      description: "Optional. Comma-separated Discord user IDs allowed to interact with the bot. Leave empty to allow everyone."
+    - key: SLACK_BOT_TOKEN
+      type: STRING
+      name: Slack Bot Token (optional)
+      description: "Optional. Bot User OAuth Token (xoxb-...) from Slack App settings. Leave empty to disable Slack."
+    - key: SLACK_APP_TOKEN
+      type: STRING
+      name: Slack App Token (optional)
+      description: "Optional. App-Level Token (xapp-...) for Socket Mode. Required when Slack Bot Token is set."
+    - key: OPENAB_ALLOW_BOT_MESSAGES
+      type: STRING
+      name: Allow Bot Messages (optional)
+      description: "Optional. Set to 'on' or 'mentions' to allow messages from bots/webhooks. Leave empty to disable."
+    - key: OPENAB_TRUSTED_BOT_IDS
+      type: STRING
+      name: Trusted Bot IDs (optional)
+      description: "Optional. Comma-separated Discord bot IDs trusted to send messages. Leave empty to trust all bots."
+    - key: OPENAB_MAX_SESSIONS
+      type: STRING
+      name: Max Concurrent Sessions (optional)
+      description: "Optional. Maximum number of concurrent agent sessions (default: 10)."
+    - key: MIMOCODE_AUTO_AUTH
+      type: STRING
+      name: Auto Auth MiMoCode (optional)
+      description: "Optional. Defaults to true. Set to false to skip MiMo Auto free-tier auth on startup."
+    - key: MIMOCODE_MODEL
+      type: STRING
+      name: MiMoCode Model (optional)
+      description: "Optional. Defaults to mimo/mimo-auto. Paid Xiaomi accounts can set another MiMoCode model."
+    - key: OPENAB_CONFIG_URL
+      type: STRING
+      name: Config URL (optional)
+      description: "Optional. URL to a remote config.toml (https://). When set, the local config file is ignored."
+  readme: |
+    # OpenAB MiMoCode
+
+    [OpenAB](https://github.com/openabdev/openab) bridges Discord, Slack, or gateway platforms to ACP-compatible coding CLIs. This template runs the MiMoCode variant via `mimo acp`.
+
+    ## Important Notes
+
+    - **Image tag:** This template tracks `ghcr.io/openabdev/openab:beta-mimocode`.
+    - **Persistent storage:** `/home/node` is mounted as a persistent volume. MiMoCode config, SQLite state, credentials, and OpenAB config survive restarts.
+    - **SQLite locking:** Do not run manual `mimo` commands while the bot is handling a request. MiMoCode stores state in SQLite and only one process should access it at a time.
+
+    ## Setup
+
+    1. Create a Discord bot at https://discord.com/developers/applications, enable Message Content Intent, and paste the token into `DISCORD_BOT_TOKEN`.
+    2. Deploy the template. By default, startup writes a MiMoCode config that disables auto-detected Bedrock providers and selects `mimo/mimo-auto`.
+    3. Startup runs `mimo auth login --provider mimo --method "MiMo Auto (free)"` unless `MIMOCODE_AUTO_AUTH=false`.
+
+    For Slack, set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`. For Telegram, LINE, Feishu/Lark, Google Chat, Teams, or WeCom, deploy the OpenAB Gateway template and add `GATEWAY_URL` / `GATEWAY_PLATFORM` to this service.
+
+    ## Customization
+
+    | File | Description |
+    |------|-------------|
+    | `/home/node/.config/openab/config.toml` | OpenAB config |
+    | `/home/node/.config/mimocode/config.json` | MiMoCode config |
+    | `/home/node/.local/share/mimocode/mimocode.db` | MiMoCode SQLite state |
+
+    To regenerate OpenAB config, delete `/home/node/.config/openab/config.toml` and restart.
+
+    ## Links
+
+    - [OpenAB GitHub](https://github.com/openabdev/openab)
+    - [OpenAB MiMoCode docs](https://github.com/openabdev/openab/blob/main/docs/mimocode.md)
+    - [GitHub Packages](https://github.com/openabdev/openab/pkgs/container/openab)
+  services:
+    - name: openab
+      icon: https://cdn-console.zeabur.com/f/0Ewi6/openab-icon.webp
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: ghcr.io/openabdev/openab:beta-mimocode
+          runAsUserID: 1000
+          command:
+            - /bin/sh
+            - -c
+            - /opt/start-openab.sh
+        volumes:
+          - id: node-home
+            dir: /home/node
+        configs:
+          - path: /opt/start-openab.sh
+            permission: 493
+            template: |
+              #!/bin/sh
+              set -e
+
+              if [ ! -f /home/node/.bashrc ]; then
+                cp /etc/skel/.bashrc /etc/skel/.profile /etc/skel/.bash_logout /home/node/ 2>/dev/null || true
+              fi
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R node:node /home/node
+                chmod 755 /home/node/.config 2>/dev/null || true
+              fi
+
+              if [ -z "$DISCORD_BOT_TOKEN" ] && [ -z "$SLACK_BOT_TOKEN" ] && [ -z "$GATEWAY_URL" ]; then
+                echo "openab: no adapter configured (set DISCORD_BOT_TOKEN, SLACK_BOT_TOKEN, or GATEWAY_URL) -- sleeping"
+                exec sleep infinity
+              fi
+
+              CONFIG_DIR=/home/node/.config/openab
+              CONFIG_FILE=$CONFIG_DIR/config.toml
+              mkdir -p "$CONFIG_DIR"
+
+              if [ ! -f "$CONFIG_FILE" ]; then
+                cp /opt/config.toml.template "$CONFIG_FILE"
+
+                if [ -n "$DISCORD_BOT_TOKEN" ]; then
+                  printf '\n[discord]\nbot_token = "${DISCORD_BOT_TOKEN}"\n' >> "$CONFIG_FILE"
+                  if [ -n "$OPENAB_ALLOW_BOT_MESSAGES" ]; then
+                    printf 'allow_bot_messages = "%s"\n' "$OPENAB_ALLOW_BOT_MESSAGES" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_TRUSTED_BOT_IDS" ]; then
+                    IFS=','; bots=""; for id in $OPENAB_TRUSTED_BOT_IDS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && bots="${bots}\"${id}\","; done; unset IFS
+                    printf 'trusted_bot_ids = [%s]\n' "$(echo "$bots" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_CHANNELS" ]; then
+                    IFS=','; channels=""; for id in $OPENAB_ALLOWED_CHANNELS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && channels="${channels}\"${id}\","; done; unset IFS
+                    printf 'allowed_channels = [%s]\n' "$(echo "$channels" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                  if [ -n "$OPENAB_ALLOWED_USERS" ]; then
+                    IFS=','; users=""; for id in $OPENAB_ALLOWED_USERS; do id=$(echo "$id" | tr -d ' '); [ -n "$id" ] && users="${users}\"${id}\","; done; unset IFS
+                    printf 'allowed_users = [%s]\n' "$(echo "$users" | sed 's/,$//')" >> "$CONFIG_FILE"
+                  fi
+                fi
+
+                if [ -n "$SLACK_BOT_TOKEN" ] && [ -n "$SLACK_APP_TOKEN" ]; then
+                  printf '\n[slack]\nbot_token = "${SLACK_BOT_TOKEN}"\napp_token = "${SLACK_APP_TOKEN}"\n' >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$GATEWAY_URL" ]; then
+                  printf '\n[gateway]\nurl = "%s"\nplatform = "%s"\nallow_all_channels = true\nallow_all_users = true\n' "$GATEWAY_URL" "${GATEWAY_PLATFORM:-telegram}" >> "$CONFIG_FILE"
+                fi
+
+                if [ -n "$OPENAB_MAX_SESSIONS" ]; then
+                  printf '\n[pool]\nmax_sessions = %s\n' "$OPENAB_MAX_SESSIONS" >> "$CONFIG_FILE"
+                fi
+
+                echo "openab: config.toml generated"
+              else
+                echo "openab: using existing config.toml (delete to regenerate)"
+              fi
+
+              run_mimo_auth='mkdir -p /home/node/.config/mimocode /home/node/.local/share/mimocode; printf "{\"disabled_providers\":[\"amazon-bedrock\"],\"model\":\"%s\"}\n" "${MIMOCODE_MODEL:-mimo/mimo-auto}" > /home/node/.config/mimocode/config.json; if [ "${MIMOCODE_AUTO_AUTH:-true}" != "false" ]; then mimo auth login --provider mimo --method "MiMo Auto (free)" >/tmp/mimocode-auth.log 2>&1 || echo "openab: mimocode auto-auth failed; run mimo auth login manually"; fi'
+
+              if [ "$(id -u)" = "0" ]; then
+                chown -R node:node /home/node "$CONFIG_DIR"
+                runuser -u node --preserve-environment -- /bin/sh -c "$run_mimo_auth"
+                exec runuser -u node --preserve-environment -- openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
+              fi
+
+              /bin/sh -c "$run_mimo_auth"
+              exec openab run --config "${OPENAB_CONFIG_URL:-$CONFIG_FILE}"
+          - path: /opt/config.toml.template
+            template: |
+              [agent]
+              command = "mimo"
+              args = ["acp"]
+              working_dir = "/home/node"
+              inherit_env = ["GHPOOL_URL"]
+
+              [reactions]
+              enabled = true
+        env:
+          DISCORD_BOT_TOKEN:
+            default: ${DISCORD_BOT_TOKEN}
+          OPENAB_ALLOWED_CHANNELS:
+            default: ""
+          OPENAB_ALLOWED_USERS:
+            default: ""
+          SLACK_BOT_TOKEN:
+            default: ""
+          SLACK_APP_TOKEN:
+            default: ""
+          OPENAB_ALLOW_BOT_MESSAGES:
+            default: ""
+          OPENAB_TRUSTED_BOT_IDS:
+            default: ""
+          OPENAB_MAX_SESSIONS:
+            default: ""
+          MIMOCODE_AUTO_AUTH:
+            default: ${MIMOCODE_AUTO_AUTH}
+          MIMOCODE_MODEL:
+            default: ${MIMOCODE_MODEL}
+          GATEWAY_URL:
+            default: ""
+          GATEWAY_PLATFORM:
+            default: telegram
+          OPENAB_CONFIG_URL:
+            default: ""
