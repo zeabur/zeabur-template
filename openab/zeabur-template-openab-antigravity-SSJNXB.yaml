@@ -129,7 +129,7 @@ spec:
       template: PREBUILT_V2
       spec:
         source:
-          image: ghcr.io/openabdev/openab-antigravity:beta
+          image: ghcr.io/openabdev/openab:beta-antigravity
           runAsUserID: 1000
           command:
             - /bin/sh

@@ -289,7 +289,7 @@ spec:
       domainKey: PUBLIC_DOMAIN
       spec:
         source:
-          image: ghcr.io/openabdev/openab-gateway:0.5.4
+          image: ghcr.io/openabdev/openab-gateway:0.6.0-rc.9
         ports:
           - id: web
             port: 8080
