@@ -207,6 +207,8 @@ spec:
           image: ghcr.io/openabdev/openab:beta-hermes
           runAsUserID: 1000
           command:
+            - tini
+            - --
             - /bin/sh
             - -c
             - /opt/start-openab.sh
