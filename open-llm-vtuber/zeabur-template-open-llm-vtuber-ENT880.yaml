@@ -110,9 +110,12 @@ spec:
                 mkdir -p /app/conf
                 # First boot: seed conf.yaml from upstream default. Subsequent boots: keep
                 # whatever the user has edited (this dir is a persistent volume).
+                SEEDED_CONF=0
                 if [ ! -f /app/conf/conf.yaml ]; then
                   cp /app/config_templates/conf.default.yaml /app/conf/conf.yaml
+                  SEEDED_CONF=1
                 fi
+                export SEEDED_CONF
                 # Always re-apply env-var-driven keys so changes to LLM/ASR/TTS settings via
                 # Zeabur env vars take effect on restart. Other yaml keys (character, MCP,
                 # provider switches, etc.) are left untouched and may be edited via
@@ -133,25 +136,24 @@ spec:
                 # user touching LLM_BASE_URL / LLM_MODEL.
                 ai_hub_key = os.environ.get('ZEABUR_AI_HUB_API_KEY') or ''
                 manual_key = os.environ.get('LLM_API_KEY') or ''
-                if ai_hub_key:
-                    api_key = ai_hub_key
-                    base_url = os.environ.get('LLM_BASE_URL') or 'https://hnd1.aihub.zeabur.ai/v1'
-                    model = os.environ.get('LLM_MODEL') or 'claude-haiku-4-5'
-                elif manual_key:
-                    api_key = manual_key
-                    base_url = os.environ.get('LLM_BASE_URL') or 'https://hnd1.aihub.zeabur.ai/v1'
-                    model = os.environ.get('LLM_MODEL') or 'claude-haiku-4-5'
-                else:
-                    api_key = ''
-                if api_key:
+                seeded_conf = os.environ.get('SEEDED_CONF') == '1'
+                api_key = ai_hub_key or manual_key
+                base_url = os.environ.get('LLM_BASE_URL') or 'https://hnd1.aihub.zeabur.ai/v1'
+                model = os.environ.get('LLM_MODEL') or 'claude-haiku-4-5'
+                if api_key or seeded_conf:
                     cc['agent_config']['agent_settings']['basic_memory_agent']['llm_provider'] = 'openai_compatible_llm'
                     llm = cc['agent_config']['llm_configs']['openai_compatible_llm']
                     llm['llm_api_key'] = api_key
                     llm['base_url']    = base_url
                     llm['model']       = model
-                if os.environ.get('GROQ_API_KEY'):
+                groq_key = os.environ.get('GROQ_API_KEY') or ''
+                if groq_key:
                     cc['asr_config']['asr_model'] = 'groq_whisper_asr'
-                    cc['asr_config']['groq_whisper_asr']['api_key'] = os.environ['GROQ_API_KEY']
+                    cc['asr_config']['groq_whisper_asr']['api_key'] = groq_key
+                elif seeded_conf:
+                    # Cloud API edition should not download local ASR models on first boot.
+                    cc['asr_config']['asr_model'] = 'groq_whisper_asr'
+                    cc['asr_config']['groq_whisper_asr']['api_key'] = ''
                 if os.environ.get('EDGE_TTS_VOICE'):
                     cc['tts_config']['edge_tts']['voice'] = os.environ['EDGE_TTS_VOICE']
                 if os.environ.get('PERSONA_PROMPT'):
