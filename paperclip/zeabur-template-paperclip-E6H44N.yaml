@@ -2,712 +2,901 @@
 apiVersion: zeabur.com/v1
 kind: Template
 metadata:
-  name: Paperclip
+    name: Paperclip
 spec:
-  description: |
-    An orchestration platform for coordinating multiple AI agents to run autonomous businesses. Manages agent teams, assigns goals, tracks work, and monitors costs from a central dashboard.
-  icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/android-chrome-192x192.png
-  coverImage: https://raw.githubusercontent.com/paperclipai/paperclip/master/doc/assets/header.png
-  tags:
-    - AI
-    - Agent
-  variables:
-    - key: PUBLIC_DOMAIN
-      type: DOMAIN
-      name: Domain
-      description: The domain to access Paperclip dashboard
-  readme: |
-    # Paperclip
+    description: |
+        An orchestration platform for coordinating multiple AI agents to run autonomous businesses. Manages agent teams, assigns goals, tracks work, and monitors costs from a central dashboard.
+    coverImage: https://raw.githubusercontent.com/paperclipai/paperclip/master/doc/assets/header.png
+    icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/android-chrome-192x192.png
+    variables:
+        - key: PUBLIC_DOMAIN
+          type: DOMAIN
+          name: Domain
+          description: The domain to access Paperclip dashboard
+    tags:
+        - AI
+        - Agent
+    readme: |
+        # Paperclip
 
-    > **Beta:** Paperclip is in early development. This template and the software may have unexpected issues.
+        > **Beta:** Paperclip is in early development. This template and the software may have unexpected issues.
 
-    [Paperclip](https://github.com/paperclipai/paperclip) is an orchestration platform for coordinating multiple AI agents (Claude, Codex, Cursor, OpenClaw, etc.) to run autonomous businesses. It provides a Node.js server with a React UI that manages agent teams, assigns goals, tracks work, and monitors costs from a central dashboard.
+        [Paperclip](https://github.com/paperclipai/paperclip) is an orchestration platform for coordinating multiple AI agents (Claude, Codex, Cursor, OpenClaw, etc.) to run autonomous businesses. It provides a Node.js server with a React UI that manages agent teams, assigns goals, tracks work, and monitors costs from a central dashboard.
 
-    ## Getting Started
+        ## Getting Started
 
-    1. Deploy the template and wait for the service to start.
-    2. Open the Zeabur **Terminal** for the Paperclip service.
-    3. Create the first admin account:
-       ```
-       gosu node pnpm paperclipai auth bootstrap-ceo
-       ```
-    4. Copy the invite URL from the output and open it in your browser to register.
-    5. Configure AI agent authentication (see **AI Agent Authentication** below).
-    6. When creating an agent, set **Working directory** to a path under `/paperclip/` (e.g. `/paperclip/workspaces/my-project`).
-    7. Click **Test now** to run the adapter environment check. A successful result shows `hello probe succeeded`.
-    8. After setup, set `PAPERCLIP_AUTH_DISABLE_SIGN_UP` to `true` in Zeabur environment variables to prevent unauthorized signups.
+        1. Deploy the template and wait for the service to start.
+        2. Open the Paperclip domain from the Zeabur **Networking** tab.
+        3. Click **Sign in / Create account**, then sign up with your email and password. The first user to sign up automatically becomes the instance admin.
+        4. After setup, set `PAPERCLIP_AUTH_DISABLE_SIGN_UP` to `true` in Zeabur environment variables to prevent unauthorized signups.
+        5. Configure AI agent authentication (see **AI Agent Authentication** below).
+        6. When creating an agent, set **Working directory** to a path under `/paperclip/` (e.g. `/paperclip/workspaces/my-project`).
+        7. Click **Test now** to run the adapter environment check. A successful result shows `hello probe succeeded`.
 
-    ## AI Agent Authentication
+        > **Alternative:** You can also create the first admin via the Zeabur Terminal: `gosu node pnpm paperclipai auth bootstrap-ceo`
 
-    **Option 1: Environment variables (recommended)**
+        ## AI Agent Authentication
 
-    Set these in Zeabur environment variables:
+        **Option 1: Environment variables (recommended)**
 
-    | Tool | Environment Variable |
-    |------|---------------------|
-    | Claude Code | `ANTHROPIC_API_KEY` |
-    | Codex | `OPENAI_API_KEY` |
+        Set these in Zeabur environment variables:
 
-    **Option 2: Terminal login**
+        | Tool | Environment Variable |
+        |------|---------------------|
+        | Claude Code | `ANTHROPIC_API_KEY` |
+        | Codex | `OPENAI_API_KEY` |
 
-    Open the Zeabur Terminal and run:
+        **Option 2: Terminal login**
 
-    | Tool | Terminal Login |
-    |------|----------------|
-    | Claude Code | `gosu node claude login` |
-    | Codex | `gosu node codex login --device-auth` |
+        Open the Zeabur Terminal and run:
 
-    ### Notes
+        | Tool | Terminal Login |
+        |------|----------------|
+        | Claude Code | `gosu node claude login` |
+        | Codex | `gosu node codex login --device-auth` |
 
-    - **Always use `gosu node` prefix** when running CLI tools in Terminal. The terminal runs as root, but credentials must be stored under the `node` user's home (`/paperclip/`) to persist and be accessible by the server.
-    - **Codex device auth:** Enable "Enable device code authorization for Codex" in [ChatGPT Security Settings](https://chatgpt.com/settings/security) before running the login command.
+        ### Notes
 
-    ## Important Notes
+        - **Always use `gosu node` prefix** when running CLI tools in Terminal. The terminal runs as root, but credentials must be stored under the `node` user's home (`/paperclip/`) to persist and be accessible by the server.
+        - **Codex device auth:** Enable "Enable device code authorization for Codex" in [ChatGPT Security Settings](https://chatgpt.com/settings/security) before running the login command.
 
-    - **Persistent storage:** Only data under `/paperclip/` survives restarts. All other paths are ephemeral.
-    - **Working directory:** Do not use `/app` — it contains the Paperclip source code and will be overwritten on updates. Always use paths under `/paperclip/` which is persistent.
-    - **Sign-up control:** Set `PAPERCLIP_AUTH_DISABLE_SIGN_UP` to `true` after creating your admin account. Temporarily set to `false` when you need to invite new users, then set back to `true`.
+        ## Important Notes
 
-    ## Changelog
+        - **Persistent storage:** Only data under `/paperclip/` survives restarts. All other paths are ephemeral.
+        - **Working directory:** Do not use `/app` — it contains the Paperclip source code and will be overwritten on updates. Always use paths under `/paperclip/` which is persistent.
+        - **Sign-up control:** Set `PAPERCLIP_AUTH_DISABLE_SIGN_UP` to `true` after creating your admin account. Temporarily set to `false` when you need to invite new users, then set back to `true`.
 
-    ### 2026-04-22 — v2026.416.0
+        ## Changelog
 
-    - Updated image to upstream release `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
-    - New: External adapter plugin system with dynamic UI parsers and declarative config schemas
-    - New: Issue hierarchy display with collapse/expand, sub-task counts, and persisted state
-    - New: Feedback voting and thumbs-capture flow for evals
-    - New: Execution workspaces with runtime controls and per-project workspace tab
-    - New: Workspace-aware routine runs
-    - Improved: Inbox mail-client keyboard shortcuts and "Today" divider
-    - Improved: Mobile layouts, dark mode, and adapter override UI
-    - Security: `BETTER_AUTH_SECRET` and `PAPERCLIP_AGENT_JWT_SECRET` are now strictly required at startup (template already sets these)
+        ### 2026-06-05 — v2026.529.0
 
-    ### 2026-04-07 — v2026.403.0
+        - Updated image to upstream release `v2026.529.0` (`ghcr.io/paperclipai/paperclip:sha-911a1e8`)
+        - Simplified startup: init.sh now delegates to the image's native `docker-entrypoint.sh`
+        - New: **Browser-based first-admin claim** — no terminal needed to set up the first admin account
+        - New: Inline document annotations and revision-aware comment threads
+        - New: Company skills CLI and catalog management (install, audit, export, assign)
+        - New: Hide projects and agents from sidebar (user-scoped resource membership)
+        - New: Live Claude model discovery — new Anthropic models appear without a code release
+        - New: Grok Build as a first-class local runtime adapter
+        - New: Modal sandbox provider plugin (alongside E2B, Cloudflare, Daytona)
+        - New: Workspace diff viewer plugin (split/unified panes, staged/unstaged changes)
+        - New: Routine secrets with `agent < project < routine` precedence
+        - New: Local Cloud Upstream sync flow
+        - New: Source-scoped recovery actions for stalled work
+        - New: Blocked Inbox attention view for triaging stalled tasks
+        - New: Local plugin development workflow with `paperclipai plugin init`
+        - New: Document locking for safer agent handoffs
+        - New: i18n foundation (i18next, locale validation, supported locale resources)
+        - Improved: ACPX-Claude adapter works out of the box (bare model IDs, better diagnostics)
+        - Improved: Scoped agent permissions and assignment controls
+        - Improved: Kanban scaling with compact cards, collapsed cold lanes, per-column limits
+        - Improved: Pause/resume agents from sidebar, virtualized chat threads
+        - Improved: Productivity review surfaces stalled work automatically
+        - Improved: Tighter workspace lifecycle guarantees (finalize gates, no-remote-git enforcement)
+        - Improved: Accepted plans can no longer be decomposed more than once
 
-    - Updated image to upstream release `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
-    - Switched from Docker Hub (`zeabur/paperclip`) to upstream GitHub Container Registry (`ghcr.io/paperclipai/paperclip`)
-    - Changed persistent volume path from `/home/node/` to `/paperclip/`
-    - Switched CLI command prefix from `runuser -u node --` to `gosu node`
-    - New: First-class blocker/dependency relations with wake-on-subtasks-done
-    - Improved: Bearer token redaction in server logs
-    - Improved: CEO agent onboarding with relative paths
-    - Improved: Markdown paste auto-formatting in inline editor
-    - Many bug fixes for UI routing, sidebar, worktree, and agent workflows
+        ### 2026-04-22 — v2026.416.0
 
-    ### 2026-03-30 — v2026.325.0
+        - Updated image to upstream release `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
+        - New: External adapter plugin system with dynamic UI parsers and declarative config schemas
+        - New: Issue hierarchy display with collapse/expand, sub-task counts, and persisted state
+        - New: Feedback voting and thumbs-capture flow for evals
+        - New: Execution workspaces with runtime controls and per-project workspace tab
+        - New: Workspace-aware routine runs
+        - Improved: Inbox mail-client keyboard shortcuts and "Today" divider
+        - Improved: Mobile layouts, dark mode, and adapter override UI
+        - Security: `BETTER_AUTH_SECRET` and `PAPERCLIP_AGENT_JWT_SECRET` are now strictly required at startup (template already sets these)
 
-    - Updated image to upstream release `v2026.325.0` (652 commits since v0.3.1)
-    - New: Inbox "Mine" tab with archive flow
-    - New: Hermes adapter support
-    - New: Cost control plane with billing, quota, and budget management
-    - New: Plugin SDK with document CRUD and event bus
-    - New: Worktree support for isolated agent workspaces
-    - New: Company import/export with org chart SVG
-    - Improved: Agent detail tabs reorganized (Prompts, Skills, Instructions)
-    - Improved: Embedded Postgres reliability in Docker
-    - Many bug fixes for adapters (Codex, Pi, OpenCode, Cursor)
+        ### 2026-04-07 — v2026.403.0
 
-    ### 2026-03-16 — Initial Release
+        - Updated image to upstream release `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
+        - Switched from Docker Hub (`zeabur/paperclip`) to upstream GitHub Container Registry (`ghcr.io/paperclipai/paperclip`)
+        - Changed persistent volume path from `/home/node/` to `/paperclip/`
+        - Switched CLI command prefix from `runuser -u node --` to `gosu node`
+        - New: First-class blocker/dependency relations with wake-on-subtasks-done
+        - Improved: Bearer token redaction in server logs
+        - Improved: CEO agent onboarding with relative paths
+        - Improved: Markdown paste auto-formatting in inline editor
+        - Many bug fixes for UI routing, sidebar, worktree, and agent workflows
 
-    - Zeabur template for Paperclip AI agent orchestration platform
-    - Services: PostgreSQL 17 + Paperclip (prebuilt image `zeabur/paperclip`, amd64 + arm64)
-    - Startup script auto-generates `config.json` on first boot
-    - Server runs as `node` user via `runuser` (required for Claude Code CLI)
-    - Single persistent volume at `/home/node/`
-    - Pre-installed CLI tools: `claude-code`, `codex`, `opencode-ai`
+        ### 2026-03-30 — v2026.325.0
 
-    ## Links
+        - Updated image to upstream release `v2026.325.0` (652 commits since v0.3.1)
+        - New: Inbox "Mine" tab with archive flow
+        - New: Hermes adapter support
+        - New: Cost control plane with billing, quota, and budget management
+        - New: Plugin SDK with document CRUD and event bus
+        - New: Worktree support for isolated agent workspaces
+        - New: Company import/export with org chart SVG
+        - Improved: Agent detail tabs reorganized (Prompts, Skills, Instructions)
+        - Improved: Embedded Postgres reliability in Docker
+        - Many bug fixes for adapters (Codex, Pi, OpenCode, Cursor)
 
-    - [Documentation](https://docs.paperclip.ing/start/what-is-paperclip)
-    - [GitHub](https://github.com/paperclipai/paperclip)
-  services:
-    - name: postgresql
-      icon: https://cdn.zeabur.com/marketplace/postgresql.svg
-      template: PREBUILT_V2
-      spec:
-        source:
-          image: postgres:17-alpine
-        ports:
-          - id: database
-            port: 5432
-            type: TCP
-        volumes:
-          - id: data
-            dir: /var/lib/postgresql/data
-        env:
-          POSTGRES_USER:
-            default: paperclip
-          POSTGRES_PASSWORD:
-            default: ${PASSWORD}
-            expose: true
-          POSTGRES_DB:
-            default: paperclip
-          POSTGRES_HOST:
-            default: ${CONTAINER_HOSTNAME}
-            expose: true
+        ### 2026-03-16 — Initial Release
 
-          POSTGRES_PORT:
-            default: ${DATABASE_PORT}
-            expose: true
+        - Zeabur template for Paperclip AI agent orchestration platform
+        - Services: PostgreSQL 17 + Paperclip (prebuilt image `zeabur/paperclip`, amd64 + arm64)
+        - Startup script auto-generates `config.json` on first boot
+        - Server runs as `node` user via `runuser` (required for Claude Code CLI)
+        - Single persistent volume at `/home/node/`
+        - Pre-installed CLI tools: `claude-code`, `codex`, `opencode-ai`
 
-          POSTGRES_CONNECTION_STRING:
-            default: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-            expose: true
+        ## Links
 
-    - name: paperclip
-      icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/android-chrome-192x192.png
-      template: PREBUILT_V2
-      domainKey: PUBLIC_DOMAIN
-      dependencies:
-        - postgresql
-      spec:
-        source:
-          image: ghcr.io/paperclipai/paperclip:sha-b8725c5
-          command:
-            - /bin/sh
-            - -c
-            - /opt/paperclip/init.sh
-        ports:
-          - id: web
-            port: 3100
-            type: HTTP
-        volumes:
-          - id: paperclip
-            dir: /paperclip
-        configs:
-          - path: /opt/paperclip/init.sh
-            permission: 493
-            template: |
-              #!/bin/sh
-              set -e
-              CONFIG="/paperclip/instances/default/config.json"
-              if [ ! -f "$CONFIG" ]; then
-                mkdir -p "$(dirname "$CONFIG")"
-                cat > "$CONFIG" <<'CONF'
-              { "$meta": { "version": 1, "updatedAt": "2026-01-01T00:00:00.000Z", "source": "onboard" }, "database": { "mode": "postgres" }, "logging": { "mode": "file" }, "server": { "deploymentMode": "authenticated", "exposure": "private", "host": "0.0.0.0", "port": 3100, "serveUi": true } }
-              CONF
-                echo "Generated $CONFIG"
-              fi
-              chown -R node:node /paperclip
-              exec gosu node node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
-        env:
-          DATABASE_URL:
-            default: ${POSTGRES_CONNECTION_STRING}
-          PAPERCLIP_PUBLIC_URL:
-            default: ${ZEABUR_WEB_URL}
-          BETTER_AUTH_BASE_URL:
-            default: ${ZEABUR_WEB_URL}
-          BETTER_AUTH_SECRET:
-            default: ${PASSWORD}
-          PAPERCLIP_AGENT_JWT_SECRET:
-            default: ${PASSWORD}
-          PAPERCLIP_MIGRATION_AUTO_APPLY:
-            default: "true"
-          PAPERCLIP_AUTH_DISABLE_SIGN_UP:
-            default: "false"
+        - [Documentation](https://docs.paperclip.ing/start/what-is-paperclip)
+        - [GitHub](https://github.com/paperclipai/paperclip)
+    services:
+        - name: postgresql
+          icon: https://cdn.zeabur.com/marketplace/postgresql.svg
+          template: PREBUILT_V2
+          spec:
+            id: postgresql
+            source:
+                image: postgres:17-alpine
+            ports:
+                - id: database
+                  port: 5432
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/postgresql/data
+            env:
+                POSTGRES_CONNECTION_STRING:
+                    default: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+                    expose: true
+                POSTGRES_DB:
+                    default: paperclip
+                POSTGRES_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                POSTGRES_PASSWORD:
+                    default: ${PASSWORD}
+                    expose: true
+                POSTGRES_PORT:
+                    default: ${DATABASE_PORT}
+                    expose: true
+                POSTGRES_USER:
+                    default: paperclip
+        - name: paperclip
+          icon: https://raw.githubusercontent.com/paperclipai/paperclip/master/ui/public/android-chrome-192x192.png
+          dependencies:
+            - postgresql
+          template: PREBUILT_V2
+          spec:
+            id: paperclip
+            source:
+                image: ghcr.io/paperclipai/paperclip:sha-911a1e8
+                command:
+                    - /bin/sh
+                    - -c
+                    - /opt/paperclip/init.sh
+            ports:
+                - id: web
+                  port: 3100
+                  type: HTTP
+            volumes:
+                - id: paperclip
+                  dir: /paperclip
+            env:
+                BETTER_AUTH_BASE_URL:
+                    default: ${ZEABUR_WEB_URL}
+                BETTER_AUTH_SECRET:
+                    default: ${PASSWORD}
+                DATABASE_URL:
+                    default: ${POSTGRES_CONNECTION_STRING}
+                PAPERCLIP_AGENT_JWT_SECRET:
+                    default: ${PASSWORD}
+                PAPERCLIP_AUTH_DISABLE_SIGN_UP:
+                    default: "false"
+                PAPERCLIP_MIGRATION_AUTO_APPLY:
+                    default: "true"
+                PAPERCLIP_PUBLIC_URL:
+                    default: ${ZEABUR_WEB_URL}
+            configs:
+                - path: /opt/paperclip/init.sh
+                  template: |
+                    #!/bin/sh
+                    set -e
+                    CONFIG="/paperclip/instances/default/config.json"
+                    if [ ! -f "$CONFIG" ]; then
+                      mkdir -p "$(dirname "$CONFIG")"
+                      cat > "$CONFIG" <<'CONF'
+                    { "$meta": { "version": 1, "updatedAt": "2026-01-01T00:00:00.000Z", "source": "onboard" }, "database": { "mode": "postgres" }, "logging": { "mode": "file" }, "server": { "deploymentMode": "authenticated", "exposure": "private", "host": "0.0.0.0", "port": 3100, "serveUi": true } }
+                    CONF
+                      echo "Generated $CONFIG"
+                    fi
+                    exec docker-entrypoint.sh node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
+                  permission: 493
+                  envsubst: null
+          domainKey: PUBLIC_DOMAIN
 localization:
-  zh-TW:
-    description: |
-      AI 多代理協調平台，用於管理多個 AI 代理自主運營業務。提供團隊管理、目標分配、工作追蹤和成本監控的集中儀表板。
-    variables:
-      - key: PUBLIC_DOMAIN
-        name: 網域
-        description: 存取 Paperclip 儀表板的網域
-    readme: |
-      # Paperclip
-
-      > **測試版：** Paperclip 仍處於早期開發階段。此模板和軟體可能會有無法預期的問題。
-
-      [Paperclip](https://github.com/paperclipai/paperclip) 是一個 AI 多代理協調平台，用於協調多個 AI 代理（Claude、Codex、Cursor、OpenClaw 等）自主運營業務。提供 Node.js 伺服器搭配 React UI，管理代理團隊、分配目標、追蹤工作並監控成本。
-
-      ## 開始使用
-
-      1. 部署模板並等待服務啟動。
-      2. 開啟 Zeabur **指令**（Paperclip 服務）。
-      3. 建立第一個管理員帳號：
-         ```
-         pnpm paperclipai auth bootstrap-ceo
-         ```
-      4. 複製輸出的邀請連結，在瀏覽器中開啟並註冊。
-      5. 登入您偏好的 AI 工具 — Codex 或 Claude Code（請參閱下方 **AI 代理認證**）。
-      6. 建立代理時，將 **Working directory** 設定為 `/paperclip/` 下的路徑（例如 `/paperclip/workspaces/my-project`）。
-      7. 點擊 **Test now** 執行適配器環境檢查。成功結果會顯示 `hello probe succeeded`。
-      8. 設定完成後，將 Zeabur 環境變數 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 設為 `true` 以禁止未授權的註冊。
-
-      ## AI 代理認證
-
-      目前僅支援**指令登入**。環境變數認證（OPENAI_API_KEY / ANTHROPIC_API_KEY）尚無法使用。
-
-      | 工具 | 指令登入 |
-      |------|--------|
-      | Codex | `gosu node codex login --device-auth` |
-      | Claude Code | `gosu node claude login` |
-
-      ### 注意事項
-
-      - **請務必使用 `gosu node` 前綴**執行指令中的 CLI 工具。以 root 執行會導致權限問題。
-      - **Codex 裝置驗證：** 執行登入指令前，請先至 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 開啟「Enable device code authorization for Codex」。
-      - **`OPENAI_API_KEY is not set` 警告：** 如果您已透過 `codex login` 驗證，可以安全忽略此警告。
-
-      ## 重要事項
-
-      - **持久化儲存：** 僅 `/paperclip/` 下的資料在重啟後保留。其他路徑皆為暫存。
-      - **工作目錄：** 請勿使用 `/app`——該路徑包含 Paperclip 原始碼，更新時會被覆蓋。請使用 `/paperclip/` 下的路徑（持久化）。
-      - **註冊控管：** 建立管理員帳號後，將 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 設為 `true`。需要邀請新使用者時暫時設為 `false`，完成後再改回 `true`。
-
-      ## 變更紀錄
-
-      ### 2026-04-22 — v2026.416.0
-
-      - 更新映像至上游版本 `v2026.416.0`（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
-      - 新增：外部適配器插件系統，支援動態 UI 解析器與宣告式設定 schema
-      - 新增：議題層級顯示（可摺疊、子任務計數、狀態持久化）
-      - 新增：回饋投票與評估用的拇指投票流程
-      - 新增：執行工作區，支援執行階段控制與專案工作區分頁
-      - 新增：工作區感知的 Routine 執行
-      - 改進：收件匣郵件客戶端式鍵盤快捷鍵與「今天」分隔線
-      - 改進：行動版版型、深色模式、適配器覆寫 UI
-      - 安全性：`BETTER_AUTH_SECRET` 與 `PAPERCLIP_AGENT_JWT_SECRET` 啟動時現為必要（本模板已預設）
-
-      ### 2026-04-07 — v2026.403.0
-
-      - 更新映像至上游版本 `v2026.403.0`（`ghcr.io/paperclipai/paperclip:sha-a072377`）
-      - 從 Docker Hub（`zeabur/paperclip`）切換至上游 GitHub Container Registry（`ghcr.io/paperclipai/paperclip`）
-      - 持久化磁碟路徑由 `/home/node/` 改為 `/paperclip/`
-      - CLI 指令前綴由 `runuser -u node --` 改為 `gosu node`
-      - 新增：一級阻礙/依賴關係支援，子任務完成時自動喚醒
-      - 改進：伺服器 log 中的 Bearer token 遮罩
-      - 改進：CEO 代理 onboarding 改用相對路徑
-      - 改進：行內編輯器貼上 markdown 自動格式化
-      - 多項 UI 路由、側邊欄、worktree 及代理流程的錯誤修正
-
-      ### 2026-03-30 — v2026.325.0
-
-      - 更新映像至上游版本 `v2026.325.0`（自 v0.3.1 以來 652 個 commit）
-      - 新增：收件匣「我的」分頁與封存流程
-      - 新增：Hermes 適配器支援
-      - 新增：成本控制面板（帳務、配額、預算管理）
-      - 新增：Plugin SDK，支援文件 CRUD 與事件匯流排
-      - 新增：Worktree 支援，提供隔離的代理工作區
-      - 新增：公司匯入/匯出，含組織圖 SVG
-      - 改進：代理詳情分頁重整（提示詞、技能、指令）
-      - 改進：Docker 中嵌入式 Postgres 穩定性
-      - 多項適配器修正（Codex、Pi、OpenCode、Cursor）
-
-      ### 2026-03-16 — 首次發佈
-
-      - Paperclip AI 代理協調平台的 Zeabur 模板
-      - 服務：PostgreSQL 17 + Paperclip（預建映像 `zeabur/paperclip`，amd64 + arm64）
-      - 啟動腳本在首次啟動時自動產生 `config.json`
-      - 伺服器透過 `runuser` 以 `node` 使用者身份執行（Claude Code CLI 所需）
-      - 單一持久化磁碟掛載於 `/home/node/`
-      - 預裝 CLI 工具：`claude-code`、`codex`、`opencode-ai`
-
-      ## 連結
-
-      - [官方文件](https://docs.paperclip.ing/start/what-is-paperclip)
-      - [GitHub](https://github.com/paperclipai/paperclip)
-  zh-CN:
-    description: |
-      AI 多代理协调平台，用于管理多个 AI 代理自主运营业务。提供团队管理、目标分配、工作追踪和成本监控的集中仪表板。
-    variables:
-      - key: PUBLIC_DOMAIN
-        name: 域名
-        description: 访问 Paperclip 仪表板的域名
-    readme: |
-      # Paperclip
-
-      > **测试版：** Paperclip 仍处于早期开发阶段。此模板和软件可能会有无法预期的问题。
-
-      [Paperclip](https://github.com/paperclipai/paperclip) 是一个 AI 多代理协调平台，用于协调多个 AI 代理（Claude、Codex、Cursor、OpenClaw 等）自主运营业务。提供 Node.js 服务器搭配 React UI，管理代理团队、分配目标、追踪工作并监控成本。
-
-      ## 开始使用
-
-      1. 部署模板并等待服务启动。
-      2. 打开 Zeabur **命令**（Paperclip 服务）。
-      3. 创建第一个管理员账号：
-         ```
-         pnpm paperclipai auth bootstrap-ceo
-         ```
-      4. 复制输出的邀请链接，在浏览器中打开并注册。
-      5. 登录您偏好的 AI 工具 — Codex 或 Claude Code（请参阅下方 **AI 代理认证**）。
-      6. 建立代理时，将 **Working directory** 设置为 `/paperclip/` 下的路径（例如 `/paperclip/workspaces/my-project`）。
-      7. 点击 **Test now** 执行适配器环境检查。成功结果会显示 `hello probe succeeded`。
-      8. 设置完成后，将 Zeabur 环境变量 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 设为 `true` 以禁止未授权的注册。
-
-      ## AI 代理认证
-
-      目前仅支持**命令登录**。环境变量认证（OPENAI_API_KEY / ANTHROPIC_API_KEY）尚无法使用。
-
-      | 工具 | 命令登录 |
-      |------|--------|
-      | Codex | `gosu node codex login --device-auth` |
-      | Claude Code | `gosu node claude login` |
-
-      ### 注意事项
-
-      - **请务必使用 `gosu node` 前缀**执行命令中的 CLI 工具。以 root 执行会导致权限问题。
-      - **Codex 设备验证：** 执行登录命令前，请先在 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 中启用「Enable device code authorization for Codex」。
-      - **`OPENAI_API_KEY is not set` 警告：** 如果您已通过 `codex login` 验证，可以安全忽略此警告。
-
-      ## 重要事项
-
-      - **持久化存储：** 仅 `/paperclip/` 下的数据在重启后保留。其他路径均为临时存储。
-      - **工作目录：** 请勿使用 `/app`——该路径包含 Paperclip 源代码，更新时会被覆盖。请使用 `/paperclip/` 下的路径（持久化）。
-      - **注册管控：** 创建管理员账号后，将 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 设为 `true`。需要邀请新用户时暂时设为 `false`，完成后再改回 `true`。
-
-      ## 变更记录
-
-      ### 2026-04-22 — v2026.416.0
-
-      - 更新镜像至上游版本 `v2026.416.0`（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
-      - 新增：外部适配器插件系统，支持动态 UI 解析器与声明式配置 schema
-      - 新增：议题层级显示（可折叠、子任务计数、状态持久化）
-      - 新增：反馈投票与评估用的拇指投票流程
-      - 新增：执行工作区，支持运行时控制与项目工作区标签页
-      - 新增：工作区感知的 Routine 运行
-      - 改进：收件箱邮件客户端式键盘快捷键与「今天」分隔线
-      - 改进：移动端布局、深色模式、适配器覆盖 UI
-      - 安全性：`BETTER_AUTH_SECRET` 与 `PAPERCLIP_AGENT_JWT_SECRET` 启动时现为必需（本模板已预设）
-
-      ### 2026-04-07 — v2026.403.0
-
-      - 更新镜像至上游版本 `v2026.403.0`（`ghcr.io/paperclipai/paperclip:sha-a072377`）
-      - 从 Docker Hub（`zeabur/paperclip`）切换至上游 GitHub Container Registry（`ghcr.io/paperclipai/paperclip`）
-      - 持久化卷路径由 `/home/node/` 改为 `/paperclip/`
-      - CLI 命令前缀由 `runuser -u node --` 改为 `gosu node`
-      - 新增：一级阻碍/依赖关系支持，子任务完成时自动唤醒
-      - 改进：服务器 log 中的 Bearer token 遮罩
-      - 改进：CEO 代理 onboarding 改用相对路径
-      - 改进：行内编辑器粘贴 markdown 自动格式化
-      - 多项 UI 路由、侧边栏、worktree 及代理流程的错误修正
-
-      ### 2026-03-30 — v2026.325.0
-
-      - 更新镜像至上游版本 `v2026.325.0`（自 v0.3.1 以来 652 个 commit）
-      - 新增：收件箱「我的」标签页与归档流程
-      - 新增：Hermes 适配器支持
-      - 新增：成本控制面板（账务、配额、预算管理）
-      - 新增：Plugin SDK，支持文档 CRUD 与事件总线
-      - 新增：Worktree 支持，提供隔离的代理工作区
-      - 新增：公司导入/导出，含组织图 SVG
-      - 改进：代理详情标签页重整（提示词、技能、指令）
-      - 改进：Docker 中嵌入式 Postgres 稳定性
-      - 多项适配器修正（Codex、Pi、OpenCode、Cursor）
-
-      ### 2026-03-16 — 首次发布
-
-      - Paperclip AI 代理协调平台的 Zeabur 模板
-      - 服务：PostgreSQL 17 + Paperclip（预构建镜像 `zeabur/paperclip`，amd64 + arm64）
-      - 启动脚本在首次启动时自动生成 `config.json`
-      - 服务器通过 `runuser` 以 `node` 用户身份运行（Claude Code CLI 所需）
-      - 单一持久化卷挂载于 `/home/node/`
-      - 预装 CLI 工具：`claude-code`、`codex`、`opencode-ai`
-
-      ## 链接
-
-      - [官方文档](https://docs.paperclip.ing/start/what-is-paperclip)
-      - [GitHub](https://github.com/paperclipai/paperclip)
-  ja-JP:
-    description: |
-      複数のAIエージェントを協調して自律的なビジネスを運営するためのオーケストレーションプラットフォーム。エージェントチームの管理、目標の割り当て、作業の追跡、コスト監視を一元的なダッシュボードから行えます。
-    variables:
-      - key: PUBLIC_DOMAIN
-        name: ドメイン
-        description: Paperclipダッシュボードにアクセスするためのドメイン
-    readme: |
-      # Paperclip
-
-      > **ベータ版：** Paperclip は初期開発段階です。このテンプレートとソフトウェアには予期しない問題が発生する可能性があります。
-
-      [Paperclip](https://github.com/paperclipai/paperclip) は、複数のAIエージェント（Claude、Codex、Cursor、OpenClawなど）を協調して自律的なビジネスを運営するためのオーケストレーションプラットフォームです。Node.jsサーバーとReact UIを提供し、エージェントチームの管理、目標の割り当て、作業の追跡、コストの監視を行います。
-
-      ## はじめに
-
-      1. テンプレートをデプロイし、サービスの起動を待ちます。
-      2. Zeabur **ターミナル**（Paperclipサービス）を開きます。
-      3. 最初の管理者アカウントを作成します：
-         ```
-         pnpm paperclipai auth bootstrap-ceo
-         ```
-      4. 出力された招待URLをコピーし、ブラウザで開いて登録します。
-      5. お好みのAIツール（Codex または Claude Code）にログインします（下記の **AIエージェント認証** を参照）。
-      6. エージェント作成時、**Working directory** を `/paperclip/` 配下のパスに設定します（例：`/paperclip/workspaces/my-project`）。
-      7. **Test now** をクリックしてアダプター環境チェックを実行します。成功すると `hello probe succeeded` と表示されます。
-      8. セットアップ完了後、Zeabur環境変数の `PAPERCLIP_AUTH_DISABLE_SIGN_UP` を `true` に設定し、不正な登録を防止します。
-
-      ## AIエージェント認証
-
-      現在**ターミナルログイン**のみサポートされています。環境変数認証（OPENAI_API_KEY / ANTHROPIC_API_KEY）はまだ動作しません。
-
-      | ツール | ターミナルログイン |
-      |--------|----------------|
-      | Codex | `gosu node codex login --device-auth` |
-      | Claude Code | `gosu node claude login` |
-
-      ### 注意事項
-
-      - **ターミナルで CLIツールを実行する際は必ず `gosu node` プレフィックスを使用してください。** rootで実行すると権限の問題が発生します。
-      - **Codexデバイス認証：** ログインコマンドを実行する前に、[ChatGPT Security Settings](https://chatgpt.com/settings/security) で「Enable device code authorization for Codex」を有効にしてください。
-      - **`OPENAI_API_KEY is not set` 警告：** `codex login` で認証済みの場合、この警告は無視して問題ありません。
-
-      ## 重要事項
-
-      - **永続ストレージ：** `/paperclip/` 配下のデータのみ再起動後も保持されます。その他のパスは一時的です。
-      - **作業ディレクトリ：** `/app` は使用しないでください。Paperclipのソースコードが含まれており、更新時に上書きされます。必ず `/paperclip/` 配下のパス（永続化）を使用してください。
-      - **登録制御：** 管理者アカウント作成後、`PAPERCLIP_AUTH_DISABLE_SIGN_UP` を `true` に設定してください。新しいユーザーを招待する際は一時的に `false` に変更し、完了後 `true` に戻してください。
-
-      ## 変更履歴
-
-      ### 2026-04-22 — v2026.416.0
-
-      - イメージをアップストリームリリース `v2026.416.0` に更新（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
-      - 新機能：動的UIパーサーと宣言的設定スキーマを備えた外部アダプタープラグインシステム
-      - 新機能：Issue階層表示（折りたたみ/展開、サブタスク数、状態の永続化）
-      - 新機能：評価用のフィードバック投票・サムズキャプチャフロー
-      - 新機能：実行ワークスペース（ランタイム制御、プロジェクト単位のワークスペースタブ）
-      - 新機能：ワークスペース対応のRoutine実行
-      - 改善：受信トレイのメールクライアント風キーボードショートカット、「今日」区切り線
-      - 改善：モバイルレイアウト、ダークモード、アダプターオーバーライドUI
-      - セキュリティ：`BETTER_AUTH_SECRET` と `PAPERCLIP_AGENT_JWT_SECRET` が起動時に必須となりました（本テンプレートは既に設定済み）
-
-      ### 2026-04-07 — v2026.403.0
-
-      - イメージをアップストリームリリース `v2026.403.0` に更新（`ghcr.io/paperclipai/paperclip:sha-a072377`）
-      - Docker Hub（`zeabur/paperclip`）から上流のGitHub Container Registry（`ghcr.io/paperclipai/paperclip`）に切り替え
-      - 永続ボリュームのパスを `/home/node/` から `/paperclip/` に変更
-      - CLIコマンドのプレフィックスを `runuser -u node --` から `gosu node` に変更
-      - 新機能：ファーストクラスのブロッカー/依存関係、サブタスク完了時の自動起動付き
-      - 改善：サーバーログ内のBearerトークンの秘匿化
-      - 改善：CEOエージェントのオンボーディングを相対パス化
-      - 改善：インラインエディタでのmarkdown貼り付けの自動フォーマット
-      - UIルーティング、サイドバー、worktree、エージェントフローに関する複数のバグ修正
-
-      ### 2026-03-30 — v2026.325.0
-
-      - イメージをアップストリームリリース `v2026.325.0` に更新（v0.3.1以降652コミット）
-      - 新機能：受信トレイ「マイ」タブとアーカイブフロー
-      - 新機能：Hermesアダプターサポート
-      - 新機能：コスト管理パネル（請求、クォータ、予算管理）
-      - 新機能：Plugin SDK（ドキュメントCRUDとイベントバス対応）
-      - 新機能：Worktreeサポート（エージェント用の隔離ワークスペース）
-      - 新機能：会社インポート/エクスポート（組織図SVG付き）
-      - 改善：エージェント詳細タブの再構成（プロンプト、スキル、指示）
-      - 改善：Docker内蔵PostgreSQLの安定性向上
-      - 複数のアダプター修正（Codex、Pi、OpenCode、Cursor）
-
-      ### 2026-03-16 — 初回リリース
-
-      - Paperclip AIエージェントオーケストレーションプラットフォームのZeaburテンプレート
-      - サービス：PostgreSQL 17 + Paperclip（ビルド済みイメージ `zeabur/paperclip`、amd64 + arm64）
-      - 起動スクリプトが初回起動時に `config.json` を自動生成
-      - サーバーは `runuser` を使用して `node` ユーザーとして実行（Claude Code CLIに必要）
-      - `/home/node/` に単一の永続ボリューム
-      - プリインストール済みCLIツール：`claude-code`、`codex`、`opencode-ai`
-
-      ## リンク
-
-      - [公式ドキュメント](https://docs.paperclip.ing/start/what-is-paperclip)
-      - [GitHub](https://github.com/paperclipai/paperclip)
-  es-ES:
-    description: |
-      Plataforma de orquestación para coordinar múltiples agentes de IA para operar negocios autónomos. Gestiona equipos de agentes, asigna objetivos, rastrea trabajo y monitorea costos desde un panel centralizado.
-    variables:
-      - key: PUBLIC_DOMAIN
-        name: Dominio
-        description: El dominio para acceder al panel de Paperclip
-    readme: |
-      # Paperclip
-
-      > **Beta:** Paperclip está en desarrollo temprano. Esta plantilla y el software pueden presentar problemas inesperados.
-
-      [Paperclip](https://github.com/paperclipai/paperclip) es una plataforma de orquestación para coordinar múltiples agentes de IA (Claude, Codex, Cursor, OpenClaw, etc.) para operar negocios autónomos. Proporciona un servidor Node.js con una interfaz React para gestionar equipos de agentes, asignar objetivos, rastrear trabajo y monitorear costos.
-
-      ## Primeros pasos
-
-      1. Despliegue la plantilla y espere a que el servicio se inicie.
-      2. Abra el **Terminal** de Zeabur (servicio Paperclip).
-      3. Cree la primera cuenta de administrador:
-         ```
-         pnpm paperclipai auth bootstrap-ceo
-         ```
-      4. Copie la URL de invitación de la salida y ábrala en su navegador para registrarse.
-      5. Inicie sesión en su herramienta de IA preferida — Codex o Claude Code (consulte **Autenticación de agentes IA** más abajo).
-      6. Al crear un agente, establezca **Working directory** en una ruta bajo `/paperclip/` (ej. `/paperclip/workspaces/my-project`).
-      7. Haga clic en **Test now** para ejecutar la verificación del adaptador. Un resultado exitoso muestra `hello probe succeeded`.
-      8. Después de la configuración, establezca `PAPERCLIP_AUTH_DISABLE_SIGN_UP` en `true` en las variables de entorno de Zeabur para evitar registros no autorizados.
-
-      ## Autenticación de agentes IA
-
-      Actualmente solo se admite **login en Terminal**. La autenticación por variables de entorno (OPENAI_API_KEY / ANTHROPIC_API_KEY) aún no funciona.
-
-      | Herramienta | Login en Terminal |
-      |-------------|------------------|
-      | Codex | `gosu node codex login --device-auth` |
-      | Claude Code | `gosu node claude login` |
-
-      ### Notas
-
-      - **Use siempre el prefijo `gosu node`** al ejecutar herramientas CLI en el Terminal. Ejecutar como root causará problemas de permisos.
-      - **Autenticación de dispositivo Codex:** Habilite "Enable device code authorization for Codex" en [ChatGPT Security Settings](https://chatgpt.com/settings/security) antes de ejecutar el comando de inicio de sesión.
-      - **Advertencia `OPENAI_API_KEY is not set`:** Esta advertencia puede ignorarse de forma segura si se autenticó mediante `codex login`.
-
-      ## Notas importantes
-
-      - **Almacenamiento persistente:** Solo los datos bajo `/paperclip/` sobreviven a los reinicios. Todas las demás rutas son efímeras.
-      - **Directorio de trabajo:** No use `/app` — contiene el código fuente de Paperclip y se sobrescribirá en actualizaciones. Use siempre rutas bajo `/paperclip/` (persistente).
-      - **Control de registro:** Establezca `PAPERCLIP_AUTH_DISABLE_SIGN_UP` en `true` después de crear su cuenta de administrador. Cambie temporalmente a `false` cuando necesite invitar nuevos usuarios, luego vuelva a `true`.
-
-      ## Registro de cambios
-
-      ### 2026-04-22 — v2026.416.0
-
-      - Imagen actualizada a la versión upstream `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
-      - Nuevo: Sistema de plugins de adaptadores externos con parsers UI dinámicos y esquemas de configuración declarativos
-      - Nuevo: Visualización de jerarquía de issues (contraer/expandir, conteo de subtareas, estado persistido)
-      - Nuevo: Flujo de votación y captura con pulgar para evaluaciones
-      - Nuevo: Espacios de trabajo de ejecución con controles de runtime y pestaña por proyecto
-      - Nuevo: Ejecuciones de Routine conscientes del workspace
-      - Mejorado: Atajos de teclado estilo cliente de correo en la bandeja de entrada y divisor "Hoy"
-      - Mejorado: Diseños móviles, modo oscuro e interfaz de override de adaptadores
-      - Seguridad: `BETTER_AUTH_SECRET` y `PAPERCLIP_AGENT_JWT_SECRET` son ahora estrictamente requeridos al inicio (la plantilla ya los establece)
-
-      ### 2026-04-07 — v2026.403.0
-
-      - Imagen actualizada a la versión upstream `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
-      - Migración desde Docker Hub (`zeabur/paperclip`) al GitHub Container Registry upstream (`ghcr.io/paperclipai/paperclip`)
-      - Ruta del volumen persistente cambiada de `/home/node/` a `/paperclip/`
-      - Prefijo de comandos CLI cambiado de `runuser -u node --` a `gosu node`
-      - Nuevo: Relaciones de primera clase de bloqueadores/dependencias con reactivación al completar subtareas
-      - Mejorado: Ocultación de tokens Bearer en los logs del servidor
-      - Mejorado: Onboarding del agente CEO con rutas relativas
-      - Mejorado: Formato automático al pegar markdown en el editor en línea
-      - Múltiples correcciones en enrutamiento UI, barra lateral, worktree y flujos de agentes
-
-      ### 2026-03-30 — v2026.325.0
-
-      - Imagen actualizada a la versión upstream `v2026.325.0` (652 commits desde v0.3.1)
-      - Nuevo: Pestaña "Mío" en la bandeja de entrada con flujo de archivo
-      - Nuevo: Soporte para adaptador Hermes
-      - Nuevo: Panel de control de costos (facturación, cuotas, gestión de presupuesto)
-      - Nuevo: Plugin SDK con CRUD de documentos y bus de eventos
-      - Nuevo: Soporte Worktree para espacios de trabajo aislados de agentes
-      - Nuevo: Importación/exportación de empresas con organigrama SVG
-      - Mejorado: Pestañas de detalle de agente reorganizadas (Prompts, Skills, Instructions)
-      - Mejorado: Estabilidad de Postgres embebido en Docker
-      - Múltiples correcciones de adaptadores (Codex, Pi, OpenCode, Cursor)
-
-      ### 2026-03-16 — Lanzamiento inicial
-
-      - Plantilla de Zeabur para la plataforma de orquestación de agentes IA Paperclip
-      - Servicios: PostgreSQL 17 + Paperclip (imagen preconstruida `zeabur/paperclip`, amd64 + arm64)
-      - El script de inicio genera automáticamente `config.json` en el primer arranque
-      - El servidor se ejecuta como usuario `node` mediante `runuser` (requerido para Claude Code CLI)
-      - Un único volumen persistente en `/home/node/`
-      - Herramientas CLI preinstaladas: `claude-code`, `codex`, `opencode-ai`
-
-      ## Enlaces
-
-      - [Documentación](https://docs.paperclip.ing/start/what-is-paperclip)
-      - [GitHub](https://github.com/paperclipai/paperclip)
-  id-ID:
-    description: |
-      Platform orkestrasi untuk mengoordinasikan beberapa agen AI untuk menjalankan bisnis otonom. Mengelola tim agen, menetapkan tujuan, melacak pekerjaan, dan memantau biaya dari dasbor terpusat.
-    variables:
-      - key: PUBLIC_DOMAIN
-        name: Domain
-        description: Domain untuk mengakses dasbor Paperclip
-    readme: |
-      # Paperclip
-
-      > **Beta:** Paperclip masih dalam tahap pengembangan awal. Template ini dan perangkat lunaknya mungkin mengalami masalah yang tidak terduga.
-
-      [Paperclip](https://github.com/paperclipai/paperclip) adalah platform orkestrasi untuk mengoordinasikan beberapa agen AI (Claude, Codex, Cursor, OpenClaw, dll.) untuk menjalankan bisnis otonom. Menyediakan server Node.js dengan UI React untuk mengelola tim agen, menetapkan tujuan, melacak pekerjaan, dan memantau biaya.
-
-      ## Memulai
-
-      1. Deploy template dan tunggu layanan dimulai.
-      2. Buka **Terminal** Zeabur untuk layanan Paperclip.
-      3. Buat akun admin pertama:
-         ```
-         pnpm paperclipai auth bootstrap-ceo
-         ```
-      4. Salin URL undangan dari output dan buka di browser untuk mendaftar.
-      5. Login ke alat AI pilihan Anda — Codex atau Claude Code (lihat **Autentikasi Agen AI** di bawah).
-      6. Saat membuat agen, atur **Working directory** ke path di bawah `/paperclip/` (contoh: `/paperclip/workspaces/my-project`).
-      7. Klik **Test now** untuk menjalankan pemeriksaan adapter. Hasil sukses menampilkan `hello probe succeeded`.
-      8. Setelah selesai, atur `PAPERCLIP_AUTH_DISABLE_SIGN_UP` menjadi `true` di variabel lingkungan Zeabur untuk mencegah pendaftaran tidak sah.
-
-      ## Autentikasi Agen AI
-
-      Saat ini hanya **login Terminal** yang didukung. Autentikasi variabel lingkungan (OPENAI_API_KEY / ANTHROPIC_API_KEY) belum berfungsi.
-
-      | Alat | Login Terminal |
-      |------|----------------|
-      | Codex | `gosu node codex login --device-auth` |
-      | Claude Code | `gosu node claude login` |
-
-      ### Catatan
-
-      - **Selalu gunakan prefiks `gosu node`** saat menjalankan alat CLI di Terminal. Menjalankan sebagai root akan menyebabkan masalah izin.
-      - **Autentikasi perangkat Codex:** Aktifkan "Enable device code authorization for Codex" di [ChatGPT Security Settings](https://chatgpt.com/settings/security) sebelum menjalankan perintah login.
-      - **Peringatan `OPENAI_API_KEY is not set`:** Peringatan ini dapat diabaikan dengan aman jika Anda telah melakukan autentikasi melalui `codex login`.
-
-      ## Catatan Penting
-
-      - **Penyimpanan persisten:** Hanya data di bawah `/paperclip/` yang bertahan setelah restart. Semua path lainnya bersifat sementara.
-      - **Direktori kerja:** Jangan gunakan `/app` — berisi kode sumber Paperclip dan akan ditimpa saat pembaruan. Selalu gunakan path di bawah `/paperclip/` (persisten).
-      - **Kontrol pendaftaran:** Atur `PAPERCLIP_AUTH_DISABLE_SIGN_UP` menjadi `true` setelah membuat akun admin Anda. Ubah sementara ke `false` saat perlu mengundang pengguna baru, lalu kembalikan ke `true`.
-
-      ## Catatan Perubahan
-
-      ### 2026-04-22 — v2026.416.0
-
-      - Image diperbarui ke rilis upstream `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
-      - Baru: Sistem plugin adaptor eksternal dengan parser UI dinamis dan skema konfigurasi deklaratif
-      - Baru: Tampilan hierarki issue (ciutkan/perluas, jumlah sub-tugas, status persisten)
-      - Baru: Alur voting umpan balik dan jempol untuk evaluasi
-      - Baru: Ruang kerja eksekusi dengan kontrol runtime dan tab ruang kerja per proyek
-      - Baru: Eksekusi Routine yang sadar ruang kerja
-      - Ditingkatkan: Pintasan keyboard ala klien email di kotak masuk dan pembatas "Hari Ini"
-      - Ditingkatkan: Tata letak mobile, mode gelap, dan UI override adaptor
-      - Keamanan: `BETTER_AUTH_SECRET` dan `PAPERCLIP_AGENT_JWT_SECRET` kini wajib saat startup (template sudah mengaturnya)
-
-      ### 2026-04-07 — v2026.403.0
-
-      - Image diperbarui ke rilis upstream `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
-      - Beralih dari Docker Hub (`zeabur/paperclip`) ke GitHub Container Registry upstream (`ghcr.io/paperclipai/paperclip`)
-      - Path volume persisten diubah dari `/home/node/` ke `/paperclip/`
-      - Prefiks perintah CLI diubah dari `runuser -u node --` ke `gosu node`
-      - Baru: Relasi blocker/dependency kelas satu dengan pembangunan otomatis saat sub-tugas selesai
-      - Ditingkatkan: Penyembunyian token Bearer di log server
-      - Ditingkatkan: Onboarding agen CEO dengan path relatif
-      - Ditingkatkan: Format otomatis saat tempel markdown di editor inline
-      - Berbagai perbaikan untuk routing UI, sidebar, worktree, dan alur agen
-
-      ### 2026-03-30 — v2026.325.0
-
-      - Image diperbarui ke rilis upstream `v2026.325.0` (652 commit sejak v0.3.1)
-      - Baru: Tab "Milik Saya" di kotak masuk dengan alur arsip
-      - Baru: Dukungan adaptor Hermes
-      - Baru: Panel kontrol biaya (tagihan, kuota, manajemen anggaran)
-      - Baru: Plugin SDK dengan CRUD dokumen dan event bus
-      - Baru: Dukungan Worktree untuk ruang kerja agen terisolasi
-      - Baru: Impor/ekspor perusahaan dengan bagan organisasi SVG
-      - Ditingkatkan: Tab detail agen direorganisasi (Prompts, Skills, Instructions)
-      - Ditingkatkan: Stabilitas Postgres tertanam di Docker
-      - Berbagai perbaikan adaptor (Codex, Pi, OpenCode, Cursor)
-
-      ### 2026-03-16 — Rilis Pertama
-
-      - Template Zeabur untuk platform orkestrasi agen AI Paperclip
-      - Layanan: PostgreSQL 17 + Paperclip (image siap pakai `zeabur/paperclip`, amd64 + arm64)
-      - Skrip startup otomatis menghasilkan `config.json` pada boot pertama
-      - Server berjalan sebagai pengguna `node` melalui `runuser` (diperlukan untuk Claude Code CLI)
-      - Volume persisten tunggal di `/home/node/`
-      - Alat CLI terinstal: `claude-code`, `codex`, `opencode-ai`
-
-      ## Tautan
-
-      - [Dokumentasi](https://docs.paperclip.ing/start/what-is-paperclip)
-      - [GitHub](https://github.com/paperclipai/paperclip)
+    es-ES:
+        description: |
+            Plataforma de orquestación para coordinar múltiples agentes de IA para operar negocios autónomos. Gestiona equipos de agentes, asigna objetivos, rastrea trabajo y monitorea costos desde un panel centralizado.
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: Dominio
+              description: El dominio para acceder al panel de Paperclip
+        readme: |
+            # Paperclip
+
+            > **Beta:** Paperclip está en desarrollo temprano. Esta plantilla y el software pueden presentar problemas inesperados.
+
+            [Paperclip](https://github.com/paperclipai/paperclip) es una plataforma de orquestación para coordinar múltiples agentes de IA (Claude, Codex, Cursor, OpenClaw, etc.) para operar negocios autónomos. Proporciona un servidor Node.js con una interfaz React para gestionar equipos de agentes, asignar objetivos, rastrear trabajo y monitorear costos.
+
+            ## Primeros pasos
+
+            1. Despliegue la plantilla y espere a que el servicio se inicie.
+            2. Abra el dominio de Paperclip desde la pestaña **Networking** de Zeabur.
+            3. Haga clic en **Sign in / Create account** y regístrese con su correo electrónico y contraseña. El primer usuario en registrarse se convierte automáticamente en administrador de la instancia.
+            5. Después de la configuración, establezca `PAPERCLIP_AUTH_DISABLE_SIGN_UP` en `true` en las variables de entorno de Zeabur para evitar registros no autorizados.
+            6. Configure la autenticación de agentes IA (consulte **Autenticación de agentes IA** más abajo).
+            7. Al crear un agente, establezca **Working directory** en una ruta bajo `/paperclip/` (ej. `/paperclip/workspaces/my-project`).
+            8. Haga clic en **Test now** para ejecutar la verificación del adaptador. Un resultado exitoso muestra `hello probe succeeded`.
+
+            > **Alternativa:** También puede crear el primer administrador desde el Terminal de Zeabur: `gosu node pnpm paperclipai auth bootstrap-ceo`
+
+            ## Autenticación de agentes IA
+
+            **Opción 1: Variables de entorno (recomendado)**
+
+            Configure estas en las variables de entorno de Zeabur:
+
+            | Herramienta | Variable de entorno |
+            |-------------|---------------------|
+            | Claude Code | `ANTHROPIC_API_KEY` |
+            | Codex | `OPENAI_API_KEY` |
+
+            **Opción 2: Login en Terminal**
+
+            Abra el Terminal de Zeabur y ejecute:
+
+            | Herramienta | Login en Terminal |
+            |-------------|------------------|
+            | Claude Code | `gosu node claude login` |
+            | Codex | `gosu node codex login --device-auth` |
+
+            ### Notas
+
+            - **Use siempre el prefijo `gosu node`** al ejecutar herramientas CLI en el Terminal. El terminal se ejecuta como root, pero las credenciales deben almacenarse en el directorio del usuario `node` (`/paperclip/`) para persistir y ser accesibles por el servidor.
+            - **Autenticación de dispositivo Codex:** Habilite "Enable device code authorization for Codex" en [ChatGPT Security Settings](https://chatgpt.com/settings/security) antes de ejecutar el comando de inicio de sesión.
+
+            ## Notas importantes
+
+            - **Almacenamiento persistente:** Solo los datos bajo `/paperclip/` sobreviven a los reinicios. Todas las demás rutas son efímeras.
+            - **Directorio de trabajo:** No use `/app` — contiene el código fuente de Paperclip y se sobrescribirá en actualizaciones. Use siempre rutas bajo `/paperclip/` (persistente).
+            - **Control de registro:** Establezca `PAPERCLIP_AUTH_DISABLE_SIGN_UP` en `true` después de crear su cuenta de administrador. Cambie temporalmente a `false` cuando necesite invitar nuevos usuarios, luego vuelva a `true`.
+
+            ## Registro de cambios
+
+            ### 2026-06-05 — v2026.529.0
+
+            - Imagen actualizada a la versión upstream `v2026.529.0` (`ghcr.io/paperclipai/paperclip:sha-911a1e8`)
+            - Inicio simplificado: init.sh ahora delega al `docker-entrypoint.sh` nativo de la imagen
+            - Nuevo: **Registro de primer administrador desde el navegador** — ya no se necesita terminal para configurar el primer admin
+            - Nuevo: Anotaciones inline en documentos con hilos de comentarios por revisión
+            - Nuevo: CLI de skills de empresa y gestión de catálogo
+            - Nuevo: Ocultar proyectos y agentes del sidebar (membresía de recursos por usuario)
+            - Nuevo: Descubrimiento dinámico de modelos Claude
+            - Nuevo: Grok Build como runtime local de primera clase
+            - Nuevo: Plugin de sandbox Modal (junto a E2B, Cloudflare, Daytona)
+            - Nuevo: Plugin visor de diffs de workspace
+            - Nuevo: Secrets en Routines con precedencia `agent < project < routine`
+            - Nuevo: Sincronización Local Cloud Upstream
+            - Nuevo: Acciones de recuperación con alcance de origen para trabajo estancado
+            - Nuevo: Vista Blocked Inbox para triaje de tareas bloqueadas
+            - Nuevo: Flujo de desarrollo local de plugins con `paperclipai plugin init`
+            - Nuevo: Bloqueo de documentos para transferencias seguras entre agentes
+            - Nuevo: Base de i18n (i18next, validación de locales)
+            - Mejorado: Adaptador ACPX-Claude funciona sin configuración adicional
+            - Mejorado: Permisos de agentes con alcance y controles de asignación
+            - Mejorado: Escalabilidad Kanban con tarjetas compactas y columnas colapsables
+            - Mejorado: Pausar/reanudar agentes desde el sidebar, hilos de chat virtualizados
+
+            ### 2026-04-22 — v2026.416.0
+
+            - Imagen actualizada a la versión upstream `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
+            - Nuevo: Sistema de plugins de adaptadores externos con parsers UI dinámicos y esquemas de configuración declarativos
+            - Nuevo: Visualización de jerarquía de issues (contraer/expandir, conteo de subtareas, estado persistido)
+            - Nuevo: Flujo de votación y captura con pulgar para evaluaciones
+            - Nuevo: Espacios de trabajo de ejecución con controles de runtime y pestaña por proyecto
+            - Nuevo: Ejecuciones de Routine conscientes del workspace
+            - Mejorado: Atajos de teclado estilo cliente de correo en la bandeja de entrada y divisor "Hoy"
+            - Mejorado: Diseños móviles, modo oscuro e interfaz de override de adaptadores
+            - Seguridad: `BETTER_AUTH_SECRET` y `PAPERCLIP_AGENT_JWT_SECRET` son ahora estrictamente requeridos al inicio (la plantilla ya los establece)
+
+            ### 2026-04-07 — v2026.403.0
+
+            - Imagen actualizada a la versión upstream `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
+            - Migración desde Docker Hub (`zeabur/paperclip`) al GitHub Container Registry upstream (`ghcr.io/paperclipai/paperclip`)
+            - Ruta del volumen persistente cambiada de `/home/node/` a `/paperclip/`
+            - Prefijo de comandos CLI cambiado de `runuser -u node --` a `gosu node`
+            - Nuevo: Relaciones de primera clase de bloqueadores/dependencias con reactivación al completar subtareas
+            - Mejorado: Ocultación de tokens Bearer en los logs del servidor
+            - Mejorado: Onboarding del agente CEO con rutas relativas
+            - Mejorado: Formato automático al pegar markdown en el editor en línea
+            - Múltiples correcciones en enrutamiento UI, barra lateral, worktree y flujos de agentes
+
+            ### 2026-03-30 — v2026.325.0
+
+            - Imagen actualizada a la versión upstream `v2026.325.0` (652 commits desde v0.3.1)
+            - Nuevo: Pestaña "Mío" en la bandeja de entrada con flujo de archivo
+            - Nuevo: Soporte para adaptador Hermes
+            - Nuevo: Panel de control de costos (facturación, cuotas, gestión de presupuesto)
+            - Nuevo: Plugin SDK con CRUD de documentos y bus de eventos
+            - Nuevo: Soporte Worktree para espacios de trabajo aislados de agentes
+            - Nuevo: Importación/exportación de empresas con organigrama SVG
+            - Mejorado: Pestañas de detalle de agente reorganizadas (Prompts, Skills, Instructions)
+            - Mejorado: Estabilidad de Postgres embebido en Docker
+            - Múltiples correcciones de adaptadores (Codex, Pi, OpenCode, Cursor)
+
+            ### 2026-03-16 — Lanzamiento inicial
+
+            - Plantilla de Zeabur para la plataforma de orquestación de agentes IA Paperclip
+            - Servicios: PostgreSQL 17 + Paperclip (imagen preconstruida `zeabur/paperclip`, amd64 + arm64)
+            - El script de inicio genera automáticamente `config.json` en el primer arranque
+            - El servidor se ejecuta como usuario `node` mediante `runuser` (requerido para Claude Code CLI)
+            - Un único volumen persistente en `/home/node/`
+            - Herramientas CLI preinstaladas: `claude-code`, `codex`, `opencode-ai`
+
+            ## Enlaces
+
+            - [Documentación](https://docs.paperclip.ing/start/what-is-paperclip)
+            - [GitHub](https://github.com/paperclipai/paperclip)
+    id-ID:
+        description: |
+            Platform orkestrasi untuk mengoordinasikan beberapa agen AI untuk menjalankan bisnis otonom. Mengelola tim agen, menetapkan tujuan, melacak pekerjaan, dan memantau biaya dari dasbor terpusat.
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: Domain
+              description: Domain untuk mengakses dasbor Paperclip
+        readme: |
+            # Paperclip
+
+            > **Beta:** Paperclip masih dalam tahap pengembangan awal. Template ini dan perangkat lunaknya mungkin mengalami masalah yang tidak terduga.
+
+            [Paperclip](https://github.com/paperclipai/paperclip) adalah platform orkestrasi untuk mengoordinasikan beberapa agen AI (Claude, Codex, Cursor, OpenClaw, dll.) untuk menjalankan bisnis otonom. Menyediakan server Node.js dengan UI React untuk mengelola tim agen, menetapkan tujuan, melacak pekerjaan, dan memantau biaya.
+
+            ## Memulai
+
+            1. Deploy template dan tunggu layanan dimulai.
+            2. Buka domain Paperclip dari tab **Networking** di Zeabur.
+            3. Klik **Sign in / Create account**, lalu daftar dengan email dan kata sandi Anda. Pengguna pertama yang mendaftar secara otomatis menjadi admin instance.
+            5. Setelah selesai, atur `PAPERCLIP_AUTH_DISABLE_SIGN_UP` menjadi `true` di variabel lingkungan Zeabur untuk mencegah pendaftaran tidak sah.
+            6. Konfigurasi autentikasi agen AI (lihat **Autentikasi Agen AI** di bawah).
+            7. Saat membuat agen, atur **Working directory** ke path di bawah `/paperclip/` (contoh: `/paperclip/workspaces/my-project`).
+            8. Klik **Test now** untuk menjalankan pemeriksaan adapter. Hasil sukses menampilkan `hello probe succeeded`.
+
+            > **Alternatif:** Anda juga dapat membuat admin pertama melalui Terminal Zeabur: `gosu node pnpm paperclipai auth bootstrap-ceo`
+
+            ## Autentikasi Agen AI
+
+            **Opsi 1: Variabel lingkungan (disarankan)**
+
+            Atur variabel berikut di variabel lingkungan Zeabur:
+
+            | Alat | Variabel Lingkungan |
+            |------|---------------------|
+            | Claude Code | `ANTHROPIC_API_KEY` |
+            | Codex | `OPENAI_API_KEY` |
+
+            **Opsi 2: Login Terminal**
+
+            Buka Terminal Zeabur dan jalankan:
+
+            | Alat | Login Terminal |
+            |------|----------------|
+            | Claude Code | `gosu node claude login` |
+            | Codex | `gosu node codex login --device-auth` |
+
+            ### Catatan
+
+            - **Selalu gunakan prefiks `gosu node`** saat menjalankan alat CLI di Terminal. Terminal berjalan sebagai root, tetapi kredensial harus disimpan di direktori pengguna `node` (`/paperclip/`) agar persisten dan dapat diakses oleh server.
+            - **Autentikasi perangkat Codex:** Aktifkan "Enable device code authorization for Codex" di [ChatGPT Security Settings](https://chatgpt.com/settings/security) sebelum menjalankan perintah login.
+
+            ## Catatan Penting
+
+            - **Penyimpanan persisten:** Hanya data di bawah `/paperclip/` yang bertahan setelah restart. Semua path lainnya bersifat sementara.
+            - **Direktori kerja:** Jangan gunakan `/app` — berisi kode sumber Paperclip dan akan ditimpa saat pembaruan. Selalu gunakan path di bawah `/paperclip/` (persisten).
+            - **Kontrol pendaftaran:** Atur `PAPERCLIP_AUTH_DISABLE_SIGN_UP` menjadi `true` setelah membuat akun admin Anda. Ubah sementara ke `false` saat perlu mengundang pengguna baru, lalu kembalikan ke `true`.
+
+            ## Catatan Perubahan
+
+            ### 2026-06-05 — v2026.529.0
+
+            - Image diperbarui ke rilis upstream `v2026.529.0` (`ghcr.io/paperclipai/paperclip:sha-911a1e8`)
+            - Startup disederhanakan: init.sh kini mendelegasikan ke `docker-entrypoint.sh` bawaan image
+            - Baru: **Klaim admin pertama dari browser** — tidak perlu terminal untuk setup admin pertama
+            - Baru: Anotasi dokumen inline dengan thread komentar per revisi
+            - Baru: CLI skills perusahaan dan manajemen katalog
+            - Baru: Sembunyikan proyek dan agen dari sidebar (keanggotaan resource per pengguna)
+            - Baru: Penemuan model Claude secara langsung
+            - Baru: Grok Build sebagai runtime lokal kelas satu
+            - Baru: Plugin sandbox Modal (bersama E2B, Cloudflare, Daytona)
+            - Baru: Plugin penampil diff workspace
+            - Baru: Secrets di Routine dengan prioritas `agent < project < routine`
+            - Baru: Sinkronisasi Local Cloud Upstream
+            - Baru: Aksi pemulihan bercakupan sumber untuk pekerjaan terhenti
+            - Baru: Tampilan Blocked Inbox untuk triase tugas terblokir
+            - Baru: Alur pengembangan plugin lokal dengan `paperclipai plugin init`
+            - Baru: Penguncian dokumen untuk serah terima agen yang lebih aman
+            - Baru: Fondasi i18n (i18next, validasi locale)
+            - Ditingkatkan: Adaptor ACPX-Claude berfungsi langsung tanpa konfigurasi tambahan
+            - Ditingkatkan: Izin agen bercakupan dan kontrol penugasan
+            - Ditingkatkan: Skalabilitas Kanban dengan kartu kompak dan kolom yang dapat diciutkan
+            - Ditingkatkan: Jeda/lanjutkan agen dari sidebar, thread chat tervirtualisasi
+
+            ### 2026-04-22 — v2026.416.0
+
+            - Image diperbarui ke rilis upstream `v2026.416.0` (`ghcr.io/paperclipai/paperclip:sha-b8725c5`)
+            - Baru: Sistem plugin adaptor eksternal dengan parser UI dinamis dan skema konfigurasi deklaratif
+            - Baru: Tampilan hierarki issue (ciutkan/perluas, jumlah sub-tugas, status persisten)
+            - Baru: Alur voting umpan balik dan jempol untuk evaluasi
+            - Baru: Ruang kerja eksekusi dengan kontrol runtime dan tab ruang kerja per proyek
+            - Baru: Eksekusi Routine yang sadar ruang kerja
+            - Ditingkatkan: Pintasan keyboard ala klien email di kotak masuk dan pembatas "Hari Ini"
+            - Ditingkatkan: Tata letak mobile, mode gelap, dan UI override adaptor
+            - Keamanan: `BETTER_AUTH_SECRET` dan `PAPERCLIP_AGENT_JWT_SECRET` kini wajib saat startup (template sudah mengaturnya)
+
+            ### 2026-04-07 — v2026.403.0
+
+            - Image diperbarui ke rilis upstream `v2026.403.0` (`ghcr.io/paperclipai/paperclip:sha-a072377`)
+            - Beralih dari Docker Hub (`zeabur/paperclip`) ke GitHub Container Registry upstream (`ghcr.io/paperclipai/paperclip`)
+            - Path volume persisten diubah dari `/home/node/` ke `/paperclip/`
+            - Prefiks perintah CLI diubah dari `runuser -u node --` ke `gosu node`
+            - Baru: Relasi blocker/dependency kelas satu dengan pembangunan otomatis saat sub-tugas selesai
+            - Ditingkatkan: Penyembunyian token Bearer di log server
+            - Ditingkatkan: Onboarding agen CEO dengan path relatif
+            - Ditingkatkan: Format otomatis saat tempel markdown di editor inline
+            - Berbagai perbaikan untuk routing UI, sidebar, worktree, dan alur agen
+
+            ### 2026-03-30 — v2026.325.0
+
+            - Image diperbarui ke rilis upstream `v2026.325.0` (652 commit sejak v0.3.1)
+            - Baru: Tab "Milik Saya" di kotak masuk dengan alur arsip
+            - Baru: Dukungan adaptor Hermes
+            - Baru: Panel kontrol biaya (tagihan, kuota, manajemen anggaran)
+            - Baru: Plugin SDK dengan CRUD dokumen dan event bus
+            - Baru: Dukungan Worktree untuk ruang kerja agen terisolasi
+            - Baru: Impor/ekspor perusahaan dengan bagan organisasi SVG
+            - Ditingkatkan: Tab detail agen direorganisasi (Prompts, Skills, Instructions)
+            - Ditingkatkan: Stabilitas Postgres tertanam di Docker
+            - Berbagai perbaikan adaptor (Codex, Pi, OpenCode, Cursor)
+
+            ### 2026-03-16 — Rilis Pertama
+
+            - Template Zeabur untuk platform orkestrasi agen AI Paperclip
+            - Layanan: PostgreSQL 17 + Paperclip (image siap pakai `zeabur/paperclip`, amd64 + arm64)
+            - Skrip startup otomatis menghasilkan `config.json` pada boot pertama
+            - Server berjalan sebagai pengguna `node` melalui `runuser` (diperlukan untuk Claude Code CLI)
+            - Volume persisten tunggal di `/home/node/`
+            - Alat CLI terinstal: `claude-code`, `codex`, `opencode-ai`
+
+            ## Tautan
+
+            - [Dokumentasi](https://docs.paperclip.ing/start/what-is-paperclip)
+            - [GitHub](https://github.com/paperclipai/paperclip)
+    ja-JP:
+        description: |
+            複数のAIエージェントを協調して自律的なビジネスを運営するためのオーケストレーションプラットフォーム。エージェントチームの管理、目標の割り当て、作業の追跡、コスト監視を一元的なダッシュボードから行えます。
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: ドメイン
+              description: Paperclipダッシュボードにアクセスするためのドメイン
+        readme: |
+            # Paperclip
+
+            > **ベータ版：** Paperclip は初期開発段階です。このテンプレートとソフトウェアには予期しない問題が発生する可能性があります。
+
+            [Paperclip](https://github.com/paperclipai/paperclip) は、複数のAIエージェント（Claude、Codex、Cursor、OpenClawなど）を協調して自律的なビジネスを運営するためのオーケストレーションプラットフォームです。Node.jsサーバーとReact UIを提供し、エージェントチームの管理、目標の割り当て、作業の追跡、コストの監視を行います。
+
+            ## はじめに
+
+            1. テンプレートをデプロイし、サービスの起動を待ちます。
+            2. Zeabur の **Networking** タブから Paperclip のドメインを開きます。
+            3. **Sign in / Create account** をクリックし、メールアドレスとパスワードでサインアップします。最初にサインアップしたユーザーが自動的にインスタンス管理者になります。
+            5. セットアップ完了後、Zeabur環境変数の `PAPERCLIP_AUTH_DISABLE_SIGN_UP` を `true` に設定し、不正な登録を防止します。
+            6. AIエージェント認証を設定します（下記の **AIエージェント認証** を参照）。
+            7. エージェント作成時、**Working directory** を `/paperclip/` 配下のパスに設定します（例：`/paperclip/workspaces/my-project`）。
+            8. **Test now** をクリックしてアダプター環境チェックを実行します。成功すると `hello probe succeeded` と表示されます。
+
+            > **代替方法：** Zeabur ターミナルから最初の管理者を作成することもできます：`gosu node pnpm paperclipai auth bootstrap-ceo`
+
+            ## AIエージェント認証
+
+            **方法1：環境変数（推奨）**
+
+            Zeabur の環境変数に以下を設定します：
+
+            | ツール | 環境変数 |
+            |--------|---------|
+            | Claude Code | `ANTHROPIC_API_KEY` |
+            | Codex | `OPENAI_API_KEY` |
+
+            **方法2：ターミナルログイン**
+
+            Zeabur ターミナルを開き、以下を実行します：
+
+            | ツール | ターミナルログイン |
+            |--------|----------------|
+            | Claude Code | `gosu node claude login` |
+            | Codex | `gosu node codex login --device-auth` |
+
+            ### 注意事項
+
+            - **ターミナルで CLIツールを実行する際は必ず `gosu node` プレフィックスを使用してください。** ターミナルはrootで実行されますが、認証情報は `node` ユーザーのホーム（`/paperclip/`）に保存される必要があります。
+            - **Codexデバイス認証：** ログインコマンドを実行する前に、[ChatGPT Security Settings](https://chatgpt.com/settings/security) で「Enable device code authorization for Codex」を有効にしてください。
+
+            ## 重要事項
+
+            - **永続ストレージ：** `/paperclip/` 配下のデータのみ再起動後も保持されます。その他のパスは一時的です。
+            - **作業ディレクトリ：** `/app` は使用しないでください。Paperclipのソースコードが含まれており、更新時に上書きされます。必ず `/paperclip/` 配下のパス（永続化）を使用してください。
+            - **登録制御：** 管理者アカウント作成後、`PAPERCLIP_AUTH_DISABLE_SIGN_UP` を `true` に設定してください。新しいユーザーを招待する際は一時的に `false` に変更し、完了後 `true` に戻してください。
+
+            ## 変更履歴
+
+            ### 2026-06-05 — v2026.529.0
+
+            - イメージをアップストリームリリース `v2026.529.0` に更新（`ghcr.io/paperclipai/paperclip:sha-911a1e8`）
+            - 起動を簡素化：init.sh がイメージのネイティブ `docker-entrypoint.sh` に委譲するように変更
+            - 新機能：**ブラウザベースの初回管理者クレーム** — ターミナル不要で初回管理者を設定可能
+            - 新機能：インラインドキュメントアノテーションとリビジョン対応コメントスレッド
+            - 新機能：カンパニースキルCLIとカタログ管理
+            - 新機能：サイドバーからプロジェクトとエージェントを非表示（ユーザー単位のリソースメンバーシップ）
+            - 新機能：Claude モデルのライブ検出
+            - 新機能：Grok Build をファーストクラスのローカルランタイムとして追加
+            - 新機能：Modal サンドボックスプロバイダープラグイン（E2B、Cloudflare、Daytonaと併用）
+            - 新機能：ワークスペース差分ビューアープラグイン
+            - 新機能：Routine シークレット（`agent < project < routine` 優先順位）
+            - 新機能：ローカル Cloud Upstream 同期
+            - 新機能：停滞した作業のソーススコープ復旧アクション
+            - 新機能：ブロックされたタスクのトリアージ用 Blocked Inbox ビュー
+            - 新機能：`paperclipai plugin init` によるローカルプラグイン開発ワークフロー
+            - 新機能：安全なエージェント引き継ぎのためのドキュメントロック
+            - 新機能：i18n 基盤（i18next、ロケール検証）
+            - 改善：ACPX-Claude アダプターが追加設定なしで動作
+            - 改善：スコープ付きエージェント権限と割り当て制御
+            - 改善：コンパクトカードと折りたたみ可能なカラムによる Kanban スケーリング
+            - 改善：サイドバーからのエージェント一時停止/再開、仮想化チャットスレッド
+
+            ### 2026-04-22 — v2026.416.0
+
+            - イメージをアップストリームリリース `v2026.416.0` に更新（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
+            - 新機能：動的UIパーサーと宣言的設定スキーマを備えた外部アダプタープラグインシステム
+            - 新機能：Issue階層表示（折りたたみ/展開、サブタスク数、状態の永続化）
+            - 新機能：評価用のフィードバック投票・サムズキャプチャフロー
+            - 新機能：実行ワークスペース（ランタイム制御、プロジェクト単位のワークスペースタブ）
+            - 新機能：ワークスペース対応のRoutine実行
+            - 改善：受信トレイのメールクライアント風キーボードショートカット、「今日」区切り線
+            - 改善：モバイルレイアウト、ダークモード、アダプターオーバーライドUI
+            - セキュリティ：`BETTER_AUTH_SECRET` と `PAPERCLIP_AGENT_JWT_SECRET` が起動時に必須となりました（本テンプレートは既に設定済み）
+
+            ### 2026-04-07 — v2026.403.0
+
+            - イメージをアップストリームリリース `v2026.403.0` に更新（`ghcr.io/paperclipai/paperclip:sha-a072377`）
+            - Docker Hub（`zeabur/paperclip`）から上流のGitHub Container Registry（`ghcr.io/paperclipai/paperclip`）に切り替え
+            - 永続ボリュームのパスを `/home/node/` から `/paperclip/` に変更
+            - CLIコマンドのプレフィックスを `runuser -u node --` から `gosu node` に変更
+            - 新機能：ファーストクラスのブロッカー/依存関係、サブタスク完了時の自動起動付き
+            - 改善：サーバーログ内のBearerトークンの秘匿化
+            - 改善：CEOエージェントのオンボーディングを相対パス化
+            - 改善：インラインエディタでのmarkdown貼り付けの自動フォーマット
+            - UIルーティング、サイドバー、worktree、エージェントフローに関する複数のバグ修正
+
+            ### 2026-03-30 — v2026.325.0
+
+            - イメージをアップストリームリリース `v2026.325.0` に更新（v0.3.1以降652コミット）
+            - 新機能：受信トレイ「マイ」タブとアーカイブフロー
+            - 新機能：Hermesアダプターサポート
+            - 新機能：コスト管理パネル（請求、クォータ、予算管理）
+            - 新機能：Plugin SDK（ドキュメントCRUDとイベントバス対応）
+            - 新機能：Worktreeサポート（エージェント用の隔離ワークスペース）
+            - 新機能：会社インポート/エクスポート（組織図SVG付き）
+            - 改善：エージェント詳細タブの再構成（プロンプト、スキル、指示）
+            - 改善：Docker内蔵PostgreSQLの安定性向上
+            - 複数のアダプター修正（Codex、Pi、OpenCode、Cursor）
+
+            ### 2026-03-16 — 初回リリース
+
+            - Paperclip AIエージェントオーケストレーションプラットフォームのZeaburテンプレート
+            - サービス：PostgreSQL 17 + Paperclip（ビルド済みイメージ `zeabur/paperclip`、amd64 + arm64）
+            - 起動スクリプトが初回起動時に `config.json` を自動生成
+            - サーバーは `runuser` を使用して `node` ユーザーとして実行（Claude Code CLIに必要）
+            - `/home/node/` に単一の永続ボリューム
+            - プリインストール済みCLIツール：`claude-code`、`codex`、`opencode-ai`
+
+            ## リンク
+
+            - [公式ドキュメント](https://docs.paperclip.ing/start/what-is-paperclip)
+            - [GitHub](https://github.com/paperclipai/paperclip)
+    zh-CN:
+        description: |
+            AI 多代理协调平台，用于管理多个 AI 代理自主运营业务。提供团队管理、目标分配、工作追踪和成本监控的集中仪表板。
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: 域名
+              description: 访问 Paperclip 仪表板的域名
+        readme: |
+            # Paperclip
+
+            > **测试版：** Paperclip 仍处于早期开发阶段。此模板和软件可能会有无法预期的问题。
+
+            [Paperclip](https://github.com/paperclipai/paperclip) 是一个 AI 多代理协调平台，用于协调多个 AI 代理（Claude、Codex、Cursor、OpenClaw 等）自主运营业务。提供 Node.js 服务器搭配 React UI，管理代理团队、分配目标、追踪工作并监控成本。
+
+            ## 开始使用
+
+            1. 部署模板并等待服务启动。
+            2. 从 Zeabur **Networking** 分页打开 Paperclip 域名。
+            3. 点击 **Sign in / Create account**，使用邮箱和密码注册。第一位注册的用户会自动成为实例管理员。
+            5. 设置完成后，将 Zeabur 环境变量 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 设为 `true` 以禁止未授权的注册。
+            6. 配置 AI 代理认证（请参阅下方 **AI 代理认证**）。
+            7. 建立代理时，将 **Working directory** 设置为 `/paperclip/` 下的路径（例如 `/paperclip/workspaces/my-project`）。
+            8. 点击 **Test now** 执行适配器环境检查。成功结果会显示 `hello probe succeeded`。
+
+            > **替代方式：** 也可以通过 Zeabur 命令创建第一个管理员：`gosu node pnpm paperclipai auth bootstrap-ceo`
+
+            ## AI 代理认证
+
+            **方式一：环境变量（推荐）**
+
+            在 Zeabur 环境变量中设置：
+
+            | 工具 | 环境变量 |
+            |------|---------|
+            | Claude Code | `ANTHROPIC_API_KEY` |
+            | Codex | `OPENAI_API_KEY` |
+
+            **方式二：命令登录**
+
+            打开 Zeabur 命令并执行：
+
+            | 工具 | 命令登录 |
+            |------|--------|
+            | Claude Code | `gosu node claude login` |
+            | Codex | `gosu node codex login --device-auth` |
+
+            ### 注意事项
+
+            - **请务必使用 `gosu node` 前缀**执行命令中的 CLI 工具。命令以 root 运行，但凭据需存储在 `node` 用户主目录（`/paperclip/`）下以持久化并供服务器访问。
+            - **Codex 设备验证：** 执行登录命令前，请先在 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 中启用「Enable device code authorization for Codex」。
+
+            ## 重要事项
+
+            - **持久化存储：** 仅 `/paperclip/` 下的数据在重启后保留。其他路径均为临时存储。
+            - **工作目录：** 请勿使用 `/app`——该路径包含 Paperclip 源代码，更新时会被覆盖。请使用 `/paperclip/` 下的路径（持久化）。
+            - **注册管控：** 创建管理员账号后，将 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 设为 `true`。需要邀请新用户时暂时设为 `false`，完成后再改回 `true`。
+
+            ## 变更记录
+
+            ### 2026-06-05 — v2026.529.0
+
+            - 更新镜像至上游版本 `v2026.529.0`（`ghcr.io/paperclipai/paperclip:sha-911a1e8`）
+            - 简化启动：init.sh 现委托镜像原生 `docker-entrypoint.sh`
+            - 新增：**浏览器端首位管理员认领** — 无需终端即可设置首位管理员
+            - 新增：文档内联注释与按修订版本的评论线程
+            - 新增：企业技能 CLI 与目录管理
+            - 新增：从侧边栏隐藏项目和代理（用户级资源成员）
+            - 新增：Claude 模型实时发现
+            - 新增：Grok Build 作为一等本地运行时
+            - 新增：Modal 沙箱提供者插件（与 E2B、Cloudflare、Daytona 并列）
+            - 新增：工作区差异查看器插件
+            - 新增：Routine 密钥，优先级 `agent < project < routine`
+            - 新增：本地 Cloud Upstream 同步
+            - 新增：来源范围的停滞工作恢复操作
+            - 新增：Blocked Inbox 视图用于分诊阻塞任务
+            - 新增：通过 `paperclipai plugin init` 的本地插件开发流程
+            - 新增：文档锁定以确保代理间安全交接
+            - 新增：i18n 基础（i18next、区域设置验证）
+            - 改进：ACPX-Claude 适配器开箱即用
+            - 改进：有范围的代理权限与分配控制
+            - 改进：看板缩放，支持紧凑卡片与可折叠列
+            - 改进：从侧边栏暂停/恢复代理、虚拟化聊天线程
+
+            ### 2026-04-22 — v2026.416.0
+
+            - 更新镜像至上游版本 `v2026.416.0`（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
+            - 新增：外部适配器插件系统，支持动态 UI 解析器与声明式配置 schema
+            - 新增：议题层级显示（可折叠、子任务计数、状态持久化）
+            - 新增：反馈投票与评估用的拇指投票流程
+            - 新增：执行工作区，支持运行时控制与项目工作区标签页
+            - 新增：工作区感知的 Routine 运行
+            - 改进：收件箱邮件客户端式键盘快捷键与「今天」分隔线
+            - 改进：移动端布局、深色模式、适配器覆盖 UI
+            - 安全性：`BETTER_AUTH_SECRET` 与 `PAPERCLIP_AGENT_JWT_SECRET` 启动时现为必需（本模板已预设）
+
+            ### 2026-04-07 — v2026.403.0
+
+            - 更新镜像至上游版本 `v2026.403.0`（`ghcr.io/paperclipai/paperclip:sha-a072377`）
+            - 从 Docker Hub（`zeabur/paperclip`）切换至上游 GitHub Container Registry（`ghcr.io/paperclipai/paperclip`）
+            - 持久化卷路径由 `/home/node/` 改为 `/paperclip/`
+            - CLI 命令前缀由 `runuser -u node --` 改为 `gosu node`
+            - 新增：一级阻碍/依赖关系支持，子任务完成时自动唤醒
+            - 改进：服务器 log 中的 Bearer token 遮罩
+            - 改进：CEO 代理 onboarding 改用相对路径
+            - 改进：行内编辑器粘贴 markdown 自动格式化
+            - 多项 UI 路由、侧边栏、worktree 及代理流程的错误修正
+
+            ### 2026-03-30 — v2026.325.0
+
+            - 更新镜像至上游版本 `v2026.325.0`（自 v0.3.1 以来 652 个 commit）
+            - 新增：收件箱「我的」标签页与归档流程
+            - 新增：Hermes 适配器支持
+            - 新增：成本控制面板（账务、配额、预算管理）
+            - 新增：Plugin SDK，支持文档 CRUD 与事件总线
+            - 新增：Worktree 支持，提供隔离的代理工作区
+            - 新增：公司导入/导出，含组织图 SVG
+            - 改进：代理详情标签页重整（提示词、技能、指令）
+            - 改进：Docker 中嵌入式 Postgres 稳定性
+            - 多项适配器修正（Codex、Pi、OpenCode、Cursor）
+
+            ### 2026-03-16 — 首次发布
+
+            - Paperclip AI 代理协调平台的 Zeabur 模板
+            - 服务：PostgreSQL 17 + Paperclip（预构建镜像 `zeabur/paperclip`，amd64 + arm64）
+            - 启动脚本在首次启动时自动生成 `config.json`
+            - 服务器通过 `runuser` 以 `node` 用户身份运行（Claude Code CLI 所需）
+            - 单一持久化卷挂载于 `/home/node/`
+            - 预装 CLI 工具：`claude-code`、`codex`、`opencode-ai`
+
+            ## 链接
+
+            - [官方文档](https://docs.paperclip.ing/start/what-is-paperclip)
+            - [GitHub](https://github.com/paperclipai/paperclip)
+    zh-TW:
+        description: |
+            AI 多代理協調平台，用於管理多個 AI 代理自主運營業務。提供團隊管理、目標分配、工作追蹤和成本監控的集中儀表板。
+        variables:
+            - key: PUBLIC_DOMAIN
+              type: STRING
+              name: 網域
+              description: 存取 Paperclip 儀表板的網域
+        readme: |
+            # Paperclip
+
+            > **測試版：** Paperclip 仍處於早期開發階段。此模板和軟體可能會有無法預期的問題。
+
+            [Paperclip](https://github.com/paperclipai/paperclip) 是一個 AI 多代理協調平台，用於協調多個 AI 代理（Claude、Codex、Cursor、OpenClaw 等）自主運營業務。提供 Node.js 伺服器搭配 React UI，管理代理團隊、分配目標、追蹤工作並監控成本。
+
+            ## 開始使用
+
+            1. 部署模板並等待服務啟動。
+            2. 從 Zeabur **Networking** 分頁開啟 Paperclip 網域。
+            3. 點擊 **Sign in / Create account**，使用電子郵件和密碼註冊。第一位註冊的使用者會自動成為執行個體管理員。
+            5. 設定完成後，將 Zeabur 環境變數 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 設為 `true` 以禁止未授權的註冊。
+            6. 設定 AI 代理認證（請參閱下方 **AI 代理認證**）。
+            7. 建立代理時，將 **Working directory** 設定為 `/paperclip/` 下的路徑（例如 `/paperclip/workspaces/my-project`）。
+            8. 點擊 **Test now** 執行適配器環境檢查。成功結果會顯示 `hello probe succeeded`。
+
+            > **替代方式：** 也可以透過 Zeabur 指令建立第一個管理員：`gosu node pnpm paperclipai auth bootstrap-ceo`
+
+            ## AI 代理認證
+
+            **方式一：環境變數（推薦）**
+
+            在 Zeabur 環境變數中設定：
+
+            | 工具 | 環境變數 |
+            |------|---------|
+            | Claude Code | `ANTHROPIC_API_KEY` |
+            | Codex | `OPENAI_API_KEY` |
+
+            **方式二：指令登入**
+
+            開啟 Zeabur 指令並執行：
+
+            | 工具 | 指令登入 |
+            |------|--------|
+            | Claude Code | `gosu node claude login` |
+            | Codex | `gosu node codex login --device-auth` |
+
+            ### 注意事項
+
+            - **請務必使用 `gosu node` 前綴**執行指令中的 CLI 工具。指令以 root 執行，但憑證需儲存在 `node` 使用者主目錄（`/paperclip/`）下以持久化並供伺服器存取。
+            - **Codex 裝置驗證：** 執行登入指令前，請先至 [ChatGPT Security Settings](https://chatgpt.com/settings/security) 開啟「Enable device code authorization for Codex」。
+
+            ## 重要事項
+
+            - **持久化儲存：** 僅 `/paperclip/` 下的資料在重啟後保留。其他路徑皆為暫存。
+            - **工作目錄：** 請勿使用 `/app`——該路徑包含 Paperclip 原始碼，更新時會被覆蓋。請使用 `/paperclip/` 下的路徑（持久化）。
+            - **註冊控管：** 建立管理員帳號後，將 `PAPERCLIP_AUTH_DISABLE_SIGN_UP` 設為 `true`。需要邀請新使用者時暫時設為 `false`，完成後再改回 `true`。
+
+            ## 變更紀錄
+
+            ### 2026-06-05 — v2026.529.0
+
+            - 更新映像至上游版本 `v2026.529.0`（`ghcr.io/paperclipai/paperclip:sha-911a1e8`）
+            - 簡化啟動：init.sh 現委託映像原生 `docker-entrypoint.sh`
+            - 新增：**瀏覽器端首位管理員認領** — 無需終端即可設定首位管理員
+            - 新增：文件內嵌註解與按修訂版本的留言串
+            - 新增：企業技能 CLI 與目錄管理
+            - 新增：從側邊欄隱藏專案和代理（使用者級資源成員）
+            - 新增：Claude 模型即時探索
+            - 新增：Grok Build 作為一等本地執行環境
+            - 新增：Modal 沙箱供應商外掛（與 E2B、Cloudflare、Daytona 並列）
+            - 新增：工作區差異檢視器外掛
+            - 新增：Routine 密鑰，優先順序 `agent < project < routine`
+            - 新增：本地 Cloud Upstream 同步
+            - 新增：來源範圍的停滯工作復原操作
+            - 新增：Blocked Inbox 檢視用於分診阻塞任務
+            - 新增：透過 `paperclipai plugin init` 的本地外掛開發流程
+            - 新增：文件鎖定以確保代理間安全交接
+            - 新增：i18n 基礎（i18next、地區設定驗證）
+            - 改進：ACPX-Claude 適配器開箱即用
+            - 改進：有範圍的代理權限與指派控制
+            - 改進：看板縮放，支援緊湊卡片與可摺疊欄位
+            - 改進：從側邊欄暫停/恢復代理、虛擬化聊天串
+
+            ### 2026-04-22 — v2026.416.0
+
+            - 更新映像至上游版本 `v2026.416.0`（`ghcr.io/paperclipai/paperclip:sha-b8725c5`）
+            - 新增：外部適配器插件系統，支援動態 UI 解析器與宣告式設定 schema
+            - 新增：議題層級顯示（可摺疊、子任務計數、狀態持久化）
+            - 新增：回饋投票與評估用的拇指投票流程
+            - 新增：執行工作區，支援執行階段控制與專案工作區分頁
+            - 新增：工作區感知的 Routine 執行
+            - 改進：收件匣郵件客戶端式鍵盤快捷鍵與「今天」分隔線
+            - 改進：行動版版型、深色模式、適配器覆寫 UI
+            - 安全性：`BETTER_AUTH_SECRET` 與 `PAPERCLIP_AGENT_JWT_SECRET` 啟動時現為必要（本模板已預設）
+
+            ### 2026-04-07 — v2026.403.0
+
+            - 更新映像至上游版本 `v2026.403.0`（`ghcr.io/paperclipai/paperclip:sha-a072377`）
+            - 從 Docker Hub（`zeabur/paperclip`）切換至上游 GitHub Container Registry（`ghcr.io/paperclipai/paperclip`）
+            - 持久化磁碟路徑由 `/home/node/` 改為 `/paperclip/`
+            - CLI 指令前綴由 `runuser -u node --` 改為 `gosu node`
+            - 新增：一級阻礙/依賴關係支援，子任務完成時自動喚醒
+            - 改進：伺服器 log 中的 Bearer token 遮罩
+            - 改進：CEO 代理 onboarding 改用相對路徑
+            - 改進：行內編輯器貼上 markdown 自動格式化
+            - 多項 UI 路由、側邊欄、worktree 及代理流程的錯誤修正
+
+            ### 2026-03-30 — v2026.325.0
+
+            - 更新映像至上游版本 `v2026.325.0`（自 v0.3.1 以來 652 個 commit）
+            - 新增：收件匣「我的」分頁與封存流程
+            - 新增：Hermes 適配器支援
+            - 新增：成本控制面板（帳務、配額、預算管理）
+            - 新增：Plugin SDK，支援文件 CRUD 與事件匯流排
+            - 新增：Worktree 支援，提供隔離的代理工作區
+            - 新增：公司匯入/匯出，含組織圖 SVG
+            - 改進：代理詳情分頁重整（提示詞、技能、指令）
+            - 改進：Docker 中嵌入式 Postgres 穩定性
+            - 多項適配器修正（Codex、Pi、OpenCode、Cursor）
+
+            ### 2026-03-16 — 首次發佈
+
+            - Paperclip AI 代理協調平台的 Zeabur 模板
+            - 服務：PostgreSQL 17 + Paperclip（預建映像 `zeabur/paperclip`，amd64 + arm64）
+            - 啟動腳本在首次啟動時自動產生 `config.json`
+            - 伺服器透過 `runuser` 以 `node` 使用者身份執行（Claude Code CLI 所需）
+            - 單一持久化磁碟掛載於 `/home/node/`
+            - 預裝 CLI 工具：`claude-code`、`codex`、`opencode-ai`
+
+            ## 連結
+
+            - [官方文件](https://docs.paperclip.ing/start/what-is-paperclip)
+            - [GitHub](https://github.com/paperclipai/paperclip)
