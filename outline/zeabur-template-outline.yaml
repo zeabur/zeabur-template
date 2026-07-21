@@ -1,0 +1,465 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Outline
+spec:
+  description: |
+    The fastest knowledge base for growing teams. A self-hosted, open-source wiki and documentation tool with real-time collaboration and Markdown support.
+  icon: https://raw.githubusercontent.com/outline/outline/main/public/images/icon-512.png
+  coverImage: https://raw.githubusercontent.com/outline/outline/main/public/images/icon-512.png
+  tags:
+    - Wiki
+    - Knowledge Base
+    - Documentation
+    - Open Source
+  variables:
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Domain
+      description: What domain do you want to bind to?
+  readme: |
+    # Outline
+
+    [Outline](https://www.getoutline.com) is a fast, collaborative, open-source knowledge base and wiki for growing teams. This template deploys Outline together with PostgreSQL and Redis, using **local file storage** (no S3/MinIO required).
+
+    ## ⚠️ You must configure an authentication provider
+
+    Outline has **no username/password login**. Sign-in only works through an SSO provider (OIDC, Google, Slack, GitHub, etc.). The email magic-link only works for users who already exist, so **the very first admin account must be created via SSO**. After deploying, set one of the following on the `outline` service and restart it:
+
+    > 💡 **The first person to sign in automatically becomes the administrator** — there is no separate admin setup. Just make sure you are the first to log in.
+
+    ### Option A — Generic OIDC (Authentik / Logto / Keycloak / Zitadel …)
+    Set these env vars on the `outline` service:
+    - `OIDC_CLIENT_ID`
+    - `OIDC_CLIENT_SECRET`
+    - `OIDC_AUTH_URI`
+    - `OIDC_TOKEN_URI`
+    - `OIDC_USERINFO_URI`
+
+    Redirect / callback URL to register with your provider:
+    `https://YOUR_DOMAIN/auth/oidc.callback`
+
+    ### Option B — Google
+    Create an OAuth client in Google Cloud Console and set:
+    - `GOOGLE_CLIENT_ID`
+    - `GOOGLE_CLIENT_SECRET`
+
+    Redirect URL: `https://YOUR_DOMAIN/auth/google.callback`
+
+    ## Notes
+
+    - `SECRET_KEY` and `UTILS_SECRET` are auto-generated on first boot and persisted to the data volume — don't change them or existing encrypted data becomes unreadable.
+    - To enable email invites, configure the `SMTP_*` variables.
+    - Uploads are stored on the persistent volume at `/var/lib/outline/data`.
+
+    ## Links & License
+
+    - Website: https://www.getoutline.com
+    - Source: https://github.com/outline/outline
+    - License: [BSL 1.1](https://github.com/outline/outline/blob/main/LICENSE) — this template only packages the official `outlinewiki/outline` image for Zeabur.
+
+  services:
+    - name: postgres
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/postgresql.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: postgres:16-alpine
+        ports:
+          - id: database
+            port: 5432
+            type: TCP
+        volumes:
+          - id: data
+            dir: /var/lib/postgresql/data
+        env:
+          POSTGRES_USER:
+            default: outline
+          POSTGRES_PASSWORD:
+            default: ${PASSWORD}
+          POSTGRES_DB:
+            default: outline
+          POSTGRES_CONNECTION_STRING_INTERNAL:
+            default: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${CONTAINER_HOSTNAME}:5432/${POSTGRES_DB}
+            expose: true
+          POSTGRES_CONNECTION_STRING:
+            default: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DB}
+            expose: true
+        healthCheck:
+          type: TCP
+          port: database
+        instructions:
+          - title: PostgreSQL connection string
+            content: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DB}
+
+    - name: redis
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/redis.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: redis:7.4-alpine
+          command:
+            - redis-server
+            - --requirepass
+            - ${REDIS_PASSWORD}
+        ports:
+          - id: database
+            port: 6379
+            type: TCP
+        volumes:
+          - id: data
+            dir: /data
+        env:
+          REDIS_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          REDIS_CONNECTION_STRING_INTERNAL:
+            default: redis://:${REDIS_PASSWORD}@${CONTAINER_HOSTNAME}:6379
+            expose: true
+        healthCheck:
+          type: TCP
+          port: database
+
+    - name: outline
+      icon: https://raw.githubusercontent.com/outline/outline/main/public/images/icon-512.png
+      template: PREBUILT_V2
+      dependencies:
+        - postgres
+        - redis
+      domainKey: PUBLIC_DOMAIN
+      spec:
+        source:
+          image: outlinewiki/outline:1.9.2
+          command:
+            - /bin/sh
+            - -c
+            - /opt/startup.sh
+        ports:
+          - id: web
+            port: 3000
+            type: HTTP
+        volumes:
+          - id: data
+            dir: /var/lib/outline/data
+        configs:
+          - path: /opt/startup.sh
+            permission: 493
+            envsubst: false
+            template: |
+              #!/bin/sh
+              set -e
+              cd /opt/outline
+              SECRET_FILE=/var/lib/outline/data/.zeabur-secrets
+              if [ ! -f "$SECRET_FILE" ]; then
+                {
+                  echo "SECRET_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+                  echo "UTILS_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+                } > "$SECRET_FILE"
+              fi
+              set -a
+              . "$SECRET_FILE"
+              set +a
+              echo "Running database migrations..."
+              ./node_modules/.bin/sequelize db:migrate --env=production-ssl-disabled
+              echo "Starting Outline..."
+              exec node build/server/index.js
+        env:
+          NODE_ENV:
+            default: production
+          PORT:
+            default: "3000"
+          URL:
+            default: https://${ZEABUR_WEB_DOMAIN}
+            readonly: true
+          FORCE_HTTPS:
+            default: "true"
+          PGSSLMODE:
+            default: disable
+          DATABASE_URL:
+            default: ${POSTGRES_CONNECTION_STRING_INTERNAL}
+          REDIS_URL:
+            default: ${REDIS_CONNECTION_STRING_INTERNAL}
+          FILE_STORAGE:
+            default: local
+          FILE_STORAGE_LOCAL_ROOT_DIR:
+            default: /var/lib/outline/data
+          FILE_STORAGE_UPLOAD_MAX_SIZE:
+            default: "262144000"
+          DEFAULT_LANGUAGE:
+            default: en_US
+          RATE_LIMITER_ENABLED:
+            default: "true"
+          # --- Authentication: fill ONE provider after deploy, then restart ---
+          OIDC_CLIENT_ID:
+            default: ""
+          OIDC_CLIENT_SECRET:
+            default: ""
+          OIDC_AUTH_URI:
+            default: ""
+          OIDC_TOKEN_URI:
+            default: ""
+          OIDC_USERINFO_URI:
+            default: ""
+          OIDC_USERNAME_CLAIM:
+            default: preferred_username
+          OIDC_DISPLAY_NAME:
+            default: OpenID Connect
+          OIDC_SCOPES:
+            default: openid profile email
+          GOOGLE_CLIENT_ID:
+            default: ""
+          GOOGLE_CLIENT_SECRET:
+            default: ""
+          # --- Optional SMTP for email invites ---
+          SMTP_HOST:
+            default: ""
+          SMTP_PORT:
+            default: ""
+          SMTP_USERNAME:
+            default: ""
+          SMTP_PASSWORD:
+            default: ""
+          SMTP_FROM_EMAIL:
+            default: ""
+        instructions:
+          - title: Application URL
+            content: ${ZEABUR_WEB_URL}
+          - title: OIDC / Google callback URL
+            content: https://${ZEABUR_WEB_DOMAIN}/auth/oidc.callback
+
+localization:
+  zh-TW:
+    description: |
+      為成長中的團隊打造的最快知識庫。自架、開源的 Wiki 與文件工具，支援即時協作與 Markdown。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: 網域
+        description: 您想要綁定哪個網域？
+    readme: |
+      # Outline
+
+      [Outline](https://www.getoutline.com) 是一套快速、可協作的開源知識庫與 Wiki。此模板會一併部署 PostgreSQL 與 Redis，並使用**本機檔案儲存**（不需要 S3/MinIO）。
+
+      ## ⚠️ 你必須設定一組登入方式（SSO）
+
+      Outline **沒有帳號密碼登入**，只能透過 SSO（OIDC、Google、Slack、GitHub 等）登入。Email 魔術連結僅適用於「已存在」的使用者，因此**第一個管理員帳號一定要透過 SSO 建立**。部署後，請在 `outline` 服務上設定以下其中一種，並重啟服務：
+
+      > 💡 **第一個登入的人會自動成為管理員** —— 沒有另外的管理員設定步驟，只要確保你是第一個登入的人即可。
+
+      ### 方案 A — 通用 OIDC（Authentik / Logto / Keycloak / Zitadel…）
+      在 `outline` 服務設定：
+      - `OIDC_CLIENT_ID`
+      - `OIDC_CLIENT_SECRET`
+      - `OIDC_AUTH_URI`
+      - `OIDC_TOKEN_URI`
+      - `OIDC_USERINFO_URI`
+
+      回呼網址：`https://你的網域/auth/oidc.callback`
+
+      ### 方案 B — Google
+      在 Google Cloud Console 建立 OAuth 用戶端後設定：
+      - `GOOGLE_CLIENT_ID`
+      - `GOOGLE_CLIENT_SECRET`
+
+      回呼網址：`https://你的網域/auth/google.callback`
+
+      ## 注意事項
+
+      - `SECRET_KEY` 與 `UTILS_SECRET` 會在首次啟動時自動產生並存到資料磁碟區，請勿更改，否則既有加密資料將無法讀取。
+      - 若要啟用 Email 邀請，請設定 `SMTP_*` 變數。
+      - 上傳檔案儲存於持久磁碟區 `/var/lib/outline/data`。
+
+      ## 連結與授權
+
+      - 官方網站：https://www.getoutline.com
+      - 原始碼：https://github.com/outline/outline
+      - 授權：[BSL 1.1](https://github.com/outline/outline/blob/main/LICENSE) — 本模板僅在 Zeabur 上封裝官方 `outlinewiki/outline` 映像檔。
+
+  zh-CN:
+    description: |
+      为成长中的团队打造的最快知识库。自托管、开源的 Wiki 与文档工具，支持实时协作与 Markdown。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: 域名
+        description: 您想要绑定哪个域名？
+    readme: |
+      # Outline
+
+      [Outline](https://www.getoutline.com) 是一套快速、可协作的开源知识库与 Wiki。此模板会一并部署 PostgreSQL 与 Redis，并使用**本地文件存储**（无需 S3/MinIO）。
+
+      ## ⚠️ 你必须配置一种登录方式（SSO）
+
+      Outline **没有账号密码登录**，只能通过 SSO（OIDC、Google、Slack、GitHub 等）登录。Email 魔术链接仅适用于「已存在」的用户，因此**第一个管理员账号必须通过 SSO 创建**。部署后，请在 `outline` 服务上配置以下其中一种，并重启服务：
+
+      > 💡 **第一个登录的人会自动成为管理员** —— 没有额外的管理员设置步骤，只要确保你是第一个登录的人即可。
+
+      ### 方案 A — 通用 OIDC（Authentik / Logto / Keycloak / Zitadel…）
+      在 `outline` 服务配置：
+      - `OIDC_CLIENT_ID`
+      - `OIDC_CLIENT_SECRET`
+      - `OIDC_AUTH_URI`
+      - `OIDC_TOKEN_URI`
+      - `OIDC_USERINFO_URI`
+
+      回调地址：`https://你的域名/auth/oidc.callback`
+
+      ### 方案 B — Google
+      在 Google Cloud Console 创建 OAuth 客户端后配置：
+      - `GOOGLE_CLIENT_ID`
+      - `GOOGLE_CLIENT_SECRET`
+
+      回调地址：`https://你的域名/auth/google.callback`
+
+      ## 注意事项
+
+      - `SECRET_KEY` 与 `UTILS_SECRET` 会在首次启动时自动生成并保存到数据卷，请勿更改，否则已有加密数据将无法读取。
+      - 若要启用 Email 邀请，请配置 `SMTP_*` 变量。
+      - 上传文件存储于持久卷 `/var/lib/outline/data`。
+
+      ## 链接与许可
+
+      - 官方网站：https://www.getoutline.com
+      - 源代码：https://github.com/outline/outline
+      - 许可证：[BSL 1.1](https://github.com/outline/outline/blob/main/LICENSE) — 本模板仅在 Zeabur 上封装官方 `outlinewiki/outline` 镜像。
+
+  ja-JP:
+    description: |
+      成長するチームのための最速のナレッジベース。セルフホスト可能なオープンソースの Wiki・ドキュメントツールで、リアルタイム共同編集と Markdown に対応。
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: ドメイン
+        description: どのドメインをバインドしますか？
+    readme: |
+      # Outline
+
+      [Outline](https://www.getoutline.com) は高速で共同編集可能なオープンソースのナレッジベース・Wiki です。このテンプレートは PostgreSQL と Redis も併せてデプロイし、**ローカルファイルストレージ**を使用します（S3/MinIO は不要）。
+
+      ## ⚠️ 認証プロバイダー（SSO）の設定が必須です
+
+      Outline に**ユーザー名／パスワードログインはありません**。SSO（OIDC、Google、Slack、GitHub など）でのみログインできます。Email マジックリンクは既存ユーザーのみ有効なため、**最初の管理者アカウントは必ず SSO で作成**する必要があります。デプロイ後、`outline` サービスに以下のいずれかを設定して再起動してください：
+
+      > 💡 **最初にログインした人が自動的に管理者になります** —— 別途の管理者設定はありません。自分が最初にログインするようにしてください。
+
+      ### オプション A — 汎用 OIDC（Authentik / Logto / Keycloak / Zitadel…）
+      `outline` サービスに設定：
+      - `OIDC_CLIENT_ID`
+      - `OIDC_CLIENT_SECRET`
+      - `OIDC_AUTH_URI`
+      - `OIDC_TOKEN_URI`
+      - `OIDC_USERINFO_URI`
+
+      コールバック URL：`https://あなたのドメイン/auth/oidc.callback`
+
+      ### オプション B — Google
+      Google Cloud Console で OAuth クライアントを作成し設定：
+      - `GOOGLE_CLIENT_ID`
+      - `GOOGLE_CLIENT_SECRET`
+
+      コールバック URL：`https://あなたのドメイン/auth/google.callback`
+
+      ## 注意事項
+
+      - `SECRET_KEY` と `UTILS_SECRET` は初回起動時に自動生成されデータボリュームに保存されます。変更すると既存の暗号化データが読めなくなるため変更しないでください。
+      - Email 招待を有効にするには `SMTP_*` を設定してください。
+      - アップロードファイルは永続ボリューム `/var/lib/outline/data` に保存されます。
+
+      ## リンクとライセンス
+
+      - 公式サイト：https://www.getoutline.com
+      - ソース：https://github.com/outline/outline
+      - ライセンス：[BSL 1.1](https://github.com/outline/outline/blob/main/LICENSE) — このテンプレートは公式 `outlinewiki/outline` イメージを Zeabur 用にパッケージするものです。
+
+  es-ES:
+    description: |
+      La base de conocimiento más rápida para equipos en crecimiento. Una wiki y herramienta de documentación autoalojada y de código abierto, con colaboración en tiempo real y compatibilidad con Markdown.
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Dominio
+        description: ¿Qué dominio quieres vincular?
+    readme: |
+      # Outline
+
+      [Outline](https://www.getoutline.com) es una base de conocimiento y wiki de código abierto, rápida y colaborativa. Esta plantilla despliega Outline junto con PostgreSQL y Redis, usando **almacenamiento local de archivos** (no requiere S3/MinIO).
+
+      ## ⚠️ Debes configurar un proveedor de autenticación (SSO)
+
+      Outline **no tiene inicio de sesión con usuario y contraseña**. Solo funciona mediante SSO (OIDC, Google, Slack, GitHub, etc.). El enlace mágico por correo solo funciona para usuarios ya existentes, por lo que **la primera cuenta de administrador debe crearse vía SSO**. Tras el despliegue, configura una de estas opciones en el servicio `outline` y reinícialo:
+
+      > 💡 **La primera persona que inicie sesión se convierte automáticamente en administrador** — no hay una configuración de administrador aparte. Solo asegúrate de ser el primero en iniciar sesión.
+
+      ### Opción A — OIDC genérico (Authentik / Logto / Keycloak / Zitadel…)
+      Configura en el servicio `outline`:
+      - `OIDC_CLIENT_ID`
+      - `OIDC_CLIENT_SECRET`
+      - `OIDC_AUTH_URI`
+      - `OIDC_TOKEN_URI`
+      - `OIDC_USERINFO_URI`
+
+      URL de redirección: `https://TU_DOMINIO/auth/oidc.callback`
+
+      ### Opción B — Google
+      Crea un cliente OAuth en Google Cloud Console y configura:
+      - `GOOGLE_CLIENT_ID`
+      - `GOOGLE_CLIENT_SECRET`
+
+      URL de redirección: `https://TU_DOMINIO/auth/google.callback`
+
+      ## Notas
+
+      - `SECRET_KEY` y `UTILS_SECRET` se generan automáticamente en el primer arranque y se guardan en el volumen de datos; no los cambies o los datos cifrados existentes quedarán ilegibles.
+      - Para habilitar invitaciones por correo, configura las variables `SMTP_*`.
+      - Los archivos subidos se almacenan en el volumen persistente `/var/lib/outline/data`.
+
+      ## Enlaces y licencia
+
+      - Sitio web: https://www.getoutline.com
+      - Código fuente: https://github.com/outline/outline
+      - Licencia: [BSL 1.1](https://github.com/outline/outline/blob/main/LICENSE) — esta plantilla solo empaqueta la imagen oficial `outlinewiki/outline` para Zeabur.
+
+  id-ID:
+    description: |
+      Basis pengetahuan tercepat untuk tim yang berkembang. Wiki dan alat dokumentasi open-source yang bisa dihosting sendiri, dengan kolaborasi real-time dan dukungan Markdown.
+    variables:
+      - key: PUBLIC_DOMAIN
+        name: Domain
+        description: Domain mana yang ingin Anda hubungkan?
+    readme: |
+      # Outline
+
+      [Outline](https://www.getoutline.com) adalah basis pengetahuan dan wiki open-source yang cepat dan kolaboratif. Template ini men-deploy Outline bersama PostgreSQL dan Redis, menggunakan **penyimpanan file lokal** (tidak perlu S3/MinIO).
+
+      ## ⚠️ Anda harus mengonfigurasi penyedia autentikasi (SSO)
+
+      Outline **tidak memiliki login username/password**. Login hanya bisa melalui SSO (OIDC, Google, Slack, GitHub, dll). Magic link email hanya berlaku untuk pengguna yang sudah ada, jadi **akun admin pertama harus dibuat via SSO**. Setelah deploy, atur salah satu opsi berikut pada service `outline` lalu restart:
+
+      > 💡 **Orang pertama yang login otomatis menjadi administrator** — tidak ada langkah pengaturan admin terpisah. Pastikan saja Anda yang pertama login.
+
+      ### Opsi A — OIDC umum (Authentik / Logto / Keycloak / Zitadel…)
+      Atur pada service `outline`:
+      - `OIDC_CLIENT_ID`
+      - `OIDC_CLIENT_SECRET`
+      - `OIDC_AUTH_URI`
+      - `OIDC_TOKEN_URI`
+      - `OIDC_USERINFO_URI`
+
+      URL callback: `https://DOMAIN_ANDA/auth/oidc.callback`
+
+      ### Opsi B — Google
+      Buat OAuth client di Google Cloud Console lalu atur:
+      - `GOOGLE_CLIENT_ID`
+      - `GOOGLE_CLIENT_SECRET`
+
+      URL callback: `https://DOMAIN_ANDA/auth/google.callback`
+
+      ## Catatan
+
+      - `SECRET_KEY` dan `UTILS_SECRET` dibuat otomatis saat pertama kali boot dan disimpan ke volume data — jangan diubah atau data terenkripsi yang ada tidak bisa dibaca.
+      - Untuk mengaktifkan undangan email, konfigurasikan variabel `SMTP_*`.
+      - File unggahan disimpan di volume persisten `/var/lib/outline/data`.
+
+      ## Tautan & Lisensi
+
+      - Situs web: https://www.getoutline.com
+      - Sumber: https://github.com/outline/outline
+      - Lisensi: [BSL 1.1](https://github.com/outline/outline/blob/main/LICENSE) — template ini hanya mengemas image resmi `outlinewiki/outline` untuk Zeabur.
