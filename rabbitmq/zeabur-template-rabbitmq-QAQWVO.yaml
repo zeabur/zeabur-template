@@ -1,0 +1,217 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+    name: RabbitMQ
+spec:
+    description: RabbitMQ is a widely used open-source message broker that implements the Advanced Message Queuing Protocol (AMQP)
+    icon: https://cdn.zeabur.com/marketplace/rabbitmq.svg
+    tags:
+        - Database
+        - Tool
+    readme: |
+        # RabbitMQ
+
+        RabbitMQ is a widely used open-source message broker that implements the Advanced Message Queuing Protocol (AMQP). For more details, [see their homepage](https://www.rabbitmq.com).
+
+        ## Environment Variables
+
+        After deploying the RabbitMQ service, Zeabur automatically injects the relevant environment variables into other services.
+
+        -  `${RABBITMQ_HOST}`: The hostname of the RabbitMQ service.
+        -  `${RABBITMQ_PORT}`: The port of the RabbitMQ service.
+        -  `${RABBITMQ_DEFAULT_USER}`: The default username for the RabbitMQ service.
+        -  `${RABBITMQ_DEFAULT_PASS}`: The default password for the RabbitMQ service.
+
+        Instead of using the above environment variables, you can add your own `DATABASE_URL` variable to simplify the URI declaration. For example:
+
+        ```plaintext
+        amqp://<RABBITMQ_DEFAULT_USER>:<RABBITMQ_DEFAULT_PASS>@<RABBITMQ_HOST>:<RABBITMQ_PORT>/<DATABASE_NAME>
+        ```
+
+        Here, `<DATABASE_NAME>` is the name of the Vhost you have added.
+
+        You can also use the DSN of the RabbitMQ service (the connection string) with the variable `${RABBITMQ_URI}`.
+
+        ## Online Management Interface
+
+        The RabbitMQ service provides an online management interface, allowing you to manage it through your browser.
+
+        You can access the RabbitMQ service’s online management interface by binding a domain and visiting `https://<your-domain>`.
+
+        ## Enabled Plugins
+
+        By default, the following plugins are enabled:
+
+        -  `rabbitmq_management`: This management plugin provides an HTTP-based API for managing and monitoring your RabbitMQ server, along with a browser-based UI and a command-line tool, rabbitmqadmin.
+        -  `rabbitmq_mqtt`: This plugin adds support for the MQTT protocol to RabbitMQ.
+        -  `rabbitmq_stomp`: This plugin adds support for the STOMP protocol to RabbitMQ.
+
+        We have enabled the ports for these plugins, and you can refer to the "Networking" section for access details.
+
+        ## Configuration
+
+        See "Settings" > "Config Editor" for the configurable files of the RabbitMQ service.
+    services:
+        - name: rabbitmq
+          icon: https://cdn.zeabur.com/marketplace/rabbitmq.svg
+          template: PREBUILT
+          spec:
+            id: rabbitmq
+            source:
+                image: rabbitmq:4-management
+            ports:
+                - id: amqp
+                  port: 5672
+                  type: TCP
+                - id: web
+                  port: 15672
+                  type: HTTP
+                - id: mqtt
+                  port: 1883
+                  type: TCP
+                - id: stomp
+                  port: 61613
+                  type: TCP
+            volumes:
+                - id: data
+                  dir: /var/lib/rabbitmq
+            instructions:
+                - title: RabbitMQ username
+                  content: ${RABBITMQ_DEFAULT_USER}
+                - title: RabbitMQ password
+                  content: ${RABBITMQ_DEFAULT_PASS}
+                - title: RabbitMQ host
+                  content: ${PORT_FORWARDED_HOSTNAME}
+                - title: RabbitMQ AMQP port
+                  content: ${AMQP_PORT_FORWARDED_PORT}
+                - title: RabbitMQ MQTT port
+                  content: ${MQTT_PORT_FORWARDED_PORT}
+                - title: RabbitMQ STOMP port
+                  content: ${STOMP_PORT_FORWARDED_PORT}
+            env:
+                RABBITMQ_CONNECTION_STRING:
+                    default: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
+                    expose: true
+                RABBITMQ_DEFAULT_PASS:
+                    default: ${PASSWORD}
+                RABBITMQ_DEFAULT_USER:
+                    default: admin
+                RABBITMQ_DEFAULT_VHOST:
+                    default: /
+                RABBITMQ_HOST:
+                    default: ${CONTAINER_HOSTNAME}
+                    expose: true
+                # Pin the node name: it defaults to rabbit@<hostname>, and the pod
+                # hostname changes on every restart, so mnesia would start empty each time.
+                RABBITMQ_NODENAME:
+                    default: rabbit@localhost
+                RABBITMQ_PORT:
+                    default: ${AMQP_PORT}
+                    expose: true
+                RABBITMQ_URI:
+                    default: ${RABBITMQ_CONNECTION_STRING}
+                    expose: true
+            configs:
+                - path: /etc/rabbitmq/rabbitmq.conf
+                  template: |
+                    # Configuration for Rabbit can be found on https://www.rabbitmq.com/docs/configure#config-file
+                    # Reference environment variables by $(ENV_VARIABLE_KEY), for example, "$(ZEABUR_SERVICE_ID)".
+                  permission: null
+                  envsubst: null
+                - path: /etc/rabbitmq/enabled_plugins
+                  template: |
+                    [rabbitmq_management,rabbitmq_mqtt,rabbitmq_stomp].
+                  permission: null
+                  envsubst: null
+localization:
+    zh-CN:
+        description: RabbitMQ 是一个被广泛使用的开源消息中间件，实现了高级消息队列协议 (AMQP)。
+        readme: |
+            # RabbitMQ
+
+            RabbitMQ 是一个被广泛使用的开源消息中间件，实现了高级消息队列协议 (AMQP)。更多详情请参考[官方主页](https://www.rabbitmq.com)。
+
+            ## 环境变量
+
+            部署 RabbitMQ 服务后，Zeabur 会自动将相关的环境变量注入到其他服务中。
+
+            - `${RABBITMQ_HOST}`：RabbitMQ 服务的主机名。
+            - `${RABBITMQ_PORT}`：RabbitMQ 服务的端口。
+            - `${RABBITMQ_DEFAULT_USER}`：RabbitMQ 服务的默认用户名。
+            - `${RABBITMQ_DEFAULT_PASS}`：RabbitMQ 服务的默认密码。
+
+            除了使用上述环境变量，你也可以添加自己的 `DATABASE_URL` 变量来简化 URI 声明。例如：
+
+            ```plaintext
+            amqp://<RABBITMQ_DEFAULT_USER>:<RABBITMQ_DEFAULT_PASS>@<RABBITMQ_HOST>:<RABBITMQ_PORT>/<DATABASE_NAME>
+            ```
+
+            这里的 `<DATABASE_NAME>` 是你添加的 Vhost 名称。
+
+            你也可以使用变量 `${RABBITMQ_URI}` 来获取 RabbitMQ 服务的 DSN（连接字符串）。
+
+            ## 在线管理界面
+
+            RabbitMQ 服务提供了在线管理界面，让你可以通过浏览器进行管理。
+
+            你可以通过绑定域名并访问 `https://<你的域名>` 来访问 RabbitMQ 服务的在线管理界面。
+
+            ## 已启用的插件
+
+            默认已启用以下插件：
+
+            - `rabbitmq_management`：这个管理插件提供了基于 HTTP 的 API 来管理和监控你的 RabbitMQ 服务器，还包含了浏览器界面和命令行工具 rabbitmqadmin。
+            - `rabbitmq_mqtt`：这个插件为 RabbitMQ 添加了 MQTT 协议支持。
+            - `rabbitmq_stomp`：这个插件为 RabbitMQ 添加了 STOMP 协议支持。
+
+            我们已经开放了这些插件的端口，你可以参考"网络"部分来了解访问详情。
+
+            ## 配置
+
+            请查看"设置">"配置编辑器"来了解 RabbitMQ 服务的可配置文件。
+    zh-TW:
+        description: RabbitMQ 是一個廣泛使用的開源訊息中介軟體，實作了進階訊息佇列協定 (AMQP)。
+        readme: |
+            # RabbitMQ
+
+            RabbitMQ 是一個廣泛使用的開源訊息中介軟體，實作了進階訊息佇列協定 (AMQP)。更多資訊請參考[官方首頁](https://www.rabbitmq.com)。
+
+            ## 環境變數
+
+            在部署 RabbitMQ 服務後，Zeabur 會自動將相關的環境變數注入到其他服務中。
+
+            - `${RABBITMQ_HOST}`：RabbitMQ 服務的主機名稱。
+            - `${RABBITMQ_PORT}`：RabbitMQ 服務的連接埠。
+            - `${RABBITMQ_DEFAULT_USER}`：RabbitMQ 服務的預設使用者名稱。
+            - `${RABBITMQ_DEFAULT_PASS}`：RabbitMQ 服務的預設密碼。
+
+            除了使用上述環境變數，你也可以新增自己的 `DATABASE_URL` 變數來簡化 URI 宣告。例如：
+
+            ```plaintext
+            amqp://<RABBITMQ_DEFAULT_USER>:<RABBITMQ_DEFAULT_PASS>@<RABBITMQ_HOST>:<RABBITMQ_PORT>/<DATABASE_NAME>
+            ```
+
+            這裡的 `<DATABASE_NAME>` 是你所新增的 Vhost 名稱。
+
+            你也可以使用變數 `${RABBITMQ_URI}` 來取得 RabbitMQ 服務的 DSN（連線字串）。
+
+            ## 線上管理介面
+
+            RabbitMQ 服務提供了線上管理介面，讓你可以透過瀏覽器進行管理。
+
+            你可以透過綁定網域並前往 `https://<你的網域>` 來存取 RabbitMQ 服務的線上管理介面。
+
+            ## 已啟用的外掛程式
+
+            預設已啟用以下外掛程式：
+
+            - `rabbitmq_management`：這個管理外掛程式提供了基於 HTTP 的 API 來管理和監控你的 RabbitMQ 伺服器，還包含了瀏覽器介面和命令列工具 rabbitmqadmin。
+            - `rabbitmq_mqtt`：這個外掛程式為 RabbitMQ 新增了 MQTT 協定支援。
+            - `rabbitmq_stomp`：這個外掛程式為 RabbitMQ 新增了 STOMP 協定支援。
+
+            我們已經開放了這些外掛程式的連接埠，你可以參考「網路」部分來了解存取細節。
+
+            ## 設定
+
+            請查看「設定」>「設定編輯器」來了解 RabbitMQ 服務的可設定檔案。
