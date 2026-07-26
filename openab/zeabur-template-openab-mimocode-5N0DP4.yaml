@@ -83,7 +83,7 @@ spec:
     2. Deploy the template. By default, startup writes a MiMoCode config that disables auto-detected Bedrock providers and selects `mimo/mimo-auto`.
     3. Startup runs `mimo auth login --provider mimo --method "MiMo Auto (free)"` unless `MIMOCODE_AUTO_AUTH=false`.
 
-    For Slack, set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`. For Telegram, LINE, Feishu/Lark, Google Chat, Teams, or WeCom, deploy the OpenAB Gateway template and add `GATEWAY_URL` / `GATEWAY_PLATFORM` to this service.
+    For Slack, set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`. For Telegram, LINE, Feishu/Lark, Google Chat, Teams, or WeCom, deploy the [OpenAB Telegram template](https://zeabur.com/templates/12LLKI) with image tag `beta-mimocode`, or enable them via unified-mode environment variables — see the [OpenAB docs](https://github.com/openabdev/openab/tree/main/docs).
 
     ## Customization
 

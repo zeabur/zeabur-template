@@ -90,7 +90,7 @@ spec:
 
        Then type `/login` in the Pi interface and complete the OAuth flow.
 
-    For Slack, set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`. For Telegram, LINE, Feishu/Lark, Google Chat, Teams, or WeCom, deploy the OpenAB Gateway template and add `GATEWAY_URL` / `GATEWAY_PLATFORM` to this service.
+    For Slack, set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`. For Telegram, LINE, Feishu/Lark, Google Chat, Teams, or WeCom, deploy the [OpenAB Telegram template](https://zeabur.com/templates/12LLKI) with image tag `beta-pi`, or enable them via unified-mode environment variables — see the [OpenAB docs](https://github.com/openabdev/openab/tree/main/docs).
 
     ## Customization
 

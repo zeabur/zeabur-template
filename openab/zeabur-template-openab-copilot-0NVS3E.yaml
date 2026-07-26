@@ -102,14 +102,10 @@ spec:
     2. Right-click the channel where you want the bot to respond → **Copy Channel ID**
     3. For multiple channels, separate IDs with commas: `123456789012345678,234567890123456789`
 
-    ## Add Messaging Platforms (Telegram / LINE / Feishu / Google Chat / MS Teams)
+    ## Add Messaging Platforms (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
 
-    To bridge Telegram, LINE, Feishu/Lark, Google Chat, or MS Teams, deploy the [OpenAB Gateway template](https://zeabur.com/templates/IMRONB) into the same Zeabur project. Then add these environment variables to this service:
+    For Telegram, deploy the [OpenAB Telegram template](https://zeabur.com/templates/12LLKI) and switch its image tag to `beta-copilot` with the matching `OPENAB_AGENT_COMMAND`. Other platforms are enabled by environment variables in unified mode (`LINE_CHANNEL_SECRET`, `FEISHU_APP_ID`, `GOOGLE_CHAT_ENABLED=true`, `TEAMS_APP_ID`, `WECOM_CORP_ID`) — see the [OpenAB docs](https://github.com/openabdev/openab/tree/main/docs). Webhook platforms need a public HTTPS domain on the service (port 8080); Feishu connects outbound via WebSocket and needs no domain.
 
-    - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-    - `GATEWAY_PLATFORM` = one of `telegram`, `line`, `feishu`, `googlechat`, `teams`
-
-    Restart the service. The startup script auto-injects the `[gateway]` block into `config.toml`.
     ## Usage
 
     - **@mention the bot** in an allowed channel to start a conversation
@@ -321,14 +317,10 @@ localization:
       2. 對頻道按右鍵 → **複製頻道 ID**
       3. 多個頻道用逗號分隔
 
-      ## 新增通訊平台（Telegram / LINE / Feishu / Google Chat / MS Teams）
+      ## 新增通訊平台（Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom）
 
-      若要橋接 Telegram、LINE、Feishu/Lark、Google Chat 或 MS Teams，請在同一個 Zeabur 專案中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然後在此服務新增以下環境變數：
+      若要使用 Telegram，請部署 [OpenAB Telegram 模板](https://zeabur.com/templates/12LLKI)，並把 image tag 換成 `beta-copilot`、設定對應的 `OPENAB_AGENT_COMMAND`。其他平台在 unified mode 下直接以環境變數啟用（`LINE_CHANNEL_SECRET`、`FEISHU_APP_ID`、`GOOGLE_CHAT_ENABLED=true`、`TEAMS_APP_ID`、`WECOM_CORP_ID`），詳見 [OpenAB 文件](https://github.com/openabdev/openab/tree/main/docs)。Webhook 類平台需要為服務綁定公開 HTTPS 網域（port 8080）；Feishu 走 WebSocket 對外連線，不需網域。
 
-      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 其中之一
-
-      重新啟動服務後，啟動腳本會自動在 `config.toml` 中加入 `[gateway]` 區塊。
       ## 使用方式
 
       - 在允許的頻道中 **@mention Bot** 即可開始對話
@@ -424,14 +416,10 @@ localization:
 
       Discord → **用户设置** → **高级** → 启用 **开发者模式** → 右键频道 → **复制频道 ID**。
 
-      ## 添加通讯平台（Telegram / LINE / 飞书 / Google Chat / MS Teams）
+      ## 添加通讯平台（Telegram / LINE / 飞书 / Google Chat / MS Teams / WeCom）
 
-      若要桥接 Telegram、LINE、飞书/Lark、Google Chat 或 MS Teams，请在同一个 Zeabur 项目中部署 [OpenAB Gateway 模板](https://zeabur.com/templates/IMRONB)，然后在此服务上设置以下环境变量：
+      若要使用 Telegram，请部署 [OpenAB Telegram 模板](https://zeabur.com/templates/12LLKI)，并把 image tag 换成 `beta-copilot`、设置对应的 `OPENAB_AGENT_COMMAND`。其他平台在 unified mode 下直接以环境变量启用（`LINE_CHANNEL_SECRET`、`FEISHU_APP_ID`、`GOOGLE_CHAT_ENABLED=true`、`TEAMS_APP_ID`、`WECOM_CORP_ID`），详见 [OpenAB 文档](https://github.com/openabdev/openab/tree/main/docs)。Webhook 类平台需要为服务绑定公开 HTTPS 域名（port 8080）；飞书走 WebSocket 对外连接，不需要域名。
 
-      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat` 或 `teams` 之一
-
-      重启服务。启动脚本会自动将 `[gateway]` 块注入 `config.toml`。
       ## 使用方式
 
       - 在允许的频道中 **@mention Bot** 即可开始对话
@@ -513,14 +501,10 @@ localization:
 
       4. 表示される URL で認証し、サービスを再起動
 
-      ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams）
+      ## メッセージプラットフォームを追加（Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom）
 
-      Telegram、LINE、Feishu/Lark、Google Chat、MS Teams を接続するには、同じ Zeabur プロジェクトに [OpenAB Gateway テンプレート](https://zeabur.com/templates/IMRONB) をデプロイしてから、このサービスに次の環境変数を設定してください：
+      Telegram を使う場合は [OpenAB Telegram テンプレート](https://zeabur.com/templates/12LLKI) をデプロイし、image tag を `beta-copilot` に変更して対応する `OPENAB_AGENT_COMMAND` を設定してください。その他のプラットフォームは unified mode で環境変数から直接有効化できます（`LINE_CHANNEL_SECRET`、`FEISHU_APP_ID`、`GOOGLE_CHAT_ENABLED=true`、`TEAMS_APP_ID`、`WECOM_CORP_ID`）。詳細は [OpenAB ドキュメント](https://github.com/openabdev/openab/tree/main/docs) を参照。Webhook 型プラットフォームはサービスに公開 HTTPS ドメイン（port 8080）が必要です。Feishu は WebSocket でアウトバウンド接続するためドメイン不要です。
 
-      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = `telegram`、`line`、`feishu`、`googlechat`、`teams` のいずれか
-
-      サービスを再起動すると、起動スクリプトが `config.toml` に `[gateway]` セクションを自動追加します。
       ## 使い方
 
       - 許可されたチャンネルで **Bot を @mention** して会話を開始
@@ -600,14 +584,10 @@ localization:
 
       4. Completar la autorización en el navegador y reiniciar el servicio
 
-      ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams)
+      ## Añadir plataformas de mensajería (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
 
-      Para conectar Telegram, LINE, Feishu/Lark, Google Chat o MS Teams, despliega la [plantilla OpenAB Gateway](https://zeabur.com/templates/IMRONB) en el mismo proyecto Zeabur. Luego añade estas variables de entorno a este servicio:
+      Para Telegram, despliega la [plantilla OpenAB Telegram](https://zeabur.com/templates/12LLKI) y cambia su image tag a `beta-copilot` con el `OPENAB_AGENT_COMMAND` correspondiente. Las demás plataformas se habilitan mediante variables de entorno en modo unified (`LINE_CHANNEL_SECRET`, `FEISHU_APP_ID`, `GOOGLE_CHAT_ENABLED=true`, `TEAMS_APP_ID`, `WECOM_CORP_ID`) — consulta la [documentación de OpenAB](https://github.com/openabdev/openab/tree/main/docs). Las plataformas webhook necesitan un dominio HTTPS público en el servicio (puerto 8080); Feishu se conecta por WebSocket saliente y no necesita dominio.
 
-      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = uno de `telegram`, `line`, `feishu`, `googlechat`, `teams`
-
-      Reinicia el servicio. El script de arranque inyecta automáticamente el bloque `[gateway]` en `config.toml`.
       ## Uso
 
       - **@mencionar al bot** en un canal permitido para iniciar una conversación
@@ -687,14 +667,10 @@ localization:
 
       4. Ikuti URL untuk otorisasi di browser, lalu restart layanan
 
-      ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams)
+      ## Tambahkan Platform Pesan (Telegram / LINE / Feishu / Google Chat / MS Teams / WeCom)
 
-      Untuk menjembatani Telegram, LINE, Feishu/Lark, Google Chat, atau MS Teams, deploy [template OpenAB Gateway](https://zeabur.com/templates/IMRONB) di proyek Zeabur yang sama. Kemudian tambahkan variabel lingkungan berikut ke layanan ini:
+      Untuk Telegram, deploy [template OpenAB Telegram](https://zeabur.com/templates/12LLKI) dan ganti image tag-nya ke `beta-copilot` dengan `OPENAB_AGENT_COMMAND` yang sesuai. Platform lain diaktifkan lewat variabel lingkungan pada unified mode (`LINE_CHANNEL_SECRET`, `FEISHU_APP_ID`, `GOOGLE_CHAT_ENABLED=true`, `TEAMS_APP_ID`, `WECOM_CORP_ID`) — lihat [dokumentasi OpenAB](https://github.com/openabdev/openab/tree/main/docs). Platform webhook memerlukan domain HTTPS publik pada layanan (port 8080); Feishu terhubung keluar via WebSocket dan tidak butuh domain.
 
-      - `GATEWAY_URL` = `ws://openab-gateway:8080/ws`
-      - `GATEWAY_PLATFORM` = salah satu dari `telegram`, `line`, `feishu`, `googlechat`, `teams`
-
-      Restart layanan. Skrip startup otomatis menyuntikkan blok `[gateway]` ke `config.toml`.
       ## Penggunaan
 
       - **@mention bot** di channel yang diizinkan untuk memulai percakapan
