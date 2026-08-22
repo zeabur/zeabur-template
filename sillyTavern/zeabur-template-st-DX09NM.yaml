@@ -93,6 +93,10 @@ spec:
           spec:
             source:
                 image: ghcr.io/sillytavern/sillytavern:1.18.0
+                command:
+                    - node
+                    - server.js
+                    - --listen
             ports:
                 - id: web
                   port: 8000
