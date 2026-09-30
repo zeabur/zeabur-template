@@ -17,10 +17,18 @@ spec:
         type: STRING
         name: Enable Control UI
         description: "Set to 'true' to enable the web Control UI via public domain (default). Set to 'false' for loopback only (more secure)."
-      - key: ZEABUR_AI_HUB_API_KEY
-        type: AI_HUB_KEY
-        name: Zeabur AI Hub API Key (Optional)
-        description: "Optional but recommended. The template defaults to zeabur-ai/glm-4.7-flash (cheap, fast) which needs this key. Without it, you'll need to switch to another provider and supply its own API key. Can be added later in the Variables tab."
+      - key: LLM_API_KEY
+        type: STRING
+        name: LLM API Key (Optional)
+        description: "Optional. Your OpenAI-compatible provider API key (OpenAI, Anthropic-compatible gateway, OpenRouter, etc.). Leave blank to configure a model later in the Control UI."
+      - key: LLM_BASE_URL
+        type: STRING
+        name: LLM Base URL (Optional)
+        description: "OpenAI-compatible endpoint, e.g. https://api.openai.com/v1"
+      - key: LLM_MODEL
+        type: STRING
+        name: LLM Model (Optional)
+        description: "Primary model id to use, e.g. gpt-4o-mini"
     tags:
       - AI
       - Assistant
@@ -41,7 +49,7 @@ spec:
       # OpenClaw 🦞
       OpenClaw 🦞 (formerly Clawdbot, Moltbot) is a personal AI assistant that runs locally and connects to multiple messaging platforms via a WebSocket-based Gateway architecture.
 
-      ⚠️ This template uses `ghcr.io/openclaw/openclaw:2026.5.28`. OpenClaw 🦞 is in rapid development, so there may be undiscovered bugs. Changing versions may also cause stability issues.
+      ⚠️ This template uses `ghcr.io/openclaw/openclaw:2026.9.7`. OpenClaw 🦞 is in rapid development, so there may be undiscovered bugs. Changing versions may also cause stability issues.
 
       ⚠️ If you encounter any issues, feel free to check the [GitHub issues](https://github.com/openclaw/openclaw/issues) for solutions or to report new ones. For Zeabur platform-related issues, please contact Zeabur support.
 
@@ -60,7 +68,9 @@ spec:
       |----------|----------|-------------|
       | **Domain** | Yes | The subdomain for accessing OpenClaw (e.g. `my-openclaw` → `my-openclaw.zeabur.app`). Can be removed after switching to loopback mode. |
       | **Enable Control UI** | Yes | `true` (default) — enables the web Control UI via your public domain. `false` — binds to loopback only, no public web access (more secure, use with Tailscale or supported channels like Telegram) |
-      | **Zeabur AI Hub API Key** | No | Leave blank to skip. The template defaults to `zeabur-ai/glm-4.7-flash` (cheap, fast) which needs this key — without it, you'll need to switch models and supply your own API key for another provider (Anthropic, OpenAI, etc.). Can be added later in the service's **Variables** tab. |
+      | **LLM API Key** | No | Your OpenAI-compatible provider API key (OpenAI, Anthropic-compatible gateway, OpenRouter, etc.). If provided together with the two fields below, the template configures a `custom` provider with your model as primary. Leave blank to pick a model/provider later via the Control UI or `openclaw` CLI. |
+      | **LLM Base URL** | No | OpenAI-compatible endpoint, e.g. `https://api.openai.com/v1`. |
+      | **LLM Model** | No | Primary model id to use, e.g. `gpt-4o-mini`. |
 
       ## Recommended Resources
       - **Minimum**: 2 vCPU / 4 GB RAM
@@ -71,34 +81,34 @@ spec:
       - **Devbox**: If you need multi-language code execution (Python, Go, Rust, C/C++), deploy the [Devbox Template](https://zeabur.com/templates/ZBVZNH) to the same project
 
       ## Usage
-      1. After deployment, open the service URL from the **Networking** tab. On the login page, paste the **Gateway Token** (found in the **Instructions** tab or **Environment Variables** → `OPENCLAW_GATEWAY_TOKEN`) and click **Connect**
+      1. After deployment, open the service URL from the **Networking** tab. On the login page, paste the **Gateway Token** (found in the **Instructions** tab or **Environment Variables** → `OPENCLAW_GATEWAY_TOKEN`) and click **Connect**. On the **first** connection each browser shows **"Approve this browser"** with a one-time command like `openclaw devices approve <requestId>`. Open **Command** in the Zeabur dashboard and run that exact command — the page then connects on its own. This is a one-time step per browser.
       2. **Configure AI model** (choose one):
-         - **Zeabur AI Hub** (default model: `glm-4.7-flash`): If you entered the API Key during deployment, go directly to step 3. You can also add `ZEABUR_AI_HUB_API_KEY` later via **Variables** tab in Zeabur dashboard (restart service after adding).
-         - **Other providers** (Anthropic, OpenAI, etc.): The template default remains `zeabur-ai/glm-4.7-flash`. To use another provider, add its API key via environment variables, then switch model with `/model <id>` in chat or via Control UI Settings. See: https://docs.openclaw.ai/providers/anthropic
+         - **During deployment**: If you filled in `LLM_API_KEY`, `LLM_BASE_URL` and `LLM_MODEL`, the template configures a `custom` OpenAI-compatible provider with your model as primary — go directly to step 3.
+         - **Later**: If you left them blank, the service still deploys. Add a provider and model via the Control UI Settings or the `openclaw` CLI, then switch model with `/model <id>` in chat. See: https://docs.openclaw.ai/providers
       3. Go to the **Chat** page to test if your AI model is working
       4. (Optional) Set up messaging platforms like Telegram, WhatsApp, etc.
 
       For AI model configuration, see the [official documentation](https://docs.openclaw.ai/providers).
 
       ### Model Switching & Failover
-      This template includes failover models that automatically switch when the primary model is unavailable. Default chain: `glm-4.7-flash` → `grok-4-fast-non-reasoning` → `minimax-m2.5` → `kimi-k2.5` → `qwen-3-235b` → `gpt-5-mini`.
+      OpenClaw supports a primary model plus optional failover models that switch automatically when the primary is unavailable. When you supply the LLM variables at deploy time, the primary is set to `custom/<your-model>`; you can add more providers and fallbacks anytime.
 
       You can manage models from **Control UI Chat** or **Command** in the Zeabur dashboard.
 
       **Via Control UI Chat** — type slash commands directly in the chat box:
-      - `/model zeabur-ai/glm-4.7-flash` — change primary model
+      - `/model custom/<your-model>` — change primary model
       - `/model` — view current model
       - `/models` — list model providers
-      - `/models <provider>` — list models for a specific provider (e.g. `/models zeabur-ai`)
+      - `/models <provider>` — list models for a specific provider (e.g. `/models custom`)
 
       **Via Command** (Zeabur dashboard) — same commands in the terminal:
       ```bash
-      openclaw models set zeabur-ai/glm-4.7-flash
+      openclaw models set custom/<your-model>
       openclaw models status
       openclaw models list --all
       openclaw models fallbacks list
-      openclaw models fallbacks add zeabur-ai/gpt-5-mini
-      openclaw models fallbacks remove zeabur-ai/gpt-5-mini
+      openclaw models fallbacks add <provider>/<model>
+      openclaw models fallbacks remove <provider>/<model>
       openclaw models fallbacks clear
       ```
 
@@ -107,8 +117,8 @@ spec:
       "agents": {
         "defaults": {
           "model": {
-            "primary": "zeabur-ai/glm-4.7-flash",
-            "fallbacks": ["zeabur-ai/grok-4-fast-non-reasoning", "zeabur-ai/minimax-m2.5"]
+            "primary": "custom/<your-model>",
+            "fallbacks": ["anthropic/claude-sonnet-4-6", "openai/gpt-4o-mini"]
           }
         }
       }
@@ -116,7 +126,7 @@ spec:
       After editing the config file, restart the service.
 
       ### Adding External Model Providers
-      Besides Zeabur AI Hub, you can add external providers like Anthropic, OpenAI, Google, etc.
+      You can add any OpenAI-compatible or first-class provider such as Anthropic, OpenAI, Google, etc.
 
       **Method 1: Environment variables** — add API keys via **Variables** tab in Zeabur dashboard:
       - `ANTHROPIC_API_KEY` — for Claude models
@@ -227,9 +237,9 @@ spec:
       ## AI Model Configuration
 
       **Verify your setup:**
-      1. The template seeds `zeabur-ai/glm-4.7-flash` as the default model on first boot:
-         - With Zeabur AI Hub API Key → it just works
-         - Without → the model won't respond; add an AI Hub key (recommended) or switch model + add your own provider API key
+      1. On first boot, if you supplied `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`, the template seeds `custom/<your-model>` as the default model:
+         - With the LLM variables set → it just works
+         - Without → no model is configured; add a provider + model via the Control UI or `openclaw` CLI
       2. Open **Chat** page and send a test message
       3. If you get a response → model is working
       4. If you get an error → check that your API key is configured correctly
@@ -246,16 +256,11 @@ spec:
       - Add API keys for other AI providers (e.g., Anthropic, OpenAI)
       - See: https://docs.openclaw.ai/providers
 
-      **Modify Zeabur AI Hub models** (via Zeabur dashboard):
-      - Go to **Settings** → **Configs** → Edit `/opt/openclaw/providers/zeabur-ai-hub.json5`, then restart the service (changes are synced on startup)
-      - Older versions (without commands): Edit `/home/node/.openclaw/openclaw.json` via **Files** tab or Control UI Settings. Add the following to `models.providers.zeabur-ai.models` array:
+      **Add or edit your custom provider's models** (via config file):
+      - Edit `/home/node/.openclaw/openclaw.json` via the **Files** tab or Control UI Settings, then restart the service. Add more entries to the `models.providers.custom.models` array:
       ```json
-      { "id": "gpt-5.2", "name": "GPT-5.2", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.75, "output": 14, "cacheRead": 0.18, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5.1", "name": "GPT-5.1", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.13, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5-nano", "name": "GPT-5 Nano", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.05, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "glm-4.7", "name": "GLM-4.7", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.4, "output": 1.9, "cacheRead": 0.08, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "glm-4.7-flash", "name": "GLM-4.7 Flash", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.06, "output": 0.4, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "kimi-k2.5", "name": "Kimi K2.5", "reasoning": false, "input": ["text"], "cost": { "input": 0.45, "output": 2.25, "cacheRead": 0.07, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 }
+      { "id": "gpt-4o", "name": "gpt-4o", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 },
+      { "id": "gpt-4o-mini", "name": "gpt-4o-mini", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 }
       ```
 
       ## Security Note
@@ -330,7 +335,7 @@ spec:
       > ⚠️ Avoid using `latest` as the tag — it always pulls the newest release, which may introduce breaking changes or unexpected errors. Pin to a specific version for stability.
       5. Check the **Logs** tab to confirm the gateway started successfully
 
-      > 💡 The startup script automatically migrates your config on each boot — new settings (like `trustedProxies`, `dangerouslyDisableDeviceAuth`) are added if missing. Your existing settings are preserved.
+      > 💡 The startup script automatically migrates your config on each boot — new settings (like `trustedProxies`) are added if missing. Your existing settings are preserved.
 
       ### "device identity required"
       This means the Control UI has not been authenticated with a Gateway Token yet. Fix:
@@ -410,7 +415,7 @@ spec:
       This template pre-configures the following settings for Zeabur's cloud environment:
 
       - **`gateway.trustedProxies`**: Set to `["10.0.0.0/8", "172.16.0.0/12"]` so the gateway correctly identifies client IPs behind Zeabur's reverse proxy. Without this, the Control UI may show "device identity required" errors.
-      - **`dangerouslyDisableDeviceAuth`**: Disables Control UI device pairing (device pairing is designed for local networks; cloud deployments use Gateway Token authentication instead).
+      - **`dangerouslyDisableDeviceAuth`** *(retired since image `2026.9.7`)*: This flag previously disabled Control UI device pairing. It is now inert and stripped by `openclaw doctor --fix`. The Control UI requires a one-time device pairing per browser instead — see step 1 in **Usage** to approve the browser with `openclaw devices approve`.
       - **`/usr/local/bin` symlinks**: The `openclaw`, `backup`, and `restore` commands are symlinked to `/usr/local/bin` so they work in Zeabur's **Command** terminal.
       - **`OPENCLAW_DISABLE_BONJOUR=1`**: Disables mDNS/Bonjour because Zeabur container hostnames can exceed the 63-byte DNS label limit. mDNS is only used for local network discovery and is not needed in cloud environments.
       - **`OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=true`**: Fixes Telegram connection issues in containerized environments (required for image versions `2026.2.17` and later).
@@ -421,6 +426,11 @@ spec:
       - GitHub: https://github.com/openclaw/openclaw
 
       ## Changelog
+      **2026/9/30**
+      - ⚠️ Upgrade image to `2026.9.7` — **back up before upgrading**. Jumping across many releases migrates the on-disk database on first boot; `2026.9.7` automatically backs up every state/agent database before migrating and restores it on rollback, but keep your own backup — downgrading later still needs the pre-upgrade backup.
+      - ⚠️ Breaking (Control UI): `dangerouslyDisableDeviceAuth` is retired and inert. The first browser that opens the Control UI now shows **"Approve this browser"** and needs a **one-time approval** — run the `openclaw devices approve <requestId>` command it displays in the **Command** terminal, and the page connects on its own.
+      - New flagship models added upstream: Anthropic Fable 5.1, OpenAI GPT-6 Astra, and the full GPT-5.6 family. Also adds auto-update controls (`OPENCLAW_NO_AUTO_UPDATE=1`), removes checkpoint restore, and includes 100+ channel/provider/security fixes since `2026.5.28`.
+
       **2026/6/1**
       - Upgrade image to `2026.5.28` — fixes LINE and other on-demand channel plugins failing to load (after a plugin-SDK layout change, the pinned image now matches the auto-installed channel plugin version). Also adds Claude Opus 4.8 support, encrypted PDF extraction, NVIDIA/MiniMax provider updates, and 100+ security/channel/agent fixes
 
@@ -551,7 +561,7 @@ spec:
         domainKey: PUBLIC_DOMAIN
         spec:
           source:
-            image: ghcr.io/openclaw/openclaw:2026.5.28
+            image: ghcr.io/openclaw/openclaw:2026.9.7
             command:
               - /bin/sh
               - -c
@@ -620,16 +630,15 @@ spec:
                 PROVIDERS_DIR="$CONFIG_DIR/providers"
                 mkdir -p "$PROVIDERS_DIR"
 
-                # Check if API key is a real value (not an unresolved template variable like '${ZEABUR_AI_HUB_API_KEY}')
-                HAS_AI_HUB_KEY=false
-                case "${ZEABUR_AI_HUB_API_KEY}" in '${'*'}') ;; '') ;; *) HAS_AI_HUB_KEY=true ;; esac
-
-                # Copy provider config from /opt (injected by Zeabur configs) on every start
-                # so template model-list updates and user Configs edits take effect
-                if [ "$HAS_AI_HUB_KEY" = true ] && [ -f /opt/openclaw/providers/zeabur-ai-hub.json5 ]; then
-                  cp /opt/openclaw/providers/zeabur-ai-hub.json5 "$PROVIDERS_DIR/"
-                  echo "Synced Zeabur AI Hub provider config from /opt"
-                fi
+                # Configure the custom LLM provider only when ALL of key/baseURL/model are real values
+                # (not blank and not an unresolved template variable like '${LLM_API_KEY}'); a partial
+                # set would produce baseUrl "" and primary "custom/", an unusable config.
+                HAS_LLM_KEY=false
+                case "${LLM_API_KEY}" in '${'*'}'|'') ;; *)
+                  case "${LLM_BASE_URL}" in '${'*'}'|'') ;; *)
+                    case "${LLM_MODEL}" in '${'*'}'|'') ;; *) HAS_LLM_KEY=true ;; esac
+                  ;; esac
+                ;; esac
 
                 # Create initial config (only if not exists)
                 if [ ! -f "$CONFIG_FILE" ]; then
@@ -639,15 +648,15 @@ spec:
                   if [ "${ENABLE_CONTROL_UI}" = "false" ]; then
                     GATEWAY_JSON='"auth": { "mode": "token" }'
                   else
-                    GATEWAY_JSON='"auth": { "mode": "token" }, "trustedProxies": ["10.0.0.0/8", "172.16.0.0/12"], "controlUi": { "allowInsecureAuth": true, "dangerouslyAllowHostHeaderOriginFallback": true, "dangerouslyDisableDeviceAuth": true }'
+                    GATEWAY_JSON='"auth": { "mode": "token" }, "trustedProxies": ["10.0.0.0/8", "172.16.0.0/12"], "controlUi": { "dangerouslyAllowHostHeaderOriginFallback": true }'
                   fi
 
-                  if [ "$HAS_AI_HUB_KEY" = true ]; then
+                  if [ "$HAS_LLM_KEY" = true ]; then
                     cat > "$CONFIG_FILE" << EOF
                 {
                   "gateway": { ${GATEWAY_JSON} },
-                  "agents": { "defaults": { "model": { "primary": "zeabur-ai/glm-4.7-flash", "fallbacks": ["zeabur-ai/grok-4-fast-non-reasoning", "zeabur-ai/minimax-m2.5", "zeabur-ai/kimi-k2.5", "zeabur-ai/qwen-3-235b", "zeabur-ai/gpt-5-mini"] } } },
-                  "models": { "providers": {} }
+                  "models": { "providers": { "custom": { "baseUrl": "${LLM_BASE_URL}", "apiKey": "${LLM_API_KEY}", "api": "openai-completions", "models": [ { "id": "${LLM_MODEL}", "name": "${LLM_MODEL}", "input": ["text","image"], "contextWindow": 128000, "maxTokens": 8192 } ] } } },
+                  "agents": { "defaults": { "model": { "primary": "custom/${LLM_MODEL}" } } }
                 }
                 EOF
                   else
@@ -660,47 +669,6 @@ spec:
                   chmod 600 "$CONFIG_FILE"
                 else
                   echo "Config exists, checking for updates..."
-                fi
-
-                # Inline AI Hub provider config from /opt every start, drop any $include reference.
-                # OpenClaw 2026.5.x rejects writes that flatten $include-owned config, which broke
-                # `openclaw models set` / `fallbacks add/remove`. Inlining keeps writes possible
-                # and self-heals existing deployments that already have $include.
-                if [ "$HAS_AI_HUB_KEY" = true ] && [ -f /opt/openclaw/providers/zeabur-ai-hub.json5 ]; then
-                  node -e "
-                    const fs = require('fs');
-                    const JSON5 = require('json5');
-                    const configPath = '$CONFIG_FILE';
-                    const providersPath = '/opt/openclaw/providers/zeabur-ai-hub.json5';
-
-                    try {
-                      const config = JSON5.parse(fs.readFileSync(configPath, 'utf8'));
-                      const providers = JSON5.parse(fs.readFileSync(providersPath, 'utf8'));
-
-                      if (!config.models) config.models = {};
-                      const existing = config.models.providers || {};
-                      delete existing['\$include'];
-                      config.models.providers = Object.assign({}, existing, providers);
-
-                      if (!config.agents?.defaults?.model?.primary) {
-                        if (!config.agents) config.agents = {};
-                        if (!config.agents.defaults) config.agents.defaults = {};
-                        config.agents.defaults.model = { primary: 'zeabur-ai/glm-4.7-flash', fallbacks: ['zeabur-ai/grok-4-fast-non-reasoning', 'zeabur-ai/minimax-m2.5', 'zeabur-ai/kimi-k2.5', 'zeabur-ai/qwen-3-235b', 'zeabur-ai/gpt-5-mini'] };
-                        console.log('Default model set to zeabur-ai/glm-4.7-flash with fallbacks.');
-                      }
-
-                      const zeaburAi = config.models.providers['zeabur-ai'];
-                      if (zeaburAi && zeaburAi.apiKey && zeaburAi.apiKey.includes('\${')) {
-                        zeaburAi.apiKey = process.env.ZEABUR_AI_HUB_API_KEY || '';
-                      }
-
-                      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-                      console.log('Zeabur AI Hub provider inlined (' + Object.keys(providers).length + ' provider(s), ' + (providers['zeabur-ai']?.models?.length || 0) + ' models).');
-                    } catch (err) {
-                      console.error('Warning: Failed to inline Zeabur AI Hub provider:', err.message);
-                      console.error('You may need to configure the provider manually via Control UI.');
-                    }
-                  "
                 fi
 
                 # Sync Control UI config with ENABLE_CONTROL_UI env var
@@ -721,8 +689,11 @@ spec:
                           changed = true;
                         }
                         const ui = config.gateway.controlUi || {};
-                        if (!ui.allowInsecureAuth || !ui.dangerouslyAllowHostHeaderOriginFallback || !ui.dangerouslyDisableDeviceAuth) {
-                          config.gateway.controlUi = { ...ui, allowInsecureAuth: true, dangerouslyAllowHostHeaderOriginFallback: true, dangerouslyDisableDeviceAuth: true };
+                        // Strip keys retired upstream (allowInsecureAuth is hard-rejected in 2026.9.7, dangerouslyDisableDeviceAuth is inert) so an existing Control-UI config upgraded from an older template still boots, and ensure the origin-fallback flag
+                        if (ui.allowInsecureAuth !== undefined || ui.dangerouslyDisableDeviceAuth !== undefined || !ui.dangerouslyAllowHostHeaderOriginFallback) {
+                          delete ui.allowInsecureAuth;
+                          delete ui.dangerouslyDisableDeviceAuth;
+                          config.gateway.controlUi = { ...ui, dangerouslyAllowHostHeaderOriginFallback: true };
                           changed = true;
                         }
                       } else {
@@ -752,18 +723,6 @@ spec:
                   "
 
                 chmod 600 "$CONFIG_FILE" 2>/dev/null || true
-
-                # Copy Zeabur image gen skill if API key is set
-                MANAGED_SKILLS_DIR="$CONFIG_DIR/skills"
-                if [ "$HAS_AI_HUB_KEY" = true ]; then
-                  SKILL_DIR="$MANAGED_SKILLS_DIR/zeabur-image-gen"
-                  if [ ! -d "$SKILL_DIR" ]; then
-                    mkdir -p "$SKILL_DIR/scripts"
-                    cp /opt/openclaw/skills/zeabur-image-gen/SKILL.md "$SKILL_DIR/"
-                    cp /opt/openclaw/skills/zeabur-image-gen/scripts/generate_image.mjs "$SKILL_DIR/scripts/"
-                    echo "Installed zeabur-image-gen skill"
-                  fi
-                fi
 
 
 
@@ -1204,220 +1163,17 @@ spec:
                   kill $FALLBACK_PID 2>/dev/null
                   wait $FALLBACK_PID 2>/dev/null
                 done
-            - path: /opt/openclaw/providers/zeabur-ai-hub.json5
-              template: |
-                {
-                  "zeabur-ai": {
-                    "baseUrl": "https://hnd1.aihub.zeabur.ai/v1",
-                    "apiKey": "${ZEABUR_AI_HUB_API_KEY}",
-                    "api": "openai-completions",
-                    "models": [
-                      { "id": "gemini-3.1-pro-preview", "name": "Gemini 3.1 Pro Preview (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 2, "output": 12, "cacheRead": 0.2, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "gemini-3.1-flash-lite-preview", "name": "Gemini 3.1 Flash Lite Preview (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.25, "output": 1.5, "cacheRead": 0.025, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "gemini-3.1-flash-image-preview", "name": "Gemini 3.1 Flash Image Preview (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.5, "output": 60, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "gemini-3-pro-image-preview", "name": "Gemini 3 Pro Image Preview (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 2, "output": 120, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "gpt-5", "name": "GPT-5 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.13, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-                      { "id": "gpt-5.4-pro", "name": "GPT-5.4 Pro (Zeabur AI Hub)", "reasoning": true, "input": ["text", "image"], "cost": { "input": 30, "output": 180, "cacheRead": 3, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-                      { "id": "claude-opus-4-7", "name": "Claude Opus 4.7 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 5, "output": 25, "cacheRead": 0.5, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192, "compat": { "supportsStore": false } },
-                      { "id": "claude-opus-4-6", "name": "Claude Opus 4.6 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 5, "output": 25, "cacheRead": 0.5, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192, "compat": { "supportsStore": false } },
-                      { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 3.3, "output": 16.5, "cacheRead": 0.33, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192, "compat": { "supportsStore": false } },
-                      { "id": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 3.3, "output": 16.5, "cacheRead": 0.33, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192, "compat": { "supportsStore": false } },
-                      { "id": "gemini-3-flash-preview", "name": "Gemini 3 Flash Preview (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.5, "output": 3, "cacheRead": 0.05, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "gpt-5-mini", "name": "GPT-5 Mini (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.25, "output": 2, "cacheRead": 0.03, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-                      { "id": "claude-haiku-4-5", "name": "Claude Haiku 4.5 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.1, "output": 5.5, "cacheRead": 0.11, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192, "compat": { "supportsStore": false } },
-                      { "id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.125, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.3, "output": 2.5, "cacheRead": 0.03, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "gemini-2.5-flash-lite", "name": "Gemini 2.5 Flash Lite (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.1, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "gemini-2.5-flash-image", "name": "Gemini 2.5 Flash Image (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.3, "output": 30, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "deepseek-v3.2", "name": "DeepSeek V3.2 (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.27, "output": 0.4, "cacheRead": 0.027, "cacheWrite": 0 }, "contextWindow": 164000, "maxTokens": 8192 },
-                      { "id": "gpt-4.1", "name": "GPT-4.1 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 2, "output": 8, "cacheRead": 0.5, "cacheWrite": 0 }, "contextWindow": 1048576, "maxTokens": 8192 },
-                      { "id": "gpt-4.1-mini", "name": "GPT-4.1 mini (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.4, "output": 1.6, "cacheRead": 0.1, "cacheWrite": 0 }, "contextWindow": 1048576, "maxTokens": 8192 },
-                      { "id": "gpt-4o", "name": "GPT-4o (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 2.5, "output": 10, "cacheRead": 1.25, "cacheWrite": 0 }, "contextWindow": 128000, "maxTokens": 8192 },
-                      { "id": "gpt-4o-mini", "name": "GPT-4o mini (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.15, "output": 0.6, "cacheRead": 0.075, "cacheWrite": 0 }, "contextWindow": 128000, "maxTokens": 8192 },
-                      { "id": "gpt-oss-120b", "name": "GPT OSS 120B (Zeabur AI Hub)", "reasoning": true, "input": ["text"], "cost": { "input": 0.35, "output": 0.75, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192, "compat": { "supportsStore": false } },
-                      { "id": "grok-4-fast-non-reasoning", "name": "Grok 4 Fast (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.2, "output": 0.5, "cacheRead": 0.05, "cacheWrite": 0 }, "contextWindow": 2000000, "maxTokens": 8192 },
-                      { "id": "glm-4.6", "name": "GLM-4.6 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.45, "output": 1.9, "cacheRead": 0.11, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-                      { "id": "llama-3.1-8b", "name": "Llama 3.1 8B (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.02, "output": 0.05, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 },
-                      { "id": "qwen-3-235b", "name": "Qwen 3 235B (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.18, "output": 0.54, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 32768, "maxTokens": 8192 },
-                      { "id": "qwen3-next", "name": "Qwen 3 Next 80B (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.14, "output": 1.1, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 32768, "maxTokens": 8192 },
-                      { "id": "kimi-k2-thinking", "name": "Kimi K2 Thinking (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.55, "output": 2.5, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 },
-                      { "id": "gpt-5.2", "name": "GPT-5.2 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.75, "output": 14, "cacheRead": 0.18, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-                      { "id": "gpt-5.1", "name": "GPT-5.1 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.13, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-                      { "id": "gpt-5-nano", "name": "GPT-5 Nano (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.05, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-                      { "id": "glm-4.7", "name": "GLM-4.7 (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.4, "output": 1.9, "cacheRead": 0.08, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-                      { "id": "glm-4.7-flash", "name": "GLM-4.7 Flash (Zeabur AI Hub)", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.06, "output": 0.4, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-                      { "id": "glm-5", "name": "GLM-5 (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.8, "output": 2.56, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-                      { "id": "kimi-k2.5", "name": "Kimi K2.5 (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.45, "output": 2.25, "cacheRead": 0.07, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 },
-                      { "id": "minimax-m2.5", "name": "MiniMax M2.5 (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.27, "output": 0.95, "cacheRead": 0.03, "cacheWrite": 0 }, "contextWindow": 196608, "maxTokens": 8192 },
-                      { "id": "step-3.5-flash", "name": "Step 3.5 Flash (Zeabur AI Hub)", "reasoning": false, "input": ["text"], "cost": { "input": 0.1, "output": 0.3, "cacheRead": 0.02, "cacheWrite": 0 }, "contextWindow": 256000, "maxTokens": 8192 },
-                      { "id": "gpt-5.5", "name": "GPT-5.5 (Zeabur AI Hub)", "reasoning": true, "input": ["text", "image"], "cost": { "input": 5, "output": 30, "cacheRead": 0.5, "cacheWrite": 0 }, "contextWindow": 272000, "maxTokens": 8192 },
-                      { "id": "deepseek-v4-flash", "name": "DeepSeek V4 Flash (Zeabur AI Hub)", "reasoning": true, "input": ["text"], "cost": { "input": 0.14, "output": 0.28, "cacheRead": 0.03, "cacheWrite": 0 }, "contextWindow": 1048576, "maxTokens": 8192 },
-                      { "id": "deepseek-v4-pro", "name": "DeepSeek V4 Pro (Zeabur AI Hub)", "reasoning": true, "input": ["text"], "cost": { "input": 1.74, "output": 3.48, "cacheRead": 0.15, "cacheWrite": 0 }, "contextWindow": 1000000, "maxTokens": 8192 },
-                      { "id": "kimi-k2.6", "name": "Kimi K2.6 (Zeabur AI Hub)", "reasoning": true, "input": ["text"], "cost": { "input": 0.75, "output": 3.5, "cacheRead": 0.15, "cacheWrite": 0 }, "contextWindow": 262144, "maxTokens": 8192 }
-                    ]
-                  }
-                }
-            - path: /opt/openclaw/skills/zeabur-image-gen/SKILL.md
-              envsubst: false
-              permission: 420
-              template: |
-                ---
-                name: zeabur-image-gen
-                description: Generate images via Zeabur AI Hub using Gemini image models.
-                homepage: https://zeabur.com/ai-hub
-                metadata:
-                  {
-                    "openclaw":
-                      {
-                        "emoji": "🎨",
-                        "requires": { "env": ["ZEABUR_AI_HUB_API_KEY"] },
-                        "primaryEnv": "ZEABUR_AI_HUB_API_KEY",
-                      },
-                  }
-                ---
-
-                # Zeabur Image Gen
-
-                Generate images via Zeabur AI Hub using Gemini image models.
-
-                ## Run
-
-                ```bash
-                node {baseDir}/scripts/generate_image.mjs --prompt "your image description" --filename "output.png"
-                ```
-
-                Useful flags:
-
-                ```bash
-                # Use a specific model
-                node {baseDir}/scripts/generate_image.mjs --prompt "a cat on the moon" --filename "cat-moon.png" --model gemini-3-pro-image-preview
-
-                # Use SFO1 endpoint (default is HND1 Tokyo)
-                node {baseDir}/scripts/generate_image.mjs --prompt "cherry blossoms" --filename "sakura.png" --endpoint sfo1
-                ```
-
-                ## Supported Models
-
-                - `gemini-2.5-flash-image` (default) - faster
-                - `gemini-3-pro-image-preview` - higher quality
-
-                ## API Key
-
-                - `ZEABUR_AI_HUB_API_KEY` env var
-                - Or set `skills."zeabur-image-gen".apiKey` / `skills."zeabur-image-gen".env.ZEABUR_AI_HUB_API_KEY` in `~/.openclaw/openclaw.json`
-
-                ## Notes
-
-                - Endpoints: `hnd1` (Tokyo, default), `sfo1` (San Francisco).
-                - Use timestamps in filenames: `yyyy-mm-dd-hh-mm-ss-name.png`.
-                - The script prints a `MEDIA:` line for OpenClaw to auto-attach on supported chat providers.
-                - Do not read the image back; report the saved path only.
-            - path: /opt/openclaw/skills/zeabur-image-gen/scripts/generate_image.mjs
-              envsubst: false
-              permission: 420
-              template: |
-                #!/usr/bin/env node
-                /**
-                 * Generate images using Zeabur AI Hub via Chat Completions API.
-                 *
-                 * Usage:
-                 *   node generate_image.mjs --prompt "your image description" --filename "output.png"
-                 *   node generate_image.mjs --prompt "a cat" --filename "cat.png" --model gemini-2.5-flash-image
-                 */
-
-                import { parseArgs } from "node:util";
-                import { writeFile, mkdir } from "node:fs/promises";
-                import { resolve, dirname } from "node:path";
-
-                const ENDPOINTS = {
-                  hnd1: "https://hnd1.aihub.zeabur.ai",
-                  sfo1: "https://sfo1.aihub.zeabur.ai",
-                };
-
-                const DEFAULT_MODEL = "gemini-2.5-flash-image";
-
-                const { values } = parseArgs({
-                  options: {
-                    prompt: { type: "string", short: "p" },
-                    filename: { type: "string", short: "f" },
-                    model: { type: "string", short: "m", default: DEFAULT_MODEL },
-                    endpoint: { type: "string", short: "e", default: "hnd1" },
-                    "api-key": { type: "string", short: "k" },
-                  },
-                  strict: true,
-                });
-
-                if (!values.prompt || !values.filename) {
-                  console.error("Usage: node generate_image.mjs --prompt <text> --filename <path>");
-                  process.exit(1);
-                }
-
-                const apiKey = values["api-key"] || process.env.ZEABUR_AI_HUB_API_KEY;
-                if (!apiKey) {
-                  console.error("Error: No API key provided.");
-                  console.error("  1. Provide --api-key argument");
-                  console.error("  2. Set ZEABUR_AI_HUB_API_KEY environment variable");
-                  process.exit(1);
-                }
-
-                const baseUrl = ENDPOINTS[values.endpoint];
-                if (!baseUrl) {
-                  console.error(`Error: Unknown endpoint "${values.endpoint}". Use: ${Object.keys(ENDPOINTS).join(", ")}`);
-                  process.exit(1);
-                }
-
-                const model = values.model;
-                const prompt = values.prompt;
-                const outputPath = resolve(values.filename);
-
-                await mkdir(dirname(outputPath), { recursive: true });
-
-                console.log(`Generating image with ${model} via ${values.endpoint}...`);
-                console.log(`Prompt: ${prompt}`);
-
-                const resp = await fetch(`${baseUrl}/v1/chat/completions`, {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${apiKey}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    model,
-                    messages: [{ role: "user", content: prompt }],
-                    stream: false,
-                  }),
-                  signal: AbortSignal.timeout(300_000),
-                });
-
-                if (!resp.ok) {
-                  const body = await resp.text();
-                  console.error(`Zeabur AI Hub API failed (${resp.status}): ${body}`);
-                  process.exit(1);
-                }
-
-                const res = await resp.json();
-                const msg = res.choices?.[0]?.message;
-
-                // Extract base64 image from response
-                const imgEntry = msg?.images?.[0]?.image_url?.url;
-                if (!imgEntry) {
-                  console.error("Error: No image in response.");
-                  console.error(`Response: ${JSON.stringify(res).slice(0, 400)}`);
-                  process.exit(1);
-                }
-
-                const b64 = imgEntry.replace(/^data:image\/\w+;base64,/, "");
-                await writeFile(outputPath, Buffer.from(b64, "base64"));
-
-                console.log(`\nImage saved: ${outputPath}`);
-                console.log(`MEDIA: ${outputPath}`);
           env:
             HOME:
               default: /home/node
             OPENCLAW_GATEWAY_TOKEN:
               default: ${PASSWORD}
-            ZEABUR_AI_HUB_API_KEY:
-              default: ${ZEABUR_AI_HUB_API_KEY}
+            LLM_API_KEY:
+              default: ${LLM_API_KEY}
+            LLM_BASE_URL:
+              default: ${LLM_BASE_URL}
+            LLM_MODEL:
+              default: ${LLM_MODEL}
             ENABLE_CONTROL_UI:
               default: ${ENABLE_CONTROL_UI}
             OPENCLAW_DISABLE_BONJOUR:
@@ -1443,14 +1199,20 @@ localization:
       - key: ENABLE_CONTROL_UI
         name: 啟用 Control UI
         description: "設為 'true' 透過公開網域啟用 Control UI（預設）。設為 'false' 僅本地連線（較安全）。"
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API 金鑰（選填）
-        description: 選填但建議填入。本模板預設模型為 zeabur-ai/glm-4.7-flash（便宜、快速），需要此金鑰才能運作。若未填入，需自行切換至其他供應商並提供對應的 API Key。之後可在「環境變數」分頁新增或修改。
+      - key: LLM_API_KEY
+        name: LLM API 金鑰（選填）
+        description: 選填。您的 OpenAI 相容供應商 API 金鑰（OpenAI、Anthropic 相容閘道、OpenRouter 等）。留空則可稍後在 Control UI 設定模型。
+      - key: LLM_BASE_URL
+        name: LLM Base URL（選填）
+        description: OpenAI 相容端點，例如 https://api.openai.com/v1
+      - key: LLM_MODEL
+        name: LLM 模型（選填）
+        description: 要使用的主要模型 id，例如 gpt-4o-mini
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞（原 Clawdbot、Moltbot）是一個個人 AI 助手，可在本地運行並透過 WebSocket Gateway 架構連接多個訊息平台。
 
-      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.5.28`。OpenClaw 🦞 正在快速開發中，可能存在尚未發現的 bug。更改版本後也無法確保穩定性。
+      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.9.7`。OpenClaw 🦞 正在快速開發中，可能存在尚未發現的 bug。更改版本後也無法確保穩定性。
 
       ⚠️ 如果遇到任何問題，歡迎到 [GitHub issues](https://github.com/openclaw/openclaw/issues) 尋找解決方案或回報新問題。Zeabur 平台相關問題請聯繫 Zeabur 支援。
 
@@ -1469,7 +1231,9 @@ localization:
       |------|------|------|
       | **網域** | 是 | 用來存取 OpenClaw 的子網域（例如 `my-openclaw` → `my-openclaw.zeabur.app`）。切換為 loopback 模式後可移除。 |
       | **啟用 Control UI** | 是 | `true`（預設）— 透過公開網域啟用 Control UI。`false` — 僅綁定本地迴路，無公開網頁存取（較安全，搭配 Tailscale 或 Tailscale 或 Telegram 等支援的通訊頻道使用） |
-      | **Zeabur AI Hub API 金鑰** | 否 | 可留空跳過。本模板預設模型為 `zeabur-ai/glm-4.7-flash`（便宜、快速），需要此金鑰才能運作 — 若未填入，需自行切換模型並提供其他供應商（Anthropic、OpenAI 等）的 API Key。之後可在服務的「環境變數」分頁新增。 |
+      | **LLM API 金鑰** | 否 | 您的 OpenAI 相容供應商 API 金鑰（OpenAI、Anthropic 相容閘道、OpenRouter 等）。若連同下方兩個欄位一起填入，模板會設定一個 `custom` 供應商，並將您的模型設為主模型。留空則可稍後透過 Control UI 或 `openclaw` CLI 選擇模型／供應商。 |
+      | **LLM Base URL** | 否 | OpenAI 相容端點，例如 `https://api.openai.com/v1`。 |
+      | **LLM 模型** | 否 | 要使用的主要模型 id，例如 `gpt-4o-mini`。 |
 
       ## 建議資源配置
       - **最低配置**：2 vCPU / 4 GB RAM
@@ -1480,34 +1244,34 @@ localization:
       - **Devbox**：如需多語言程式執行（Python、Go、Rust、C/C++），請將 [Devbox 模板](https://zeabur.com/templates/ZBVZNH) 部署到同一個專案
 
       ## 使用方式
-      1. 部署完成後，從**網路**頁籤開啟服務網址。在登入頁面貼上 **Gateway Token**（可在**使用說明**頁籤或**環境變數** → `OPENCLAW_GATEWAY_TOKEN` 中找到），點擊 **Connect**
+      1. 部署完成後，從**網路**頁籤開啟服務網址。在登入頁面貼上 **Gateway Token**（可在**使用說明**頁籤或**環境變數** → `OPENCLAW_GATEWAY_TOKEN` 中找到），點擊 **Connect**。**首次**連線時每個瀏覽器會顯示 **「Approve this browser」**，並附上類似 `openclaw devices approve <requestId>` 的一次性指令。請開啟 Zeabur 儀表板的 **Command**，執行畫面上那條指令 —— 該頁面隨後會自動連上。此為每個瀏覽器一次性的步驟。
       2. **設定 AI 模型**（二擇一）：
-         - **Zeabur AI Hub**（預設模型：`glm-4.7-flash`）：若部署時已輸入 API Key，直接前往步驟 3。也可之後在 Zeabur 控制台的**變數**頁籤新增 `ZEABUR_AI_HUB_API_KEY`（新增後記得重新啟動服務）。
-         - **其他供應商**（Anthropic、OpenAI 等）：模板預設仍是 `zeabur-ai/glm-4.7-flash`。要改用其他供應商，請透過環境變數新增該供應商的 API Key,接著在聊天中用 `/model <id>` 或透過 Control UI Settings 切換模型。詳情請見：https://docs.openclaw.ai/providers/anthropic
+         - **部署時設定**：若已填入 `LLM_API_KEY`、`LLM_BASE_URL` 與 `LLM_MODEL`，模板會設定一個 `custom` OpenAI 相容供應商，並將您的模型設為主模型 — 直接前往步驟 3。
+         - **稍後設定**：若留空，服務仍會正常部署。之後透過 Control UI Settings 或 `openclaw` CLI 新增供應商與模型，再於聊天中用 `/model <id>` 切換模型。詳情請見：https://docs.openclaw.ai/providers
       3. 前往 **Chat** 頁面測試 AI 模型是否正常運作
       4. （選擇性）設定 Telegram、WhatsApp 等通訊平台
 
       AI 模型設定請參閱[官方文件](https://docs.openclaw.ai/providers)。
 
       ### 模型切換與 Failover
-      此模板內建 failover 模型，當主模型不可用時會自動切換。預設鏈：`glm-4.7-flash` → `grok-4-fast-non-reasoning` → `minimax-m2.5` → `kimi-k2.5` → `qwen-3-235b` → `gpt-5-mini`。
+      OpenClaw 支援一個主模型加上選用的 failover 模型，當主模型不可用時會自動切換。部署時填入 LLM 變數，主模型會設為 `custom/<你的模型>`；之後可隨時新增供應商與備援模型。
 
       可透過 **Control UI Chat** 或 Zeabur 控制台的**指令**管理模型。
 
       **透過 Control UI Chat** — 在對話框直接輸入 slash command：
-      - `/model zeabur-ai/glm-4.7-flash` — 切換主模型
+      - `/model custom/<你的模型>` — 切換主模型
       - `/model` — 查看目前模型
       - `/models` — 列出模型供應商
-      - `/models <provider>` — 列出指定供應商的模型（例如 `/models zeabur-ai`）
+      - `/models <provider>` — 列出指定供應商的模型（例如 `/models custom`）
 
       **透過指令**（Zeabur 控制台）— 在終端機執行相同指令：
       ```bash
-      openclaw models set zeabur-ai/glm-4.7-flash
+      openclaw models set custom/<你的模型>
       openclaw models status
       openclaw models list --all
       openclaw models fallbacks list
-      openclaw models fallbacks add zeabur-ai/gpt-5-mini
-      openclaw models fallbacks remove zeabur-ai/gpt-5-mini
+      openclaw models fallbacks add <provider>/<model>
+      openclaw models fallbacks remove <provider>/<model>
       openclaw models fallbacks clear
       ```
 
@@ -1516,8 +1280,8 @@ localization:
       "agents": {
         "defaults": {
           "model": {
-            "primary": "zeabur-ai/glm-4.7-flash",
-            "fallbacks": ["zeabur-ai/grok-4-fast-non-reasoning", "zeabur-ai/minimax-m2.5"]
+            "primary": "custom/<你的模型>",
+            "fallbacks": ["anthropic/claude-sonnet-4-6", "openai/gpt-4o-mini"]
           }
         }
       }
@@ -1525,7 +1289,7 @@ localization:
       編輯設定檔後需重新啟動服務。
 
       ### 新增外部模型供應商
-      除了 Zeabur AI Hub，您也可以新增 Anthropic、OpenAI、Google 等外部供應商。
+      您可以新增任何 OpenAI 相容或原生支援的供應商，例如 Anthropic、OpenAI、Google 等。
 
       **方法一：環境變數** — 在 Zeabur 控制台的**變數**頁籤新增 API key：
       - `ANTHROPIC_API_KEY` — Claude 模型
@@ -1636,9 +1400,9 @@ localization:
       ## AI 模型設定
 
       **確認模型是否正常運作：**
-      1. 本模板首次啟動時會將 `zeabur-ai/glm-4.7-flash` 寫入為預設模型：
-         - 有填 Zeabur AI Hub API Key → 開箱即用
-         - 沒有填 → 模型將無法回應；請加上 AI Hub 金鑰（建議）或切換模型並提供其他供應商的 API Key
+      1. 首次啟動時，若你已填入 `LLM_API_KEY`／`LLM_BASE_URL`／`LLM_MODEL`，本模板會將 `custom/<你的模型>` 寫入為預設模型：
+         - 有填 LLM 變數 → 開箱即用
+         - 沒有填 → 尚未設定任何模型；請透過 Control UI 或 `openclaw` CLI 新增供應商與模型
       2. 開啟 **Chat** 頁面，發送一則測試訊息
       3. 如果收到回覆 → 模型正常運作
       4. 如果出現錯誤 → 確認 API 金鑰是否正確設定
@@ -1655,16 +1419,11 @@ localization:
       - 新增其他 AI 供應商的 API 金鑰（如 Anthropic、OpenAI 等）
       - 請見：https://docs.openclaw.ai/providers
 
-      **修改 Zeabur AI Hub 模型**（透過 Zeabur 控制台）：
-      - 前往**設定** → **設定檔** → 編輯 `/opt/openclaw/providers/zeabur-ai-hub.json5`，然後重新啟動服務（變更會在啟動時同步）
-      - 舊版（沒有這些指令）：透過**檔案**頁籤或 Control UI Settings 編輯 `/home/node/.openclaw/openclaw.json`，將以下內容加入 `models.providers.zeabur-ai.models` 陣列：
+      **新增或編輯自訂供應商的模型**（透過設定檔）：
+      - 透過**檔案**頁籤或 Control UI Settings 編輯 `/home/node/.openclaw/openclaw.json`，然後重新啟動服務。在 `models.providers.custom.models` 陣列中加入更多項目：
       ```json
-      { "id": "gpt-5.2", "name": "GPT-5.2", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.75, "output": 14, "cacheRead": 0.18, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5.1", "name": "GPT-5.1", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.13, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5-nano", "name": "GPT-5 Nano", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.05, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "glm-4.7", "name": "GLM-4.7", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.4, "output": 1.9, "cacheRead": 0.08, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "glm-4.7-flash", "name": "GLM-4.7 Flash", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.06, "output": 0.4, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "kimi-k2.5", "name": "Kimi K2.5", "reasoning": false, "input": ["text"], "cost": { "input": 0.45, "output": 2.25, "cacheRead": 0.07, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 }
+      { "id": "gpt-4o", "name": "gpt-4o", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 },
+      { "id": "gpt-4o-mini", "name": "gpt-4o-mini", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 }
       ```
 
       ## 安全提示
@@ -1739,7 +1498,7 @@ localization:
       > ⚠️ 避免使用 `latest` 作為標籤 — 它會在每次重啟時拉取最新版本，可能引入破壞性變更或無法預期的錯誤。建議固定使用特定版本號以確保穩定性。
       5. 到**紀錄**頁籤確認 Gateway 正常啟動
 
-      > 💡 啟動腳本會在每次開機時自動遷移設定 — 若缺少新設定（如 `trustedProxies`、`dangerouslyDisableDeviceAuth`）會自動補上。既有設定不會被覆蓋。
+      > 💡 啟動腳本會在每次開機時自動遷移設定 — 若缺少新設定（如 `trustedProxies`）會自動補上。既有設定不會被覆蓋。
 
       ### "device identity required"
       表示 Control UI 尚未通過 Gateway Token 驗證。修復方式：
@@ -1821,7 +1580,7 @@ localization:
       此模板針對 Zeabur 雲端環境預先配置了以下設定：
 
       - **`gateway.trustedProxies`**：設為 `["10.0.0.0/8", "172.16.0.0/12"]`，讓 Gateway 能正確辨識 Zeabur 反向代理後的用戶端 IP。未設定時，Control UI 可能會出現「device identity required」錯誤。
-      - **`dangerouslyDisableDeviceAuth`**：停用 Control UI 裝置配對（裝置配對是為區域網路設計的功能，雲端部署改用 Gateway Token 驗證）。
+      - **`dangerouslyDisableDeviceAuth`** *(自映像檔 `2026.9.7` 起已退役)*：此旗標過去用於停用 Control UI 裝置配對，現已失效並會被 `openclaw doctor --fix` 移除。改為每個瀏覽器需一次性裝置配對 —— 詳見**使用方式**步驟 1,用 `openclaw devices approve` 核准該瀏覽器。
       - **`/usr/local/bin` 符號連結**：`openclaw`、`backup`、`restore` 指令已建立符號連結至 `/usr/local/bin`，可直接在 Zeabur 的**命令**終端中使用。
       - **`OPENCLAW_DISABLE_BONJOUR=1`**：停用 mDNS/Bonjour，因為 Zeabur 容器主機名稱可能超過 63 bytes 的 DNS 標籤限制。mDNS 僅用於區域網路發現，雲端環境中不需要。
       - **`OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=true`**：修復容器環境中的 Telegram 連線問題（`2026.2.17` 及之後的映像檔版本需要）。
@@ -1832,6 +1591,11 @@ localization:
       - GitHub：https://github.com/openclaw/openclaw
 
       ## 更新日誌
+      **2026/9/30**
+      - ⚠️ 升級映像檔至 `2026.9.7` — **升級前請先備份**。跨多個版本升級會在首次啟動時遷移磁碟資料庫；`2026.9.7` 會在遷移前自動備份所有 state/agent 資料庫並可於 rollback 還原,但仍請自行備份 —— 日後若要降版仍需要升級前的備份。
+      - ⚠️ 破壞性變更（Control UI）：`dangerouslyDisableDeviceAuth` 已退役且失效。首次開啟 Control UI 的瀏覽器現在會顯示 **「Approve this browser」** 並需要**一次性核准** —— 在 **Command** 終端執行畫面上顯示的 `openclaw devices approve <requestId>`,該頁面隨後會自動連上。
+      - 上游新增旗艦模型：Anthropic Fable 5.1、OpenAI GPT-6 Astra、完整 GPT-5.6 系列。另新增自動更新開關（`OPENCLAW_NO_AUTO_UPDATE=1`）、移除 checkpoint restore，並包含自 `2026.5.28` 以來 100+ 項頻道/provider/安全性修復。
+
       **2026/6/1**
       - 升級映像檔至 `2026.5.28` — 修復 LINE 等需即時安裝的頻道外掛載入失敗問題（外掛 SDK 結構調整後，固定映像檔版本現已與自動安裝的頻道外掛版本相符）。同時新增 Claude Opus 4.8 支援、加密 PDF 解析、NVIDIA/MiniMax provider 更新，以及 100+ 安全性/頻道/agent 修復
 
@@ -1965,14 +1729,20 @@ localization:
       - key: ENABLE_CONTROL_UI
         name: 启用 Control UI
         description: "设为 'true' 通过公开域名启用 Control UI（默认）。设为 'false' 仅本地连接（更安全）。"
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API 密钥（选填）
-        description: 选填但建议填入。本模板默认模型为 zeabur-ai/glm-4.7-flash（便宜、快速），需要此密钥才能运行。若未填入，需自行切换至其他供应商并提供对应的 API Key。之后可在「变量」页签新增或修改。
+      - key: LLM_API_KEY
+        name: LLM API 密钥（选填）
+        description: 选填。您的 OpenAI 兼容供应商 API 密钥（OpenAI、Anthropic 兼容网关、OpenRouter 等）。留空则可稍后在 Control UI 配置模型。
+      - key: LLM_BASE_URL
+        name: LLM Base URL（选填）
+        description: OpenAI 兼容端点，例如 https://api.openai.com/v1
+      - key: LLM_MODEL
+        name: LLM 模型（选填）
+        description: 要使用的主要模型 id，例如 gpt-4o-mini
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞（原 Clawdbot、Moltbot）是一个个人 AI 助手，可在本地运行并通过 WebSocket Gateway 架构连接多个消息平台。
 
-      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.5.28`。OpenClaw 🦞 正在快速开发中，可能存在尚未发现的 bug。更改版本后也无法确保稳定性。
+      ⚠️ 本模板使用 `ghcr.io/openclaw/openclaw:2026.9.7`。OpenClaw 🦞 正在快速开发中，可能存在尚未发现的 bug。更改版本后也无法确保稳定性。
 
       ⚠️ 如果遇到任何问题，欢迎到 [GitHub issues](https://github.com/openclaw/openclaw/issues) 寻找解决方案或回报新问题。Zeabur 平台相关问题请联系 Zeabur 支持。
 
@@ -1991,7 +1761,9 @@ localization:
       |------|------|------|
       | **域名** | 是 | 用来访问 OpenClaw 的子域名（例如 `my-openclaw` → `my-openclaw.zeabur.app`）。切换为 loopback 模式后可移除。 |
       | **启用 Control UI** | 是 | `true`（默认）— 通过公开域名启用 Control UI。`false` — 仅绑定本地回环，无公开网页访问（更安全，配合 Tailscale 或 Tailscale 或 Telegram 等支持的通讯频道使用） |
-      | **Zeabur AI Hub API 密钥** | 否 | 可留空跳过。本模板默认模型为 `zeabur-ai/glm-4.7-flash`（便宜、快速），需要此密钥才能运行 — 若未填入，需自行切换模型并提供其他供应商（Anthropic、OpenAI 等）的 API Key。之后可在服务的「变量」页签新增。 |
+      | **LLM API 密钥** | 否 | 您的 OpenAI 兼容供应商 API 密钥（OpenAI、Anthropic 兼容网关、OpenRouter 等）。若连同下方两个字段一起填入，模板会配置一个 `custom` 供应商，并将您的模型设为主模型。留空则可稍后通过 Control UI 或 `openclaw` CLI 选择模型／供应商。 |
+      | **LLM Base URL** | 否 | OpenAI 兼容端点，例如 `https://api.openai.com/v1`。 |
+      | **LLM 模型** | 否 | 要使用的主要模型 id，例如 `gpt-4o-mini`。 |
 
       ## 建议资源配置
       - **最低配置**：2 vCPU / 4 GB RAM
@@ -2002,34 +1774,34 @@ localization:
       - **Devbox**：如需多语言程序执行（Python、Go、Rust、C/C++），请将 [Devbox 模板](https://zeabur.com/templates/ZBVZNH) 部署到同一个项目
 
       ## 使用方式
-      1. 部署完成后，从**网络**页签打开服务网址。在登录页面粘贴 **Gateway Token**（可在**使用说明**页签或**环境变量** → `OPENCLAW_GATEWAY_TOKEN` 中找到），点击 **Connect**
+      1. 部署完成后，从**网络**页签打开服务网址。在登录页面粘贴 **Gateway Token**（可在**使用说明**页签或**环境变量** → `OPENCLAW_GATEWAY_TOKEN` 中找到），点击 **Connect**。**首次**连接时每个浏览器会显示 **“Approve this browser”**，并附上类似 `openclaw devices approve <requestId>` 的一次性指令。请打开 Zeabur 仪表板的 **Command**，执行画面上那条指令 —— 该页面随后会自动连上。此为每个浏览器一次性的步骤。
       2. **设置 AI 模型**（二选一）：
-         - **Zeabur AI Hub**（默认模型：`glm-4.7-flash`）：若部署时已输入 API Key，直接前往步骤 3。也可之后在 Zeabur 控制台的**变量**页签添加 `ZEABUR_AI_HUB_API_KEY`（添加后记得重新启动服务）。
-         - **其他供应商**（Anthropic、OpenAI 等）：模板默认仍是 `zeabur-ai/glm-4.7-flash`。要改用其他供应商，请通过环境变量添加该供应商的 API Key，接着在聊天中用 `/model <id>` 或通过 Control UI Settings 切换模型。详情请见：https://docs.openclaw.ai/providers/anthropic
+         - **部署时设置**：若已填入 `LLM_API_KEY`、`LLM_BASE_URL` 与 `LLM_MODEL`，模板会配置一个 `custom` OpenAI 兼容供应商，并将您的模型设为主模型 — 直接前往步骤 3。
+         - **稍后设置**：若留空，服务仍会正常部署。之后通过 Control UI Settings 或 `openclaw` CLI 添加供应商与模型，再在聊天中用 `/model <id>` 切换模型。详情请见：https://docs.openclaw.ai/providers
       3. 前往 **Chat** 页面测试 AI 模型是否正常运作
       4. （可选）设置 Telegram、WhatsApp 等通讯平台
 
       AI 模型设置请参阅[官方文档](https://docs.openclaw.ai/providers)。
 
       ### 模型切换与 Failover
-      此模板内建 failover 模型，当主模型不可用时会自动切换。默认链：`glm-4.7-flash` → `grok-4-fast-non-reasoning` → `minimax-m2.5` → `kimi-k2.5` → `qwen-3-235b` → `gpt-5-mini`。
+      OpenClaw 支持一个主模型加上可选的 failover 模型，当主模型不可用时会自动切换。部署时填入 LLM 变量，主模型会设为 `custom/<你的模型>`；之后可随时添加供应商与备援模型。
 
       可通过 **Control UI Chat** 或 Zeabur 控制台的**命令**管理模型。
 
       **通过 Control UI Chat** — 在对话框直接输入 slash command：
-      - `/model zeabur-ai/glm-4.7-flash` — 切换主模型
+      - `/model custom/<你的模型>` — 切换主模型
       - `/model` — 查看当前模型
       - `/models` — 列出模型供应商
-      - `/models <provider>` — 列出指定供应商的模型（例如 `/models zeabur-ai`）
+      - `/models <provider>` — 列出指定供应商的模型（例如 `/models custom`）
 
       **通过命令**（Zeabur 控制台）— 在终端执行相同命令：
       ```bash
-      openclaw models set zeabur-ai/glm-4.7-flash
+      openclaw models set custom/<你的模型>
       openclaw models status
       openclaw models list --all
       openclaw models fallbacks list
-      openclaw models fallbacks add zeabur-ai/gpt-5-mini
-      openclaw models fallbacks remove zeabur-ai/gpt-5-mini
+      openclaw models fallbacks add <provider>/<model>
+      openclaw models fallbacks remove <provider>/<model>
       openclaw models fallbacks clear
       ```
 
@@ -2038,8 +1810,8 @@ localization:
       "agents": {
         "defaults": {
           "model": {
-            "primary": "zeabur-ai/glm-4.7-flash",
-            "fallbacks": ["zeabur-ai/grok-4-fast-non-reasoning", "zeabur-ai/minimax-m2.5"]
+            "primary": "custom/<你的模型>",
+            "fallbacks": ["anthropic/claude-sonnet-4-6", "openai/gpt-4o-mini"]
           }
         }
       }
@@ -2047,7 +1819,7 @@ localization:
       编辑配置文件后需重新启动服务。
 
       ### 添加外部模型供应商
-      除了 Zeabur AI Hub，您还可以添加 Anthropic、OpenAI、Google 等外部供应商。
+      您可以添加任何 OpenAI 兼容或原生支持的供应商，例如 Anthropic、OpenAI、Google 等。
 
       **方法一：环境变量** — 在 Zeabur 控制台的**变量**页签添加 API key：
       - `ANTHROPIC_API_KEY` — Claude 模型
@@ -2158,9 +1930,9 @@ localization:
       ## AI 模型设置
 
       **确认模型是否正常运作：**
-      1. 本模板首次启动时会将 `zeabur-ai/glm-4.7-flash` 写入为默认模型：
-         - 有填 Zeabur AI Hub API Key → 开箱即用
-         - 没有填 → 模型将无法回应；请加上 AI Hub 密钥（建议）或切换模型并提供其他供应商的 API Key
+      1. 首次启动时，若你已填入 `LLM_API_KEY`／`LLM_BASE_URL`／`LLM_MODEL`，本模板会将 `custom/<你的模型>` 写入为默认模型：
+         - 有填 LLM 变量 → 开箱即用
+         - 没有填 → 尚未配置任何模型；请通过 Control UI 或 `openclaw` CLI 添加供应商与模型
       2. 打开 **Chat** 页面，发送一条测试消息
       3. 如果收到回复 → 模型正常运作
       4. 如果出现错误 → 确认 API 密钥是否正确设置
@@ -2177,16 +1949,11 @@ localization:
       - 添加其他 AI 供应商的 API 密钥（如 Anthropic、OpenAI 等）
       - 请见：https://docs.openclaw.ai/providers
 
-      **修改 Zeabur AI Hub 模型**（通过 Zeabur 控制台）：
-      - 前往**设置** → **配置文件** → 编辑 `/opt/openclaw/providers/zeabur-ai-hub.json5`，然后重新启动服务（变更会在启动时同步）
-      - 旧版（没有这些命令）：通过**文件**页签或 Control UI Settings 编辑 `/home/node/.openclaw/openclaw.json`，将以下内容加入 `models.providers.zeabur-ai.models` 数组：
+      **添加或编辑自定义供应商的模型**（通过配置文件）：
+      - 通过**文件**页签或 Control UI Settings 编辑 `/home/node/.openclaw/openclaw.json`，然后重新启动服务。在 `models.providers.custom.models` 数组中加入更多项：
       ```json
-      { "id": "gpt-5.2", "name": "GPT-5.2", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.75, "output": 14, "cacheRead": 0.18, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5.1", "name": "GPT-5.1", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.13, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5-nano", "name": "GPT-5 Nano", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.05, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "glm-4.7", "name": "GLM-4.7", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.4, "output": 1.9, "cacheRead": 0.08, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "glm-4.7-flash", "name": "GLM-4.7 Flash", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.06, "output": 0.4, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "kimi-k2.5", "name": "Kimi K2.5", "reasoning": false, "input": ["text"], "cost": { "input": 0.45, "output": 2.25, "cacheRead": 0.07, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 }
+      { "id": "gpt-4o", "name": "gpt-4o", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 },
+      { "id": "gpt-4o-mini", "name": "gpt-4o-mini", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 }
       ```
 
       ## 安全提示
@@ -2261,7 +2028,7 @@ localization:
       > ⚠️ 避免使用 `latest` 作为标签 — 它会在每次重启时拉取最新版本，可能引入破坏性变更或无法预期的错误。建议固定使用特定版本号以确保稳定性。
       5. 到**日志**页签确认 Gateway 正常启动
 
-      > 💡 启动脚本会在每次开机时自动迁移配置 — 若缺少新设置（如 `trustedProxies`、`dangerouslyDisableDeviceAuth`）会自动补上。既有设置不会被覆盖。
+      > 💡 启动脚本会在每次开机时自动迁移配置 — 若缺少新设置（如 `trustedProxies`）会自动补上。既有设置不会被覆盖。
 
       ### "device identity required"
       表示 Control UI 尚未通过 Gateway Token 验证。修复方式：
@@ -2343,7 +2110,7 @@ localization:
       此模板针对 Zeabur 云端环境预先配置了以下设置：
 
       - **`gateway.trustedProxies`**：设为 `["10.0.0.0/8", "172.16.0.0/12"]`，让 Gateway 能正确辨识 Zeabur 反向代理后的用户端 IP。未设置时，Control UI 可能会出现「device identity required」错误。
-      - **`dangerouslyDisableDeviceAuth`**：停用 Control UI 设备配对（设备配对是为局域网设计的功能，云端部署改用 Gateway Token 验证）。
+      - **`dangerouslyDisableDeviceAuth`** *(自镜像 `2026.9.7` 起已退役)*：此标志过去用于停用 Control UI 设备配对，现已失效并会被 `openclaw doctor --fix` 移除。改为每个浏览器需一次性设备配对 —— 详见**使用方式**步骤 1,用 `openclaw devices approve` 批准该浏览器。
       - **`/usr/local/bin` 符号链接**：`openclaw`、`backup`、`restore` 命令已建立符号链接至 `/usr/local/bin`，可直接在 Zeabur 的**命令**终端中使用。
       - **`OPENCLAW_DISABLE_BONJOUR=1`**：停用 mDNS/Bonjour，因为 Zeabur 容器主机名称可能超过 63 bytes 的 DNS 标签限制。mDNS 仅用于局域网发现，云端环境中不需要。
       - **`OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=true`**：修复容器环境中的 Telegram 连接问题（`2026.2.17` 及之后的镜像版本需要）。
@@ -2354,6 +2121,11 @@ localization:
       - GitHub：https://github.com/openclaw/openclaw
 
       ## 更新日志
+      **2026/9/30**
+      - ⚠️ 升级镜像至 `2026.9.7` — **升级前请先备份**。跨多个版本升级会在首次启动时迁移磁盘数据库；`2026.9.7` 会在迁移前自动备份所有 state/agent 数据库并可于 rollback 还原,但仍请自行备份 —— 日后若要降级仍需要升级前的备份。
+      - ⚠️ 破坏性变更（Control UI）：`dangerouslyDisableDeviceAuth` 已退役且失效。首次打开 Control UI 的浏览器现在会显示 **“Approve this browser”** 并需要**一次性批准** —— 在 **Command** 终端执行画面上显示的 `openclaw devices approve <requestId>`,该页面随后会自动连上。
+      - 上游新增旗舰模型：Anthropic Fable 5.1、OpenAI GPT-6 Astra、完整 GPT-5.6 系列。另新增自动更新开关（`OPENCLAW_NO_AUTO_UPDATE=1`）、移除 checkpoint restore，并包含自 `2026.5.28` 以来 100+ 项频道/provider/安全性修复。
+
       **2026/6/1**
       - 升级镜像至 `2026.5.28` — 修复 LINE 等需即时安装的频道插件加载失败问题（插件 SDK 结构调整后，固定镜像版本现已与自动安装的频道插件版本相符）。同时新增 Claude Opus 4.8 支持、加密 PDF 解析、NVIDIA/MiniMax provider 更新，以及 100+ 安全性/频道/agent 修复
 
@@ -2487,14 +2259,20 @@ localization:
       - key: ENABLE_CONTROL_UI
         name: Control UI を有効化
         description: "'true' で公開ドメイン経由の Control UI を有効化（デフォルト）。'false' でローカル接続のみ（より安全）。"
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API キー（任意）
-        description: 任意（推奨）。本テンプレートのデフォルトモデルは zeabur-ai/glm-4.7-flash（安価・高速）で、このキーが必要です。未入力の場合は別プロバイダーに切り替えて独自の API キーを用意する必要があります。後から「変数」タブで追加・変更可能です。
+      - key: LLM_API_KEY
+        name: LLM API キー（任意）
+        description: 任意。OpenAI 互換プロバイダーの API キー（OpenAI、Anthropic 互換ゲートウェイ、OpenRouter など）。空欄の場合は後から Control UI でモデルを設定できます。
+      - key: LLM_BASE_URL
+        name: LLM Base URL（任意）
+        description: OpenAI 互換エンドポイント、例：https://api.openai.com/v1
+      - key: LLM_MODEL
+        name: LLM モデル（任意）
+        description: 使用するプライマリモデル id、例：gpt-4o-mini
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞（旧 Clawdbot、Moltbot）は、ローカルで実行され、WebSocket ベースの Gateway アーキテクチャを介して複数のメッセージングプラットフォームに接続する個人用 AI アシスタントです。
 
-      ⚠️ 本テンプレートは `ghcr.io/openclaw/openclaw:2026.5.28` を使用しています。OpenClaw 🦞 は急速に開発中のため、未発見のバグがある可能性があります。バージョンを変更した場合も安定性を保証できません。
+      ⚠️ 本テンプレートは `ghcr.io/openclaw/openclaw:2026.9.7` を使用しています。OpenClaw 🦞 は急速に開発中のため、未発見のバグがある可能性があります。バージョンを変更した場合も安定性を保証できません。
 
       ⚠️ 問題が発生した場合は、[GitHub issues](https://github.com/openclaw/openclaw/issues) で解決策を探したり、新しい問題を報告したりしてください。Zeabur プラットフォーム関連の問題については、Zeabur サポートにお問い合わせください。
 
@@ -2513,7 +2291,9 @@ localization:
       |------|------|------|
       | **ドメイン** | はい | OpenClaw にアクセスするためのサブドメイン（例：`my-openclaw` → `my-openclaw.zeabur.app`）。loopback モードに切り替え後は削除可能。 |
       | **Control UI を有効化** | はい | `true`（デフォルト）— 公開ドメイン経由で Control UI を有効化。`false` — ローカルループバックのみ、公開 Web アクセスなし（より安全、Tailscale や Tailscale や Telegram 等の対応チャンネルと併用） |
-      | **Zeabur AI Hub API キー** | いいえ | 空欄でスキップ可能。本テンプレートのデフォルトモデルは `zeabur-ai/glm-4.7-flash`（安価・高速）で、このキーが必要です — 未入力の場合はモデルを切り替え、他プロバイダー（Anthropic、OpenAI など）の API キーを用意する必要があります。後から「変数」タブで追加できます。 |
+      | **LLM API キー** | いいえ | OpenAI 互換プロバイダーの API キー（OpenAI、Anthropic 互換ゲートウェイ、OpenRouter など）。下の 2 つの項目と合わせて入力すると、テンプレートが `custom` プロバイダーを設定し、あなたのモデルをプライマリにします。空欄の場合は後から Control UI または `openclaw` CLI でモデル／プロバイダーを選べます。 |
+      | **LLM Base URL** | いいえ | OpenAI 互換エンドポイント、例：`https://api.openai.com/v1`。 |
+      | **LLM モデル** | いいえ | 使用するプライマリモデル id、例：`gpt-4o-mini`。 |
 
       ## 推奨リソース
       - **最小構成**：2 vCPU / 4 GB RAM
@@ -2524,34 +2304,34 @@ localization:
       - **Devbox**：多言語コード実行（Python、Go、Rust、C/C++）が必要な場合は、[Devbox テンプレート](https://zeabur.com/templates/ZBVZNH)を同じプロジェクトにデプロイしてください
 
       ## 使用方法
-      1. デプロイ後、**ネットワーク**タブからサービス URL を開く。ログインページで **Gateway Token**（**手順**タブまたは**環境変数** → `OPENCLAW_GATEWAY_TOKEN` で確認）を貼り付け、**Connect** をクリック
+      1. デプロイ後、**ネットワーク**タブからサービス URL を開く。ログインページで **Gateway Token**（**手順**タブまたは**環境変数** → `OPENCLAW_GATEWAY_TOKEN` で確認）を貼り付け、**Connect** をクリック。**初回**接続時は各ブラウザに **「Approve this browser」** と `openclaw devices approve <requestId>` のような一度きりのコマンドが表示されます。Zeabur ダッシュボードの **Command** を開き、表示されたそのコマンドを実行すると、ページは自動的に接続します。これはブラウザごとに一度きりの手順です。
       2. **AI モデルを設定**（いずれかを選択）：
-         - **Zeabur AI Hub**（デフォルトモデル：`glm-4.7-flash`）：デプロイ時に API Key を入力済みの場合、ステップ 3 へ進む。後から Zeabur ダッシュボードの**変数**タブで `ZEABUR_AI_HUB_API_KEY` を追加も可能（追加後はサービスを再起動）。
-         - **他のプロバイダー**（Anthropic、OpenAI など）：テンプレートのデフォルトは引き続き `zeabur-ai/glm-4.7-flash` です。他のプロバイダーを使うには、環境変数で API キーを追加してから、チャットで `/model <id>` または Control UI Settings からモデルを切り替えてください。詳細：https://docs.openclaw.ai/providers/anthropic
+         - **デプロイ時に設定**：`LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL` を入力済みの場合、テンプレートが `custom` OpenAI 互換プロバイダーを設定し、あなたのモデルをプライマリにします — ステップ 3 へ進む。
+         - **後から設定**：空欄のままでもサービスはデプロイされます。後から Control UI Settings または `openclaw` CLI でプロバイダーとモデルを追加し、チャットで `/model <id>` からモデルを切り替えてください。詳細：https://docs.openclaw.ai/providers
       3. **Chat** ページで AI モデルが正常に動作しているかテスト
       4. （オプション）Telegram、WhatsApp などのメッセージングプラットフォームを設定
 
       AI モデル設定については[公式ドキュメント](https://docs.openclaw.ai/providers)をご覧ください。
 
       ### モデル切り替えと Failover
-      このテンプレートにはフェイルオーバーモデルが含まれており、プライマリモデルが利用できない場合に自動的に切り替わります。デフォルトチェーン：`glm-4.7-flash` → `grok-4-fast-non-reasoning` → `minimax-m2.5` → `kimi-k2.5` → `qwen-3-235b` → `gpt-5-mini`。
+      OpenClaw はプライマリモデルに加えて、任意のフェイルオーバーモデルをサポートしており、プライマリが利用できない場合に自動的に切り替わります。デプロイ時に LLM 変数を入力すると、プライマリは `custom/<あなたのモデル>` に設定されます。プロバイダーやフォールバックはいつでも追加できます。
 
       **Control UI Chat** または Zeabur ダッシュボードの**コマンド**からモデルを管理できます。
 
       **Control UI Chat から** — チャットボックスに slash command を直接入力：
-      - `/model zeabur-ai/glm-4.7-flash` — プライマリモデルを変更
+      - `/model custom/<あなたのモデル>` — プライマリモデルを変更
       - `/model` — 現在のモデルを確認
       - `/models` — モデルプロバイダー一覧
-      - `/models <provider>` — 指定プロバイダーのモデル一覧（例：`/models zeabur-ai`）
+      - `/models <provider>` — 指定プロバイダーのモデル一覧（例：`/models custom`）
 
       **コマンドから**（Zeabur ダッシュボード）— ターミナルで同じコマンドを実行：
       ```bash
-      openclaw models set zeabur-ai/glm-4.7-flash
+      openclaw models set custom/<あなたのモデル>
       openclaw models status
       openclaw models list --all
       openclaw models fallbacks list
-      openclaw models fallbacks add zeabur-ai/gpt-5-mini
-      openclaw models fallbacks remove zeabur-ai/gpt-5-mini
+      openclaw models fallbacks add <provider>/<model>
+      openclaw models fallbacks remove <provider>/<model>
       openclaw models fallbacks clear
       ```
 
@@ -2560,8 +2340,8 @@ localization:
       "agents": {
         "defaults": {
           "model": {
-            "primary": "zeabur-ai/glm-4.7-flash",
-            "fallbacks": ["zeabur-ai/grok-4-fast-non-reasoning", "zeabur-ai/minimax-m2.5"]
+            "primary": "custom/<あなたのモデル>",
+            "fallbacks": ["anthropic/claude-sonnet-4-6", "openai/gpt-4o-mini"]
           }
         }
       }
@@ -2569,7 +2349,7 @@ localization:
       設定ファイル編集後はサービスを再起動してください。
 
       ### 外部モデルプロバイダーの追加
-      Zeabur AI Hub 以外に、Anthropic、OpenAI、Google などの外部プロバイダーを追加できます。
+      Anthropic、OpenAI、Google など、OpenAI 互換またはネイティブ対応のプロバイダーを追加できます。
 
       **方法 1：環境変数** — Zeabur ダッシュボードの**変数**タブで API キーを追加：
       - `ANTHROPIC_API_KEY` — Claude モデル
@@ -2680,9 +2460,9 @@ localization:
       ## AI モデル設定
 
       **セットアップの確認：**
-      1. 本テンプレートは初回起動時に `zeabur-ai/glm-4.7-flash` をデフォルトモデルとして書き込みます：
-         - Zeabur AI Hub API Key を入力した場合 → そのまま動作
-         - 入力しなかった場合 → モデルは応答しません。AI Hub キーを追加（推奨）するか、モデルを切り替えて他プロバイダーの API キーを用意してください
+      1. 初回起動時、`LLM_API_KEY`／`LLM_BASE_URL`／`LLM_MODEL` を入力していれば、本テンプレートは `custom/<あなたのモデル>` をデフォルトモデルとして書き込みます：
+         - LLM 変数を入力した場合 → そのまま動作
+         - 入力しなかった場合 → モデルは未設定です。Control UI または `openclaw` CLI でプロバイダーとモデルを追加してください
       2. **Chat** ページを開き、テストメッセージを送信
       3. 返答があれば → モデルは正常に動作しています
       4. エラーが出た場合 → API キーが正しく設定されているか確認
@@ -2699,16 +2479,11 @@ localization:
       - 他の AI プロバイダーの API キーを追加（例：Anthropic、OpenAI）
       - 詳細：https://docs.openclaw.ai/providers
 
-      **Zeabur AI Hub モデルを変更**（Zeabur ダッシュボードで）：
-      - **設定** → **設定ファイル** → `/opt/openclaw/providers/zeabur-ai-hub.json5` を編集し、サービスを再起動（変更は起動時に同期されます）
-      - 旧バージョン（コマンドなし）：**ファイル** タブまたは Control UI Settings で `/home/node/.openclaw/openclaw.json` を編集。以下を `models.providers.zeabur-ai.models` 配列に追加：
+      **カスタムプロバイダーのモデルを追加・編集**（設定ファイルで）：
+      - **ファイル** タブまたは Control UI Settings で `/home/node/.openclaw/openclaw.json` を編集し、サービスを再起動。`models.providers.custom.models` 配列に項目を追加：
       ```json
-      { "id": "gpt-5.2", "name": "GPT-5.2", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.75, "output": 14, "cacheRead": 0.18, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5.1", "name": "GPT-5.1", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.13, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5-nano", "name": "GPT-5 Nano", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.05, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "glm-4.7", "name": "GLM-4.7", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.4, "output": 1.9, "cacheRead": 0.08, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "glm-4.7-flash", "name": "GLM-4.7 Flash", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.06, "output": 0.4, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "kimi-k2.5", "name": "Kimi K2.5", "reasoning": false, "input": ["text"], "cost": { "input": 0.45, "output": 2.25, "cacheRead": 0.07, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 }
+      { "id": "gpt-4o", "name": "gpt-4o", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 },
+      { "id": "gpt-4o-mini", "name": "gpt-4o-mini", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 }
       ```
 
       ## セキュリティに関する注意
@@ -2783,7 +2558,7 @@ localization:
       > ⚠️ タグに `latest` の使用は避けてください — 再起動のたびに最新バージョンが取得され、破壊的な変更や予期しないエラーが発生する可能性があります。安定性のために特定のバージョンを固定してください。
       5. **ログ**タブで Gateway が正常に起動したか確認
 
-      > 💡 スタートアップスクリプトは起動時に設定を自動移行します — 不足している設定（`trustedProxies`、`dangerouslyDisableDeviceAuth` など）は自動追加されます。既存の設定は上書きされません。
+      > 💡 スタートアップスクリプトは起動時に設定を自動移行します — 不足している設定（`trustedProxies` など）は自動追加されます。既存の設定は上書きされません。
 
       ### "device identity required"
       Control UI がまだ Gateway Token で認証されていないことを意味します。修正方法：
@@ -2865,7 +2640,7 @@ localization:
       このテンプレートは Zeabur クラウド環境向けに以下の設定を事前構成しています：
 
       - **`gateway.trustedProxies`**：`["10.0.0.0/8", "172.16.0.0/12"]` に設定。Gateway が Zeabur リバースプロキシ背後のクライアント IP を正しく識別できるようにします。未設定の場合、Control UI に「device identity required」エラーが表示される可能性があります。
-      - **`dangerouslyDisableDeviceAuth`**：Control UI デバイスペアリングを無効化（デバイスペアリングはローカルネットワーク向けの機能で、クラウドデプロイでは代わりに Gateway Token 認証を使用）。
+      - **`dangerouslyDisableDeviceAuth`** *(イメージ `2026.9.7` 以降廃止)*：このフラグは以前 Control UI デバイスペアリングを無効化していましたが、現在は無効で `openclaw doctor --fix` により削除されます。代わりにブラウザごとに一度きりのデバイスペアリングが必要です —— **使い方**のステップ 1 を参照し、`openclaw devices approve` でブラウザを承認してください。
       - **`/usr/local/bin` シンボリックリンク**：`openclaw`、`backup`、`restore` コマンドが `/usr/local/bin` にシンボリックリンクされ、Zeabur の**コマンド**ターミナルで直接使用できます。
       - **`OPENCLAW_DISABLE_BONJOUR=1`**：mDNS/Bonjour を無効化。Zeabur コンテナのホスト名が 63 バイトの DNS ラベル制限を超える可能性があるため。mDNS はローカルネットワーク検出にのみ使用され、クラウド環境では不要です。
       - **`OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=true`**：コンテナ環境での Telegram 接続問題を修正（イメージバージョン `2026.2.17` 以降で必要）。
@@ -2876,6 +2651,11 @@ localization:
       - GitHub：https://github.com/openclaw/openclaw
 
       ## 変更履歴
+      **2026/9/30**
+      - ⚠️ イメージを `2026.9.7` にアップグレード — **アップグレード前にバックアップしてください**。多数のリリースをまたぐアップグレードは初回起動時にディスク上のデータベースを移行します。`2026.9.7` は移行前にすべての state/agent データベースを自動バックアップし、ロールバック時に復元しますが、ご自身でもバックアップしてください —— 後でダウングレードするにはアップグレード前のバックアップが必要です。
+      - ⚠️ 破壊的変更（Control UI）：`dangerouslyDisableDeviceAuth` は廃止され無効になりました。Control UI を最初に開くブラウザには **「Approve this browser」** が表示され、**一度きりの承認**が必要です —— **Command** ターミナルで画面に表示される `openclaw devices approve <requestId>` を実行すると、ページは自動的に接続します。
+      - 上流で新しいフラッグシップモデルを追加：Anthropic Fable 5.1、OpenAI GPT-6 Astra、GPT-5.6 ファミリー全体。さらに自動更新の制御（`OPENCLAW_NO_AUTO_UPDATE=1`）を追加、checkpoint restore を削除、`2026.5.28` 以降 100 以上のチャンネル/プロバイダー/セキュリティ修正を含みます。
+
       **2026/6/1**
       - イメージを `2026.5.28` にアップグレード — LINE などオンデマンドでインストールされるチャンネルプラグインの読み込み失敗を修正（プラグイン SDK の構造変更後、固定イメージのバージョンが自動インストールされるチャンネルプラグインのバージョンと一致するようになりました）。さらに Claude Opus 4.8 サポート、暗号化 PDF 抽出、NVIDIA/MiniMax プロバイダー更新、100 以上のセキュリティ/チャンネル/エージェント修正を追加
 
@@ -3009,14 +2789,20 @@ localization:
       - key: ENABLE_CONTROL_UI
         name: Habilitar Control UI
         description: "'true' para habilitar la Control UI vía dominio público (predeterminado). 'false' para solo conexiones locales (más seguro)."
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Clave API de Zeabur AI Hub (Opcional)
-        description: "Opcional pero recomendado. La plantilla usa zeabur-ai/glm-4.7-flash (económico, rápido) como modelo predeterminado, que requiere esta clave. Sin ella, deberá cambiar a otro proveedor y usar su propia clave API. Puede añadirlo después en la pestaña Variables."
+      - key: LLM_API_KEY
+        name: Clave API de LLM (Opcional)
+        description: "Opcional. La clave API de su proveedor compatible con OpenAI (OpenAI, gateway compatible con Anthropic, OpenRouter, etc.). Déjelo en blanco para configurar un modelo más tarde en el Control UI."
+      - key: LLM_BASE_URL
+        name: URL Base de LLM (Opcional)
+        description: "Endpoint compatible con OpenAI, p. ej. https://api.openai.com/v1"
+      - key: LLM_MODEL
+        name: Modelo LLM (Opcional)
+        description: "Id del modelo principal a usar, p. ej. gpt-4o-mini"
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞 (anteriormente Clawdbot, Moltbot) es un asistente personal de IA que se ejecuta localmente y se conecta a múltiples plataformas de mensajería a través de una arquitectura Gateway basada en WebSocket.
 
-      ⚠️ Esta plantilla usa `ghcr.io/openclaw/openclaw:2026.5.28`. OpenClaw 🦞 está en desarrollo rápido, por lo que puede haber errores no descubiertos. Cambiar de versión tampoco garantiza estabilidad.
+      ⚠️ Esta plantilla usa `ghcr.io/openclaw/openclaw:2026.9.7`. OpenClaw 🦞 está en desarrollo rápido, por lo que puede haber errores no descubiertos. Cambiar de versión tampoco garantiza estabilidad.
 
       ⚠️ Si encuentra algún problema, no dude en consultar los [GitHub issues](https://github.com/openclaw/openclaw/issues) para buscar soluciones o reportar nuevos problemas. Para problemas relacionados con la plataforma Zeabur, contacte al soporte de Zeabur.
 
@@ -3035,7 +2821,9 @@ localization:
       |----------|-----------|-------------|
       | **Dominio** | Sí | El subdominio para acceder a OpenClaw (ej. `my-openclaw` → `my-openclaw.zeabur.app`). Se puede eliminar después de cambiar al modo loopback. |
       | **Habilitar Control UI** | Sí | `true` (predeterminado) — habilita la Control UI web vía dominio público. `false` — solo loopback, sin acceso web público (más seguro, usar con Tailscale o canales compatibles como Telegram) |
-      | **Clave API de Zeabur AI Hub** | No | Déjelo en blanco para omitir. La plantilla usa `zeabur-ai/glm-4.7-flash` (económico, rápido) como modelo predeterminado, que requiere esta clave — sin ella, deberá cambiar de modelo y usar su propia clave API de otro proveedor (Anthropic, OpenAI, etc.). Puede añadirlo después en la pestaña **Variables**. |
+      | **Clave API de LLM** | No | La clave API de su proveedor compatible con OpenAI (OpenAI, gateway compatible con Anthropic, OpenRouter, etc.). Si la proporciona junto con los dos campos siguientes, la plantilla configura un proveedor `custom` con su modelo como principal. Déjelo en blanco para elegir un modelo/proveedor más tarde vía el Control UI o la CLI `openclaw`. |
+      | **URL Base de LLM** | No | Endpoint compatible con OpenAI, p. ej. `https://api.openai.com/v1`. |
+      | **Modelo LLM** | No | Id del modelo principal a usar, p. ej. `gpt-4o-mini`. |
 
       ## Recursos Recomendados
       - **Mínimo**: 2 vCPU / 4 GB RAM
@@ -3046,34 +2834,34 @@ localization:
       - **Devbox**: Si necesita ejecución de código multilenguaje (Python, Go, Rust, C/C++), despliegue la [Plantilla Devbox](https://zeabur.com/templates/ZBVZNH) en el mismo proyecto
 
       ## Uso
-      1. Después del despliegue, abra la URL del servicio desde la pestaña **Red**. En la página de inicio de sesión, pegue el **Gateway Token** (disponible en la pestaña **Instrucciones** o **Variables de entorno** → `OPENCLAW_GATEWAY_TOKEN`) y haga clic en **Connect**
+      1. Después del despliegue, abra la URL del servicio desde la pestaña **Red**. En la página de inicio de sesión, pegue el **Gateway Token** (disponible en la pestaña **Instrucciones** o **Variables de entorno** → `OPENCLAW_GATEWAY_TOKEN`) y haga clic en **Connect**. En la **primera** conexión, cada navegador muestra **"Approve this browser"** con un comando único como `openclaw devices approve <requestId>`. Abra **Command** en el panel de Zeabur y ejecute ese comando —— la página se conecta sola. Es un paso único por navegador.
       2. **Configure el modelo de AI** (elija uno):
-         - **Zeabur AI Hub** (modelo predeterminado: `glm-4.7-flash`): Si ingresó la API Key durante el despliegue, vaya directamente al paso 3. También puede agregar `ZEABUR_AI_HUB_API_KEY` después en la pestaña **Variables** del panel de Zeabur (reinicie el servicio después de agregar).
-         - **Otros proveedores** (Anthropic, OpenAI, etc.): El predeterminado de la plantilla sigue siendo `zeabur-ai/glm-4.7-flash`. Para usar otro proveedor, agregue su clave API mediante variables de entorno, luego cambie el modelo con `/model <id>` en el chat o desde Control UI Settings. Más info: https://docs.openclaw.ai/providers/anthropic
+         - **Durante el despliegue**: Si completó `LLM_API_KEY`, `LLM_BASE_URL` y `LLM_MODEL`, la plantilla configura un proveedor `custom` compatible con OpenAI con su modelo como principal — vaya directamente al paso 3.
+         - **Más tarde**: Si los dejó en blanco, el servicio igual se despliega. Agregue un proveedor y un modelo vía Control UI Settings o la CLI `openclaw`, luego cambie el modelo con `/model <id>` en el chat. Más info: https://docs.openclaw.ai/providers
       3. Vaya a la página **Chat** para probar si su modelo de AI funciona
       4. (Opcional) Configure plataformas de mensajería como Telegram, WhatsApp, etc.
 
       Para configuración de modelos de AI, consulte la [documentación oficial](https://docs.openclaw.ai/providers).
 
       ### Cambio de Modelo y Failover
-      Esta plantilla incluye modelos de failover que cambian automáticamente cuando el modelo principal no está disponible. Cadena predeterminada: `glm-4.7-flash` → `grok-4-fast-non-reasoning` → `minimax-m2.5` → `kimi-k2.5` → `qwen-3-235b` → `gpt-5-mini`.
+      OpenClaw admite un modelo principal más modelos de failover opcionales que cambian automáticamente cuando el principal no está disponible. Al proporcionar las variables LLM durante el despliegue, el principal se establece en `custom/<su-modelo>`; puede agregar más proveedores y fallbacks en cualquier momento.
 
       Puede gestionar modelos desde **Control UI Chat** o **Comando** en el panel de Zeabur.
 
       **Desde Control UI Chat** — escriba slash commands directamente en el chat:
-      - `/model zeabur-ai/glm-4.7-flash` — cambiar modelo principal
+      - `/model custom/<su-modelo>` — cambiar modelo principal
       - `/model` — ver modelo actual
       - `/models` — listar proveedores de modelos
-      - `/models <provider>` — listar modelos de un proveedor (ej. `/models zeabur-ai`)
+      - `/models <provider>` — listar modelos de un proveedor (ej. `/models custom`)
 
       **Desde Comando** (panel de Zeabur) — mismos comandos en la terminal:
       ```bash
-      openclaw models set zeabur-ai/glm-4.7-flash
+      openclaw models set custom/<su-modelo>
       openclaw models status
       openclaw models list --all
       openclaw models fallbacks list
-      openclaw models fallbacks add zeabur-ai/gpt-5-mini
-      openclaw models fallbacks remove zeabur-ai/gpt-5-mini
+      openclaw models fallbacks add <provider>/<model>
+      openclaw models fallbacks remove <provider>/<model>
       openclaw models fallbacks clear
       ```
 
@@ -3082,8 +2870,8 @@ localization:
       "agents": {
         "defaults": {
           "model": {
-            "primary": "zeabur-ai/glm-4.7-flash",
-            "fallbacks": ["zeabur-ai/grok-4-fast-non-reasoning", "zeabur-ai/minimax-m2.5"]
+            "primary": "custom/<su-modelo>",
+            "fallbacks": ["anthropic/claude-sonnet-4-6", "openai/gpt-4o-mini"]
           }
         }
       }
@@ -3091,7 +2879,7 @@ localization:
       Después de editar el archivo, reinicie el servicio.
 
       ### Agregar Proveedores de Modelos Externos
-      Además de Zeabur AI Hub, puede agregar proveedores externos como Anthropic, OpenAI, Google, etc.
+      Puede agregar cualquier proveedor compatible con OpenAI o de primera clase, como Anthropic, OpenAI, Google, etc.
 
       **Método 1: Variables de entorno** — agregue API keys en la pestaña **Variables** del panel de Zeabur:
       - `ANTHROPIC_API_KEY` — modelos Claude
@@ -3202,9 +2990,9 @@ localization:
       ## Configuración del Modelo de AI
 
       **Verifique su configuración:**
-      1. La plantilla escribe `zeabur-ai/glm-4.7-flash` como modelo predeterminado en el primer arranque:
-         - Con Zeabur AI Hub API Key → funciona directamente
-         - Sin → el modelo no responderá; añada una clave de AI Hub (recomendado) o cambie el modelo + añada la clave API de otro proveedor
+      1. En el primer arranque, si proporcionó `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`, la plantilla escribe `custom/<su-modelo>` como modelo predeterminado:
+         - Con las variables LLM configuradas → funciona directamente
+         - Sin → no hay ningún modelo configurado; añada un proveedor y un modelo vía el Control UI o la CLI `openclaw`
       2. Abra la página **Chat** y envíe un mensaje de prueba
       3. Si recibe una respuesta → el modelo funciona correctamente
       4. Si obtiene un error → verifique que su clave API esté configurada correctamente
@@ -3221,16 +3009,11 @@ localization:
       - Agregar claves API de otros proveedores (ej. Anthropic, OpenAI)
       - Más info: https://docs.openclaw.ai/providers
 
-      **Modificar modelos de Zeabur AI Hub** (vía panel de Zeabur):
-      - Ir a **Configuración** → **Archivos de configuración** → Editar `/opt/openclaw/providers/zeabur-ai-hub.json5`, luego reiniciar el servicio (los cambios se sincronizan al iniciar)
-      - Versiones anteriores (sin comandos): Edite `/home/node/.openclaw/openclaw.json` vía pestaña **Archivos** o Control UI Settings. Agregue lo siguiente al array `models.providers.zeabur-ai.models`:
+      **Agregar o editar los modelos de su proveedor custom** (vía archivo de configuración):
+      - Edite `/home/node/.openclaw/openclaw.json` vía pestaña **Archivos** o Control UI Settings, luego reinicie el servicio. Agregue más entradas al array `models.providers.custom.models`:
       ```json
-      { "id": "gpt-5.2", "name": "GPT-5.2", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.75, "output": 14, "cacheRead": 0.18, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5.1", "name": "GPT-5.1", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.13, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5-nano", "name": "GPT-5 Nano", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.05, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "glm-4.7", "name": "GLM-4.7", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.4, "output": 1.9, "cacheRead": 0.08, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "glm-4.7-flash", "name": "GLM-4.7 Flash", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.06, "output": 0.4, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "kimi-k2.5", "name": "Kimi K2.5", "reasoning": false, "input": ["text"], "cost": { "input": 0.45, "output": 2.25, "cacheRead": 0.07, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 }
+      { "id": "gpt-4o", "name": "gpt-4o", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 },
+      { "id": "gpt-4o-mini", "name": "gpt-4o-mini", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 }
       ```
 
       ## Nota de Seguridad
@@ -3305,7 +3088,7 @@ localization:
       > ⚠️ Evite usar `latest` como etiqueta — descarga la versión más reciente en cada reinicio, lo que puede introducir cambios incompatibles o errores inesperados. Fije una versión específica para mayor estabilidad.
       5. Revise la pestaña **Logs** para confirmar que el gateway se inició correctamente
 
-      > 💡 El script de inicio migra automáticamente su configuración en cada arranque — los ajustes faltantes (como `trustedProxies`, `dangerouslyDisableDeviceAuth`) se agregan automáticamente. Sus configuraciones existentes se conservan.
+      > 💡 El script de inicio migra automáticamente su configuración en cada arranque — los ajustes faltantes (como `trustedProxies`) se agregan automáticamente. Sus configuraciones existentes se conservan.
 
       ### "device identity required"
       Esto significa que la Control UI aún no ha sido autenticada con un Gateway Token. Solución:
@@ -3387,7 +3170,7 @@ localization:
       Esta plantilla preconfigura los siguientes ajustes para el entorno de nube de Zeabur:
 
       - **`gateway.trustedProxies`**: Configurado como `["10.0.0.0/8", "172.16.0.0/12"]` para que el gateway identifique correctamente las IPs de los clientes detrás del proxy inverso de Zeabur. Sin esto, la Control UI puede mostrar errores de "device identity required".
-      - **`dangerouslyDisableDeviceAuth`**: Deshabilita el emparejamiento de dispositivos de la Control UI (el emparejamiento está diseñado para redes locales; los despliegues en la nube usan autenticación por Gateway Token).
+      - **`dangerouslyDisableDeviceAuth`** *(retirado desde la imagen `2026.9.7`)*: Esta opción antes deshabilitaba el emparejamiento de dispositivos de la Control UI. Ahora es inerte y `openclaw doctor --fix` la elimina. En su lugar, la Control UI requiere un emparejamiento único de dispositivo por navegador —— consulta el paso 1 de **Uso** para aprobar el navegador con `openclaw devices approve`.
       - **Symlinks en `/usr/local/bin`**: Los comandos `openclaw`, `backup` y `restore` tienen enlaces simbólicos en `/usr/local/bin` para funcionar en la terminal de **Comando** de Zeabur.
       - **`OPENCLAW_DISABLE_BONJOUR=1`**: Deshabilita mDNS/Bonjour porque los nombres de host de los contenedores de Zeabur pueden exceder el límite de 63 bytes de las etiquetas DNS. mDNS solo se usa para descubrimiento de red local y no es necesario en entornos de nube.
       - **`OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=true`**: Soluciona problemas de conexión con Telegram en entornos de contenedores (necesario para versiones de imagen `2026.2.17` en adelante).
@@ -3398,6 +3181,11 @@ localization:
       - GitHub: https://github.com/openclaw/openclaw
 
       ## Registro de Cambios
+      **2026/9/30**
+      - ⚠️ Actualizar imagen a `2026.9.7` — **haz una copia de seguridad antes de actualizar**. Saltar entre muchas versiones migra la base de datos en disco en el primer arranque; `2026.9.7` respalda automáticamente todas las bases de datos de state/agent antes de migrar y las restaura en el rollback, pero mantén tu propia copia —— volver a una versión anterior aún requiere la copia previa a la actualización.
+      - ⚠️ Cambio incompatible (Control UI): `dangerouslyDisableDeviceAuth` está retirado e inerte. El primer navegador que abre la Control UI ahora muestra **"Approve this browser"** y necesita una **aprobación única** —— ejecuta en la terminal **Command** el comando `openclaw devices approve <requestId>` que muestra, y la página se conecta sola.
+      - Nuevos modelos insignia añadidos upstream: Anthropic Fable 5.1, OpenAI GPT-6 Astra y toda la familia GPT-5.6. También añade controles de actualización automática (`OPENCLAW_NO_AUTO_UPDATE=1`), elimina checkpoint restore e incluye más de 100 correcciones de canales/proveedores/seguridad desde `2026.5.28`.
+
       **2026/6/1**
       - Actualizar imagen a `2026.5.28` — corrige el fallo de carga de LINE y otros plugins de canal instalados bajo demanda (tras un cambio en la estructura del SDK de plugins, la versión de la imagen fijada ahora coincide con la versión del plugin de canal instalado automáticamente). También añade soporte para Claude Opus 4.8, extracción de PDF cifrados, actualizaciones de proveedores NVIDIA/MiniMax y más de 100 correcciones de seguridad/canales/agentes
 
@@ -3531,14 +3319,20 @@ localization:
       - key: ENABLE_CONTROL_UI
         name: Aktifkan Control UI
         description: "'true' untuk mengaktifkan Control UI via domain publik (default). 'false' untuk hanya koneksi lokal (lebih aman)."
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Kunci API Zeabur AI Hub (Opsional)
-        description: "Opsional tapi disarankan. Template ini menggunakan zeabur-ai/glm-4.7-flash (murah, cepat) sebagai model default, yang memerlukan kunci ini. Tanpa kunci ini, Anda perlu beralih ke penyedia lain dan menyediakan API key sendiri. Dapat ditambahkan nanti di tab Variabel."
+      - key: LLM_API_KEY
+        name: Kunci API LLM (Opsional)
+        description: "Opsional. Kunci API penyedia Anda yang kompatibel dengan OpenAI (OpenAI, gateway kompatibel Anthropic, OpenRouter, dll.). Kosongkan untuk mengonfigurasi model nanti di Control UI."
+      - key: LLM_BASE_URL
+        name: Base URL LLM (Opsional)
+        description: "Endpoint yang kompatibel dengan OpenAI, mis. https://api.openai.com/v1"
+      - key: LLM_MODEL
+        name: Model LLM (Opsional)
+        description: "Id model utama yang digunakan, mis. gpt-4o-mini"
     readme: |
       # OpenClaw 🦞
       OpenClaw 🦞 (sebelumnya Clawdbot, Moltbot) adalah asisten AI pribadi yang berjalan secara lokal dan terhubung ke berbagai platform perpesanan melalui arsitektur Gateway berbasis WebSocket.
 
-      ⚠️ Template ini menggunakan `ghcr.io/openclaw/openclaw:2026.5.28`. OpenClaw 🦞 sedang dalam pengembangan cepat, jadi mungkin ada bug yang belum ditemukan. Mengubah versi juga tidak menjamin stabilitas.
+      ⚠️ Template ini menggunakan `ghcr.io/openclaw/openclaw:2026.9.7`. OpenClaw 🦞 sedang dalam pengembangan cepat, jadi mungkin ada bug yang belum ditemukan. Mengubah versi juga tidak menjamin stabilitas.
 
       ⚠️ Jika Anda mengalami masalah, silakan kunjungi [GitHub issues](https://github.com/openclaw/openclaw/issues) untuk mencari solusi atau melaporkan masalah baru. Untuk masalah terkait platform Zeabur, silakan hubungi dukungan Zeabur.
 
@@ -3557,7 +3351,9 @@ localization:
       |----------|-------|-----------|
       | **Domain** | Ya | Subdomain untuk mengakses OpenClaw (contoh `my-openclaw` → `my-openclaw.zeabur.app`). Dapat dihapus setelah beralih ke mode loopback. |
       | **Aktifkan Control UI** | Ya | `true` (default) — mengaktifkan Control UI web via domain publik. `false` — hanya loopback, tanpa akses web publik (lebih aman, gunakan dengan Tailscale atau channel yang didukung seperti Telegram) |
-      | **Kunci API Zeabur AI Hub** | Tidak | Kosongkan untuk melewati. Template ini menggunakan `zeabur-ai/glm-4.7-flash` (murah, cepat) sebagai model default, yang memerlukan kunci ini — tanpa kunci ini, Anda perlu beralih model dan menyediakan API key dari penyedia lain (Anthropic, OpenAI, dll.). Dapat ditambahkan nanti di tab **Variabel**. |
+      | **Kunci API LLM** | Tidak | Kunci API penyedia Anda yang kompatibel dengan OpenAI (OpenAI, gateway kompatibel Anthropic, OpenRouter, dll.). Jika diisi bersama dua kolom di bawah, template mengonfigurasi penyedia `custom` dengan model Anda sebagai utama. Kosongkan untuk memilih model/penyedia nanti via Control UI atau CLI `openclaw`. |
+      | **Base URL LLM** | Tidak | Endpoint yang kompatibel dengan OpenAI, mis. `https://api.openai.com/v1`. |
+      | **Model LLM** | Tidak | Id model utama yang digunakan, mis. `gpt-4o-mini`. |
 
       ## Sumber Daya yang Direkomendasikan
       - **Minimum**: 2 vCPU / 4 GB RAM
@@ -3568,34 +3364,34 @@ localization:
       - **Devbox**: Jika Anda memerlukan eksekusi kode multi-bahasa (Python, Go, Rust, C/C++), deploy [Template Devbox](https://zeabur.com/templates/ZBVZNH) ke proyek yang sama
 
       ## Penggunaan
-      1. Setelah deploy, buka URL layanan dari tab **Networking**. Di halaman login, tempelkan **Gateway Token** (tersedia di tab **Instruksi** atau **Variables** → `OPENCLAW_GATEWAY_TOKEN`) dan klik **Connect**
+      1. Setelah deploy, buka URL layanan dari tab **Networking**. Di halaman login, tempelkan **Gateway Token** (tersedia di tab **Instruksi** atau **Variables** → `OPENCLAW_GATEWAY_TOKEN`) dan klik **Connect**. Pada koneksi **pertama**, setiap browser menampilkan **"Approve this browser"** dengan perintah sekali pakai seperti `openclaw devices approve <requestId>`. Buka **Command** di dashboard Zeabur dan jalankan perintah itu —— halaman akan tersambung sendiri. Ini langkah sekali saja per browser.
       2. **Konfigurasi model AI** (pilih salah satu):
-         - **Zeabur AI Hub** (model default: `glm-4.7-flash`): Jika sudah memasukkan API Key saat deploy, langsung ke langkah 3. Bisa juga menambahkan `ZEABUR_AI_HUB_API_KEY` nanti di tab **Variables** dashboard Zeabur (restart layanan setelah menambahkan).
-         - **Penyedia lain** (Anthropic, OpenAI, dll.): Default template tetap `zeabur-ai/glm-4.7-flash`. Untuk menggunakan penyedia lain, tambahkan API key-nya via variabel lingkungan, lalu beralih model dengan `/model <id>` di chat atau dari Control UI Settings. Info: https://docs.openclaw.ai/providers/anthropic
+         - **Saat deploy**: Jika Anda mengisi `LLM_API_KEY`, `LLM_BASE_URL`, dan `LLM_MODEL`, template mengonfigurasi penyedia `custom` yang kompatibel dengan OpenAI dengan model Anda sebagai utama — langsung ke langkah 3.
+         - **Nanti**: Jika dikosongkan, layanan tetap ter-deploy. Tambahkan penyedia dan model via Control UI Settings atau CLI `openclaw`, lalu beralih model dengan `/model <id>` di chat. Info: https://docs.openclaw.ai/providers
       3. Buka halaman **Chat** untuk menguji apakah model AI Anda berfungsi
       4. (Opsional) Atur platform pesan seperti Telegram, WhatsApp, dll.
 
       Untuk konfigurasi model AI, lihat [dokumentasi resmi](https://docs.openclaw.ai/providers).
 
       ### Pergantian Model dan Failover
-      Template ini menyertakan model failover yang otomatis beralih saat model utama tidak tersedia. Rantai default: `glm-4.7-flash` → `grok-4-fast-non-reasoning` → `minimax-m2.5` → `kimi-k2.5` → `qwen-3-235b` → `gpt-5-mini`.
+      OpenClaw mendukung satu model utama plus model failover opsional yang beralih otomatis saat model utama tidak tersedia. Saat Anda mengisi variabel LLM ketika deploy, model utama diatur ke `custom/<model-anda>`; Anda dapat menambahkan penyedia dan fallback kapan saja.
 
       Anda dapat mengelola model dari **Control UI Chat** atau **Perintah** di dashboard Zeabur.
 
       **Dari Control UI Chat** — ketik slash command langsung di kotak chat:
-      - `/model zeabur-ai/glm-4.7-flash` — ganti model utama
+      - `/model custom/<model-anda>` — ganti model utama
       - `/model` — lihat model saat ini
       - `/models` — daftar penyedia model
-      - `/models <provider>` — daftar model dari penyedia tertentu (mis. `/models zeabur-ai`)
+      - `/models <provider>` — daftar model dari penyedia tertentu (mis. `/models custom`)
 
       **Dari Perintah** (dashboard Zeabur) — perintah yang sama di terminal:
       ```bash
-      openclaw models set zeabur-ai/glm-4.7-flash
+      openclaw models set custom/<model-anda>
       openclaw models status
       openclaw models list --all
       openclaw models fallbacks list
-      openclaw models fallbacks add zeabur-ai/gpt-5-mini
-      openclaw models fallbacks remove zeabur-ai/gpt-5-mini
+      openclaw models fallbacks add <provider>/<model>
+      openclaw models fallbacks remove <provider>/<model>
       openclaw models fallbacks clear
       ```
 
@@ -3604,8 +3400,8 @@ localization:
       "agents": {
         "defaults": {
           "model": {
-            "primary": "zeabur-ai/glm-4.7-flash",
-            "fallbacks": ["zeabur-ai/grok-4-fast-non-reasoning", "zeabur-ai/minimax-m2.5"]
+            "primary": "custom/<model-anda>",
+            "fallbacks": ["anthropic/claude-sonnet-4-6", "openai/gpt-4o-mini"]
           }
         }
       }
@@ -3613,7 +3409,7 @@ localization:
       Setelah mengedit file konfigurasi, restart layanan.
 
       ### Menambahkan Penyedia Model Eksternal
-      Selain Zeabur AI Hub, Anda dapat menambahkan penyedia eksternal seperti Anthropic, OpenAI, Google, dll.
+      Anda dapat menambahkan penyedia apa pun yang kompatibel dengan OpenAI atau didukung secara native seperti Anthropic, OpenAI, Google, dll.
 
       **Metode 1: Variabel lingkungan** — tambahkan API key di tab **Variables** dashboard Zeabur:
       - `ANTHROPIC_API_KEY` — model Claude
@@ -3724,9 +3520,9 @@ localization:
       ## Konfigurasi Model AI
 
       **Verifikasi setup Anda:**
-      1. Template menulis `zeabur-ai/glm-4.7-flash` sebagai model default saat boot pertama:
-         - Dengan Zeabur AI Hub API Key → langsung berfungsi
-         - Tanpa → model tidak akan merespons; tambahkan kunci AI Hub (disarankan) atau beralih model + tambahkan kunci API penyedia lain
+      1. Saat boot pertama, jika Anda mengisi `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`, template menulis `custom/<model-anda>` sebagai model default:
+         - Dengan variabel LLM terisi → langsung berfungsi
+         - Tanpa → belum ada model yang dikonfigurasi; tambahkan penyedia + model via Control UI atau CLI `openclaw`
       2. Buka halaman **Chat** dan kirim pesan percobaan
       3. Jika mendapat balasan → model berfungsi dengan baik
       4. Jika ada error → pastikan kunci API sudah dikonfigurasi dengan benar
@@ -3743,16 +3539,11 @@ localization:
       - Tambahkan kunci API penyedia lain (misal: Anthropic, OpenAI)
       - Info: https://docs.openclaw.ai/providers
 
-      **Modifikasi model Zeabur AI Hub** (via dashboard Zeabur):
-      - Buka **Settings** → **Configs** → Edit `/opt/openclaw/providers/zeabur-ai-hub.json5`, lalu restart layanan (perubahan disinkronkan saat startup)
-      - Versi lama (tanpa perintah): Edit `/home/node/.openclaw/openclaw.json` via tab **Files** atau Control UI Settings. Tambahkan berikut ke array `models.providers.zeabur-ai.models`:
+      **Tambah atau edit model penyedia custom Anda** (via file konfigurasi):
+      - Edit `/home/node/.openclaw/openclaw.json` via tab **Files** atau Control UI Settings, lalu restart layanan. Tambahkan entri ke array `models.providers.custom.models`:
       ```json
-      { "id": "gpt-5.2", "name": "GPT-5.2", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.75, "output": 14, "cacheRead": 0.18, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5.1", "name": "GPT-5.1", "reasoning": false, "input": ["text", "image"], "cost": { "input": 1.25, "output": 10, "cacheRead": 0.13, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "gpt-5-nano", "name": "GPT-5 Nano", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.05, "output": 0.4, "cacheRead": 0.01, "cacheWrite": 0 }, "contextWindow": 400000, "maxTokens": 8192 },
-      { "id": "glm-4.7", "name": "GLM-4.7", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.4, "output": 1.9, "cacheRead": 0.08, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "glm-4.7-flash", "name": "GLM-4.7 Flash", "reasoning": false, "input": ["text", "image"], "cost": { "input": 0.06, "output": 0.4, "cacheRead": 0, "cacheWrite": 0 }, "contextWindow": 204800, "maxTokens": 8192 },
-      { "id": "kimi-k2.5", "name": "Kimi K2.5", "reasoning": false, "input": ["text"], "cost": { "input": 0.45, "output": 2.25, "cacheRead": 0.07, "cacheWrite": 0 }, "contextWindow": 131072, "maxTokens": 8192 }
+      { "id": "gpt-4o", "name": "gpt-4o", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 },
+      { "id": "gpt-4o-mini", "name": "gpt-4o-mini", "input": ["text", "image"], "contextWindow": 128000, "maxTokens": 8192 }
       ```
 
       ## Catatan Keamanan
@@ -3827,7 +3618,7 @@ localization:
       > ⚠️ Hindari menggunakan `latest` sebagai tag — ini akan mengunduh versi terbaru setiap kali restart, yang dapat menyebabkan perubahan yang tidak kompatibel atau error tak terduga. Gunakan versi spesifik untuk stabilitas.
       5. Periksa tab **Logs** untuk memastikan gateway berhasil dimulai
 
-      > 💡 Skrip startup secara otomatis memigrasi konfigurasi Anda setiap kali boot — pengaturan yang hilang (seperti `trustedProxies`, `dangerouslyDisableDeviceAuth`) akan ditambahkan otomatis. Pengaturan yang sudah ada tidak akan ditimpa.
+      > 💡 Skrip startup secara otomatis memigrasi konfigurasi Anda setiap kali boot — pengaturan yang hilang (seperti `trustedProxies`) akan ditambahkan otomatis. Pengaturan yang sudah ada tidak akan ditimpa.
 
       ### "device identity required"
       Ini berarti Control UI belum diautentikasi dengan Gateway Token. Solusi:
@@ -3909,7 +3700,7 @@ localization:
       Template ini mengonfigurasi pengaturan berikut untuk lingkungan cloud Zeabur:
 
       - **`gateway.trustedProxies`**: Diatur ke `["10.0.0.0/8", "172.16.0.0/12"]` agar gateway dapat mengidentifikasi IP klien dengan benar di belakang reverse proxy Zeabur. Tanpa ini, Control UI mungkin menampilkan error "device identity required".
-      - **`dangerouslyDisableDeviceAuth`**: Menonaktifkan pemasangan perangkat Control UI (pemasangan perangkat dirancang untuk jaringan lokal; deployment cloud menggunakan autentikasi Gateway Token).
+      - **`dangerouslyDisableDeviceAuth`** *(dipensiunkan sejak image `2026.9.7`)*: Flag ini sebelumnya menonaktifkan pemasangan perangkat Control UI. Kini tidak aktif dan dihapus oleh `openclaw doctor --fix`. Sebagai gantinya, Control UI memerlukan pemasangan perangkat sekali pakai per browser —— lihat langkah 1 di **Penggunaan** untuk menyetujui browser dengan `openclaw devices approve`.
       - **Symlink `/usr/local/bin`**: Perintah `openclaw`, `backup`, dan `restore` di-symlink ke `/usr/local/bin` agar berfungsi di terminal **Perintah** Zeabur.
       - **`OPENCLAW_DISABLE_BONJOUR=1`**: Menonaktifkan mDNS/Bonjour karena nama host container Zeabur dapat melebihi batas label DNS 63 byte. mDNS hanya digunakan untuk penemuan jaringan lokal dan tidak diperlukan di lingkungan cloud.
       - **`OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=true`**: Memperbaiki masalah koneksi Telegram di lingkungan container (diperlukan untuk versi image `2026.2.17` dan setelahnya).
@@ -3920,6 +3711,11 @@ localization:
       - GitHub: https://github.com/openclaw/openclaw
 
       ## Catatan Perubahan
+      **2026/9/30**
+      - ⚠️ Upgrade image ke `2026.9.7` — **cadangkan sebelum upgrade**. Melompati banyak rilis akan memigrasikan database di disk saat boot pertama; `2026.9.7` otomatis mencadangkan semua database state/agent sebelum migrasi dan memulihkannya saat rollback, tetapi tetap simpan cadangan Anda sendiri —— menurunkan versi nanti tetap memerlukan cadangan sebelum upgrade.
+      - ⚠️ Perubahan yang merusak (Control UI): `dangerouslyDisableDeviceAuth` sudah dipensiunkan dan tidak aktif. Browser pertama yang membuka Control UI kini menampilkan **"Approve this browser"** dan memerlukan **persetujuan sekali pakai** —— di terminal **Command** jalankan perintah `openclaw devices approve <requestId>` yang ditampilkan, dan halaman akan tersambung sendiri.
+      - Model unggulan baru ditambahkan upstream: Anthropic Fable 5.1, OpenAI GPT-6 Astra, dan seluruh keluarga GPT-5.6. Juga menambahkan kontrol pembaruan otomatis (`OPENCLAW_NO_AUTO_UPDATE=1`), menghapus checkpoint restore, dan mencakup 100+ perbaikan channel/provider/keamanan sejak `2026.5.28`.
+
       **2026/6/1**
       - Upgrade image ke `2026.5.28` — memperbaiki kegagalan pemuatan plugin LINE dan channel lain yang dipasang sesuai permintaan (setelah perubahan struktur SDK plugin, versi image yang dipatok kini cocok dengan versi plugin channel yang dipasang otomatis). Juga menambahkan dukungan Claude Opus 4.8, ekstraksi PDF terenkripsi, pembaruan provider NVIDIA/MiniMax, dan 100+ perbaikan keamanan/channel/agent
 

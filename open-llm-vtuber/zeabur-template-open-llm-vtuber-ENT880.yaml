@@ -5,28 +5,24 @@ metadata:
     name: Open-LLM-VTuber (Cloud API)
 spec:
     description: |
-      Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D talking face. Cloud-API edition: all inference via OpenAI-compatible LLM (default Zeabur AI Hub), Groq Whisper for speech-to-text, and free Edge-TTS for voice output. ⚠️ Pins openllmvtuber/open-llm-vtuber:latest — upstream is in rapid development, so restarting the service can pull breaking changes.
+      Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D talking face. Cloud-API edition: all inference via your own OpenAI-compatible LLM (OpenAI, Anthropic, Gemini, DeepSeek, Groq, …), Groq Whisper for speech-to-text, and free Edge-TTS for voice output. ⚠️ Pins openllmvtuber/open-llm-vtuber:latest — upstream is in rapid development, so restarting the service can pull breaking changes.
     icon: https://docs.llmvtuber.com/img/open_llm_vtuber.png
     tags:
       - AI
       - VTuber
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        type: AI_HUB_KEY
-        name: Zeabur AI Hub API Key (recommended)
-        description: Click Generate to mint a Zeabur AI Hub key — auto-configures the LLM to claude-haiku-4-5 via https://hnd1.aihub.zeabur.ai/v1, billed against your Zeabur credits. Leave blank if you'd rather use OpenAI / Anthropic / etc. directly (then fill LLM_API_KEY + LLM_BASE_URL + LLM_MODEL below).
       - key: LLM_API_KEY
         type: STRING
-        name: LLM API Key (only if not using AI Hub)
-        description: API key for an OpenAI-compatible LLM provider. Ignored when ZEABUR_AI_HUB_API_KEY is set. Pair with LLM_BASE_URL and LLM_MODEL.
+        name: LLM API Key (required)
+        description: API key for your OpenAI-compatible LLM provider (OpenAI, Anthropic, Gemini, DeepSeek, Groq, etc.). Pair with LLM_BASE_URL and LLM_MODEL. Without a key the LLM is left unconfigured and chat will not work.
       - key: LLM_BASE_URL
         type: STRING
         name: LLM Base URL
-        description: OpenAI-compatible API base URL. Defaults to Zeabur AI Hub (https://hnd1.aihub.zeabur.ai/v1). For OpenAI use https://api.openai.com/v1, for Anthropic use https://api.anthropic.com/v1 (with Claude key).
+        description: OpenAI-compatible API base URL for your provider. For OpenAI use https://api.openai.com/v1, for Anthropic use https://api.anthropic.com/v1 (with a Claude key). See the readme table for more providers.
       - key: LLM_MODEL
         type: STRING
         name: LLM Model
-        description: Model name. Defaults to claude-haiku-4-5. Examples — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash; OpenAI gpt-4o-mini; Anthropic claude-haiku-4-5.
+        description: Model name for your provider. Examples — OpenAI gpt-4o-mini; Anthropic claude-haiku-4-5; Gemini gemini-2.5-flash; DeepSeek deepseek-chat.
       - key: GROQ_API_KEY
         type: STRING
         name: Groq API Key (optional — enables voice input)
@@ -50,25 +46,26 @@ spec:
 
       | Layer | Provider | Cost |
       |-------|----------|------|
-      | **LLM** | OpenAI-compatible (default Zeabur AI Hub) | pay-per-token |
+      | **LLM** | Your own OpenAI-compatible provider | pay-per-token |
       | **ASR** (speech-to-text) | Groq Whisper-large-v3-turbo | free tier |
       | **TTS** (text-to-speech) | Microsoft Edge-TTS | free, no key |
       | **Live2D** | rendered in browser | free |
 
       ## Quick start
 
-      1. **Get an LLM API key** — sign up at [Zeabur AI Hub](https://zeabur.com/ai) for a one-stop key that covers Claude / GPT / Gemini / DeepSeek, or use OpenAI / Anthropic directly.
+      1. **Get an LLM API key** — from any OpenAI-compatible provider (OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, …). Set `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` for your provider — see the table below.
       2. **(Optional) Get a Groq API key** — sign up at [console.groq.com](https://console.groq.com) for free Whisper STT. Without this, voice input is disabled but text chat still works.
       3. Click **Deploy** and fill in the variables.
       4. Open the deployed URL — start chatting or click the mic to talk.
 
       > **About the URL auto-config**: Upstream's frontend bundle hardcodes `ws://127.0.0.1:12393` as the WebSocket / Base URL defaults (built for local dev). This template injects a tiny script into `index.html` at container start that points those defaults at the current page origin, so you don't have to touch the Settings UI. If a future upstream release adds runtime config support, we can drop this patch.
 
-      ## Want a different LLM provider?
+      ## Pick your LLM provider
+
+      Set `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` to match any OpenAI-compatible provider:
 
       | Provider | LLM_BASE_URL | LLM_MODEL |
       |----------|--------------|-----------|
-      | Zeabur AI Hub *(default)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
       | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
       | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
       | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
@@ -130,22 +127,21 @@ spec:
                     c = yaml.load(f)
                 c['system_config']['host'] = '0.0.0.0'
                 cc = c['character_config']
-                # Prefer Zeabur AI Hub key when present; otherwise fall back to a user-
-                # supplied LLM_API_KEY. AI Hub also forces the AI Hub base URL / model
-                # defaults so the "click Generate, deploy" flow just works without the
-                # user touching LLM_BASE_URL / LLM_MODEL.
-                ai_hub_key = os.environ.get('ZEABUR_AI_HUB_API_KEY') or ''
-                manual_key = os.environ.get('LLM_API_KEY') or ''
                 seeded_conf = os.environ.get('SEEDED_CONF') == '1'
-                api_key = ai_hub_key or manual_key
-                base_url = os.environ.get('LLM_BASE_URL') or 'https://hnd1.aihub.zeabur.ai/v1'
-                model = os.environ.get('LLM_MODEL') or 'claude-haiku-4-5'
-                if api_key or seeded_conf:
+                # Configure the LLM from the user-supplied BYO provider vars. Only write
+                # the config when an API key is present; with no key we leave conf.yaml
+                # untouched rather than pointing at any default endpoint.
+                api_key = os.environ.get('LLM_API_KEY') or ''
+                base_url = os.environ.get('LLM_BASE_URL') or ''
+                model = os.environ.get('LLM_MODEL') or ''
+                if api_key:
                     cc['agent_config']['agent_settings']['basic_memory_agent']['llm_provider'] = 'openai_compatible_llm'
                     llm = cc['agent_config']['llm_configs']['openai_compatible_llm']
                     llm['llm_api_key'] = api_key
-                    llm['base_url']    = base_url
-                    llm['model']       = model
+                    if base_url:
+                        llm['base_url'] = base_url
+                    if model:
+                        llm['model'] = model
                 groq_key = os.environ.get('GROQ_API_KEY') or ''
                 if groq_key:
                     cc['asr_config']['asr_model'] = 'groq_whisper_asr'
@@ -205,8 +201,6 @@ spec:
             - id: conf
               dir: /app/conf
           env:
-            ZEABUR_AI_HUB_API_KEY:
-              default: ${ZEABUR_AI_HUB_API_KEY}
             LLM_API_KEY:
               default: ${LLM_API_KEY}
             LLM_BASE_URL:
@@ -222,20 +216,17 @@ spec:
 localization:
   zh-TW:
     description: |
-      與任何 LLM 進行免提語音對話，支援打斷與 Live2D 動態頭像。雲端 API 版本：LLM 走 OpenAI 相容 API（預設 Zeabur AI Hub）、語音輸入用 Groq Whisper、語音輸出用免費的 Edge-TTS，無需 GPU。⚠️ 鎖在 openllmvtuber/open-llm-vtuber:latest，上游仍處於快速開發階段，重啟 service 可能拉到含 breaking change 的新版本。
+      與任何 LLM 進行免提語音對話，支援打斷與 Live2D 動態頭像。雲端 API 版本：LLM 走你自己的 OpenAI 相容供應商（OpenAI、Anthropic、Gemini、DeepSeek、Groq…）、語音輸入用 Groq Whisper、語音輸出用免費的 Edge-TTS，無需 GPU。⚠️ 鎖在 openllmvtuber/open-llm-vtuber:latest，上游仍處於快速開發階段，重啟 service 可能拉到含 breaking change 的新版本。
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API Key（建議）
-        description: 按 Generate 即可當場生一把 Zeabur AI Hub key，自動把 LLM 設成 claude-haiku-4-5、走 https://hnd1.aihub.zeabur.ai/v1，從 Zeabur 點數扣費。如果想直接用 OpenAI / Anthropic 等則留空，並填下面的 LLM_API_KEY + LLM_BASE_URL + LLM_MODEL。
       - key: LLM_API_KEY
-        name: LLM API Key（不用 AI Hub 才需要填）
-        description: OpenAI 相容 LLM 供應商的 API key。當 ZEABUR_AI_HUB_API_KEY 有值時此欄會被忽略。請搭配 LLM_BASE_URL 和 LLM_MODEL 一起設定。
+        name: LLM API Key（必填）
+        description: 你自己的 OpenAI 相容 LLM 供應商 API key（OpenAI、Anthropic、Gemini、DeepSeek、Groq 等）。請搭配 LLM_BASE_URL 和 LLM_MODEL 一起設定。未填 key 時 LLM 不會被設定，對話將無法使用。
       - key: LLM_BASE_URL
         name: LLM Base URL
-        description: OpenAI 相容 API 的 base URL。預設指向 Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI 填 https://api.openai.com/v1，Anthropic 填 https://api.anthropic.com/v1（需 Claude key）。
+        description: 你供應商的 OpenAI 相容 API base URL。OpenAI 填 https://api.openai.com/v1，Anthropic 填 https://api.anthropic.com/v1（需 Claude key）。更多供應商見 readme 表格。
       - key: LLM_MODEL
         name: LLM 模型
-        description: 模型名稱，預設 claude-haiku-4-5。範例 — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash；OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5。
+        description: 你供應商的模型名稱。範例 — OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5；Gemini gemini-2.5-flash；DeepSeek deepseek-chat。
       - key: GROQ_API_KEY
         name: Groq API Key（選填，啟用語音輸入）
         description: 從 https://console.groq.com 取得免費 Groq API key — 啟用 Whisper-large-v3-turbo 語音辨識。留空則停用語音輸入（仍可文字對話）。
@@ -256,25 +247,26 @@ localization:
 
       | 層級 | 供應商 | 費用 |
       |------|--------|------|
-      | **LLM** | OpenAI 相容（預設 Zeabur AI Hub）| 依用量計費 |
+      | **LLM** | 你自己的 OpenAI 相容供應商 | 依用量計費 |
       | **ASR**（語音轉文字）| Groq Whisper-large-v3-turbo | 免費額度 |
       | **TTS**（文字轉語音）| Microsoft Edge-TTS | 免費、不需 key |
       | **Live2D** | 瀏覽器渲染 | 免費 |
 
       ## 快速開始
 
-      1. **取得 LLM API key** — 至 [Zeabur AI Hub](https://zeabur.com/ai) 註冊一把可同時用 Claude / GPT / Gemini / DeepSeek 的 key，或直接用 OpenAI / Anthropic。
+      1. **取得 LLM API key** — 用任一 OpenAI 相容供應商（OpenAI、Anthropic、Google Gemini、DeepSeek、Groq…）。依你的供應商設定 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL` — 見下方表格。
       2. **（選填）取得 Groq API key** — 至 [console.groq.com](https://console.groq.com) 申請免費 Whisper STT。不填則停用語音輸入，但仍可文字對話。
       3. 點 **Deploy** 並填入變數。
       4. 開啟部署後的網址 — 開始對話或按麥克風講話。
 
       > **關於自動 URL 設定**：上游 frontend 把 `ws://127.0.0.1:12393` 寫死當 WebSocket / Base URL 預設（本地開發思維）。此 template 在容器啟動時注入一段 script 到 `index.html`，把這些預設改成當前頁面 origin，使用者不需要進 Settings 改。未來上游若加 runtime config，可拿掉這個 patch。
 
-      ## 想換其他 LLM 供應商？
+      ## 選擇你的 LLM 供應商
+
+      依你要用的 OpenAI 相容供應商設定 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`：
 
       | 供應商 | LLM_BASE_URL | LLM_MODEL |
       |--------|--------------|-----------|
-      | Zeabur AI Hub *(預設)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
       | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
       | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
       | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
@@ -302,20 +294,17 @@ localization:
       - [Live2D 模型畫廊](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
   zh-CN:
     description: |
-      与任何 LLM 进行免提语音对话，支持打断与 Live2D 动态头像。云端 API 版本：LLM 走 OpenAI 兼容 API（默认 Zeabur AI Hub）、语音输入用 Groq Whisper、语音输出用免费的 Edge-TTS，无需 GPU。⚠️ 锁在 openllmvtuber/open-llm-vtuber:latest，上游仍处于快速开发阶段，重启 service 可能拉到含 breaking change 的新版本。
+      与任何 LLM 进行免提语音对话，支持打断与 Live2D 动态头像。云端 API 版本：LLM 走你自己的 OpenAI 兼容供应商（OpenAI、Anthropic、Gemini、DeepSeek、Groq…）、语音输入用 Groq Whisper、语音输出用免费的 Edge-TTS，无需 GPU。⚠️ 锁在 openllmvtuber/open-llm-vtuber:latest，上游仍处于快速开发阶段，重启 service 可能拉到含 breaking change 的新版本。
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API Key（推荐）
-        description: 点 Generate 当场生成一个 Zeabur AI Hub key，自动把 LLM 设成 claude-haiku-4-5、走 https://hnd1.aihub.zeabur.ai/v1，从 Zeabur 余额扣费。如果想直接用 OpenAI / Anthropic 等则留空，并填下面的 LLM_API_KEY + LLM_BASE_URL + LLM_MODEL。
       - key: LLM_API_KEY
-        name: LLM API Key（不用 AI Hub 时填）
-        description: OpenAI 兼容 LLM 供应商的 API key。当 ZEABUR_AI_HUB_API_KEY 有值时此字段会被忽略。请搭配 LLM_BASE_URL 和 LLM_MODEL 一起设置。
+        name: LLM API Key（必填）
+        description: 你自己的 OpenAI 兼容 LLM 供应商 API key（OpenAI、Anthropic、Gemini、DeepSeek、Groq 等）。请搭配 LLM_BASE_URL 和 LLM_MODEL 一起设置。未填 key 时 LLM 不会被配置，对话将无法使用。
       - key: LLM_BASE_URL
         name: LLM Base URL
-        description: OpenAI 兼容 API 的 base URL。默认指向 Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI 填 https://api.openai.com/v1，Anthropic 填 https://api.anthropic.com/v1（需 Claude key）。
+        description: 你供应商的 OpenAI 兼容 API base URL。OpenAI 填 https://api.openai.com/v1，Anthropic 填 https://api.anthropic.com/v1（需 Claude key）。更多供应商见 readme 表格。
       - key: LLM_MODEL
         name: LLM 模型
-        description: 模型名称，默认 claude-haiku-4-5。示例 — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash；OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5。
+        description: 你供应商的模型名称。示例 — OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5；Gemini gemini-2.5-flash；DeepSeek deepseek-chat。
       - key: GROQ_API_KEY
         name: Groq API Key（选填，启用语音输入）
         description: 从 https://console.groq.com 获取免费 Groq API key — 启用 Whisper-large-v3-turbo 语音识别。留空则停用语音输入（仍可文字对话）。
@@ -336,25 +325,26 @@ localization:
 
       | 层级 | 供应商 | 费用 |
       |------|--------|------|
-      | **LLM** | OpenAI 兼容（默认 Zeabur AI Hub）| 按用量计费 |
+      | **LLM** | 你自己的 OpenAI 兼容供应商 | 按用量计费 |
       | **ASR**（语音转文字）| Groq Whisper-large-v3-turbo | 免费额度 |
       | **TTS**（文字转语音）| Microsoft Edge-TTS | 免费、不需 key |
       | **Live2D** | 浏览器渲染 | 免费 |
 
       ## 快速开始
 
-      1. **获取 LLM API key** — 至 [Zeabur AI Hub](https://zeabur.com/ai) 注册一把可同时用 Claude / GPT / Gemini / DeepSeek 的 key，或直接用 OpenAI / Anthropic。
+      1. **获取 LLM API key** — 用任一 OpenAI 兼容供应商（OpenAI、Anthropic、Google Gemini、DeepSeek、Groq…）。按你的供应商设置 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL` — 见下方表格。
       2. **（选填）获取 Groq API key** — 至 [console.groq.com](https://console.groq.com) 申请免费 Whisper STT。不填则停用语音输入，但仍可文字对话。
       3. 点 **Deploy** 并填入变量。
       4. 打开部署后的网址 — 开始对话或按麦克风讲话。
 
       > **关于自动 URL 设置**：上游 frontend 把 `ws://127.0.0.1:12393` 写死当 WebSocket / Base URL 默认值（本地开发思维）。此 template 在容器启动时注入一段 script 到 `index.html`，把这些默认值改成当前页面 origin，用户不需要进 Settings 改。未来上游若加 runtime config，可去掉这个 patch。
 
-      ## 想换其他 LLM 供应商？
+      ## 选择你的 LLM 供应商
+
+      按你要用的 OpenAI 兼容供应商设置 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`：
 
       | 供应商 | LLM_BASE_URL | LLM_MODEL |
       |--------|--------------|-----------|
-      | Zeabur AI Hub *(默认)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
       | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
       | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
       | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
@@ -382,20 +372,17 @@ localization:
       - [Live2D 模型画廊](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
   ja-JP:
     description: |
-      Live2D の話す顔と音声割り込みに対応した、ハンズフリー音声で任意の LLM と対話できる AI VTuber。クラウド API 版：LLM は OpenAI 互換 API（デフォルトは Zeabur AI Hub）、音声入力は Groq Whisper、音声出力は無料の Edge-TTS。GPU 不要。⚠️ openllmvtuber/open-llm-vtuber:latest を pin しているため、上流の活発な開発によりサービス再起動で破壊的変更が入る可能性があります。
+      Live2D の話す顔と音声割り込みに対応した、ハンズフリー音声で任意の LLM と対話できる AI VTuber。クラウド API 版：LLM はあなた自身の OpenAI 互換プロバイダー（OpenAI、Anthropic、Gemini、DeepSeek、Groq…）、音声入力は Groq Whisper、音声出力は無料の Edge-TTS。GPU 不要。⚠️ openllmvtuber/open-llm-vtuber:latest を pin しているため、上流の活発な開発によりサービス再起動で破壊的変更が入る可能性があります。
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API キー（推奨）
-        description: Generate をクリックするだけで Zeabur AI Hub キーが発行され、LLM が自動的に claude-haiku-4-5 / https://hnd1.aihub.zeabur.ai/v1 に設定されます。料金は Zeabur のクレジットから引き落とされます。OpenAI / Anthropic などを直接使いたい場合は空欄のまま、下の LLM_API_KEY + LLM_BASE_URL + LLM_MODEL を設定してください。
       - key: LLM_API_KEY
-        name: LLM API キー（AI Hub を使わない場合のみ）
-        description: OpenAI 互換 LLM プロバイダーの API キー。ZEABUR_AI_HUB_API_KEY が設定されている場合、このフィールドは無視されます。LLM_BASE_URL と LLM_MODEL と一緒に設定してください。
+        name: LLM API キー（必須）
+        description: あなた自身の OpenAI 互換 LLM プロバイダーの API キー（OpenAI、Anthropic、Gemini、DeepSeek、Groq など）。LLM_BASE_URL と LLM_MODEL と一緒に設定してください。キーが未設定の場合、LLM は設定されず対話は機能しません。
       - key: LLM_BASE_URL
         name: LLM Base URL
-        description: OpenAI 互換 API の base URL。デフォルトは Zeabur AI Hub（https://hnd1.aihub.zeabur.ai/v1）。OpenAI は https://api.openai.com/v1、Anthropic は https://api.anthropic.com/v1（Claude キーが必要）。
+        description: あなたのプロバイダーの OpenAI 互換 API base URL。OpenAI は https://api.openai.com/v1、Anthropic は https://api.anthropic.com/v1（Claude キーが必要）。その他のプロバイダーは readme の表を参照してください。
       - key: LLM_MODEL
         name: LLM モデル
-        description: モデル名。デフォルトは claude-haiku-4-5。例 — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash；OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5。
+        description: あなたのプロバイダーのモデル名。例 — OpenAI gpt-4o-mini；Anthropic claude-haiku-4-5；Gemini gemini-2.5-flash；DeepSeek deepseek-chat。
       - key: GROQ_API_KEY
         name: Groq API キー（任意、音声入力を有効化）
         description: https://console.groq.com から無料の Groq API キーを取得 — Whisper-large-v3-turbo 音声認識を有効化します。空欄の場合は音声入力が無効になりますが、テキスト対話は引き続き可能です。
@@ -416,25 +403,26 @@ localization:
 
       | レイヤー | プロバイダー | コスト |
       |----------|------------|-------|
-      | **LLM** | OpenAI 互換（デフォルトは Zeabur AI Hub）| トークン従量課金 |
+      | **LLM** | あなた自身の OpenAI 互換プロバイダー | トークン従量課金 |
       | **ASR**（音声認識）| Groq Whisper-large-v3-turbo | 無料枠 |
       | **TTS**（音声合成）| Microsoft Edge-TTS | 無料、キー不要 |
       | **Live2D** | ブラウザでレンダリング | 無料 |
 
       ## クイックスタート
 
-      1. **LLM API キーを取得** — [Zeabur AI Hub](https://zeabur.com/ai) で Claude / GPT / Gemini / DeepSeek をまとめて使えるキーを登録するか、OpenAI / Anthropic を直接利用してください。
+      1. **LLM API キーを取得** — 任意の OpenAI 互換プロバイダー（OpenAI、Anthropic、Google Gemini、DeepSeek、Groq…）から取得。プロバイダーに合わせて `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL` を設定してください — 下の表を参照。
       2. **（任意）Groq API キーを取得** — [console.groq.com](https://console.groq.com) で無料の Whisper STT を申請。空欄の場合は音声入力が無効になりますが、テキスト対話は引き続き可能です。
       3. **Deploy** をクリックして変数を入力。
       4. デプロイされた URL を開く — 対話を始めるか、マイクをクリックして話してください。
 
       > **URL 自動設定について**：上流のフロントエンドバンドルは `ws://127.0.0.1:12393` を WebSocket / Base URL のデフォルトとしてハードコードしています（ローカル開発向け設計）。このテンプレートはコンテナ起動時に `index.html` へ小さなスクリプトを注入し、これらのデフォルトを現在のページ origin に向けることで、ユーザーが Settings UI を触る必要をなくしています。上流が将来 runtime 設定をサポートすれば、このパッチは削除できます。
 
-      ## 他の LLM プロバイダーを使用したい場合
+      ## LLM プロバイダーを選ぶ
+
+      使用する OpenAI 互換プロバイダーに合わせて `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL` を設定してください：
 
       | プロバイダー | LLM_BASE_URL | LLM_MODEL |
       |------------|--------------|-----------|
-      | Zeabur AI Hub *(デフォルト)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
       | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
       | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
       | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
@@ -462,20 +450,17 @@ localization:
       - [Live2D モデルギャラリー](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
   es-ES:
     description: |
-      Conversa con cualquier LLM mediante voz manos libres, con interrupción por voz y un rostro hablante Live2D. Edición Cloud API: toda la inferencia se ejecuta vía APIs en la nube (LLM compatible con OpenAI por defecto Zeabur AI Hub, Groq Whisper para reconocimiento de voz y Edge-TTS gratuito). Sin GPU local requerida. ⚠️ Usa openllmvtuber/open-llm-vtuber:latest — el proyecto upstream está en desarrollo rápido, por lo que reiniciar el servicio puede traer cambios incompatibles.
+      Conversa con cualquier LLM mediante voz manos libres, con interrupción por voz y un rostro hablante Live2D. Edición Cloud API: toda la inferencia se ejecuta vía APIs en la nube (tu propio LLM compatible con OpenAI — OpenAI, Anthropic, Gemini, DeepSeek, Groq…, Groq Whisper para reconocimiento de voz y Edge-TTS gratuito). Sin GPU local requerida. ⚠️ Usa openllmvtuber/open-llm-vtuber:latest — el proyecto upstream está en desarrollo rápido, por lo que reiniciar el servicio puede traer cambios incompatibles.
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Clave API de Zeabur AI Hub (recomendada)
-        description: Haz clic en Generar para crear una clave de Zeabur AI Hub al instante — configura automáticamente el LLM a claude-haiku-4-5 vía https://hnd1.aihub.zeabur.ai/v1, facturado con tus créditos de Zeabur. Déjalo vacío si prefieres usar OpenAI / Anthropic / etc. directamente (entonces rellena LLM_API_KEY + LLM_BASE_URL + LLM_MODEL más abajo).
       - key: LLM_API_KEY
-        name: Clave API de LLM (solo si no usas AI Hub)
-        description: Clave API para un proveedor de LLM compatible con OpenAI. Se ignora cuando ZEABUR_AI_HUB_API_KEY está configurada. Combínala con LLM_BASE_URL y LLM_MODEL.
+        name: Clave API de LLM (requerida)
+        description: Clave API de tu propio proveedor de LLM compatible con OpenAI (OpenAI, Anthropic, Gemini, DeepSeek, Groq, etc.). Combínala con LLM_BASE_URL y LLM_MODEL. Sin clave, el LLM queda sin configurar y el chat no funcionará.
       - key: LLM_BASE_URL
         name: URL Base del LLM
-        description: URL base de la API compatible con OpenAI. Por defecto Zeabur AI Hub (https://hnd1.aihub.zeabur.ai/v1). Para OpenAI usa https://api.openai.com/v1, para Anthropic usa https://api.anthropic.com/v1 (con clave de Claude).
+        description: URL base de la API compatible con OpenAI de tu proveedor. Para OpenAI usa https://api.openai.com/v1, para Anthropic usa https://api.anthropic.com/v1 (con clave de Claude). Ver la tabla del readme para más proveedores.
       - key: LLM_MODEL
         name: Modelo LLM
-        description: Nombre del modelo. Por defecto claude-haiku-4-5. Ejemplos — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash; OpenAI gpt-4o-mini; Anthropic claude-haiku-4-5.
+        description: Nombre del modelo de tu proveedor. Ejemplos — OpenAI gpt-4o-mini; Anthropic claude-haiku-4-5; Gemini gemini-2.5-flash; DeepSeek deepseek-chat.
       - key: GROQ_API_KEY
         name: Clave API de Groq (opcional — habilita entrada de voz)
         description: Clave API gratuita de Groq desde https://console.groq.com — habilita el reconocimiento de voz Whisper-large-v3-turbo. Déjala vacía para desactivar la entrada de voz (el chat de texto sigue funcionando).
@@ -496,25 +481,26 @@ localization:
 
       | Capa | Proveedor | Coste |
       |------|-----------|-------|
-      | **LLM** | Compatible con OpenAI (Zeabur AI Hub por defecto) | pago por token |
+      | **LLM** | Tu propio proveedor compatible con OpenAI | pago por token |
       | **ASR** (voz a texto) | Groq Whisper-large-v3-turbo | nivel gratuito |
       | **TTS** (texto a voz) | Microsoft Edge-TTS | gratis, sin clave |
       | **Live2D** | renderizado en el navegador | gratis |
 
       ## Inicio rápido
 
-      1. **Obtén una clave API de LLM** — regístrate en [Zeabur AI Hub](https://zeabur.com/ai) para una clave que cubre Claude / GPT / Gemini / DeepSeek, o usa OpenAI / Anthropic directamente.
+      1. **Obtén una clave API de LLM** — de cualquier proveedor compatible con OpenAI (OpenAI, Anthropic, Google Gemini, DeepSeek, Groq…). Configura `LLM_API_KEY`, `LLM_BASE_URL` y `LLM_MODEL` según tu proveedor — consulta la tabla de abajo.
       2. **(Opcional) Obtén una clave API de Groq** — regístrate en [console.groq.com](https://console.groq.com) para el STT Whisper gratis. Sin esto, la entrada de voz se desactiva pero el chat de texto sigue funcionando.
       3. Haz clic en **Deploy** y rellena las variables.
       4. Abre la URL desplegada — empieza a chatear o haz clic en el micrófono para hablar.
 
       > **Sobre la auto-configuración de URL**: El bundle del frontend upstream tiene `ws://127.0.0.1:12393` hardcodeado como valor por defecto de WebSocket / Base URL (diseño para desarrollo local). Esta plantilla inyecta un pequeño script en `index.html` al arrancar el contenedor para apuntar esos valores por defecto al origen actual de la página, evitando que tengas que tocar la UI de Settings. Si una versión upstream futura añade soporte de configuración en runtime, podremos quitar este parche.
 
-      ## ¿Quieres usar otro proveedor de LLM?
+      ## Elige tu proveedor de LLM
+
+      Configura `LLM_API_KEY`, `LLM_BASE_URL` y `LLM_MODEL` según el proveedor compatible con OpenAI que quieras usar:
 
       | Proveedor | LLM_BASE_URL | LLM_MODEL |
       |-----------|--------------|-----------|
-      | Zeabur AI Hub *(por defecto)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
       | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
       | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
       | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |
@@ -542,20 +528,17 @@ localization:
       - [Galería de modelos Live2D](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/main/live2d-models)
   id-ID:
     description: |
-      Berbicara dengan LLM apa pun melalui suara hands-free, dengan interupsi suara dan wajah berbicara Live2D. Edisi Cloud API: semua inferensi melalui API cloud (LLM kompatibel OpenAI default Zeabur AI Hub, Groq Whisper untuk speech-to-text, dan Edge-TTS gratis). Tanpa GPU lokal. ⚠️ Menggunakan openllmvtuber/open-llm-vtuber:latest — upstream dalam pengembangan cepat, jadi restart service bisa menarik breaking change.
+      Berbicara dengan LLM apa pun melalui suara hands-free, dengan interupsi suara dan wajah berbicara Live2D. Edisi Cloud API: semua inferensi melalui API cloud (penyedia OpenAI-kompatibel Anda sendiri — OpenAI, Anthropic, Gemini, DeepSeek, Groq…, Groq Whisper untuk speech-to-text, dan Edge-TTS gratis). Tanpa GPU lokal. ⚠️ Menggunakan openllmvtuber/open-llm-vtuber:latest — upstream dalam pengembangan cepat, jadi restart service bisa menarik breaking change.
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API Key (direkomendasikan)
-        description: Klik Generate untuk membuat Zeabur AI Hub key seketika — otomatis mengonfigurasi LLM ke claude-haiku-4-5 via https://hnd1.aihub.zeabur.ai/v1, ditagih dari kredit Zeabur Anda. Biarkan kosong jika Anda ingin menggunakan OpenAI / Anthropic / dll. secara langsung (lalu isi LLM_API_KEY + LLM_BASE_URL + LLM_MODEL di bawah).
       - key: LLM_API_KEY
-        name: LLM API Key (hanya jika tidak menggunakan AI Hub)
-        description: API key untuk penyedia LLM yang kompatibel OpenAI. Diabaikan ketika ZEABUR_AI_HUB_API_KEY diatur. Pasangkan dengan LLM_BASE_URL dan LLM_MODEL.
+        name: LLM API Key (wajib)
+        description: API key penyedia LLM kompatibel OpenAI milik Anda sendiri (OpenAI, Anthropic, Gemini, DeepSeek, Groq, dll.). Pasangkan dengan LLM_BASE_URL dan LLM_MODEL. Tanpa key, LLM tidak dikonfigurasi dan chat tidak akan berfungsi.
       - key: LLM_BASE_URL
         name: LLM Base URL
-        description: Base URL API yang kompatibel OpenAI. Default Zeabur AI Hub (https://hnd1.aihub.zeabur.ai/v1). Untuk OpenAI gunakan https://api.openai.com/v1, untuk Anthropic gunakan https://api.anthropic.com/v1 (dengan Claude key).
+        description: Base URL API kompatibel OpenAI dari penyedia Anda. Untuk OpenAI gunakan https://api.openai.com/v1, untuk Anthropic gunakan https://api.anthropic.com/v1 (dengan Claude key). Lihat tabel readme untuk penyedia lainnya.
       - key: LLM_MODEL
         name: LLM Model
-        description: Nama model. Default claude-haiku-4-5. Contoh — Zeabur AI Hub claude-haiku-4-5 / gpt-4o-mini / gemini-2.5-flash; OpenAI gpt-4o-mini; Anthropic claude-haiku-4-5.
+        description: Nama model dari penyedia Anda. Contoh — OpenAI gpt-4o-mini; Anthropic claude-haiku-4-5; Gemini gemini-2.5-flash; DeepSeek deepseek-chat.
       - key: GROQ_API_KEY
         name: Groq API Key (opsional — mengaktifkan input suara)
         description: Groq API key gratis dari https://console.groq.com — mengaktifkan speech-to-text Whisper-large-v3-turbo. Biarkan kosong untuk menonaktifkan input suara (chat teks tetap berfungsi).
@@ -576,25 +559,26 @@ localization:
 
       | Layer | Penyedia | Biaya |
       |-------|----------|-------|
-      | **LLM** | Kompatibel OpenAI (default Zeabur AI Hub) | bayar per token |
+      | **LLM** | Penyedia OpenAI-kompatibel Anda sendiri | bayar per token |
       | **ASR** (speech-to-text) | Groq Whisper-large-v3-turbo | tier gratis |
       | **TTS** (text-to-speech) | Microsoft Edge-TTS | gratis, tanpa key |
       | **Live2D** | dirender di browser | gratis |
 
       ## Mulai cepat
 
-      1. **Dapatkan LLM API key** — daftar di [Zeabur AI Hub](https://zeabur.com/ai) untuk satu key yang mencakup Claude / GPT / Gemini / DeepSeek, atau gunakan OpenAI / Anthropic langsung.
+      1. **Dapatkan LLM API key** — dari penyedia kompatibel OpenAI mana pun (OpenAI, Anthropic, Google Gemini, DeepSeek, Groq…). Atur `LLM_API_KEY`, `LLM_BASE_URL`, dan `LLM_MODEL` sesuai penyedia Anda — lihat tabel di bawah.
       2. **(Opsional) Dapatkan Groq API key** — daftar di [console.groq.com](https://console.groq.com) untuk Whisper STT gratis. Tanpa ini, input suara dinonaktifkan tetapi chat teks tetap berfungsi.
       3. Klik **Deploy** dan isi variabel.
       4. Buka URL yang sudah di-deploy — mulai chatting atau klik mic untuk berbicara.
 
       > **Tentang konfigurasi URL otomatis**: Frontend bundle upstream menghardcode `ws://127.0.0.1:12393` sebagai default WebSocket / Base URL (didesain untuk local dev). Template ini menyuntikkan script kecil ke `index.html` saat container start untuk mengarahkan default tersebut ke origin halaman saat ini, sehingga Anda tidak perlu mengutak-atik Settings UI. Jika rilis upstream mendatang menambahkan dukungan konfigurasi runtime, kita bisa menghapus patch ini.
 
-      ## Ingin penyedia LLM berbeda?
+      ## Pilih penyedia LLM Anda
+
+      Atur `LLM_API_KEY`, `LLM_BASE_URL`, dan `LLM_MODEL` sesuai penyedia kompatibel OpenAI yang ingin Anda gunakan:
 
       | Penyedia | LLM_BASE_URL | LLM_MODEL |
       |----------|--------------|-----------|
-      | Zeabur AI Hub *(default)* | `https://hnd1.aihub.zeabur.ai/v1` | `claude-haiku-4-5` |
       | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
       | Anthropic | `https://api.anthropic.com/v1` | `claude-haiku-4-5` |
       | Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` |

@@ -93,7 +93,7 @@ spec:
     | Method | How to use |
     |--------|-----------|
     | **Anthropic API Key** | Go to [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → copy the `sk-ant-api...` key into `OPENAB_AUTH_TOKEN` |
-    | **Zeabur AI Hub Token** | Go to [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → copy the token into `OPENAB_AUTH_TOKEN` |
+    | **Custom gateway token** | Paste any other token into `OPENAB_AUTH_TOKEN`; it is sent directly to the default Anthropic endpoint. To route it through a custom gateway, also set `ANTHROPIC_BASE_URL` yourself. |
     | **Claude OAuth Token** | Run `claude setup-token` in your terminal (requires Claude Pro/Max/Team/Enterprise subscription) → visit the URL it shows → authorize → paste the code back → copy the `sk-ant-oat...` token into `OPENAB_AUTH_TOKEN` |
     | **In-container login** | Leave `OPENAB_AUTH_TOKEN` empty. After deploy, go to Zeabur Dashboard → Service → **Exec** and run `runuser -u node -- claude auth login` (or `claude setup-token`). Credentials are written to `/home/node/.claude/` on the persistent volume and survive restarts. |
 
@@ -213,7 +213,6 @@ spec:
                     ;;
                   *)
                     export ANTHROPIC_API_KEY="$OPENAB_AUTH_TOKEN"
-                    export ANTHROPIC_BASE_URL="https://hnd1.aihub.zeabur.ai"
                     export CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1
                     ;;
                 esac
@@ -364,7 +363,7 @@ localization:
       | 方式 | 使用方法 |
       |------|---------|
       | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 將 `sk-ant-api...` 金鑰填入 `OPENAB_AUTH_TOKEN` |
-      | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 將 token 填入 `OPENAB_AUTH_TOKEN` |
+      | **自訂 gateway token** | 將其他 token 填入 `OPENAB_AUTH_TOKEN`，會直接送往預設的 Anthropic 端點。若要改走自訂 gateway，請自行設定 `ANTHROPIC_BASE_URL`。 |
       | **Claude OAuth Token** | 在終端執行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 訂閱）→ 開啟顯示的 URL → 授權 → 貼回驗證碼 → 將輸出的 `sk-ant-oat...` token 填入 `OPENAB_AUTH_TOKEN` |
       | **容器內登入** | `OPENAB_AUTH_TOKEN` 留空。部署後到 Zeabur Dashboard → 服務 → **Exec** 執行 `runuser -u node -- claude auth login`（或 `claude setup-token`）。認證資料會寫入持久卷的 `/home/node/.claude/`，重啟後仍保留。 |
 
@@ -482,7 +481,7 @@ localization:
       | 方式 | 使用方法 |
       |------|---------|
       | **Anthropic API Key** | 前往 [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → 将 `sk-ant-api...` 密钥填入 `OPENAB_AUTH_TOKEN` |
-      | **Zeabur AI Hub Token** | 前往 [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → 将 token 填入 `OPENAB_AUTH_TOKEN` |
+      | **自定义 gateway token** | 将其他 token 填入 `OPENAB_AUTH_TOKEN`，会直接发送到默认的 Anthropic 端点。若要改走自定义 gateway，请自行设置 `ANTHROPIC_BASE_URL`。 |
       | **Claude OAuth Token** | 在终端运行 `claude setup-token`（需要 Claude Pro/Max/Team/Enterprise 订阅）→ 打开显示的 URL → 授权 → 粘贴验证码 → 将输出的 `sk-ant-oat...` token 填入 `OPENAB_AUTH_TOKEN` |
       | **容器内登录** | `OPENAB_AUTH_TOKEN` 留空。部署后到 Zeabur Dashboard → 服务 → **Exec** 运行 `runuser -u node -- claude auth login`（或 `claude setup-token`）。认证数据会写入持久卷的 `/home/node/.claude/`，重启后仍保留。 |
 
@@ -600,7 +599,7 @@ localization:
       | 方法 | 使用方法 |
       |------|---------|
       | **Anthropic API Key** | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → `sk-ant-api...` キーを `OPENAB_AUTH_TOKEN` に貼り付け |
-      | **Zeabur AI Hub Token** | [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → token を `OPENAB_AUTH_TOKEN` に貼り付け |
+      | **カスタム gateway トークン** | その他のトークンを `OPENAB_AUTH_TOKEN` に貼り付けると、デフォルトの Anthropic エンドポイントへ直接送信されます。カスタム gateway を経由させる場合は `ANTHROPIC_BASE_URL` を自分で設定してください。 |
       | **Claude OAuth Token** | ターミナルで `claude setup-token` を実行（Claude Pro/Max/Team/Enterprise サブスクリプションが必要）→ 表示された URL を開く → 認証 → コードを貼り付け → 出力された `sk-ant-oat...` token を `OPENAB_AUTH_TOKEN` に貼り付け |
       | **コンテナ内ログイン** | `OPENAB_AUTH_TOKEN` を空のままに。デプロイ後、Zeabur Dashboard → サービス → **Exec** で `runuser -u node -- claude auth login`（または `claude setup-token`）を実行。認証情報は永続ボリュームの `/home/node/.claude/` に書き込まれ、再起動後も保持されます。 |
 
@@ -718,7 +717,7 @@ localization:
       | Método | Cómo usarlo |
       |--------|-------------|
       | **Anthropic API Key** | Ir a [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → pegar la clave `sk-ant-api...` en `OPENAB_AUTH_TOKEN` |
-      | **Zeabur AI Hub Token** | Ir a [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → pegar el token en `OPENAB_AUTH_TOKEN` |
+      | **Token de gateway personalizado** | Pega cualquier otro token en `OPENAB_AUTH_TOKEN`; se envía directamente al endpoint predeterminado de Anthropic. Para enrutarlo por un gateway personalizado, configura tú mismo `ANTHROPIC_BASE_URL`. |
       | **Claude OAuth Token** | Ejecutar `claude setup-token` en la terminal (requiere suscripción Claude Pro/Max/Team/Enterprise) → abrir la URL mostrada → autorizar → pegar el código → pegar el token `sk-ant-oat...` en `OPENAB_AUTH_TOKEN` |
       | **Login dentro del contenedor** | Dejar `OPENAB_AUTH_TOKEN` vacío. Tras el despliegue, ir a Zeabur Dashboard → Servicio → **Exec** y ejecutar `runuser -u node -- claude auth login` (o `claude setup-token`). Las credenciales se guardan en `/home/node/.claude/` en el volumen persistente y se conservan tras reinicios. |
 
@@ -847,7 +846,7 @@ localization:
       | Metode | Cara menggunakan |
       |--------|------------------|
       | **Anthropic API Key** | Buka [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) → Create Key → tempel kunci `sk-ant-api...` ke `OPENAB_AUTH_TOKEN` |
-      | **Zeabur AI Hub Token** | Buka [Zeabur AI Hub](https://zeabur.com/ai-hub) → API Keys → Create → tempel token ke `OPENAB_AUTH_TOKEN` |
+      | **Token gateway kustom** | Tempel token lain ke `OPENAB_AUTH_TOKEN`; token dikirim langsung ke endpoint Anthropic default. Untuk merutekannya lewat gateway kustom, atur sendiri `ANTHROPIC_BASE_URL`. |
       | **Claude OAuth Token** | Jalankan `claude setup-token` di terminal (memerlukan langganan Claude Pro/Max/Team/Enterprise) → buka URL yang ditampilkan → otorisasi → tempel kode → tempel token `sk-ant-oat...` yang dihasilkan ke `OPENAB_AUTH_TOKEN` |
       | **Login di dalam kontainer** | Biarkan `OPENAB_AUTH_TOKEN` kosong. Setelah deploy, buka Zeabur Dashboard → Layanan → **Exec** dan jalankan `runuser -u node -- claude auth login` (atau `claude setup-token`). Kredensial ditulis ke `/home/node/.claude/` pada volume persisten dan dipertahankan setelah restart. |
 

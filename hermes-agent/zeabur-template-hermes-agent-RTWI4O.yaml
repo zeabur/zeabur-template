@@ -9,10 +9,18 @@ spec:
     coverImage: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/assets/banner.png
     icon: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/static/img/logo.png
     variables:
-        - key: AI_HUB_API_KEY
-          type: AI_HUB_KEY
-          name: Zeabur AI Hub Key
-          description: Generate a Zeabur AI Hub key — this is all you need to start. The agent and the web dashboard work out of the box. To use OpenRouter, another provider, or Telegram instead, add the relevant environment variables after deploy (see the README).
+        - key: LLM_API_KEY
+          type: STRING
+          name: LLM API Key (Optional)
+          description: Optional. Your OpenAI-compatible provider API key. Leave blank to configure later.
+        - key: LLM_BASE_URL
+          type: STRING
+          name: LLM Base URL (Optional)
+          description: OpenAI-compatible endpoint, e.g. https://api.openai.com/v1
+        - key: LLM_MODEL
+          type: STRING
+          name: LLM Model (Optional)
+          description: Primary model id, e.g. gpt-4o-mini
         - key: PUBLIC_DOMAIN
           type: DOMAIN
           name: Dashboard Domain
@@ -28,11 +36,11 @@ spec:
 
         ## Quick Start
 
-        1. **Deploy this template** — generate a **Zeabur AI Hub key** and pick a **dashboard domain** (e.g. `my-hermes`). That's it; the agent and dashboard work out of the box.
+        1. **Deploy this template** — pick a **dashboard domain** (e.g. `my-hermes`). Optionally supply your LLM provider now by setting `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` (any OpenAI-compatible provider); leave them blank to configure the model later.
         2. **Open the dashboard** — go to your domain (auto-bound to the dashboard). Add a custom domain later in the **Networking** tab if you like.
         3. **Log in** — username `admin`, password = your service `PASSWORD` (shown in the service instructions). Start chatting in the browser — no Telegram needed.
 
-        > Want OpenRouter, another provider (Minimax, Kimi, …), or Telegram instead? Add the relevant environment variables after deploy — see **Models & Providers** and **Messaging Platforms** below.
+        > Prefer another provider or Telegram? Set your OpenAI-compatible provider variables (`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`) and add any messaging environment variables after deploy — see **Models & Providers** and **Messaging Platforms** below.
 
         ## Ports & Domains
 
@@ -68,14 +76,14 @@ spec:
 
         ## Models & Providers
 
-        Out of the box this template uses **Zeabur AI Hub** (key from the **Zeabur AI Hub Key** variable), model `claude-sonnet-4-5`, region `sfo1`. To change things, add these in the **Variables** tab and restart:
+        This template runs against any **OpenAI-compatible provider** you bring. Set these in the **Variables** tab and restart:
 
-        - **Model** — set `LLM_MODEL` to any [AI Hub model](https://zeabur.com/ai).
-        - **Region** — set `LLM_BASE_URL` to `https://hnd1.aihub.zeabur.ai/v1` for Tokyo (default is `sfo1`).
-        - **OpenRouter instead** — set `OPENROUTER_API_KEY` (leave the AI Hub key empty); Hermes auto-detects it.
-        - **Another provider** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — add that provider's API key env var (e.g. `KIMI_API_KEY`, `MINIMAX_API_KEY`) and pick the model with `hermes model` in the **Exec** tab. See the [Configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) and [Environment Variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+        - **API key** — set `LLM_API_KEY` to your provider's key.
+        - **Endpoint** — set `LLM_BASE_URL` to the provider's OpenAI-compatible base URL, e.g. `https://api.openai.com/v1`. If you set a key but leave the base URL empty, the agent will error until you provide one — this is intentional so misconfiguration is visible.
+        - **Model** — set `LLM_MODEL` to the model id, e.g. `gpt-4o-mini`.
+        - **Another provider** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — set `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` for that provider, or add that provider's own API key env var (e.g. `KIMI_API_KEY`, `MINIMAX_API_KEY`) and pick the model with `hermes model` in the **Exec** tab. See the [Configuration guide](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) and [Environment Variables reference](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
 
-        > `LLM_MODEL` / `LLM_BASE_URL` + the AI Hub key are applied to the `model` block of `/opt/data/config.yaml` on every start. Leave them unset to manage `config.yaml` by hand instead.
+        > When `LLM_API_KEY` is set, `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` are applied to the `model` block of `/opt/data/config.yaml` on every start (provider `custom`). Leave `LLM_API_KEY` unset to manage `config.yaml` by hand instead.
 
         ## Messaging Platforms
 
@@ -160,8 +168,12 @@ spec:
                 - title: Dashboard Password
                   content: ${PASSWORD}
             env:
-                AI_HUB_API_KEY:
-                    default: ${AI_HUB_API_KEY}
+                LLM_API_KEY:
+                    default: ${LLM_API_KEY}
+                LLM_BASE_URL:
+                    default: ${LLM_BASE_URL}
+                LLM_MODEL:
+                    default: ${LLM_MODEL}
                 API_SERVER_ENABLED:
                     default: "true"
                 API_SERVER_HOST:
@@ -185,7 +197,7 @@ spec:
                     #!/command/with-contenv sh
                     HERMES_HOME="${HERMES_HOME:-/opt/data}"
                     cfg="$HERMES_HOME/config.yaml"
-                    case "${AI_HUB_API_KEY:-}${LLM_BASE_URL:-}${LLM_MODEL:-}" in
+                    case "${LLM_API_KEY:-}${LLM_BASE_URL:-}${LLM_MODEL:-}" in
                         "") exit 0 ;;
                     esac
                     [ -f "$cfg" ] || exit 0
@@ -195,19 +207,18 @@ spec:
                     with open(path) as f:
                         cfg = yaml.safe_load(f) or {}
                     model = cfg.get("model") or {}
-                    aihub = os.environ.get("AI_HUB_API_KEY", "").strip()
+                    api_key = os.environ.get("LLM_API_KEY", "").strip()
                     base = os.environ.get("LLM_BASE_URL", "").strip()
                     name = os.environ.get("LLM_MODEL", "").strip()
-                    if aihub or base:
-                        # provider must be "custom" so the key is sent to a non-OpenRouter
-                        # base_url (otherwise upstream returns 401).
+                    if api_key:
+                        # provider must be "custom" so the key is sent to the configured
+                        # OpenAI-compatible base_url (otherwise upstream returns 401).
                         model["provider"] = "custom"
-                        model["base_url"] = base or "https://sfo1.aihub.zeabur.ai/v1"
-                        model["api_key"] = aihub or os.environ.get("OPENROUTER_API_KEY", "")
-                        # The seeded default model is an OpenRouter-style id; pick a valid
-                        # AI Hub model so an AI-Hub-only deploy works with no extra input.
-                        if not name:
-                            name = "claude-sonnet-4-5"
+                        model["api_key"] = api_key
+                        # No base_url default: if it's empty the agent errors visibly
+                        # instead of silently routing to a wrong/dead host.
+                        if base:
+                            model["base_url"] = base
                     if name:
                         model["default"] = name
                     cfg["model"] = model
@@ -227,10 +238,18 @@ localization:
         description: |
             Hermes Agent de NousResearch — un agente de IA autónomo con memoria persistente, uso de herramientas, programación de tareas y más de 14 plataformas de mensajería (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, WeChat, WeCom, Feishu, DingTalk, Email, y más). Incluye un servidor API compatible con OpenAI.
         variables:
-            - key: AI_HUB_API_KEY
+            - key: LLM_API_KEY
               type: STRING
-              name: Clave de Zeabur AI Hub
-              description: Genere una clave de Zeabur AI Hub y listo — es lo único que necesita; el agente y el dashboard web funcionan de inmediato. Para usar OpenRouter, otro proveedor o Telegram, añada las variables de entorno correspondientes tras el despliegue (consulte el README).
+              name: LLM API Key (Optional)
+              description: Optional. Your OpenAI-compatible provider API key. Leave blank to configure later.
+            - key: LLM_BASE_URL
+              type: STRING
+              name: LLM Base URL (Optional)
+              description: OpenAI-compatible endpoint, e.g. https://api.openai.com/v1
+            - key: LLM_MODEL
+              type: STRING
+              name: LLM Model (Optional)
+              description: Primary model id, e.g. gpt-4o-mini
             - key: PUBLIC_DOMAIN
               type: STRING
               name: Dominio del Dashboard
@@ -242,11 +261,11 @@ localization:
 
             ## Inicio rápido
 
-            1. **Despliegue esta plantilla** — genere una **clave de Zeabur AI Hub** e indique un **dominio para el Dashboard** (p. ej. `my-hermes`). Eso es todo; el agente y el Dashboard funcionan de inmediato.
+            1. **Despliegue esta plantilla** — indique un **dominio para el Dashboard** (p. ej. `my-hermes`). Opcionalmente, configure ya su proveedor LLM definiendo `LLM_API_KEY`, `LLM_BASE_URL` y `LLM_MODEL` (cualquier proveedor compatible con OpenAI); déjelos en blanco para configurar el modelo más tarde.
             2. **Abra el Dashboard** — vaya a su dominio (vinculado al Dashboard automáticamente). Puede añadir un dominio personalizado más tarde en la pestaña **Redes**.
             3. **Inicie sesión** — usuario `admin`, contraseña = el `PASSWORD` de su servicio (mostrado en las instrucciones del servicio). Chatee en el navegador — sin necesidad de Telegram.
 
-            > ¿Quiere usar OpenRouter, otro proveedor (Minimax, Kimi, …) o Telegram en su lugar? Añada las variables de entorno correspondientes tras el despliegue — consulte **Modelos y proveedores** y **Plataformas de mensajería** más abajo.
+            > ¿Prefiere otro proveedor o Telegram? Defina las variables de su proveedor compatible con OpenAI (`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`) y añada las variables de entorno de mensajería tras el despliegue — consulte **Modelos y proveedores** y **Plataformas de mensajería** más abajo.
 
             ## Puertos y dominios
 
@@ -288,14 +307,14 @@ localization:
 
             ## Modelos y proveedores
 
-            De fábrica, esta plantilla usa **Zeabur AI Hub** (clave de la variable **Clave de Zeabur AI Hub**), el modelo `claude-sonnet-4-5` y la región `sfo1`. Para cambiarlo, añada lo siguiente en la pestaña **Variables** y reinicie:
+            Esta plantilla funciona con cualquier **proveedor compatible con OpenAI** que usted aporte. Configure lo siguiente en la pestaña **Variables** y reinicie:
 
-            - **Modelo** — ponga `LLM_MODEL` en cualquier [modelo de AI Hub](https://zeabur.com/ai).
-            - **Región** — ponga `LLM_BASE_URL` en `https://hnd1.aihub.zeabur.ai/v1` para Tokio (por defecto es `sfo1`).
-            - **OpenRouter en su lugar** — configure `OPENROUTER_API_KEY` (deje vacía la clave de AI Hub); Hermes lo detecta automáticamente.
-            - **Otro proveedor** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — añada la variable de entorno con la clave API de ese proveedor (p. ej. `KIMI_API_KEY`, `MINIMAX_API_KEY`) y elija el modelo con `hermes model` en la pestaña **Exec**. Consulte la guía de [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) y la [referencia de variables de entorno](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+            - **Clave API** — ponga `LLM_API_KEY` con la clave de su proveedor.
+            - **Endpoint** — ponga `LLM_BASE_URL` con la URL base compatible con OpenAI del proveedor, p. ej. `https://api.openai.com/v1`. Si define una clave pero deja el base URL vacío, el agente dará error hasta que lo indique — es intencional para que un error de configuración sea visible.
+            - **Modelo** — ponga `LLM_MODEL` con el id del modelo, p. ej. `gpt-4o-mini`.
+            - **Otro proveedor** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — defina `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` para ese proveedor, o añada la variable de entorno con la clave API propia del proveedor (p. ej. `KIMI_API_KEY`, `MINIMAX_API_KEY`) y elija el modelo con `hermes model` en la pestaña **Exec**. Consulte la guía de [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) y la [referencia de variables de entorno](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
 
-            > `LLM_MODEL` / `LLM_BASE_URL` y la clave de AI Hub se aplican al bloque `model` de `/opt/data/config.yaml` en cada arranque. Déjelas sin configurar para gestionar `config.yaml` a mano.
+            > Cuando `LLM_API_KEY` está definida, `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` se aplican al bloque `model` de `/opt/data/config.yaml` en cada arranque (proveedor `custom`). Deje `LLM_API_KEY` sin configurar para gestionar `config.yaml` a mano.
 
             ## Configuración
 
@@ -338,10 +357,18 @@ localization:
         description: |
             Hermes Agent oleh NousResearch — agen AI otonom dengan memori persisten, penggunaan alat, penjadwalan tugas, dan 14+ platform pesan (Telegram, Discord, Slack, WhatsApp, Signal, Matrix, WeChat, WeCom, Feishu, DingTalk, Email, dan lainnya). Dilengkapi server API yang kompatibel dengan OpenAI.
         variables:
-            - key: AI_HUB_API_KEY
+            - key: LLM_API_KEY
               type: STRING
-              name: Kunci Zeabur AI Hub
-              description: Buat kunci Zeabur AI Hub dan selesai — hanya ini yang Anda perlukan; agen dan dashboard web langsung berfungsi. Untuk menggunakan OpenRouter, penyedia lain, atau Telegram, tambahkan variabel lingkungan terkait setelah deploy (lihat README).
+              name: LLM API Key (Optional)
+              description: Optional. Your OpenAI-compatible provider API key. Leave blank to configure later.
+            - key: LLM_BASE_URL
+              type: STRING
+              name: LLM Base URL (Optional)
+              description: OpenAI-compatible endpoint, e.g. https://api.openai.com/v1
+            - key: LLM_MODEL
+              type: STRING
+              name: LLM Model (Optional)
+              description: Primary model id, e.g. gpt-4o-mini
             - key: PUBLIC_DOMAIN
               type: STRING
               name: Domain Dashboard
@@ -353,11 +380,11 @@ localization:
 
             ## Mulai Cepat
 
-            1. **Deploy template ini** — buat sebuah **kunci Zeabur AI Hub** dan isi sebuah **domain Dashboard** (mis. `my-hermes`). Itu saja; agen dan Dashboard langsung berfungsi.
+            1. **Deploy template ini** — isi sebuah **domain Dashboard** (mis. `my-hermes`). Opsional, siapkan penyedia LLM Anda sekarang dengan mengatur `LLM_API_KEY`, `LLM_BASE_URL`, dan `LLM_MODEL` (penyedia apa pun yang kompatibel dengan OpenAI); kosongkan untuk mengonfigurasi model nanti.
             2. **Buka Dashboard** — kunjungi domain Anda (otomatis ter-bind ke Dashboard). Anda bisa menambahkan domain kustom nanti di tab **Networking**.
             3. **Masuk** — nama pengguna `admin`, kata sandi = `PASSWORD` layanan Anda (ditampilkan pada instruksi layanan). Langsung chat di browser — tanpa Telegram.
 
-            > Ingin menggunakan OpenRouter, penyedia lain (Minimax, Kimi, …), atau Telegram? Tambahkan variabel lingkungan terkait setelah deploy — lihat **Model & Penyedia** dan **Platform Pesan** di bawah.
+            > Ingin penyedia lain atau Telegram? Atur variabel penyedia kompatibel OpenAI Anda (`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`) dan tambahkan variabel lingkungan pesan setelah deploy — lihat **Model & Penyedia** dan **Platform Pesan** di bawah.
 
             ## Port & Domain
 
@@ -399,14 +426,14 @@ localization:
 
             ## Model & Penyedia
 
-            Secara bawaan, template ini menggunakan **Zeabur AI Hub** (kunci dari variabel **Kunci Zeabur AI Hub**), model `claude-sonnet-4-5`, region `sfo1`. Untuk mengubahnya, tambahkan berikut ini di tab **Variables** lalu restart:
+            Template ini berjalan dengan **penyedia apa pun yang kompatibel dengan OpenAI** yang Anda bawa. Atur berikut ini di tab **Variables** lalu restart:
 
-            - **Model** — atur `LLM_MODEL` ke salah satu [model AI Hub](https://zeabur.com/ai).
-            - **Region** — atur `LLM_BASE_URL` ke `https://hnd1.aihub.zeabur.ai/v1` untuk Tokyo (default-nya `sfo1`).
-            - **OpenRouter sebagai gantinya** — atur `OPENROUTER_API_KEY` (kosongkan kunci AI Hub); Hermes mendeteksinya secara otomatis.
-            - **Penyedia lain** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — tambahkan variabel lingkungan kunci API penyedia tersebut (mis. `KIMI_API_KEY`, `MINIMAX_API_KEY`) dan pilih model dengan `hermes model` di tab **Exec**. Lihat panduan [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) dan [referensi variabel lingkungan](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
+            - **Kunci API** — atur `LLM_API_KEY` ke kunci penyedia Anda.
+            - **Endpoint** — atur `LLM_BASE_URL` ke base URL kompatibel OpenAI milik penyedia, mis. `https://api.openai.com/v1`. Jika Anda mengatur kunci tetapi mengosongkan base URL, agen akan error hingga Anda mengisinya — ini disengaja agar kesalahan konfigurasi terlihat.
+            - **Model** — atur `LLM_MODEL` ke id model, mis. `gpt-4o-mini`.
+            - **Penyedia lain** (Minimax, Kimi, GLM/Zhipu, Gemini, NVIDIA, xAI, …) — atur `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` untuk penyedia tersebut, atau tambahkan variabel lingkungan kunci API penyedia itu sendiri (mis. `KIMI_API_KEY`, `MINIMAX_API_KEY`) dan pilih model dengan `hermes model` di tab **Exec**. Lihat panduan [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration) dan [referensi variabel lingkungan](https://hermes-agent.nousresearch.com/docs/reference/environment-variables).
 
-            > `LLM_MODEL` / `LLM_BASE_URL` beserta kunci AI Hub diterapkan ke blok `model` pada `/opt/data/config.yaml` setiap kali start. Kosongkan untuk mengelola `config.yaml` secara manual.
+            > Saat `LLM_API_KEY` diatur, `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` diterapkan ke blok `model` pada `/opt/data/config.yaml` setiap kali start (provider `custom`). Kosongkan `LLM_API_KEY` untuk mengelola `config.yaml` secara manual.
 
             ## Konfigurasi
 
@@ -449,10 +476,18 @@ localization:
         description: |
             Hermes Agent（NousResearch 開発）— 永続メモリ、ツール使用、スケジュール実行、14+ メッセージングプラットフォーム（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、WeChat、WeCom、Feishu、DingTalk、Email など）を備えた自律型 AI エージェント。OpenAI 互換 API サーバー内蔵。
         variables:
-            - key: AI_HUB_API_KEY
+            - key: LLM_API_KEY
               type: STRING
-              name: Zeabur AI Hub キー
-              description: Zeabur AI Hub キーを生成すれば準備完了——必要な入力はこれだけで、エージェントとウェブ Dashboard はそのまま使えます。OpenRouter や他のプロバイダー、Telegram を使う場合は、デプロイ後に対応する環境変数を追加してください（README を参照）。
+              name: LLM API Key (Optional)
+              description: Optional. Your OpenAI-compatible provider API key. Leave blank to configure later.
+            - key: LLM_BASE_URL
+              type: STRING
+              name: LLM Base URL (Optional)
+              description: OpenAI-compatible endpoint, e.g. https://api.openai.com/v1
+            - key: LLM_MODEL
+              type: STRING
+              name: LLM Model (Optional)
+              description: Primary model id, e.g. gpt-4o-mini
             - key: PUBLIC_DOMAIN
               type: STRING
               name: Dashboard ドメイン
@@ -464,11 +499,11 @@ localization:
 
             ## クイックスタート
 
-            1. **このテンプレートをデプロイ** — **Zeabur AI Hub キー**を生成し、**Dashboard ドメイン**（例：`my-hermes`）を入力します。これだけで、エージェントと Dashboard はそのまま使えます。
+            1. **このテンプレートをデプロイ** — **Dashboard ドメイン**（例：`my-hermes`）を入力します。任意で、`LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`（OpenAI 互換の任意のプロバイダー）を設定して LLM プロバイダーをここで指定できます。空欄のままにすればモデルは後から設定できます。
             2. **Dashboard を開く** — あなたのドメインにアクセスします（Dashboard に自動でバインドされます）。後から**ネットワーク**タブでカスタムドメインも設定できます。
             3. **ログイン** — ユーザー名 `admin`、パスワードはサービスの `PASSWORD`（サービス説明に表示）。ブラウザで直接チャットできます — Telegram は不要です。
 
-            > OpenRouter、他のプロバイダー（Minimax、Kimi など）、または Telegram を使いたい場合は、デプロイ後に対応する環境変数を追加してください — 下記の**モデルとプロバイダー**および**メッセージプラットフォーム**を参照してください。
+            > 他のプロバイダーや Telegram を使いたい場合は、OpenAI 互換プロバイダーの変数（`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`）を設定し、デプロイ後にメッセージング用の環境変数を追加してください — 下記の**モデルとプロバイダー**および**メッセージプラットフォーム**を参照してください。
 
             ## ポートとドメイン
 
@@ -510,14 +545,14 @@ localization:
 
             ## モデルとプロバイダー
 
-            このテンプレートは標準で **Zeabur AI Hub**（キーは「Zeabur AI Hub キー」変数から）、モデル `claude-sonnet-4-5`、リージョン `sfo1` を使用します。変更するには、**変数**タブで以下を追加して再起動してください：
+            このテンプレートは、あなたが用意する任意の **OpenAI 互換プロバイダー**で動作します。**変数**タブで以下を設定して再起動してください：
 
-            - **モデル** — `LLM_MODEL` を任意の [AI Hub モデル](https://zeabur.com/ai)に設定します。
-            - **リージョン** — 東京を使う場合は `LLM_BASE_URL` を `https://hnd1.aihub.zeabur.ai/v1` に設定します（デフォルトは `sfo1`）。
-            - **OpenRouter を使う** — `OPENROUTER_API_KEY` を設定します（AI Hub キーは空のままに）。Hermes が自動検出します。
-            - **他のプロバイダー**（Minimax、Kimi、GLM/Zhipu、Gemini、NVIDIA、xAI など）— そのプロバイダーの API キー環境変数（例：`KIMI_API_KEY`、`MINIMAX_API_KEY`）を追加し、**Exec** タブで `hermes model` を使ってモデルを選択します。[Configuration ガイド](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)と[環境変数リファレンス](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)を参照してください。
+            - **API キー** — `LLM_API_KEY` にプロバイダーのキーを設定します。
+            - **エンドポイント** — `LLM_BASE_URL` にプロバイダーの OpenAI 互換ベース URL を設定します（例：`https://api.openai.com/v1`）。キーを設定してベース URL を空のままにすると、エージェントはベース URL を指定するまでエラーになります — 設定ミスを可視化するための意図的な動作です。
+            - **モデル** — `LLM_MODEL` にモデル ID を設定します（例：`gpt-4o-mini`）。
+            - **他のプロバイダー**（Minimax、Kimi、GLM/Zhipu、Gemini、NVIDIA、xAI など）— そのプロバイダー向けに `LLM_API_KEY` ／ `LLM_BASE_URL` ／ `LLM_MODEL` を設定するか、そのプロバイダー専用の API キー環境変数（例：`KIMI_API_KEY`、`MINIMAX_API_KEY`）を追加し、**Exec** タブで `hermes model` を使ってモデルを選択します。[Configuration ガイド](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)と[環境変数リファレンス](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)を参照してください。
 
-            > `LLM_MODEL` ／ `LLM_BASE_URL` と AI Hub キーは、起動のたびに `/opt/data/config.yaml` の `model` ブロックに適用されます。`config.yaml` を手動で管理したい場合は空欄のままにしてください。
+            > `LLM_API_KEY` が設定されている場合、`LLM_API_KEY` ／ `LLM_BASE_URL` ／ `LLM_MODEL` は起動のたびに `/opt/data/config.yaml` の `model` ブロックに適用されます（プロバイダー `custom`）。`config.yaml` を手動で管理したい場合は `LLM_API_KEY` を空欄のままにしてください。
 
             ## 設定
 
@@ -560,10 +595,18 @@ localization:
         description: |
             Hermes Agent 由 NousResearch 开发，是一款具备持久记忆、工具使用、定时任务及 14+ 消息平台集成（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、微信、企业微信、飞书、钉钉、Email 等）的自主 AI 代理。内置 OpenAI 兼容 API 服务器。
         variables:
-            - key: AI_HUB_API_KEY
+            - key: LLM_API_KEY
               type: STRING
-              name: Zeabur AI Hub 密钥
-              description: 生成一组 Zeabur AI Hub 密钥即可开始——这是唯一需要的输入，Agent 与网页 Dashboard 开箱即用。若想改用 OpenRouter、其他供应商或 Telegram，请在部署后自行新增对应的环境变量（见 README）。
+              name: LLM API Key (Optional)
+              description: Optional. Your OpenAI-compatible provider API key. Leave blank to configure later.
+            - key: LLM_BASE_URL
+              type: STRING
+              name: LLM Base URL (Optional)
+              description: OpenAI-compatible endpoint, e.g. https://api.openai.com/v1
+            - key: LLM_MODEL
+              type: STRING
+              name: LLM Model (Optional)
+              description: Primary model id, e.g. gpt-4o-mini
             - key: PUBLIC_DOMAIN
               type: STRING
               name: Dashboard 域名
@@ -575,11 +618,11 @@ localization:
 
             ## 快速开始
 
-            1. **部署此模板** — 生成一组 **Zeabur AI Hub 密钥**，并填一个 **Dashboard 域名**（例如 `my-hermes`）。就这样，Agent 与 Dashboard 开箱即用。
+            1. **部署此模板** — 填一个 **Dashboard 域名**（例如 `my-hermes`）。可选：现在就设置你的 LLM 供应商，填入 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`（任何 OpenAI 兼容供应商）；留空则稍后再配置模型。
             2. **打开 Dashboard** — 前往你的域名（已自动绑定到 Dashboard）。之后可在「网络」标签页绑定自定义域名。
             3. **登录** — 账号 `admin`，密码为服务的 `PASSWORD`（显示在服务说明中）。直接在浏览器里对话——不需要 Telegram。
 
-            > 想改用 OpenRouter、其他供应商（Minimax、Kimi……）或 Telegram 吗？请在部署后新增对应的环境变量——详见下方的**模型与供应商**及**消息平台**。
+            > 想改用其他供应商或 Telegram 吗？请设置你的 OpenAI 兼容供应商变量（`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`），并在部署后新增消息平台的环境变量——详见下方的**模型与供应商**及**消息平台**。
 
             ## 端口与域名
 
@@ -621,14 +664,14 @@ localization:
 
             ## 模型与供应商
 
-            开箱即用时，此模板使用 **Zeabur AI Hub**（密钥来自「Zeabur AI Hub 密钥」变量）、模型 `claude-sonnet-4-5`、区域 `sfo1`。若要调整，请在「变量」标签页新增以下项目并重启：
+            此模板可搭配你自备的任何 **OpenAI 兼容供应商**运行。请在「变量」标签页设置以下项目并重启：
 
-            - **模型** — 把 `LLM_MODEL` 设为任一 [AI Hub 模型](https://zeabur.com/ai)。
-            - **区域** — 把 `LLM_BASE_URL` 设为 `https://hnd1.aihub.zeabur.ai/v1` 即可使用东京（默认为 `sfo1`）。
-            - **改用 OpenRouter** — 设置 `OPENROUTER_API_KEY`（并把 AI Hub 密钥留空），Hermes 会自动检测。
-            - **其他供应商**（Minimax、Kimi、GLM/智谱、Gemini、NVIDIA、xAI……）— 新增该供应商的 API 密钥环境变量（例如 `KIMI_API_KEY`、`MINIMAX_API_KEY`），并在「Exec」标签页用 `hermes model` 选择模型。详见 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)与[环境变量参考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
+            - **API 密钥** — 把 `LLM_API_KEY` 设为你的供应商密钥。
+            - **端点** — 把 `LLM_BASE_URL` 设为供应商的 OpenAI 兼容 base URL，例如 `https://api.openai.com/v1`。若设置了密钥却把 base URL 留空，Agent 会报错直到你填入——这是刻意设计，让配置错误显而易见。
+            - **模型** — 把 `LLM_MODEL` 设为模型 id，例如 `gpt-4o-mini`。
+            - **其他供应商**（Minimax、Kimi、GLM/智谱、Gemini、NVIDIA、xAI……）— 为该供应商设置 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`，或新增该供应商自己的 API 密钥环境变量（例如 `KIMI_API_KEY`、`MINIMAX_API_KEY`），并在「Exec」标签页用 `hermes model` 选择模型。详见 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)与[环境变量参考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
 
-            > `LLM_MODEL` ／ `LLM_BASE_URL` 加上 AI Hub 密钥会在每次启动时应用到 `/opt/data/config.yaml` 的 `model` 区块。若想自行手动管理 `config.yaml`，将它们留空即可。
+            > 当设置了 `LLM_API_KEY` 时，`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` 会在每次启动时应用到 `/opt/data/config.yaml` 的 `model` 区块（provider 为 `custom`）。若想自行手动管理 `config.yaml`，把 `LLM_API_KEY` 留空即可。
 
             ## 配置
 
@@ -671,10 +714,18 @@ localization:
         description: |
             Hermes Agent 由 NousResearch 開發，是一款具備持久記憶、工具使用、排程任務及 14+ 訊息平台整合（Telegram、Discord、Slack、WhatsApp、Signal、Matrix、微信、企業微信、飛書、釘釘、Email 等）的自主 AI 代理。內建 OpenAI 相容 API 伺服器。
         variables:
-            - key: AI_HUB_API_KEY
+            - key: LLM_API_KEY
               type: STRING
-              name: Zeabur AI Hub 金鑰
-              description: 產生一組 Zeabur AI Hub 金鑰即可開始——這是唯一需要的輸入，Agent 與網頁 Dashboard 開箱即用。若想改用 OpenRouter、其他供應商或 Telegram，請在部署後自行新增對應的環境變數（見 README）。
+              name: LLM API Key (Optional)
+              description: Optional. Your OpenAI-compatible provider API key. Leave blank to configure later.
+            - key: LLM_BASE_URL
+              type: STRING
+              name: LLM Base URL (Optional)
+              description: OpenAI-compatible endpoint, e.g. https://api.openai.com/v1
+            - key: LLM_MODEL
+              type: STRING
+              name: LLM Model (Optional)
+              description: Primary model id, e.g. gpt-4o-mini
             - key: PUBLIC_DOMAIN
               type: STRING
               name: Dashboard 網域
@@ -686,11 +737,11 @@ localization:
 
             ## 快速開始
 
-            1. **部署此模板** — 產生一組 **Zeabur AI Hub 金鑰**，並填一個 **Dashboard 網域**（例如 `my-hermes`）。就這樣，Agent 與 Dashboard 開箱即用。
+            1. **部署此模板** — 填一個 **Dashboard 網域**（例如 `my-hermes`）。選填：現在就設定你的 LLM 供應商，填入 `LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`（任何 OpenAI 相容供應商）；留空則稍後再設定模型。
             2. **開啟 Dashboard** — 前往你的網域（已自動綁定到 Dashboard）。之後可在「網路」分頁綁定自訂網域。
             3. **登入** — 帳號 `admin`，密碼為服務的 `PASSWORD`（顯示於服務說明中）。直接在瀏覽器裡對話——不需要 Telegram。
 
-            > 想改用 OpenRouter、其他供應商（Minimax、Kimi……）或 Telegram 嗎？請在部署後新增對應的環境變數——詳見下方的**模型與供應商**及**訊息平台**。
+            > 想改用其他供應商或 Telegram 嗎？請設定你的 OpenAI 相容供應商變數（`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`），並在部署後新增訊息平台的環境變數——詳見下方的**模型與供應商**及**訊息平台**。
 
             ## Port 與網域
 
@@ -732,14 +783,14 @@ localization:
 
             ## 模型與供應商
 
-            開箱即用時，此模板使用 **Zeabur AI Hub**（金鑰來自「Zeabur AI Hub 金鑰」變數）、模型 `claude-sonnet-4-5`、區域 `sfo1`。若要調整，請在「變數」分頁新增以下項目並重啟：
+            此模板可搭配你自備的任何 **OpenAI 相容供應商**運行。請在「變數」分頁設定以下項目並重啟：
 
-            - **模型** — 把 `LLM_MODEL` 設為任一 [AI Hub 模型](https://zeabur.com/ai)。
-            - **區域** — 把 `LLM_BASE_URL` 設為 `https://hnd1.aihub.zeabur.ai/v1` 即可使用東京（預設為 `sfo1`）。
-            - **改用 OpenRouter** — 設定 `OPENROUTER_API_KEY`（並把 AI Hub 金鑰留空），Hermes 會自動偵測。
-            - **其他供應商**（Minimax、Kimi、GLM/智譜、Gemini、NVIDIA、xAI……）— 新增該供應商的 API 金鑰環境變數（例如 `KIMI_API_KEY`、`MINIMAX_API_KEY`），並在「Exec」分頁用 `hermes model` 選擇模型。詳見 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)與[環境變數參考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
+            - **API 金鑰** — 把 `LLM_API_KEY` 設為你的供應商金鑰。
+            - **端點** — 把 `LLM_BASE_URL` 設為供應商的 OpenAI 相容 base URL，例如 `https://api.openai.com/v1`。若設定了金鑰卻把 base URL 留空，Agent 會報錯直到你填入——這是刻意設計，讓設定錯誤顯而易見。
+            - **模型** — 把 `LLM_MODEL` 設為模型 id，例如 `gpt-4o-mini`。
+            - **其他供應商**（Minimax、Kimi、GLM/智譜、Gemini、NVIDIA、xAI……）— 為該供應商設定 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`，或新增該供應商自己的 API 金鑰環境變數（例如 `KIMI_API_KEY`、`MINIMAX_API_KEY`），並在「Exec」分頁用 `hermes model` 選擇模型。詳見 [Configuration 指南](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)與[環境變數參考](https://hermes-agent.nousresearch.com/docs/reference/environment-variables)。
 
-            > `LLM_MODEL` ／ `LLM_BASE_URL` 加上 AI Hub 金鑰會在每次啟動時套用到 `/opt/data/config.yaml` 的 `model` 區塊。若想自行手動管理 `config.yaml`，把它們留空即可。
+            > 當設定了 `LLM_API_KEY` 時，`LLM_API_KEY` ／ `LLM_BASE_URL` ／ `LLM_MODEL` 會在每次啟動時套用到 `/opt/data/config.yaml` 的 `model` 區塊（provider 為 `custom`）。若想自行手動管理 `config.yaml`，把 `LLM_API_KEY` 留空即可。
 
             ## 設定
 
