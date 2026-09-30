@@ -22,10 +22,18 @@ spec:
         cpu: 1
         ram: 2
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
+      - key: LLM_API_KEY
         type: STRING
-        name: Zeabur AI Hub API Key
-        description: Zeabur AI Hub API key for multi-model access (get one at zeabur.com). Recommended for Zeabur users. Leave empty to use other providers.
+        name: LLM API Key (Optional)
+        description: Optional. Your OpenAI-compatible provider API key.
+      - key: LLM_BASE_URL
+        type: STRING
+        name: LLM Base URL (Optional)
+        description: OpenAI-compatible endpoint, e.g. https://api.openai.com/v1
+      - key: LLM_MODEL
+        type: STRING
+        name: LLM Model (Optional)
+        description: Primary model id, e.g. gpt-4o-mini
       - key: TELEGRAM_BOT_TOKEN
         type: STRING
         name: Telegram Bot Token
@@ -48,13 +56,13 @@ spec:
       ## Quick Start
 
       1. After deployment, the Nanobot gateway starts automatically
-      2. If you entered an API key during deployment (Zeabur AI Hub or OpenRouter), a chat model is already configured
+      2. If you entered an API key during deployment (your own OpenAI-compatible provider or OpenRouter), a chat model is already configured
       3. If you entered a Telegram bot token, the bot is ready — send it a message to start chatting
       4. To add more platforms or change settings, edit `/root/.nanobot/config.json` via the **Files** tab
 
       **Skipped a field during deployment?** You can add it later by editing `/root/.nanobot/config.json` in the **Files** tab, or by adding the corresponding environment variable in the Zeabur dashboard and restarting the service.
 
-      **Default model:** When using Zeabur AI Hub, the default model is `openai/claude-sonnet-4-5`. When using OpenRouter, the default model is `openrouter/anthropic/claude-sonnet-4`. You can change this in the config file at any time.
+      **Default model:** When you bring your own OpenAI-compatible provider, the default model is the `LLM Model` you set (e.g. `gpt-4o-mini`). When using OpenRouter, the default model is `openrouter/anthropic/claude-sonnet-4`. If you set no key, the default is `anthropic/claude-opus-4-5`. You can change this in the config file at any time.
 
       ## LLM Providers
 
@@ -62,7 +70,7 @@ spec:
 
       | Provider | How to get API key | `providers` config | Model ID example |
       |----------|-------------------|-------------------|-----------------|
-      | Zeabur AI Hub | [zeabur.com/ai-hub](https://zeabur.com/ai-hub) | `"openai": {"api_key":"...","api_base":"https://hnd1.aihub.zeabur.ai/v1"}` | `openai/claude-sonnet-4-5` |
+      | OpenAI-compatible (BYO) | your provider's dashboard | `"openai": {"api_key":"...","api_base":"https://api.openai.com/v1"}` | `gpt-4o-mini` |
       | OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) | `"openrouter": {"api_key":"sk-or-..."}` | `openrouter/anthropic/claude-sonnet-4` |
       | Anthropic | [console.anthropic.com](https://console.anthropic.com/) | `"anthropic": {"api_key":"sk-ant-..."}` | `anthropic/claude-sonnet-4-5` |
       | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | `"openai": {"api_key":"sk-..."}` | `openai/gpt-4o` |
@@ -74,7 +82,7 @@ spec:
       3. Change `"agents" > "defaults" > "model"` to the new model ID
       4. **Restart the service** for changes to take effect
 
-      **Example** — switch from Zeabur AI Hub to OpenRouter:
+      **Example** — switch to OpenRouter:
       ```json
       {
         "providers": {
@@ -192,15 +200,21 @@ spec:
                     "tools": {"restrict_to_workspace": True}
                 }
 
-                zeabur_key = os.environ.get("ZEABUR_AI_HUB_API_KEY", "")
-                if zeabur_key and not zeabur_key.startswith("${"):
-                    config["providers"]["openai"] = {"api_key": zeabur_key, "api_base": "https://hnd1.aihub.zeabur.ai/v1"}
-                    config["agents"]["defaults"]["model"] = "openai/claude-sonnet-4-5"
+                llm_key = os.environ.get("LLM_API_KEY", "")
+                llm_base_url = os.environ.get("LLM_BASE_URL", "")
+                llm_model = os.environ.get("LLM_MODEL", "")
+                if llm_key and not llm_key.startswith("${"):
+                    openai_provider = {"api_key": llm_key}
+                    if llm_base_url and not llm_base_url.startswith("${"):
+                        openai_provider["api_base"] = llm_base_url
+                    config["providers"]["openai"] = openai_provider
+                    if llm_model and not llm_model.startswith("${"):
+                        config["agents"]["defaults"]["model"] = llm_model
 
                 openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
                 if openrouter_key and not openrouter_key.startswith("${"):
                     config["providers"]["openrouter"] = {"api_key": openrouter_key}
-                    if not (zeabur_key and not zeabur_key.startswith("${")):
+                    if not (llm_key and not llm_key.startswith("${")):
                         config["agents"]["defaults"]["model"] = "openrouter/anthropic/claude-sonnet-4"
 
                 telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -220,10 +234,12 @@ spec:
                   echo "Config already exists at $CONFIG_FILE"
                 fi
 
-                # Export Zeabur AI Hub env vars for litellm
-                if [ -n "$ZEABUR_AI_HUB_API_KEY" ] && [ "$ZEABUR_AI_HUB_API_KEY" != '${ZEABUR_AI_HUB_API_KEY}' ]; then
-                  export OPENAI_API_KEY="$ZEABUR_AI_HUB_API_KEY"
-                  export OPENAI_API_BASE="https://hnd1.aihub.zeabur.ai/v1"
+                # Export OpenAI-compatible provider env vars for litellm
+                if [ -n "$LLM_API_KEY" ] && [ "$LLM_API_KEY" != '${LLM_API_KEY}' ]; then
+                  export OPENAI_API_KEY="$LLM_API_KEY"
+                  if [ -n "$LLM_BASE_URL" ] && [ "$LLM_BASE_URL" != '${LLM_BASE_URL}' ]; then
+                    export OPENAI_API_BASE="$LLM_BASE_URL"
+                  fi
                 fi
 
                 echo "=== Starting health check server ==="
@@ -246,8 +262,12 @@ spec:
                 echo "=== Starting nanobot gateway ==="
                 exec nanobot gateway
           env:
-            ZEABUR_AI_HUB_API_KEY:
-              default: ${ZEABUR_AI_HUB_API_KEY}
+            LLM_API_KEY:
+              default: ${LLM_API_KEY}
+            LLM_BASE_URL:
+              default: ${LLM_BASE_URL}
+            LLM_MODEL:
+              default: ${LLM_MODEL}
             OPENROUTER_API_KEY:
               default: ${OPENROUTER_API_KEY}
             TELEGRAM_BOT_TOKEN:
@@ -258,9 +278,15 @@ localization:
     description: |
       Nanobot 是一個超輕量級個人 AI 助手（約 4K 行核心程式碼），支援多種 LLM 供應商和聊天平台，包括 Telegram、Discord、WhatsApp、Slack、釘釘、飛書、QQ 和電子郵件。
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API 金鑰
-        description: Zeabur AI Hub API 金鑰，用於多模型存取（在 zeabur.com 取得）。推薦 Zeabur 用戶使用。留空可使用其他供應商。
+      - key: LLM_API_KEY
+        name: LLM API 金鑰（選填）
+        description: 選填。您的 OpenAI 相容供應商 API 金鑰。
+      - key: LLM_BASE_URL
+        name: LLM Base URL（選填）
+        description: OpenAI 相容端點，例如 https://api.openai.com/v1
+      - key: LLM_MODEL
+        name: LLM 模型（選填）
+        description: 主要模型 ID，例如 gpt-4o-mini
       - key: TELEGRAM_BOT_TOKEN
         name: Telegram Bot Token
         description: 您的 Telegram 機器人 Token（從 @BotFather 取得）。留空可稍後設定。
@@ -282,13 +308,13 @@ localization:
       ## 快速開始
 
       1. 部署後，Nanobot 閘道將自動啟動
-      2. 如果您在部署時輸入了 API 金鑰（Zeabur AI Hub 或 OpenRouter），聊天模型已自動設定
+      2. 如果您在部署時輸入了 API 金鑰（您自己的 OpenAI 相容供應商或 OpenRouter），聊天模型已自動設定
       3. 如果您輸入了 Telegram bot token，機器人已就緒 — 直接發訊息即可開始對話
       4. 如需新增更多平台或修改設定，透過**檔案**標籤編輯 `/root/.nanobot/config.json`
 
       **部署時跳過了某個欄位？** 可以事後透過**檔案**標籤編輯 `/root/.nanobot/config.json`，或在 Zeabur 控制台新增對應的環境變數並重啟服務。
 
-      **預設模型：** 使用 Zeabur AI Hub 時預設為 `openai/claude-sonnet-4-5`，使用 OpenRouter 時預設為 `openrouter/anthropic/claude-sonnet-4`。可隨時在設定檔中修改。
+      **預設模型：** 使用您自己的 OpenAI 相容供應商時，預設為您設定的 `LLM 模型`（例如 `gpt-4o-mini`）；使用 OpenRouter 時預設為 `openrouter/anthropic/claude-sonnet-4`；未設定金鑰時預設為 `anthropic/claude-opus-4-5`。可隨時在設定檔中修改。
 
       ## LLM 供應商
 
@@ -296,7 +322,7 @@ localization:
 
       | 供應商 | 取得 API 金鑰 | `providers` 設定 | 模型 ID 範例 |
       |--------|-------------|-----------------|-------------|
-      | Zeabur AI Hub | [zeabur.com/ai-hub](https://zeabur.com/ai-hub) | `"openai": {"api_key":"...","api_base":"https://hnd1.aihub.zeabur.ai/v1"}` | `openai/claude-sonnet-4-5` |
+      | OpenAI 相容（自帶） | 您供應商的控制台 | `"openai": {"api_key":"...","api_base":"https://api.openai.com/v1"}` | `gpt-4o-mini` |
       | OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) | `"openrouter": {"api_key":"sk-or-..."}` | `openrouter/anthropic/claude-sonnet-4` |
       | Anthropic | [console.anthropic.com](https://console.anthropic.com/) | `"anthropic": {"api_key":"sk-ant-..."}` | `anthropic/claude-sonnet-4-5` |
       | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | `"openai": {"api_key":"sk-..."}` | `openai/gpt-4o` |
@@ -354,9 +380,15 @@ localization:
     description: |
       Nanobot 是一个超轻量级个人 AI 助手（约 4K 行核心代码），支持多种 LLM 供应商和聊天平台，包括 Telegram、Discord、WhatsApp、Slack、钉钉、飞书、QQ 和电子邮件。
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API 密钥
-        description: Zeabur AI Hub API 密钥，用于多模型访问（在 zeabur.com 获取）。推荐 Zeabur 用户使用。留空可使用其他供应商。
+      - key: LLM_API_KEY
+        name: LLM API 密钥（选填）
+        description: 选填。您的 OpenAI 兼容供应商 API 密钥。
+      - key: LLM_BASE_URL
+        name: LLM Base URL（选填）
+        description: OpenAI 兼容端点，例如 https://api.openai.com/v1
+      - key: LLM_MODEL
+        name: LLM 模型（选填）
+        description: 主要模型 ID，例如 gpt-4o-mini
       - key: TELEGRAM_BOT_TOKEN
         name: Telegram Bot Token
         description: 您的 Telegram 机器人 Token（从 @BotFather 获取）。留空可稍后设置。
@@ -378,13 +410,13 @@ localization:
       ## 快速开始
 
       1. 部署后，Nanobot 网关将自动启动
-      2. 如果您在部署时输入了 API 密钥（Zeabur AI Hub 或 OpenRouter），聊天模型已自动配置
+      2. 如果您在部署时输入了 API 密钥（您自己的 OpenAI 兼容供应商或 OpenRouter），聊天模型已自动配置
       3. 如果您输入了 Telegram bot token，机器人已就绪 — 直接发消息即可开始对话
       4. 如需添加更多平台或修改设置，通过**文件**标签编辑 `/root/.nanobot/config.json`
 
       **部署时跳过了某个字段？** 可以事后通过**文件**标签编辑 `/root/.nanobot/config.json`，或在 Zeabur 控制台添加对应的环境变量并重启服务。
 
-      **默认模型：** 使用 Zeabur AI Hub 时默认为 `openai/claude-sonnet-4-5`，使用 OpenRouter 时默认为 `openrouter/anthropic/claude-sonnet-4`。可随时在配置文件中修改。
+      **默认模型：** 使用您自己的 OpenAI 兼容供应商时，默认为您设置的 `LLM 模型`（例如 `gpt-4o-mini`）；使用 OpenRouter 时默认为 `openrouter/anthropic/claude-sonnet-4`；未设置密钥时默认为 `anthropic/claude-opus-4-5`。可随时在配置文件中修改。
 
       ## LLM 供应商
 
@@ -392,7 +424,7 @@ localization:
 
       | 供应商 | 获取 API 密钥 | `providers` 配置 | 模型 ID 示例 |
       |--------|-------------|-----------------|-------------|
-      | Zeabur AI Hub | [zeabur.com/ai-hub](https://zeabur.com/ai-hub) | `"openai": {"api_key":"...","api_base":"https://hnd1.aihub.zeabur.ai/v1"}` | `openai/claude-sonnet-4-5` |
+      | OpenAI 兼容（自带） | 您供应商的控制台 | `"openai": {"api_key":"...","api_base":"https://api.openai.com/v1"}` | `gpt-4o-mini` |
       | OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) | `"openrouter": {"api_key":"sk-or-..."}` | `openrouter/anthropic/claude-sonnet-4` |
       | Anthropic | [console.anthropic.com](https://console.anthropic.com/) | `"anthropic": {"api_key":"sk-ant-..."}` | `anthropic/claude-sonnet-4-5` |
       | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | `"openai": {"api_key":"sk-..."}` | `openai/gpt-4o` |
@@ -450,9 +482,15 @@ localization:
     description: |
       Nanobot は超軽量パーソナル AI アシスタント（コアコード約4K行）で、複数の LLM プロバイダーと Telegram、Discord、WhatsApp、Slack、DingTalk、Feishu、QQ、メールなどのチャットプラットフォームをサポートしています。
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Zeabur AI Hub API キー
-        description: Zeabur AI Hub API キー（zeabur.com で取得）。Zeabur ユーザーにおすすめ。空欄の場合は他のプロバイダーを使用できます。
+      - key: LLM_API_KEY
+        name: LLM API キー（任意）
+        description: 任意。OpenAI 互換プロバイダーの API キー。
+      - key: LLM_BASE_URL
+        name: LLM Base URL（任意）
+        description: OpenAI 互換エンドポイント、例：https://api.openai.com/v1
+      - key: LLM_MODEL
+        name: LLM モデル（任意）
+        description: 主要なモデル ID、例：gpt-4o-mini
       - key: TELEGRAM_BOT_TOKEN
         name: Telegram Bot トークン
         description: BotFather から取得した Telegram ボットトークン。後で設定する場合は空欄にしてください。
@@ -474,13 +512,13 @@ localization:
       ## クイックスタート
 
       1. デプロイ後、Nanobot ゲートウェイが自動的に起動します
-      2. デプロイ時に API キー（Zeabur AI Hub または OpenRouter）を入力した場合、チャットモデルは自動設定済みです
+      2. デプロイ時に API キー（ご自身の OpenAI 互換プロバイダーまたは OpenRouter）を入力した場合、チャットモデルは自動設定済みです
       3. Telegram ボットトークンを入力した場合、ボットは準備完了 — メッセージを送信して会話を開始
       4. プラットフォームの追加や設定変更は **Files** タブから `/root/.nanobot/config.json` を編集
 
       **デプロイ時に入力をスキップした場合：** **Files** タブから `/root/.nanobot/config.json` を編集するか、Zeabur ダッシュボードで対応する環境変数を追加してサービスを再起動してください。
 
-      **デフォルトモデル：** Zeabur AI Hub 使用時は `openai/claude-sonnet-4-5`、OpenRouter 使用時は `openrouter/anthropic/claude-sonnet-4`。設定ファイルでいつでも変更できます。
+      **デフォルトモデル：** ご自身の OpenAI 互換プロバイダー使用時は設定した `LLM モデル`（例：`gpt-4o-mini`）、OpenRouter 使用時は `openrouter/anthropic/claude-sonnet-4`、キー未設定時は `anthropic/claude-opus-4-5`。設定ファイルでいつでも変更できます。
 
       ## LLM プロバイダー
 
@@ -488,7 +526,7 @@ localization:
 
       | プロバイダー | API キー取得先 | `providers` 設定 | モデル ID 例 |
       |------------|--------------|-----------------|-------------|
-      | Zeabur AI Hub | [zeabur.com/ai-hub](https://zeabur.com/ai-hub) | `"openai": {"api_key":"...","api_base":"https://hnd1.aihub.zeabur.ai/v1"}` | `openai/claude-sonnet-4-5` |
+      | OpenAI 互換（自前） | プロバイダーのダッシュボード | `"openai": {"api_key":"...","api_base":"https://api.openai.com/v1"}` | `gpt-4o-mini` |
       | OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) | `"openrouter": {"api_key":"sk-or-..."}` | `openrouter/anthropic/claude-sonnet-4` |
       | Anthropic | [console.anthropic.com](https://console.anthropic.com/) | `"anthropic": {"api_key":"sk-ant-..."}` | `anthropic/claude-sonnet-4-5` |
       | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | `"openai": {"api_key":"sk-..."}` | `openai/gpt-4o` |
@@ -546,9 +584,15 @@ localization:
     description: |
       Nanobot es un asistente personal de IA ultraligero (~4K lineas de codigo central) que soporta multiples proveedores de LLM y plataformas de chat incluyendo Telegram, Discord, WhatsApp, Slack, DingTalk, Feishu, QQ y correo electronico.
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Clave API de Zeabur AI Hub
-        description: Clave API de Zeabur AI Hub para acceso multimodelo (obtenga una en zeabur.com). Recomendado para usuarios de Zeabur. Dejelo vacio para usar otros proveedores.
+      - key: LLM_API_KEY
+        name: Clave API de LLM (Opcional)
+        description: Opcional. La clave API de su proveedor compatible con OpenAI.
+      - key: LLM_BASE_URL
+        name: URL Base de LLM (Opcional)
+        description: Endpoint compatible con OpenAI, p. ej. https://api.openai.com/v1
+      - key: LLM_MODEL
+        name: Modelo de LLM (Opcional)
+        description: ID del modelo principal, p. ej. gpt-4o-mini
       - key: TELEGRAM_BOT_TOKEN
         name: Token de Bot de Telegram
         description: Su token de bot de Telegram de BotFather. Dejelo vacio para configurar despues.
@@ -570,13 +614,13 @@ localization:
       ## Inicio Rapido
 
       1. Despues del despliegue, la puerta de enlace de Nanobot se inicia automaticamente
-      2. Si ingreso una clave API durante el despliegue (Zeabur AI Hub u OpenRouter), el modelo de chat ya esta configurado
+      2. Si ingreso una clave API durante el despliegue (su propio proveedor compatible con OpenAI u OpenRouter), el modelo de chat ya esta configurado
       3. Si ingreso un token de bot de Telegram, el bot esta listo — envie un mensaje para comenzar
       4. Para agregar mas plataformas o cambiar configuracion, edite `/root/.nanobot/config.json` en la pestana **Files**
 
       **Omitio un campo durante el despliegue?** Puede agregarlo despues editando `/root/.nanobot/config.json` en la pestana **Files**, o agregando la variable de entorno correspondiente en el panel de Zeabur y reiniciando el servicio.
 
-      **Modelo predeterminado:** Con Zeabur AI Hub es `openai/claude-sonnet-4-5`, con OpenRouter es `openrouter/anthropic/claude-sonnet-4`. Puede cambiarlo en el archivo de configuracion en cualquier momento.
+      **Modelo predeterminado:** Con su propio proveedor compatible con OpenAI es el `Modelo de LLM` que configure (p. ej. `gpt-4o-mini`), con OpenRouter es `openrouter/anthropic/claude-sonnet-4`, sin clave es `anthropic/claude-opus-4-5`. Puede cambiarlo en el archivo de configuracion en cualquier momento.
 
       ## Proveedores de LLM
 
@@ -584,7 +628,7 @@ localization:
 
       | Proveedor | Obtener clave API | Configuracion `providers` | Ejemplo de Model ID |
       |-----------|------------------|--------------------------|-------------------|
-      | Zeabur AI Hub | [zeabur.com/ai-hub](https://zeabur.com/ai-hub) | `"openai": {"api_key":"...","api_base":"https://hnd1.aihub.zeabur.ai/v1"}` | `openai/claude-sonnet-4-5` |
+      | Compatible con OpenAI (propio) | el panel de su proveedor | `"openai": {"api_key":"...","api_base":"https://api.openai.com/v1"}` | `gpt-4o-mini` |
       | OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) | `"openrouter": {"api_key":"sk-or-..."}` | `openrouter/anthropic/claude-sonnet-4` |
       | Anthropic | [console.anthropic.com](https://console.anthropic.com/) | `"anthropic": {"api_key":"sk-ant-..."}` | `anthropic/claude-sonnet-4-5` |
       | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | `"openai": {"api_key":"sk-..."}` | `openai/gpt-4o` |
@@ -642,9 +686,15 @@ localization:
     description: |
       Nanobot adalah asisten AI pribadi yang sangat ringan (~4K baris kode inti) yang mendukung berbagai penyedia LLM dan platform chat termasuk Telegram, Discord, WhatsApp, Slack, DingTalk, Feishu, QQ, dan Email.
     variables:
-      - key: ZEABUR_AI_HUB_API_KEY
-        name: Kunci API Zeabur AI Hub
-        description: Kunci API Zeabur AI Hub untuk akses multi-model (dapatkan di zeabur.com). Direkomendasikan untuk pengguna Zeabur. Kosongkan untuk menggunakan penyedia lain.
+      - key: LLM_API_KEY
+        name: Kunci API LLM (Opsional)
+        description: Opsional. Kunci API penyedia Anda yang kompatibel dengan OpenAI.
+      - key: LLM_BASE_URL
+        name: URL Base LLM (Opsional)
+        description: Endpoint kompatibel OpenAI, mis. https://api.openai.com/v1
+      - key: LLM_MODEL
+        name: Model LLM (Opsional)
+        description: ID model utama, mis. gpt-4o-mini
       - key: TELEGRAM_BOT_TOKEN
         name: Token Bot Telegram
         description: Token bot Telegram Anda dari BotFather. Kosongkan untuk mengonfigurasi nanti.
@@ -666,13 +716,13 @@ localization:
       ## Mulai Cepat
 
       1. Setelah deploy, gateway Nanobot akan dimulai secara otomatis
-      2. Jika Anda memasukkan kunci API saat deploy (Zeabur AI Hub atau OpenRouter), model chat sudah dikonfigurasi
+      2. Jika Anda memasukkan kunci API saat deploy (penyedia kompatibel OpenAI Anda sendiri atau OpenRouter), model chat sudah dikonfigurasi
       3. Jika Anda memasukkan token bot Telegram, bot sudah siap — kirim pesan untuk mulai
       4. Untuk menambah platform atau mengubah pengaturan, edit `/root/.nanobot/config.json` di tab **Files**
 
       **Melewatkan kolom saat deploy?** Anda dapat menambahkannya nanti dengan mengedit `/root/.nanobot/config.json` di tab **Files**, atau menambahkan variabel lingkungan yang sesuai di dashboard Zeabur dan me-restart layanan.
 
-      **Model default:** Dengan Zeabur AI Hub defaultnya `openai/claude-sonnet-4-5`, dengan OpenRouter defaultnya `openrouter/anthropic/claude-sonnet-4`. Dapat diubah di file konfigurasi kapan saja.
+      **Model default:** Dengan penyedia kompatibel OpenAI Anda sendiri defaultnya adalah `Model LLM` yang Anda atur (mis. `gpt-4o-mini`), dengan OpenRouter defaultnya `openrouter/anthropic/claude-sonnet-4`, tanpa kunci defaultnya `anthropic/claude-opus-4-5`. Dapat diubah di file konfigurasi kapan saja.
 
       ## Penyedia LLM
 
@@ -680,7 +730,7 @@ localization:
 
       | Penyedia | Dapatkan kunci API | Konfigurasi `providers` | Contoh Model ID |
       |----------|-------------------|------------------------|----------------|
-      | Zeabur AI Hub | [zeabur.com/ai-hub](https://zeabur.com/ai-hub) | `"openai": {"api_key":"...","api_base":"https://hnd1.aihub.zeabur.ai/v1"}` | `openai/claude-sonnet-4-5` |
+      | Kompatibel OpenAI (bawa sendiri) | dashboard penyedia Anda | `"openai": {"api_key":"...","api_base":"https://api.openai.com/v1"}` | `gpt-4o-mini` |
       | OpenRouter | [openrouter.ai/keys](https://openrouter.ai/keys) | `"openrouter": {"api_key":"sk-or-..."}` | `openrouter/anthropic/claude-sonnet-4` |
       | Anthropic | [console.anthropic.com](https://console.anthropic.com/) | `"anthropic": {"api_key":"sk-ant-..."}` | `anthropic/claude-sonnet-4-5` |
       | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) | `"openai": {"api_key":"sk-..."}` | `openai/gpt-4o` |

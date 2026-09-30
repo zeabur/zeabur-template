@@ -11,10 +11,14 @@ spec:
           type: DOMAIN
           name: Domain
           description: Domain for the Firecrawl API endpoint.
-        - key: ZEABUR_AI_HUB_API_KEY
-          type: AI_HUB_KEY
-          name: Zeabur AI Hub API Key (Optional)
-          description: "Optional — only needed for LLM-powered features (llm-extract, summary, /v2/extract, /v2/agent). Click Generate to mint an AI Hub key on the spot; the api service will be auto-configured to use AI Hub (claude-sonnet-4-5 by default). Leave blank to deploy without LLM, or set OPENAI_API_KEY directly on the api service after deploy for non-AI-Hub providers."
+        - key: OPENAI_API_KEY
+          type: STRING
+          name: OpenAI API Key (Optional)
+          description: "Optional. Enables Firecrawl's LLM extract feature. Your OpenAI-compatible provider key."
+        - key: OPENAI_BASE_URL
+          type: STRING
+          name: OpenAI Base URL (Optional)
+          description: "OpenAI-compatible endpoint, e.g. https://api.openai.com/v1 (defaults to OpenAI if blank)"
     tags:
         - Crawler
         - AI
@@ -38,14 +42,17 @@ spec:
 
         ## Configuration
 
-        Only the public domain is required. The deploy form also offers an optional **Zeabur AI Hub API Key** field — click **Generate** to mint one on the spot, and the api container auto-configures itself to use [AI Hub](https://zeabur.com/ai-hub) on first start: `OPENAI_BASE_URL=https://hnd1.aihub.zeabur.ai/v1`, `MODEL_NAME=claude-sonnet-4-5`. AI Hub bills against your Zeabur credits, no separate OpenAI signup needed.
+        Only the public domain is required. Core scraping and crawling work with no LLM configured.
 
-        **Other LLM providers (OpenAI direct, OpenRouter, xAI, Ollama, …):** leave the AI Hub field blank, deploy, then set `OPENAI_API_KEY` (and optionally `OPENAI_BASE_URL`, `MODEL_NAME`) on the api service env tab. The auto-config only fires when AI Hub is chosen at deploy time, so user-set values are never overwritten. The full list of supported variables lives in [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts).
+        **LLM extract (optional, bring your own OpenAI-compatible provider):** the deploy form offers two optional fields — **OpenAI API Key** and **OpenAI Base URL**. Fill in your provider key to enable Firecrawl's LLM-powered features (llm-extract, summary, `/v2/extract`, `/v2/agent`). Leave both blank to deploy without LLM.
 
-        **Already deployed with AI Hub and want to switch later?** Just set `OPENAI_API_KEY` (your own key) on the api env tab and restart the api service — the wrapper sees the user-set value and skips the AI Hub auto-config.
+        - **OpenAI direct:** set `OPENAI_API_KEY` and leave `OPENAI_BASE_URL` blank — Firecrawl falls back to the OpenAI default endpoint.
+        - **Other OpenAI-compatible providers (OpenRouter, xAI, Ollama, a self-hosted gateway, …):** set both `OPENAI_API_KEY` and `OPENAI_BASE_URL` (e.g. `https://openrouter.ai/api/v1`). You can also set `MODEL_NAME` on the api service env tab. The full list of supported variables lives in [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts).
 
-        **Caveats when running on AI Hub:**
-        - AI Hub does not currently provide embedding models. Crawl link relevance ranking falls back to no-ranking — the rest of the LLM features (extract, agent, summary) are unaffected.
+        You can change these any time on the api service env tab and restart the service.
+
+        **Caveats:**
+        - Some OpenAI-compatible providers do not expose embedding models. When embeddings are unavailable, crawl link relevance ranking falls back to no-ranking — the rest of the LLM features (extract, agent, summary) are unaffected.
         - A few Firecrawl features (interactive browser-agent, direct-quote handling) call Google Gemini directly via `@ai-sdk/google` rather than through `OPENAI_BASE_URL`. To enable them, also set `GOOGLE_GENERATIVE_AI_API_KEY` on the api service.
 
         `BULL_AUTH_KEY` (which protects the internal Bull queue dashboard) is auto-generated; you can find it on the api service env tab.
@@ -225,14 +232,6 @@ spec:
                     - /bin/sh
                     - -c
                     - |
-                      # If the deploy form's AI Hub key field was filled, wire OpenAI-compat env vars to AI Hub.
-                      # This only runs when the user explicitly chose AI Hub; OPENAI_* vars set by the user are never overwritten.
-                      if [ -n "$ZEABUR_AI_HUB_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
-                        export OPENAI_API_KEY="$ZEABUR_AI_HUB_API_KEY"
-                        : "${OPENAI_BASE_URL:=https://hnd1.aihub.zeabur.ai/v1}"
-                        : "${MODEL_NAME:=claude-sonnet-4-5}"
-                        export OPENAI_BASE_URL MODEL_NAME
-                      fi
                       exec node dist/src/harness.js --start-docker
             ports:
                 - id: web
@@ -275,10 +274,10 @@ spec:
                     default: ${REDIS_URL}
                 BULL_AUTH_KEY:
                     default: ${PASSWORD}
-                ZEABUR_AI_HUB_API_KEY:
-                    default: ${ZEABUR_AI_HUB_API_KEY}
                 OPENAI_API_KEY:
-                    default: ""
+                    default: ${OPENAI_API_KEY}
+                OPENAI_BASE_URL:
+                    default: ${OPENAI_BASE_URL}
             healthCheck:
                 type: TCP
                 port: web
@@ -305,14 +304,17 @@ localization:
 
             ## 設定
 
-            必填的只有網域。部署表單還提供一個可選的 **Zeabur AI Hub API Key** 欄位——按 **Generate** 當場生一把 key，api 容器啟動時會自動把自己接到 [AI Hub](https://zeabur.com/ai-hub)：`OPENAI_BASE_URL=https://hnd1.aihub.zeabur.ai/v1`、`MODEL_NAME=claude-sonnet-4-5`。AI Hub 直接從 Zeabur credit 扣費，不用另外申請 OpenAI 帳號。
+            必填的只有網域。核心的爬取與擷取功能不需要任何 LLM 設定即可運作。
 
-            **想用其他 provider（OpenAI 直連、OpenRouter、xAI、Ollama…）：** 部署時 AI Hub 欄位留空，完成後到 api 服務 env tab 設 `OPENAI_API_KEY`（可選 `OPENAI_BASE_URL`、`MODEL_NAME`）。auto-config 只有在部署時選了 AI Hub 才會觸發，使用者自己設的值不會被覆寫。完整支援的變數清單見 [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts)。
+            **LLM extract（可選，自備 OpenAI 相容 provider）：** 部署表單提供兩個可選欄位——**OpenAI API Key** 與 **OpenAI Base URL**。填入你的 provider key 即可啟用 Firecrawl 的 LLM 功能（llm-extract、summary、`/v2/extract`、`/v2/agent`）。兩者都留空則以無 LLM 模式部署。
 
-            **已經用 AI Hub 部署完想換成自己的？** 直接在 api env tab 設 `OPENAI_API_KEY`（你自己的 key）然後 restart api 服務即可——wrapper 看到 user 已設值就會跳過 AI Hub auto-config。
+            - **OpenAI 直連：** 設 `OPENAI_API_KEY`，`OPENAI_BASE_URL` 留空——Firecrawl 會使用 OpenAI 預設端點。
+            - **其他 OpenAI 相容 provider（OpenRouter、xAI、Ollama、自架 gateway…）：** 同時設定 `OPENAI_API_KEY` 與 `OPENAI_BASE_URL`（例如 `https://openrouter.ai/api/v1`）。也可在 api 服務 env tab 設 `MODEL_NAME`。完整支援的變數清單見 [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts)。
 
-            **AI Hub 上跑的注意事項：**
-            - AI Hub 目前沒有 embedding model。Crawl 連結相關度排序會退化為原順序，其他 LLM 功能（extract、agent、summary）不受影響。
+            這些值隨時可在 api 服務 env tab 修改，改完 restart 服務即可。
+
+            **注意事項：**
+            - 部分 OpenAI 相容 provider 不提供 embedding model。無法取得 embedding 時，Crawl 連結相關度排序會退化為原順序，其他 LLM 功能（extract、agent、summary）不受影響。
             - 少數 Firecrawl 功能（互動式 browser-agent、direct-quote 處理）寫死透過 `@ai-sdk/google` 呼叫 Google Gemini，不走 `OPENAI_BASE_URL`。若要啟用，請另外在 api 服務設 `GOOGLE_GENERATIVE_AI_API_KEY`。
 
             `BULL_AUTH_KEY`（保護內建 Bull queue dashboard）會自動生成，可在 api 服務 env tab 查看。
@@ -369,14 +371,17 @@ localization:
 
             ## 配置
 
-            必填的只有域名。部署表单还提供一个可选的 **Zeabur AI Hub API Key** 字段——点击 **Generate** 当场生成一个 key，api 容器启动时会自动接入 [AI Hub](https://zeabur.com/ai-hub)：`OPENAI_BASE_URL=https://hnd1.aihub.zeabur.ai/v1`、`MODEL_NAME=claude-sonnet-4-5`。AI Hub 直接从 Zeabur credit 扣费，无需另外注册 OpenAI 账号。
+            必填的只有域名。核心的爬取与抓取功能无需任何 LLM 配置即可运行。
 
-            **想用其他 provider（OpenAI 直连、OpenRouter、xAI、Ollama…）：** 部署时 AI Hub 字段留空，完成后到 api 服务 env tab 设置 `OPENAI_API_KEY`（可选 `OPENAI_BASE_URL`、`MODEL_NAME`）。auto-config 仅在部署时选择 AI Hub 才会触发，用户自己设置的值不会被覆盖。完整支持的变量清单见 [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts)。
+            **LLM extract（可选，自备 OpenAI 兼容 provider）：** 部署表单提供两个可选字段——**OpenAI API Key** 与 **OpenAI Base URL**。填入您的 provider key 即可启用 Firecrawl 的 LLM 功能（llm-extract、summary、`/v2/extract`、`/v2/agent`）。两者都留空则以无 LLM 模式部署。
 
-            **已经用 AI Hub 部署完想换成自己的？** 直接在 api env tab 设置 `OPENAI_API_KEY`（您自己的 key）然后 restart api 服务即可——wrapper 看到 user 已设值就会跳过 AI Hub auto-config。
+            - **OpenAI 直连：** 设置 `OPENAI_API_KEY`，`OPENAI_BASE_URL` 留空——Firecrawl 会使用 OpenAI 默认端点。
+            - **其他 OpenAI 兼容 provider（OpenRouter、xAI、Ollama、自建 gateway…）：** 同时设置 `OPENAI_API_KEY` 与 `OPENAI_BASE_URL`（例如 `https://openrouter.ai/api/v1`）。也可在 api 服务 env tab 设置 `MODEL_NAME`。完整支持的变量清单见 [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts)。
 
-            **AI Hub 上运行的注意事项：**
-            - AI Hub 目前没有 embedding model。Crawl 链接相关度排序会退化为原顺序，其他 LLM 功能（extract、agent、summary）不受影响。
+            这些值随时可在 api 服务 env tab 修改，改完 restart 服务即可。
+
+            **注意事项：**
+            - 部分 OpenAI 兼容 provider 不提供 embedding model。无法获取 embedding 时，Crawl 链接相关度排序会退化为原顺序，其他 LLM 功能（extract、agent、summary）不受影响。
             - 少数 Firecrawl 功能（交互式 browser-agent、direct-quote 处理）写死通过 `@ai-sdk/google` 调用 Google Gemini，不走 `OPENAI_BASE_URL`。若要启用，请在 api 服务额外设置 `GOOGLE_GENERATIVE_AI_API_KEY`。
 
             `BULL_AUTH_KEY`（保护内置 Bull queue dashboard）会自动生成，可在 api 服务 env tab 查看。
@@ -433,14 +438,17 @@ localization:
 
             ## 設定
 
-            必須項目はドメイン名のみです。デプロイフォームには **Zeabur AI Hub API Key** のオプション欄があり、**Generate** をクリックすればその場でキーを発行できます。api コンテナは初回起動時に自動的に [AI Hub](https://zeabur.com/ai-hub) を使うように設定されます（`OPENAI_BASE_URL=https://hnd1.aihub.zeabur.ai/v1`、`MODEL_NAME=claude-sonnet-4-5`）。AI Hub は Zeabur のクレジットから直接課金されるため、別途 OpenAI のサインアップは不要です。
+            必須項目はドメイン名のみです。コアのクロール / スクレイピング機能は LLM 設定なしで動作します。
 
-            **OpenAI 以外のプロバイダ（OpenAI 直接、OpenRouter、xAI、Ollama …）を使う場合：** デプロイ時に AI Hub 欄を空のままにし、デプロイ完了後に api サービスの env タブで `OPENAI_API_KEY`（必要に応じて `OPENAI_BASE_URL`、`MODEL_NAME`）を設定してください。auto-config はデプロイ時に AI Hub を選択した場合のみ作動するため、ユーザーが設定した値は上書きされません。サポートされる変数の完全なリストは [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts) を参照してください。
+            **LLM extract（オプション、OpenAI 互換プロバイダを持ち込み）：** デプロイフォームには **OpenAI API Key** と **OpenAI Base URL** の 2 つのオプション欄があります。プロバイダのキーを入力すると Firecrawl の LLM 機能（llm-extract、summary、`/v2/extract`、`/v2/agent`）が有効になります。両方を空のままにすると LLM なしでデプロイされます。
 
-            **AI Hub でデプロイ済みで後から切り替えたい場合：** api サービスの env タブに `OPENAI_API_KEY`（自前のキー）を設定して api サービスを再起動するだけです。wrapper はユーザー設定値を検知し、AI Hub auto-config をスキップします。
+            - **OpenAI 直接：** `OPENAI_API_KEY` を設定し、`OPENAI_BASE_URL` は空のままにします。Firecrawl は OpenAI のデフォルトエンドポイントを使用します。
+            - **その他の OpenAI 互換プロバイダ（OpenRouter、xAI、Ollama、セルフホストのゲートウェイ …）：** `OPENAI_API_KEY` と `OPENAI_BASE_URL`（例: `https://openrouter.ai/api/v1`）の両方を設定します。api サービスの env タブで `MODEL_NAME` も設定できます。サポートされる変数の完全なリストは [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts) を参照してください。
 
-            **AI Hub で運用する際の注意点：**
-            - AI Hub は現在 embedding model を提供していません。Crawl のリンク関連度ランキングは「ランキングなし」にフォールバックしますが、その他の LLM 機能（extract、agent、summary）には影響しません。
+            これらの値は api サービスの env タブでいつでも変更でき、変更後にサービスを再起動するだけです。
+
+            **注意点：**
+            - 一部の OpenAI 互換プロバイダは embedding model を提供していません。embedding が利用できない場合、Crawl のリンク関連度ランキングは「ランキングなし」にフォールバックしますが、その他の LLM 機能（extract、agent、summary）には影響しません。
             - 一部の Firecrawl 機能（インタラクティブ browser-agent、direct-quote 処理）は `OPENAI_BASE_URL` を経由せず、`@ai-sdk/google` 経由で直接 Google Gemini を呼び出します。これらを有効化するには、api サービスに `GOOGLE_GENERATIVE_AI_API_KEY` も設定してください。
 
             `BULL_AUTH_KEY`（内蔵 Bull queue dashboard を保護する認証キー）は自動生成されます。api サービスの env タブから確認できます。
@@ -497,14 +505,17 @@ localization:
 
             ## Configuración
 
-            Solo el dominio es obligatorio. El formulario de despliegue también incluye un campo opcional **Zeabur AI Hub API Key** — pulsa **Generate** para crear una clave al instante, y el contenedor api se autoconfigura para usar [AI Hub](https://zeabur.com/ai-hub) en su primer arranque (`OPENAI_BASE_URL=https://hnd1.aihub.zeabur.ai/v1`, `MODEL_NAME=claude-sonnet-4-5`). AI Hub se factura contra tus créditos de Zeabur, sin necesidad de registrarte en OpenAI.
+            Solo el dominio es obligatorio. El rastreo y la extracción principales funcionan sin ningún LLM configurado.
 
-            **Otros proveedores LLM (OpenAI directo, OpenRouter, xAI, Ollama, …):** deja el campo de AI Hub en blanco, despliega y luego define `OPENAI_API_KEY` (y opcionalmente `OPENAI_BASE_URL`, `MODEL_NAME`) en la pestaña env del servicio api. La autoconfiguración solo se activa cuando se elige AI Hub al desplegar, por lo que los valores definidos por el usuario nunca se sobreescriben. La lista completa de variables soportadas está en [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts).
+            **LLM extract (opcional, trae tu propio proveedor compatible con OpenAI):** el formulario de despliegue ofrece dos campos opcionales — **OpenAI API Key** y **OpenAI Base URL**. Introduce la clave de tu proveedor para habilitar las funciones LLM de Firecrawl (llm-extract, summary, `/v2/extract`, `/v2/agent`). Deja ambos en blanco para desplegar sin LLM.
 
-            **¿Ya desplegaste con AI Hub y quieres cambiar luego?** Define `OPENAI_API_KEY` (tu propia clave) en la pestaña env del servicio api y reinicia el servicio api — el wrapper detecta el valor definido por el usuario y omite la autoconfiguración de AI Hub.
+            - **OpenAI directo:** define `OPENAI_API_KEY` y deja `OPENAI_BASE_URL` en blanco — Firecrawl usa el endpoint por defecto de OpenAI.
+            - **Otros proveedores compatibles con OpenAI (OpenRouter, xAI, Ollama, un gateway autoalojado, …):** define tanto `OPENAI_API_KEY` como `OPENAI_BASE_URL` (p. ej. `https://openrouter.ai/api/v1`). También puedes definir `MODEL_NAME` en la pestaña env del servicio api. La lista completa de variables soportadas está en [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts).
 
-            **Consideraciones al ejecutar sobre AI Hub:**
-            - AI Hub no proporciona modelos de embedding actualmente. La ordenación de relevancia de enlaces durante el crawl se desactiva (los enlaces se devuelven sin ordenar); el resto de funciones LLM (extract, agent, summary) no se ven afectadas.
+            Puedes cambiar estos valores en cualquier momento en la pestaña env del servicio api y reiniciar el servicio.
+
+            **Consideraciones:**
+            - Algunos proveedores compatibles con OpenAI no exponen modelos de embedding. Cuando los embeddings no están disponibles, la ordenación de relevancia de enlaces durante el crawl se desactiva (los enlaces se devuelven sin ordenar); el resto de funciones LLM (extract, agent, summary) no se ven afectadas.
             - Algunas funciones de Firecrawl (browser-agent interactivo, manejo de citas directas) llaman a Google Gemini directamente vía `@ai-sdk/google` sin pasar por `OPENAI_BASE_URL`. Para habilitarlas, define también `GOOGLE_GENERATIVE_AI_API_KEY` en el servicio api.
 
             `BULL_AUTH_KEY` (que protege el panel interno Bull queue) se genera automáticamente; puedes verlo en la pestaña env del servicio api.
@@ -561,14 +572,17 @@ localization:
 
             ## Konfigurasi
 
-            Hanya domain yang wajib diisi. Form deploy juga menyediakan field opsional **Zeabur AI Hub API Key** — klik **Generate** untuk membuat key langsung di sana, container api akan otomatis terkonfigurasi untuk pakai [AI Hub](https://zeabur.com/ai-hub) saat pertama kali start (`OPENAI_BASE_URL=https://hnd1.aihub.zeabur.ai/v1`, `MODEL_NAME=claude-sonnet-4-5`). AI Hub ditagih ke kredit Zeabur Anda, tidak perlu daftar OpenAI terpisah.
+            Hanya domain yang wajib diisi. Fitur inti crawling dan scraping bekerja tanpa LLM apa pun yang dikonfigurasi.
 
-            **Provider LLM lain (OpenAI langsung, OpenRouter, xAI, Ollama, …):** kosongkan field AI Hub saat deploy, lalu set `OPENAI_API_KEY` (dan opsional `OPENAI_BASE_URL`, `MODEL_NAME`) di tab env service api setelah deploy. Auto-config hanya aktif kalau AI Hub dipilih saat deploy, jadi nilai yang user set sendiri tidak akan ditimpa. Daftar lengkap variabel yang didukung ada di [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts).
+            **LLM extract (opsional, bawa provider kompatibel-OpenAI Anda sendiri):** form deploy menyediakan dua field opsional — **OpenAI API Key** dan **OpenAI Base URL**. Isi key provider Anda untuk mengaktifkan fitur LLM Firecrawl (llm-extract, summary, `/v2/extract`, `/v2/agent`). Kosongkan keduanya untuk deploy tanpa LLM.
 
-            **Sudah deploy dengan AI Hub tapi mau ganti nanti?** Cukup set `OPENAI_API_KEY` (key Anda sendiri) di tab env service api lalu restart service api — wrapper akan mendeteksi nilai yang user set dan melewatkan AI Hub auto-config.
+            - **OpenAI langsung:** set `OPENAI_API_KEY` dan kosongkan `OPENAI_BASE_URL` — Firecrawl memakai endpoint default OpenAI.
+            - **Provider kompatibel-OpenAI lain (OpenRouter, xAI, Ollama, gateway self-hosted, …):** set `OPENAI_API_KEY` dan `OPENAI_BASE_URL` (mis. `https://openrouter.ai/api/v1`). Anda juga bisa set `MODEL_NAME` di tab env service api. Daftar lengkap variabel yang didukung ada di [`apps/api/src/config.ts`](https://github.com/firecrawl/firecrawl/blob/main/apps/api/src/config.ts).
 
-            **Catatan saat menjalankan di AI Hub:**
-            - AI Hub saat ini tidak menyediakan embedding model. Ranking relevansi link saat crawl akan fallback ke "tanpa ranking"; fitur LLM lain (extract, agent, summary) tidak terpengaruh.
+            Nilai-nilai ini bisa diubah kapan saja di tab env service api lalu restart service.
+
+            **Catatan:**
+            - Sebagian provider kompatibel-OpenAI tidak menyediakan embedding model. Saat embedding tidak tersedia, ranking relevansi link saat crawl akan fallback ke "tanpa ranking"; fitur LLM lain (extract, agent, summary) tidak terpengaruh.
             - Beberapa fitur Firecrawl (browser-agent interaktif, penanganan direct-quote) memanggil Google Gemini langsung via `@ai-sdk/google` tanpa melalui `OPENAI_BASE_URL`. Untuk mengaktifkannya, set juga `GOOGLE_GENERATIVE_AI_API_KEY` di service api.
 
             `BULL_AUTH_KEY` (untuk melindungi Bull queue dashboard internal) dibuat otomatis; bisa dilihat di tab env service api.
