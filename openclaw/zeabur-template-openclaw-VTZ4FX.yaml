@@ -630,9 +630,15 @@ spec:
                 PROVIDERS_DIR="$CONFIG_DIR/providers"
                 mkdir -p "$PROVIDERS_DIR"
 
-                # Check if API key is a real value (not an unresolved template variable like '${LLM_API_KEY}')
+                # Configure the custom LLM provider only when ALL of key/baseURL/model are real values
+                # (not blank and not an unresolved template variable like '${LLM_API_KEY}'); a partial
+                # set would produce baseUrl "" and primary "custom/", an unusable config.
                 HAS_LLM_KEY=false
-                case "${LLM_API_KEY}" in '${'*'}') ;; '') ;; *) HAS_LLM_KEY=true ;; esac
+                case "${LLM_API_KEY}" in '${'*'}'|'') ;; *)
+                  case "${LLM_BASE_URL}" in '${'*'}'|'') ;; *)
+                    case "${LLM_MODEL}" in '${'*'}'|'') ;; *) HAS_LLM_KEY=true ;; esac
+                  ;; esac
+                ;; esac
 
                 # Create initial config (only if not exists)
                 if [ ! -f "$CONFIG_FILE" ]; then
@@ -683,7 +689,10 @@ spec:
                           changed = true;
                         }
                         const ui = config.gateway.controlUi || {};
-                        if (!ui.dangerouslyAllowHostHeaderOriginFallback) {
+                        // Strip keys retired upstream (allowInsecureAuth is hard-rejected in 2026.9.7, dangerouslyDisableDeviceAuth is inert) so an existing Control-UI config upgraded from an older template still boots, and ensure the origin-fallback flag
+                        if (ui.allowInsecureAuth !== undefined || ui.dangerouslyDisableDeviceAuth !== undefined || !ui.dangerouslyAllowHostHeaderOriginFallback) {
+                          delete ui.allowInsecureAuth;
+                          delete ui.dangerouslyDisableDeviceAuth;
                           config.gateway.controlUi = { ...ui, dangerouslyAllowHostHeaderOriginFallback: true };
                           changed = true;
                         }
